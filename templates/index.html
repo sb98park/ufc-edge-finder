@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UFC Edge Finder</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #262b36;
+    --text: #e6e8eb;
+    --muted: #8a8f9a;
+    --green: #3ddc84;
+    --red: #ff5c5c;
+    --accent: #d4af37;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    margin: 0;
+    padding: 32px;
+  }
+  h1 {
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 24px; font-size: 14px; }
+  .disclaimer {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 36px;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+  tr:last-child td { border-bottom: none; }
+  .edge-pos { color: var(--green); font-weight: 600; }
+  .edge-neg { color: var(--red); }
+  .section-title { font-size: 15px; margin: 8px 0 12px; color: var(--accent); }
+</style>
+</head>
+<body>
+  <h1>🥋 UFC Edge Finder</h1>
+  <div class="subtitle">Model probability vs. sportsbook line, ranked by edge</div>
+
+  <div class="disclaimer">
+    For analysis and education only, not betting advice. Edges are only as
+    good as the data feeding the model — always factor in recent form,
+    injuries, and camp changes the stats can't see. Please gamble
+    responsibly; if it stops being fun, that's worth paying attention to.
+  </div>
+
+  <div class="section-title">Ranked Edges</div>
+  <table>
+    <tr>
+      <th>Fighter</th><th>Market</th><th>Odds</th><th>Model Prob</th>
+      <th>Book Fair Prob</th><th>Edge %</th><th>½-Kelly Stake %</th>
+    </tr>
+    {% for row in edges %}
+    <tr>
+      <td>{{ row.fighter }}</td>
+      <td>{{ row.market }}</td>
+      <td>{{ row.odds_american }}</td>
+      <td>{{ row.model_prob }}</td>
+      <td>{{ row.book_fair_prob }}</td>
+      <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
+      <td>{{ row.half_kelly_stake_pct }}%</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <div class="section-title">Elo Rankings (from fight history)</div>
+  <table>
+    <tr><th>Fighter</th><th>Elo</th></tr>
+    {% for row in rankings %}
+    <tr><td>{{ row.fighter }}</td><td>{{ row.elo | round(1) }}</td></tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

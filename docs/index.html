@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UFC Edge Finder</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #262b36;
+    --text: #e6e8eb; --muted: #8a8f9a; --green: #3ddc84;
+    --red: #ff5c5c; --accent: #d4af37;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 20px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); margin-bottom: 4px; font-size: 13px; }
+  .updated { color: var(--muted); font-size: 11px; margin-bottom: 20px; }
+  .disclaimer, .notice {
+    background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: var(--muted); margin-bottom: 20px;
+  }
+  .notice { border-left-color: var(--red); }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 28px; font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+  .edge-pos { color: var(--green); font-weight: 600; }
+  .edge-neg { color: var(--red); }
+  .section-title { font-size: 14px; margin: 6px 0 10px; color: var(--accent); }
+  @media (max-width: 480px) {
+    th, td { padding: 6px 6px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+  <h1>🥋 UFC Edge Finder</h1>
+  <div class="subtitle">Model probability vs. live sportsbook line, ranked by edge</div>
+  <div class="updated">Last updated: 2026-07-05 12:58 UTC · auto-refreshes every few hours</div>
+
+  <div class="disclaimer">
+    For analysis and education only, not betting advice. Only moneyline odds
+    are live right now (props need manual lines, see README). Please gamble
+    responsibly — if it ever stops being fun, that's worth paying attention to.
+  </div>
+
+  
+
+  
+  <div class="section-title">Live Moneyline Edges</div>
+  <table>
+    <tr><th>Fighter</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
+    
+    <tr>
+      <td>Max Holloway</td>
+      <td>+230</td>
+      <td>0.436</td>
+      <td>0.291</td>
+      <td class="edge-pos">14.41%</td>
+      <td>9.51%</td>
+    </tr>
+    
+    <tr>
+      <td>Ilia Topuria</td>
+      <td>-280</td>
+      <td>0.564</td>
+      <td>0.709</td>
+      <td class="edge-neg">-14.41%</td>
+      <td>0.0%</td>
+    </tr>
+    
+  </table>
+  
+
+  <div class="section-title">Elo Rankings (from fight history)</div>
+  <table>
+    <tr><th>Fighter</th><th>Elo</th></tr>
+    
+    <tr><td>Ilia Topuria</td><td>1538.6</td></tr>
+    
+    <tr><td>Islam Makhachev</td><td>1531.3</td></tr>
+    
+    <tr><td>Jamahal Hill</td><td>1518.4</td></tr>
+    
+    <tr><td>Jon Jones</td><td>1515.2</td></tr>
+    
+    <tr><td>Tom Aspinall</td><td>1505.2</td></tr>
+    
+    <tr><td>Leon Edwards</td><td>1504.2</td></tr>
+    
+    <tr><td>Belal Muhammad</td><td>1501.4</td></tr>
+    
+    <tr><td>Dricus Du Plessis</td><td>1494.4</td></tr>
+    
+    <tr><td>Max Holloway</td><td>1493.6</td></tr>
+    
+    <tr><td>Alex Pereira</td><td>1467.5</td></tr>
+    
+    <tr><td>Sean Strickland</td><td>1465.6</td></tr>
+    
+    <tr><td>Charles Oliveira</td><td>1464.5</td></tr>
+    
+  </table>
+</body>
+</html>
