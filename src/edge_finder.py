@@ -143,6 +143,48 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
     return pd.DataFrame(rows).sort_values("edge_pct", ascending=False).reset_index(drop=True)
 
 
+def derive_card_label(row: pd.Series) -> str:
+    """Prefer an explicit event name (e.g. 'UFC 329'); fall back to date-based grouping."""
+    event_name = (row.get("event_name") or "").strip()
+    if event_name:
+        return event_name
+    start_date = row.get("start_date")
+    if pd.notna(start_date) and str(start_date).strip():
+        date_part = str(start_date)[:10]
+        return f"Fight Card — {date_part}"
+    return "Upcoming Fights"
+
+
+def build_fight_list(upcoming_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    One row per fight (deduped), with card grouping metadata attached.
+    Used to list every matchup on a card even if no prop cleared the edge
+    threshold for that fight.
+    """
+    cols = [c for c in ["fight_id", "fighter_a", "fighter_b", "event_name",
+                         "start_date", "weight_class", "card_position"] if c in upcoming_df.columns]
+    fights = upcoming_df[cols].drop_duplicates(subset="fight_id").copy()
+    fights["card_label"] = fights.apply(derive_card_label, axis=1)
+    return fights.reset_index(drop=True)
+
+
+def top_standout_props(edges_df: pd.DataFrame, n: int = 5, min_edge: float = 5.0) -> pd.DataFrame:
+    """The headline shortlist: biggest model-vs-market disagreements, positive edge only."""
+    if edges_df.empty:
+        return edges_df
+    standouts = edges_df[edges_df["edge_pct"] >= min_edge].copy()
+    return standouts.sort_values("edge_pct", ascending=False).head(n).reset_index(drop=True)
+
+
+def attach_fight_meta(edges_df: pd.DataFrame, fight_list_df: pd.DataFrame) -> pd.DataFrame:
+    """Merges card_label/weight_class/opponent info into the edges dataframe for grouped display."""
+    if edges_df.empty or fight_list_df.empty:
+        return edges_df
+    meta_cols = [c for c in ["fight_id", "card_label", "weight_class", "card_position",
+                              "fighter_a", "fighter_b"] if c in fight_list_df.columns]
+    return edges_df.merge(fight_list_df[meta_cols], on="fight_id", how="left")
+
+
 def find_all_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame, elo_ratings: dict[str, float]) -> pd.DataFrame:
     frames = [
         compute_moneyline_edges(upcoming_df, elo_ratings),

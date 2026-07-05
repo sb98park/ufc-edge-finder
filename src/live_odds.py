@@ -63,13 +63,17 @@ def to_upcoming_rows(events: list[dict]) -> list[dict]:
         if not prices_a or not prices_b:
             continue  # no usable odds yet for this fight
 
+        start_date = event.get("commence_time")
+
         rows.append({
             "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
+            "event_name": "", "start_date": start_date, "weight_class": "", "card_position": "",
             "market": "Moneyline", "selection": fighter_a, "selection_method": "",
             "odds_american": statistics.median(prices_a),
         })
         rows.append({
             "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
+            "event_name": "", "start_date": start_date, "weight_class": "", "card_position": "",
             "market": "Moneyline", "selection": fighter_b, "selection_method": "",
             "odds_american": statistics.median(prices_b),
         })

@@ -6,66 +6,158 @@
 <title>UFC Edge Finder</title>
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --border: #262b36;
-    --text: #e6e8eb; --muted: #8a8f9a; --green: #3ddc84;
+    --bg: #0b0d11; --panel: #15181f; --panel2: #1b1f28; --border: #262b36;
+    --text: #eef0f2; --muted: #8a8f9a; --green: #3ddc84;
     --red: #ff5c5c; --accent: #d4af37;
   }
   * { box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 20px; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  .subtitle { color: var(--muted); margin-bottom: 4px; font-size: 13px; }
-  .updated { color: var(--muted); font-size: 11px; margin-bottom: 20px; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 18px; }
+  h1 { font-size: 21px; margin: 0 0 2px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+  .updated { color: var(--muted); font-size: 11px; margin-bottom: 18px; }
+
   .disclaimer, .notice {
     background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: var(--muted); margin-bottom: 20px;
+    padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: var(--muted); margin-bottom: 18px;
   }
   .notice { border-left-color: var(--red); }
-  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 28px; font-size: 13px; }
-  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+
+  .standout-section { margin-bottom: 26px; }
+  .standout-title { font-size: 15px; color: var(--accent); margin-bottom: 10px; }
+  .standout-card {
+    background: linear-gradient(135deg, #1c1710, #15181f);
+    border: 1px solid #3a2f14; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .standout-main { font-size: 14px; font-weight: 600; }
+  .standout-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .standout-edge { font-size: 18px; font-weight: 700; white-space: nowrap; }
+
+  .event-header { margin: 26px 0 10px; }
+  .event-name { font-size: 17px; font-weight: 700; }
+  .event-date { color: var(--muted); font-size: 12px; }
+
+  details.fight-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 10px; overflow: hidden;
+  }
+  details.fight-card summary {
+    padding: 12px 14px; cursor: pointer; list-style: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  details.fight-card summary::-webkit-details-marker { display: none; }
+  .matchup { font-size: 14.5px; font-weight: 600; }
+  .weight-class { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .card-position { color: var(--accent); font-size: 11px; font-weight: 600; }
+  .chevron { color: var(--muted); font-size: 12px; transition: transform 0.15s; }
+  details[open] .chevron { transform: rotate(90deg); }
+  .no-edges { color: var(--muted); font-size: 12px; padding: 0 14px 12px; }
+
+  .fight-body { padding: 0 14px 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; }
   tr:last-child td { border-bottom: none; }
-  .edge-pos { color: var(--green); font-weight: 600; }
+  .edge-pos { color: var(--green); font-weight: 700; }
   .edge-neg { color: var(--red); }
-  .section-title { font-size: 14px; margin: 6px 0 10px; color: var(--accent); }
+
+  .section-title { font-size: 14px; margin: 24px 0 10px; color: var(--accent); }
+  .rankings-table { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+
   @media (max-width: 480px) {
-    th, td { padding: 6px 6px; font-size: 12px; }
+    th, td { padding: 6px 5px; font-size: 11.5px; }
+    .standout-card { flex-direction: column; align-items: flex-start; }
   }
 </style>
 </head>
 <body>
   <h1>🥋 UFC Edge Finder</h1>
-  <div class="subtitle">Model probability vs. live sportsbook line, ranked by edge</div>
-  <div class="updated">Last updated: {{ generated_at }} · auto-refreshes every few hours</div>
+  <div class="subtitle">Model probability vs. live sportsbook lines</div>
+  <div class="updated">Last updated: {{ generated_at }} · source: {{ source or "unavailable" }} · auto-refreshes every few hours</div>
 
   <div class="disclaimer">
-    For analysis and education only, not betting advice. Only moneyline odds
-    are live right now (props need manual lines, see README). Please gamble
-    responsibly — if it ever stops being fun, that's worth paying attention to.
+    For analysis and education only, not betting advice. A flagged edge means the model disagrees
+    with the market — it doesn't mean it's right. Sanity-check against recent form, injuries, and camp
+    news. Please gamble responsibly.
   </div>
 
   {% if live_error %}
   <div class="notice">{{ live_error }}</div>
   {% endif %}
 
-  {% if edges %}
-  <div class="section-title">Live Moneyline Edges</div>
-  <table>
-    <tr><th>Fighter</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
-    {% for row in edges %}
+  {% if standout_props %}
+  <div class="standout-section">
+    <div class="standout-title">🔥 Standout Props This Refresh</div>
+    {% for p in standout_props %}
+    <div class="standout-card">
+      <div>
+        <div class="standout-main">{{ p.fighter }} — {{ p.market }}</div>
+        <div class="standout-sub">Odds {{ p.odds_american }} · Model {{ p.model_prob }} vs. Book {{ p.book_fair_prob }} · ½-Kelly {{ p.half_kelly_stake_pct }}%</div>
+      </div>
+      <div class="standout-edge {{ 'edge-pos' if p.edge_pct > 0 else 'edge-neg' }}">{{ p.edge_pct }}%</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for event in events %}
+  <div class="event-header">
+    <div class="event-name">{{ event.event_name }}</div>
+    <div class="event-date">{{ event.event_date }}</div>
+  </div>
+
+  {% for fight in event.fights %}
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">{{ fight.fighter_a }} vs {{ fight.fighter_b }}</div>
+        <div class="weight-class">{{ fight.weight_class }}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">{{ fight.card_position }}</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      {% if fight.edges %}
+      <table>
+        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
+        {% for row in fight.edges %}
+        <tr>
+          <td>{{ row.fighter }}</td>
+          <td>{{ row.market }}</td>
+          <td>{{ row.odds_american }}</td>
+          <td>{{ row.model_prob }}</td>
+          <td>{{ row.book_fair_prob }}</td>
+          <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
+          <td>{{ row.half_kelly_stake_pct }}%</td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      {% endif %}
+    </div>
+  </details>
+  {% endfor %}
+  {% endfor %}
+
+  {% if unmatched %}
+  <div class="section-title">Other Live Lines (not on a tracked card)</div>
+  <table class="rankings-table">
+    <tr><th>Fighter</th><th>Market</th><th>Odds</th><th>Edge %</th></tr>
+    {% for row in unmatched %}
     <tr>
-      <td>{{ row.fighter }}</td>
-      <td>{{ row.odds_american }}</td>
-      <td>{{ row.model_prob }}</td>
-      <td>{{ row.book_fair_prob }}</td>
+      <td>{{ row.fighter }}</td><td>{{ row.market }}</td><td>{{ row.odds_american }}</td>
       <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
-      <td>{{ row.half_kelly_stake_pct }}%</td>
     </tr>
     {% endfor %}
   </table>
   {% endif %}
 
   <div class="section-title">Elo Rankings (from fight history)</div>
-  <table>
+  <table class="rankings-table">
     <tr><th>Fighter</th><th>Elo</th></tr>
     {% for row in rankings %}
     <tr><td>{{ row.fighter }}</td><td>{{ "%.1f"|format(row.elo) }}</td></tr>

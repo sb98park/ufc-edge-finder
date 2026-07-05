@@ -116,6 +116,8 @@ def parse_eventgroup(eventgroup_json: dict) -> list[dict]:
                         event.get("participants", [{}, {}])[1].get("name")
                         if len(event.get("participants", [])) > 1 else None
                     )
+                    start_date = event.get("startDate")  # ISO date/time if DK provides it
+                    weight_class = event.get("name") or ""  # DK sometimes includes weight class in the event name
 
                     for outcome in offer.get("outcomes", []):
                         label = outcome.get("label", "")
@@ -145,6 +147,10 @@ def parse_eventgroup(eventgroup_json: dict) -> list[dict]:
                             "fight_id": event_id,
                             "fighter_a": fighter_a,
                             "fighter_b": fighter_b,
+                            "event_name": "",  # DK's MMA feed usually isn't grouped by card name; derived by date downstream
+                            "start_date": start_date,
+                            "weight_class": weight_class,
+                            "card_position": "",
                             "market": market_key,
                             "selection": selection,
                             "selection_method": selection_method,

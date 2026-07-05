@@ -6,559 +6,434 @@
 <title>UFC Edge Finder</title>
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --border: #262b36;
-    --text: #e6e8eb; --muted: #8a8f9a; --green: #3ddc84;
+    --bg: #0b0d11; --panel: #15181f; --panel2: #1b1f28; --border: #262b36;
+    --text: #eef0f2; --muted: #8a8f9a; --green: #3ddc84;
     --red: #ff5c5c; --accent: #d4af37;
   }
   * { box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 20px; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  .subtitle { color: var(--muted); margin-bottom: 4px; font-size: 13px; }
-  .updated { color: var(--muted); font-size: 11px; margin-bottom: 20px; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 18px; }
+  h1 { font-size: 21px; margin: 0 0 2px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+  .updated { color: var(--muted); font-size: 11px; margin-bottom: 18px; }
+
   .disclaimer, .notice {
     background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: var(--muted); margin-bottom: 20px;
+    padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: var(--muted); margin-bottom: 18px;
   }
   .notice { border-left-color: var(--red); }
-  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 28px; font-size: 13px; }
-  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+
+  .standout-section { margin-bottom: 26px; }
+  .standout-title { font-size: 15px; color: var(--accent); margin-bottom: 10px; }
+  .standout-card {
+    background: linear-gradient(135deg, #1c1710, #15181f);
+    border: 1px solid #3a2f14; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .standout-main { font-size: 14px; font-weight: 600; }
+  .standout-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .standout-edge { font-size: 18px; font-weight: 700; white-space: nowrap; }
+
+  .event-header { margin: 26px 0 10px; }
+  .event-name { font-size: 17px; font-weight: 700; }
+  .event-date { color: var(--muted); font-size: 12px; }
+
+  details.fight-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 10px; overflow: hidden;
+  }
+  details.fight-card summary {
+    padding: 12px 14px; cursor: pointer; list-style: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  details.fight-card summary::-webkit-details-marker { display: none; }
+  .matchup { font-size: 14.5px; font-weight: 600; }
+  .weight-class { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .card-position { color: var(--accent); font-size: 11px; font-weight: 600; }
+  .chevron { color: var(--muted); font-size: 12px; transition: transform 0.15s; }
+  details[open] .chevron { transform: rotate(90deg); }
+  .no-edges { color: var(--muted); font-size: 12px; padding: 0 14px 12px; }
+
+  .fight-body { padding: 0 14px 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; }
   tr:last-child td { border-bottom: none; }
-  .edge-pos { color: var(--green); font-weight: 600; }
+  .edge-pos { color: var(--green); font-weight: 700; }
   .edge-neg { color: var(--red); }
-  .section-title { font-size: 14px; margin: 6px 0 10px; color: var(--accent); }
+
+  .section-title { font-size: 14px; margin: 24px 0 10px; color: var(--accent); }
+  .rankings-table { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+
   @media (max-width: 480px) {
-    th, td { padding: 6px 6px; font-size: 12px; }
+    th, td { padding: 6px 5px; font-size: 11.5px; }
+    .standout-card { flex-direction: column; align-items: flex-start; }
   }
 </style>
 </head>
 <body>
   <h1>🥋 UFC Edge Finder</h1>
-  <div class="subtitle">Model probability vs. live sportsbook line, ranked by edge</div>
-  <div class="updated">Last updated: 2026-07-05 18:17 UTC · auto-refreshes every few hours</div>
+  <div class="subtitle">Model probability vs. live sportsbook lines</div>
+  <div class="updated">Last updated: 2026-07-05 18:24 UTC · source: DraftKings (moneyline + props) · auto-refreshes every few hours</div>
 
   <div class="disclaimer">
-    For analysis and education only, not betting advice. Only moneyline odds
-    are live right now (props need manual lines, see README). Please gamble
-    responsibly — if it ever stops being fun, that's worth paying attention to.
+    For analysis and education only, not betting advice. A flagged edge means the model disagrees
+    with the market — it doesn't mean it's right. Sanity-check against recent form, injuries, and camp
+    news. Please gamble responsibly.
   </div>
 
   
 
   
-  <div class="section-title">Live Moneyline Edges</div>
-  <table>
-    <tr><th>Fighter</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
+  <div class="standout-section">
+    <div class="standout-title">🔥 Standout Props This Refresh</div>
+    
+    <div class="standout-card">
+      <div>
+        <div class="standout-main">Conor McGregor — Method: KO/TKO</div>
+        <div class="standout-sub">Odds +250 · Model 0.864 vs. Book 0.286 · ½-Kelly 40.45%</div>
+      </div>
+      <div class="standout-edge edge-pos">57.79%</div>
+    </div>
+    
+    <div class="standout-card">
+      <div>
+        <div class="standout-main">Conor McGregor vs Max Holloway — Total Rounds Over</div>
+        <div class="standout-sub">Odds -110 · Model 0.276 vs. Book 0.524 · ½-Kelly 0.0%</div>
+      </div>
+      <div class="standout-edge edge-neg">-24.76%</div>
+    </div>
+    
+    <div class="standout-card">
+      <div>
+        <div class="standout-main">Conor McGregor vs Max Holloway — Total Rounds Under</div>
+        <div class="standout-sub">Odds -110 · Model 0.724 vs. Book 0.524 · ½-Kelly 21.0%</div>
+      </div>
+      <div class="standout-edge edge-pos">20.0%</div>
+    </div>
+    
+    <div class="standout-card">
+      <div>
+        <div class="standout-main">Conor McGregor — Moneyline</div>
+        <div class="standout-sub">Odds 150 · Model 0.509 vs. Book 0.384 · ½-Kelly 9.1%</div>
+      </div>
+      <div class="standout-edge edge-pos">12.57%</div>
+    </div>
+    
+    <div class="standout-card">
+      <div>
+        <div class="standout-main">Max Holloway — Moneyline</div>
+        <div class="standout-sub">Odds -180 · Model 0.491 vs. Book 0.616 · ½-Kelly 0.0%</div>
+      </div>
+      <div class="standout-edge edge-neg">-12.57%</div>
+    </div>
+    
+  </div>
+  
+
+  
+  <div class="event-header">
+    <div class="event-name">UFC 329: McGregor vs. Holloway 2</div>
+    <div class="event-date">2026-07-11</div>
+  </div>
+
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Conor McGregor vs Max Holloway</div>
+        <div class="weight-class">Welterweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Main Event</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <table>
+        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
+        
+        <tr>
+          <td>Conor McGregor</td>
+          <td>Method: KO/TKO</td>
+          <td>+250</td>
+          <td>0.864</td>
+          <td>0.286</td>
+          <td class="edge-pos">57.79%</td>
+          <td>40.45%</td>
+        </tr>
+        
+        <tr>
+          <td>Conor McGregor vs Max Holloway</td>
+          <td>Total Rounds Over</td>
+          <td>-110</td>
+          <td>0.276</td>
+          <td>0.524</td>
+          <td class="edge-neg">-24.76%</td>
+          <td>0.0%</td>
+        </tr>
+        
+        <tr>
+          <td>Conor McGregor vs Max Holloway</td>
+          <td>Total Rounds Under</td>
+          <td>-110</td>
+          <td>0.724</td>
+          <td>0.524</td>
+          <td class="edge-pos">20.0%</td>
+          <td>21.0%</td>
+        </tr>
+        
+        <tr>
+          <td>Conor McGregor</td>
+          <td>Moneyline</td>
+          <td>150</td>
+          <td>0.509</td>
+          <td>0.384</td>
+          <td class="edge-pos">12.57%</td>
+          <td>9.1%</td>
+        </tr>
+        
+        <tr>
+          <td>Max Holloway</td>
+          <td>Moneyline</td>
+          <td>-180</td>
+          <td>0.491</td>
+          <td>0.616</td>
+          <td class="edge-neg">-12.57%</td>
+          <td>0.0%</td>
+        </tr>
+        
+      </table>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Benoit Saint-Denis vs Paddy Pimblett</div>
+        <div class="weight-class">Lightweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Co-Main Event</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <table>
+        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
+        
+        <tr>
+          <td>Benoit Saint-Denis</td>
+          <td>Moneyline</td>
+          <td>135</td>
+          <td>0.5</td>
+          <td>0.409</td>
+          <td class="edge-pos">9.12%</td>
+          <td>6.48%</td>
+        </tr>
+        
+        <tr>
+          <td>Paddy Pimblett</td>
+          <td>Moneyline</td>
+          <td>-160</td>
+          <td>0.5</td>
+          <td>0.591</td>
+          <td class="edge-neg">-9.12%</td>
+          <td>0.0%</td>
+        </tr>
+        
+      </table>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Cory Sandhagen vs Mario Bautista</div>
+        <div class="weight-class">Bantamweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Main Card</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Brandon Royval vs Lone'er Kavanagh</div>
+        <div class="weight-class">Flyweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Main Card</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">King Green vs Terrance McKinney</div>
+        <div class="weight-class">Lightweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Main Card</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Robert Whittaker vs Nikita Krylov</div>
+        <div class="weight-class">Light Heavyweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Main Card</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Gable Steveson vs Elisha Ellison</div>
+        <div class="weight-class">Heavyweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Main Card</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Cody Garbrandt vs Adrian Yanez</div>
+        <div class="weight-class">Bantamweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Prelims</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Luke Riley vs Kai Kamaka III</div>
+        <div class="weight-class">Featherweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Prelims</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Cesar Almeida vs Damian Pinas</div>
+        <div class="weight-class">Middleweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Prelims</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      
+    </div>
+  </details>
+  
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">Ryan Gandra vs Zach Reese</div>
+        <div class="weight-class">Middleweight</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-position">Prelims</div>
+        <span class="chevron">▶</span>
+      </div>
+    </summary>
+    <div class="fight-body">
+      
+      <div class="no-edges">No live odds matched to this fight yet.</div>
+      
+    </div>
+  </details>
+  
+  
+
+  
+  <div class="section-title">Other Live Lines (not on a tracked card)</div>
+  <table class="rankings-table">
+    <tr><th>Fighter</th><th>Market</th><th>Odds</th><th>Edge %</th></tr>
     
     <tr>
-      <td>Elisha Ellison</td>
-      <td>1200.0</td>
-      <td>0.5</td>
-      <td>0.074</td>
-      <td class="edge-pos">42.62%</td>
-      <td>22.92%</td>
+      <td>Other Guy</td><td>Moneyline</td><td>-110</td>
+      <td class="edge-neg">0.0%</td>
     </tr>
     
     <tr>
-      <td>Justin Gaethje</td>
-      <td>385.0</td>
-      <td>0.5</td>
-      <td>0.198</td>
-      <td class="edge-pos">30.17%</td>
-      <td>18.51%</td>
-    </tr>
-    
-    <tr>
-      <td>Paulo Henrique Costa</td>
-      <td>375.0</td>
-      <td>0.5</td>
-      <td>0.202</td>
-      <td class="edge-pos">29.83%</td>
-      <td>18.33%</td>
-    </tr>
-    
-    <tr>
-      <td>Cody Garbrandt</td>
-      <td>320.0</td>
-      <td>0.5</td>
-      <td>0.228</td>
-      <td class="edge-pos">27.19%</td>
-      <td>17.19%</td>
-    </tr>
-    
-    <tr>
-      <td>Song Yadong</td>
-      <td>285.0</td>
-      <td>0.5</td>
-      <td>0.25</td>
-      <td class="edge-pos">24.97%</td>
-      <td>16.23%</td>
-    </tr>
-    
-    <tr>
-      <td>Khalil Rountree</td>
-      <td>252.0</td>
-      <td>0.5</td>
-      <td>0.273</td>
-      <td class="edge-pos">22.69%</td>
-      <td>15.08%</td>
-    </tr>
-    
-    <tr>
-      <td>Kai Kamaka</td>
-      <td>245.0</td>
-      <td>0.5</td>
-      <td>0.278</td>
-      <td class="edge-pos">22.21%</td>
-      <td>14.8%</td>
-    </tr>
-    
-    <tr>
-      <td>Kamaru Usman</td>
-      <td>217.0</td>
-      <td>0.508</td>
-      <td>0.304</td>
-      <td class="edge-pos">20.41%</td>
-      <td>14.07%</td>
-    </tr>
-    
-    <tr>
-      <td>Ian Garry</td>
-      <td>275.0</td>
-      <td>0.455</td>
-      <td>0.256</td>
-      <td class="edge-pos">19.91%</td>
-      <td>12.85%</td>
-    </tr>
-    
-    <tr>
-      <td>Cody Durden</td>
-      <td>215.0</td>
-      <td>0.5</td>
-      <td>0.304</td>
-      <td class="edge-pos">19.58%</td>
-      <td>13.37%</td>
-    </tr>
-    
-    <tr>
-      <td>Kamaru Usman</td>
-      <td>270.0</td>
-      <td>0.455</td>
-      <td>0.26</td>
-      <td class="edge-pos">19.46%</td>
-      <td>12.66%</td>
-    </tr>
-    
-    <tr>
-      <td>Josh Hokit</td>
-      <td>210.0</td>
-      <td>0.5</td>
-      <td>0.311</td>
-      <td class="edge-pos">18.89%</td>
-      <td>13.1%</td>
-    </tr>
-    
-    <tr>
-      <td>Conor McGregor</td>
-      <td>185.0</td>
-      <td>0.509</td>
-      <td>0.336</td>
-      <td class="edge-pos">17.29%</td>
-      <td>12.2%</td>
-    </tr>
-    
-    <tr>
-      <td>Brandon Royval</td>
-      <td>185.0</td>
-      <td>0.5</td>
-      <td>0.336</td>
-      <td class="edge-pos">16.36%</td>
-      <td>11.49%</td>
-    </tr>
-    
-    <tr>
-      <td>Cesar Almeida</td>
-      <td>185.0</td>
-      <td>0.5</td>
-      <td>0.339</td>
-      <td class="edge-pos">16.15%</td>
-      <td>11.49%</td>
-    </tr>
-    
-    <tr>
-      <td>Gillian Robertson</td>
-      <td>172.0</td>
-      <td>0.5</td>
-      <td>0.352</td>
-      <td class="edge-pos">14.82%</td>
-      <td>10.47%</td>
-    </tr>
-    
-    <tr>
-      <td>Joshua Van</td>
-      <td>165.0</td>
-      <td>0.5</td>
-      <td>0.365</td>
-      <td class="edge-pos">13.45%</td>
-      <td>9.85%</td>
-    </tr>
-    
-    <tr>
-      <td>Justin Gaethje</td>
-      <td>210.0</td>
-      <td>0.445</td>
-      <td>0.311</td>
-      <td class="edge-pos">13.35%</td>
-      <td>9.01%</td>
-    </tr>
-    
-    <tr>
-      <td>Sean Strickland</td>
-      <td>175.0</td>
-      <td>0.451</td>
-      <td>0.351</td>
-      <td class="edge-pos">9.96%</td>
-      <td>6.84%</td>
-    </tr>
-    
-    <tr>
-      <td>Nikita Krylov</td>
-      <td>130.0</td>
-      <td>0.5</td>
-      <td>0.417</td>
-      <td class="edge-pos">8.3%</td>
-      <td>5.77%</td>
-    </tr>
-    
-    <tr>
-      <td>King Green</td>
-      <td>126.0</td>
-      <td>0.5</td>
-      <td>0.424</td>
-      <td class="edge-pos">7.56%</td>
-      <td>5.16%</td>
-    </tr>
-    
-    <tr>
-      <td>Mario Bautista</td>
-      <td>126.0</td>
-      <td>0.5</td>
-      <td>0.424</td>
-      <td class="edge-pos">7.56%</td>
-      <td>5.16%</td>
-    </tr>
-    
-    <tr>
-      <td>Jorge Masvidal</td>
-      <td>125.0</td>
-      <td>0.5</td>
-      <td>0.429</td>
-      <td class="edge-pos">7.11%</td>
-      <td>5.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Zachary Reese</td>
-      <td>122.0</td>
-      <td>0.5</td>
-      <td>0.433</td>
-      <td class="edge-pos">6.68%</td>
-      <td>4.51%</td>
-    </tr>
-    
-    <tr>
-      <td>Paddy Pimblett</td>
-      <td>120.0</td>
-      <td>0.5</td>
-      <td>0.434</td>
-      <td class="edge-pos">6.56%</td>
-      <td>4.17%</td>
-    </tr>
-    
-    <tr>
-      <td>Alex Pereira</td>
-      <td>140.0</td>
-      <td>0.453</td>
-      <td>0.404</td>
-      <td class="edge-pos">4.97%</td>
-      <td>3.15%</td>
-    </tr>
-    
-    <tr>
-      <td>Nassourdine Imavov</td>
-      <td>-114.0</td>
-      <td>0.549</td>
-      <td>0.509</td>
-      <td class="edge-pos">4.07%</td>
-      <td>1.78%</td>
-    </tr>
-    
-    <tr>
-      <td>Tracy Cortez</td>
-      <td>-104.0</td>
-      <td>0.5</td>
-      <td>0.486</td>
-      <td class="edge-pos">1.4%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Wang Cong</td>
-      <td>-117.0</td>
-      <td>0.5</td>
-      <td>0.514</td>
-      <td class="edge-neg">-1.4%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Sean Strickland</td>
-      <td>-106.0</td>
-      <td>0.451</td>
-      <td>0.491</td>
-      <td class="edge-neg">-4.07%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Josh Hokit</td>
-      <td>-160.0</td>
-      <td>0.547</td>
-      <td>0.596</td>
-      <td class="edge-neg">-4.97%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Benoit Saint-Denis</td>
-      <td>-145.0</td>
-      <td>0.5</td>
-      <td>0.566</td>
-      <td class="edge-neg">-6.56%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Ryan Gandra</td>
-      <td>-143.5</td>
-      <td>0.5</td>
-      <td>0.567</td>
-      <td class="edge-neg">-6.68%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Conor McGregor</td>
-      <td>-145.0</td>
-      <td>0.5</td>
-      <td>0.571</td>
-      <td class="edge-neg">-7.11%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Terrance Mckinney</td>
-      <td>-150.0</td>
-      <td>0.5</td>
-      <td>0.576</td>
-      <td class="edge-neg">-7.56%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Cory Sandhagen</td>
-      <td>-150.0</td>
-      <td>0.5</td>
-      <td>0.576</td>
-      <td class="edge-neg">-7.56%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Robert Whittaker</td>
-      <td>-155.0</td>
-      <td>0.5</td>
-      <td>0.583</td>
-      <td class="edge-neg">-8.3%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Khamzat Chimaev</td>
-      <td>-205.0</td>
-      <td>0.549</td>
-      <td>0.649</td>
-      <td class="edge-neg">-9.96%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Ilia Topuria</td>
-      <td>-250.0</td>
-      <td>0.555</td>
-      <td>0.689</td>
-      <td class="edge-neg">-13.35%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Manel Kape</td>
-      <td>-190.0</td>
-      <td>0.5</td>
-      <td>0.635</td>
-      <td class="edge-neg">-13.45%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Mackenzie Dern</td>
-      <td>-210.0</td>
-      <td>0.5</td>
-      <td>0.648</td>
-      <td class="edge-neg">-14.82%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Damian Pinas</td>
-      <td>-218.0</td>
-      <td>0.5</td>
-      <td>0.661</td>
-      <td class="edge-neg">-16.15%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Lone'er Kavanagh</td>
-      <td>-225.0</td>
-      <td>0.5</td>
-      <td>0.664</td>
-      <td class="edge-neg">-16.36%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Max Holloway</td>
-      <td>-225.0</td>
-      <td>0.491</td>
-      <td>0.664</td>
-      <td class="edge-neg">-17.29%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Ciryl Gane</td>
-      <td>-250.0</td>
-      <td>0.5</td>
-      <td>0.689</td>
-      <td class="edge-neg">-18.89%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Islam Makhachev</td>
-      <td>-330.0</td>
-      <td>0.545</td>
-      <td>0.74</td>
-      <td class="edge-neg">-19.46%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Alessandro Costa</td>
-      <td>-265.0</td>
-      <td>0.5</td>
-      <td>0.696</td>
-      <td class="edge-neg">-19.58%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Islam Makhachev</td>
-      <td>-345.0</td>
-      <td>0.545</td>
-      <td>0.744</td>
-      <td class="edge-neg">-19.91%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Dricus Du Plessis</td>
-      <td>-260.0</td>
-      <td>0.492</td>
-      <td>0.696</td>
-      <td class="edge-neg">-20.41%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Luke Riley</td>
-      <td>-305.0</td>
-      <td>0.5</td>
-      <td>0.722</td>
-      <td class="edge-neg">-22.21%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Magomed Ankalaev</td>
-      <td>-310.0</td>
-      <td>0.5</td>
-      <td>0.727</td>
-      <td class="edge-neg">-22.69%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Umar Nurmagomedov</td>
-      <td>-350.0</td>
-      <td>0.5</td>
-      <td>0.75</td>
-      <td class="edge-neg">-24.97%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Adrian Yanez</td>
-      <td>-415.0</td>
-      <td>0.5</td>
-      <td>0.772</td>
-      <td class="edge-neg">-27.19%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Khamzat Chimaev</td>
-      <td>-500.0</td>
-      <td>0.5</td>
-      <td>0.798</td>
-      <td class="edge-neg">-29.83%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Arman Tsarukyan</td>
-      <td>-500.0</td>
-      <td>0.5</td>
-      <td>0.802</td>
-      <td class="edge-neg">-30.17%</td>
-      <td>0.0%</td>
-    </tr>
-    
-    <tr>
-      <td>Gable Steveson</td>
-      <td>-2800.0</td>
-      <td>0.5</td>
-      <td>0.926</td>
-      <td class="edge-neg">-42.62%</td>
-      <td>0.0%</td>
+      <td>Random Guy</td><td>Moneyline</td><td>-110</td>
+      <td class="edge-neg">0.0%</td>
     </tr>
     
   </table>
   
 
   <div class="section-title">Elo Rankings (from fight history)</div>
-  <table>
+  <table class="rankings-table">
     <tr><th>Fighter</th><th>Elo</th></tr>
     
     <tr><td>Ilia Topuria</td><td>1538.6</td></tr>

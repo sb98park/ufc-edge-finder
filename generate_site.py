@@ -1,9 +1,8 @@
 """
-Generates a static HTML page (docs/index.html) from live odds + the Elo
-model, for publishing via GitHub Pages. This is what the GitHub Actions
-workflow runs on a schedule.
+Generates docs/index.html: live odds/props grouped by real upcoming fight
+cards, with a standout-props section flagging the biggest model-vs-market
+disagreements. Run by GitHub Actions on a schedule; can also run locally:
 
-Run manually with:
     ODDS_API_KEY=your_key python generate_site.py
 """
 
@@ -16,6 +15,7 @@ from jinja2 import Environment, FileSystemLoader
 from src.elo import EloRatingSystem
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
+from src.card_matcher import load_fight_cards, group_edges_by_card, top_standout_props
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -31,6 +31,7 @@ def build_ratings() -> dict[str, float]:
 def main():
     elo_ratings = build_ratings()
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
+    cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
 
     live_error = None
     edges_df = pd.DataFrame()
@@ -44,6 +45,9 @@ def main():
     except Exception as exc:
         live_error = f"Couldn't fetch live odds: {exc}"
 
+    events, unmatched_df = group_edges_by_card(edges_df, cards_df)
+    standout_props = top_standout_props(edges_df, n=5, min_edge=5.0)
+
     rankings_df = pd.DataFrame(
         [{"fighter": f, "elo": r} for f, r in elo_ratings.items()]
     ).sort_values("elo", ascending=False).reset_index(drop=True)
@@ -52,9 +56,12 @@ def main():
     template = env.get_template("site.html")
 
     html = template.render(
-        edges=edges_df.to_dict("records"),
+        events=events,
+        unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
+        standout_props=standout_props,
         rankings=rankings_df.to_dict("records"),
         live_error=live_error,
+        source=source,
         generated_at=dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
     )
 
@@ -62,7 +69,7 @@ def main():
     with open(OUTPUT_PATH, "w") as f:
         f.write(html)
 
-    print(f"Wrote {OUTPUT_PATH} ({len(edges_df)} edges, {len(rankings_df)} ranked fighters)")
+    print(f"Wrote {OUTPUT_PATH} ({len(events)} events, {len(standout_props)} standout props flagged)")
 
 
 if __name__ == "__main__":
