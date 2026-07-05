@@ -22,15 +22,17 @@ import pandas as pd
 from src.elo import EloRatingSystem
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
+from src.power_rating import build_effective_ratings
+from src.odds_utils import format_american_odds
 
 DATA_DIR = "data"
 
 
-def build_ratings() -> dict[str, float]:
+def build_ratings(fighters_df: pd.DataFrame) -> dict[str, float]:
     history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
     elo = EloRatingSystem()
     elo.build_from_history(history_df)
-    return elo.ratings
+    return build_effective_ratings(fighters_df, elo.ratings, history_df)
 
 
 
@@ -40,7 +42,7 @@ def main():
     args = parser.parse_args()
 
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
-    elo_ratings = build_ratings()
+    elo_ratings = build_ratings(fighters_df)
 
     upcoming_df, source = get_live_props()
     if upcoming_df.empty:
@@ -48,6 +50,7 @@ def main():
         return
 
     edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings)
+    edges_df["odds_american"] = edges_df["odds_american"].apply(format_american_odds)
 
     print(f"\nData source: {source}")
     print(f"Total lines analyzed: {len(edges_df)}\n")

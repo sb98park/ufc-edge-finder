@@ -16,21 +16,23 @@ from src.elo import EloRatingSystem
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
 from src.card_matcher import load_fight_cards, group_edges_by_card, top_standout_props
+from src.power_rating import build_effective_ratings
+from src.odds_utils import format_american_odds
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
 
 
-def build_ratings() -> dict[str, float]:
+def build_ratings(fighters_df: pd.DataFrame) -> dict[str, float]:
     history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
     elo = EloRatingSystem()
     elo.build_from_history(history_df)
-    return elo.ratings
+    return build_effective_ratings(fighters_df, elo.ratings, history_df)
 
 
 def main():
-    elo_ratings = build_ratings()
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
+    elo_ratings = build_ratings(fighters_df)
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
 
     live_error = None
@@ -53,6 +55,7 @@ def main():
     ).sort_values("elo", ascending=False).reset_index(drop=True)
 
     env = Environment(loader=FileSystemLoader("templates"))
+    env.filters["american"] = format_american_odds
     template = env.get_template("site.html")
 
     html = template.render(

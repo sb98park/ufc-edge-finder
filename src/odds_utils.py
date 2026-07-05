@@ -38,6 +38,12 @@ def remove_vig_two_way(prob_a: float, prob_b: float) -> tuple[float, float]:
     return prob_a / total, prob_b / total
 
 
+def format_american_odds(value) -> str:
+    """+230 for underdogs, -280 for favorites -- never a bare decimal."""
+    v = int(round(float(value)))
+    return f"+{v}" if v > 0 else str(v)
+
+
 def decimal_odds(prob: float) -> float:
     """Fair decimal payout odds implied by a probability."""
     if prob <= 0:

@@ -93,7 +93,7 @@
     <div class="standout-card">
       <div>
         <div class="standout-main">{{ p.fighter }} — {{ p.market }}</div>
-        <div class="standout-sub">Odds {{ p.odds_american }} · Model {{ p.model_prob }} vs. Book {{ p.book_fair_prob }} · ½-Kelly {{ p.half_kelly_stake_pct }}%</div>
+        <div class="standout-sub">Odds {{ p.odds_american | american }} · Model {{ p.model_prob }} vs. Book {{ p.book_fair_prob }} · ½-Kelly {{ p.half_kelly_stake_pct }}%</div>
       </div>
       <div class="standout-edge {{ 'edge-pos' if p.edge_pct > 0 else 'edge-neg' }}">{{ p.edge_pct }}%</div>
     </div>
@@ -127,7 +127,7 @@
         <tr>
           <td>{{ row.fighter }}</td>
           <td>{{ row.market }}</td>
-          <td>{{ row.odds_american }}</td>
+          <td>{{ row.odds_american | american }}</td>
           <td>{{ row.model_prob }}</td>
           <td>{{ row.book_fair_prob }}</td>
           <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
@@ -149,7 +149,7 @@
     <tr><th>Fighter</th><th>Market</th><th>Odds</th><th>Edge %</th></tr>
     {% for row in unmatched %}
     <tr>
-      <td>{{ row.fighter }}</td><td>{{ row.market }}</td><td>{{ row.odds_american }}</td>
+      <td>{{ row.fighter }}</td><td>{{ row.market }}</td><td>{{ row.odds_american | american }}</td>
       <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
     </tr>
     {% endfor %}
