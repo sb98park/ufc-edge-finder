@@ -66,6 +66,8 @@ CATEGORY_MAP = {
     "how will the fight end": "Method",
     "total rounds": "TotalRounds",
     "round total": "TotalRounds",
+    "go the distance": "GoesTheDistance",
+    "fight to a decision": "GoesTheDistance",
 }
 
 METHOD_LABEL_MAP = {
@@ -141,7 +143,15 @@ def parse_eventgroup(eventgroup_json: dict) -> list[dict]:
                             # label is usually "<Fighter> by <Method>"
                             selection = label.split(" by ")[0].strip()
                         elif market_key == "TotalRounds":
-                            selection = "Over" if "over" in label.lower() else "Under" if "under" in label.lower() else label
+                            # Capture the specific line (e.g. "Over 2.5") so multiple
+                            # round lines on the same fight (1.5, 2.5, 3.5) don't collide
+                            line_match = re.search(r"(\d+\.?\d*)", label)
+                            line = line_match.group(1) if line_match else ""
+                            side = "Over" if "over" in label.lower() else "Under" if "under" in label.lower() else label
+                            selection = f"{side} {line}".strip()
+                            selection_method = line  # stash the numeric line for grouping downstream
+                        elif market_key == "GoesTheDistance":
+                            selection = "Goes The Distance" if "yes" in label.lower() or "distance" in label.lower() else "Ends In Finish"
 
                         rows.append({
                             "fight_id": event_id,

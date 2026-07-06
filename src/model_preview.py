@@ -67,12 +67,24 @@ def build_full_market_projection(
         (row_a["ko_wins"] + row_a["sub_wins"]) / max(int(row_a["wins"]), 1)
         + (row_b["ko_wins"] + row_b["sub_wins"]) / max(int(row_b["wins"]), 1)
     ) / 2
+    # Uses the 2.5 reference line to match the most commonly-offered live
+    # line format ("Total Rounds Under 2.5") -- if the book offers a
+    # different line (1.5, 3.5), this projection just won't dedupe against
+    # it and both will show, which is a reasonable fallback.
     rounds_rows = [
-        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under", "model_prob": round(combined_finish_rate, 3)},
-        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over", "model_prob": round(1 - combined_finish_rate, 3)},
+        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 2.5", "model_prob": round(combined_finish_rate, 3)},
+        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 2.5", "model_prob": round(1 - combined_finish_rate, 3)},
     ]
 
-    return {"method_rows": method_rows, "rounds_rows": rounds_rows}
+    dec_rate_a = row_a["dec_wins"] / max(int(row_a["wins"]), 1)
+    dec_rate_b = row_b["dec_wins"] / max(int(row_b["wins"]), 1)
+    goes_distance_prob = (dec_rate_a + dec_rate_b) / 2
+    distance_rows = [
+        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Fight Outcome: Goes The Distance", "model_prob": round(goes_distance_prob, 3)},
+        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Fight Outcome: Ends In Finish", "model_prob": round(1 - goes_distance_prob, 3)},
+    ]
+
+    return {"method_rows": method_rows, "rounds_rows": rounds_rows, "distance_rows": distance_rows}
 
 
 def build_fight_preview(

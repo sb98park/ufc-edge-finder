@@ -3,31 +3,35 @@ fight_id,fighter_a,fighter_b,event_name,start_date,weight_class,card_position,ma
 1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,Moneyline,Max Holloway,,-185
 1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,Method,Conor McGregor,KO/TKO,180
 1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,Method,Max Holloway,DEC,140
-1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,TotalRounds,Over,,-110
-1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,TotalRounds,Under,,-110
-2,Paddy Pimblett,Benoit Saint Denis,UFC 329,2026-07-11,Lightweight,Co-Main,Moneyline,Paddy Pimblett,,-165
-2,Paddy Pimblett,Benoit Saint Denis,UFC 329,2026-07-11,Lightweight,Co-Main,Moneyline,Benoit Saint Denis,,140
-2,Paddy Pimblett,Benoit Saint Denis,UFC 329,2026-07-11,Lightweight,Co-Main,Method,Benoit Saint Denis,KO/TKO,220
-2,Paddy Pimblett,Benoit Saint Denis,UFC 329,2026-07-11,Lightweight,Co-Main,Method,Paddy Pimblett,DEC,150
-2,Paddy Pimblett,Benoit Saint Denis,UFC 329,2026-07-11,Lightweight,Co-Main,TotalRounds,Over,,-120
-2,Paddy Pimblett,Benoit Saint Denis,UFC 329,2026-07-11,Lightweight,Co-Main,TotalRounds,Under,,100
+1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,TotalRounds,Over 2.5,,-110
+1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,TotalRounds,Under 2.5,,-110
+1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,TotalRounds,Over 1.5,,120
+1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,TotalRounds,Under 1.5,,-150
+1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,GoesTheDistance,Goes The Distance,,135
+1,Conor McGregor,Max Holloway,UFC 329,2026-07-11,Welterweight,Main Event,GoesTheDistance,Ends In Finish,,-165
+2,Paddy Pimblett,Benoit Saint-Denis,UFC 329,2026-07-11,Lightweight,Co-Main,Moneyline,Paddy Pimblett,,-165
+2,Paddy Pimblett,Benoit Saint-Denis,UFC 329,2026-07-11,Lightweight,Co-Main,Moneyline,Benoit Saint-Denis,,140
+2,Paddy Pimblett,Benoit Saint-Denis,UFC 329,2026-07-11,Lightweight,Co-Main,Method,Benoit Saint-Denis,KO/TKO,220
+2,Paddy Pimblett,Benoit Saint-Denis,UFC 329,2026-07-11,Lightweight,Co-Main,Method,Paddy Pimblett,DEC,150
+2,Paddy Pimblett,Benoit Saint-Denis,UFC 329,2026-07-11,Lightweight,Co-Main,TotalRounds,Over 2.5,,-120
+2,Paddy Pimblett,Benoit Saint-Denis,UFC 329,2026-07-11,Lightweight,Co-Main,TotalRounds,Under 2.5,,100
 3,Cory Sandhagen,Mario Bautista,UFC 329,2026-07-11,Bantamweight,Main Card,Moneyline,Cory Sandhagen,,-145
 3,Cory Sandhagen,Mario Bautista,UFC 329,2026-07-11,Bantamweight,Main Card,Moneyline,Mario Bautista,,125
 3,Cory Sandhagen,Mario Bautista,UFC 329,2026-07-11,Bantamweight,Main Card,Method,Mario Bautista,SUB,280
-3,Cory Sandhagen,Mario Bautista,UFC 329,2026-07-11,Bantamweight,Main Card,TotalRounds,Over,,-135
-3,Cory Sandhagen,Mario Bautista,UFC 329,2026-07-11,Bantamweight,Main Card,TotalRounds,Under,,112
+3,Cory Sandhagen,Mario Bautista,UFC 329,2026-07-11,Bantamweight,Main Card,TotalRounds,Over 2.5,,-135
+3,Cory Sandhagen,Mario Bautista,UFC 329,2026-07-11,Bantamweight,Main Card,TotalRounds,Under 2.5,,112
 4,Lone'er Kavanagh,Brandon Royval,UFC 329,2026-07-11,Flyweight,Main Card,Moneyline,Lone'er Kavanagh,,105
 4,Lone'er Kavanagh,Brandon Royval,UFC 329,2026-07-11,Flyweight,Main Card,Moneyline,Brandon Royval,,-125
 4,Lone'er Kavanagh,Brandon Royval,UFC 329,2026-07-11,Flyweight,Main Card,Method,Brandon Royval,SUB,190
-4,Lone'er Kavanagh,Brandon Royval,UFC 329,2026-07-11,Flyweight,Main Card,TotalRounds,Over,,-105
-4,Lone'er Kavanagh,Brandon Royval,UFC 329,2026-07-11,Flyweight,Main Card,TotalRounds,Under,,-115
+4,Lone'er Kavanagh,Brandon Royval,UFC 329,2026-07-11,Flyweight,Main Card,TotalRounds,Over 2.5,,-105
+4,Lone'er Kavanagh,Brandon Royval,UFC 329,2026-07-11,Flyweight,Main Card,TotalRounds,Under 2.5,,-115
 5,King Green,Terrance McKinney,UFC 329,2026-07-11,Lightweight,Main Card,Moneyline,King Green,,130
 5,King Green,Terrance McKinney,UFC 329,2026-07-11,Lightweight,Main Card,Moneyline,Terrance McKinney,,-155
 5,King Green,Terrance McKinney,UFC 329,2026-07-11,Lightweight,Main Card,Method,Terrance McKinney,KO/TKO,145
-5,King Green,Terrance McKinney,UFC 329,2026-07-11,Lightweight,Main Card,TotalRounds,Over,,150
-5,King Green,Terrance McKinney,UFC 329,2026-07-11,Lightweight,Main Card,TotalRounds,Under,,-190
+5,King Green,Terrance McKinney,UFC 329,2026-07-11,Lightweight,Main Card,TotalRounds,Over 2.5,,150
+5,King Green,Terrance McKinney,UFC 329,2026-07-11,Lightweight,Main Card,TotalRounds,Under 2.5,,-190
 6,Nikita Krylov,Robert Whittaker,UFC 329,2026-07-11,Light Heavyweight,Main Card,Moneyline,Nikita Krylov,,175
 6,Nikita Krylov,Robert Whittaker,UFC 329,2026-07-11,Light Heavyweight,Main Card,Moneyline,Robert Whittaker,,-215
 6,Nikita Krylov,Robert Whittaker,UFC 329,2026-07-11,Light Heavyweight,Main Card,Method,Nikita Krylov,SUB,240
-6,Nikita Krylov,Robert Whittaker,UFC 329,2026-07-11,Light Heavyweight,Main Card,TotalRounds,Over,,-125
-6,Nikita Krylov,Robert Whittaker,UFC 329,2026-07-11,Light Heavyweight,Main Card,TotalRounds,Under,,105
+6,Nikita Krylov,Robert Whittaker,UFC 329,2026-07-11,Light Heavyweight,Main Card,TotalRounds,Over 2.5,,-125
+6,Nikita Krylov,Robert Whittaker,UFC 329,2026-07-11,Light Heavyweight,Main Card,TotalRounds,Under 2.5,,105

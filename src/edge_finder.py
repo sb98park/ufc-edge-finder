@@ -8,6 +8,8 @@ against recent form, injuries, weight cuts, camp changes, etc. that a
 pure stats model can't see.
 """
 
+import re
+
 import pandas as pd
 
 from .odds_utils import american_to_implied_prob, remove_vig_two_way, edge_percent, kelly_fraction
@@ -126,17 +128,28 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
     return pd.DataFrame(rows).sort_values("edge_pct", ascending=False).reset_index(drop=True)
 
 
+def _extract_round_line(selection: str) -> float | None:
+    match = re.search(r"(\d+\.?\d*)", str(selection))
+    return float(match.group(1)) if match else None
+
+
 def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
     """
     Over/Under total rounds props, estimated from each fighter's historical
-    finish rate (frequent finishers -> fewer rounds; frequent decisions ->
-    more rounds). Very simplified -- a good candidate to improve first with
-    real fight-length data instead of just win-method proxies.
+    finish rate. A fight card often offers multiple lines (1.5, 2.5, 3.5) for
+    the same fight -- these are grouped separately so they don't collide,
+    with probability adjusted per line (a lower line is stricter/less likely
+    to hit "Under" than a higher one). Still a simplified proxy, not a real
+    per-round simulation.
     """
     rows = []
-    props = upcoming_df[upcoming_df["market"] == "TotalRounds"]
+    props = upcoming_df[upcoming_df["market"] == "TotalRounds"].copy()
+    props["_line"] = props["selection"].apply(_extract_round_line)
 
-    for fight_id, group in props.groupby("fight_id"):
+    REFERENCE_LINE = 2.5
+    ADJUSTMENT_PER_ROUND = 0.15
+
+    for (fight_id, line), group in props.groupby(["fight_id", "_line"]):
         fighters_in_fight = group["fighter_a"].iloc[0], group["fighter_b"].iloc[0]
         finish_rates = []
         for name in fighters_in_fight:
@@ -152,11 +165,14 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
             continue
 
         combined_finish_rate = sum(finish_rates) / len(finish_rates)
-        # crude heuristic: high combined finish rate -> lean Under
-        model_prob_under = min(0.85, max(0.15, combined_finish_rate))
+        if line is not None:
+            model_prob_under = combined_finish_rate - (REFERENCE_LINE - line) * ADJUSTMENT_PER_ROUND
+        else:
+            model_prob_under = combined_finish_rate
+        model_prob_under = min(0.95, max(0.05, model_prob_under))
 
         for _, row in group.iterrows():
-            model_p = model_prob_under if row["selection"] == "Under" else (1 - model_prob_under)
+            model_p = model_prob_under if "under" in row["selection"].lower() else (1 - model_prob_under)
             imp = american_to_implied_prob(row["odds_american"])
             rows.append({
                 "fight_id": fight_id,
@@ -168,6 +184,44 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 "edge_pct": round(edge_percent(model_p, imp), 2),
                 "half_kelly_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
             })
+
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).sort_values("edge_pct", ascending=False).reset_index(drop=True)
+
+
+def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    'Fight goes the distance' vs 'ends in a finish' -- derived the same way
+    as method-of-victory (sum of both fighters' decision-win likelihood).
+    """
+    rows = []
+    props = upcoming_df[upcoming_df["market"] == "GoesTheDistance"]
+
+    for _, row in props.iterrows():
+        f_a = fighters_df[fighters_df["name"] == row["fighter_a"]]
+        f_b = fighters_df[fighters_df["name"] == row["fighter_b"]]
+        if f_a.empty or f_b.empty:
+            continue
+        a, b = f_a.iloc[0], f_b.iloc[0]
+        dec_rate_a = a["dec_wins"] / max(int(a["wins"]), 1)
+        dec_rate_b = b["dec_wins"] / max(int(b["wins"]), 1)
+        # rough proxy: average of both fighters' decision tendency as the
+        # fight-level chance it goes the distance
+        goes_distance_prob = (dec_rate_a + dec_rate_b) / 2
+
+        model_p = goes_distance_prob if "distance" in row["selection"].lower() and "ends" not in row["selection"].lower() else (1 - goes_distance_prob)
+        imp = american_to_implied_prob(row["odds_american"])
+        rows.append({
+            "fight_id": row["fight_id"],
+            "fighter": f"{row['fighter_a']} vs {row['fighter_b']}",
+            "market": f"Fight Outcome: {row['selection']}",
+            "odds_american": row["odds_american"],
+            "model_prob": round(model_p, 3),
+            "book_fair_prob": round(imp, 3),
+            "edge_pct": round(edge_percent(model_p, imp), 2),
+            "half_kelly_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+        })
 
     if not rows:
         return pd.DataFrame()
@@ -221,6 +275,7 @@ def find_all_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame, elo_rat
         compute_moneyline_edges(upcoming_df, elo_ratings, fighters_df),
         compute_method_edges(upcoming_df, fighters_df),
         compute_total_rounds_edges(upcoming_df, fighters_df),
+        compute_goes_the_distance_edges(upcoming_df, fighters_df),
     ]
     frames = [f for f in frames if not f.empty]
     if not frames:

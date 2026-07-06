@@ -27,6 +27,9 @@ def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
     }
 
 
+from src.matchup_model import predict_matchup
+
+
 def explain_moneyline(row: dict, fighters_df: pd.DataFrame) -> str:
     stats = _fighter_stats(fighters_df, row["fighter"])
     edge_dir = "higher" if row["edge_pct"] > 0 else "lower"
@@ -35,6 +38,40 @@ def explain_moneyline(row: dict, fighters_df: pd.DataFrame) -> str:
         f"{edge_dir} than the market's {row['book_fair_prob']*100:.0f}% implied probability "
         f"at {row['odds_american']} ({row['edge_pct']:+.1f}% edge)."
     )
+
+    opponent = row.get("opponent")
+    if opponent:
+        matchup = predict_matchup(row["fighter"], opponent, fighters_df, {})
+        # predict_matchup needs effective_ratings for the base gap, but we don't
+        # have that here -- just the style breakdown, which doesn't depend on it
+        if matchup:
+            drivers = []
+            if abs(matchup["wrestling_adjustment"]) > 15:
+                who = row["fighter"] if matchup["wrestling_adjustment"] > 0 else opponent
+                drivers.append(f"{who}'s takedown accuracy vs. the opponent's takedown defense")
+            if abs(matchup["striking_adjustment"]) > 10:
+                who = row["fighter"] if matchup["striking_adjustment"] > 0 else opponent
+                drivers.append(f"{who}'s striking accuracy edge")
+            if abs(matchup["durability_adjustment"]) > 15:
+                who = row["fighter"] if matchup["durability_adjustment"] > 0 else opponent
+                drivers.append(f"{who} having been finished less often historically")
+            layoff_a = matchup.get("layoff_years_a")
+            layoff_b = matchup.get("layoff_years_b")
+            if layoff_a and layoff_a > 1.0:
+                drivers.append(f"{row['fighter']} coming off a {layoff_a:.1f}-year layoff (ring rust risk)")
+            if layoff_b and layoff_b > 1.0:
+                drivers.append(f"{opponent} coming off a {layoff_b:.1f}-year layoff (ring rust risk)")
+
+            if drivers:
+                base += f" Biggest factors in that number: {', '.join(drivers)}."
+            elif stats:
+                base += (
+                    f" That's built on a {stats['wins']}-{stats['losses']} record "
+                    f"({stats['win_pct']*100:.0f}% win rate) and a {stats['finish_rate']*100:.0f}% finish rate, "
+                    f"with no major style, durability, or layoff mismatch pulling the number further."
+                )
+            return base
+
     if stats:
         base += (
             f" That's built on a {stats['wins']}-{stats['losses']} record "
@@ -83,6 +120,24 @@ def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
     return base
 
 
+def explain_goes_the_distance(row: dict, fighters_df: pd.DataFrame) -> str:
+    names = row["fighter"].split(" vs ")
+    dec_rates = []
+    for name in names:
+        s = _fighter_stats(fighters_df, name.strip())
+        if s:
+            dec_rates.append(s["dec_rate"])
+
+    base = (
+        f"{row['market']} at {row['odds_american']} implies {row['book_fair_prob']*100:.0f}%, "
+        f"vs. the model's {row['model_prob']*100:.0f}% ({row['edge_pct']:+.1f}% edge)."
+    )
+    if dec_rates:
+        avg_dec = sum(dec_rates) / len(dec_rates)
+        base += f" Based on both fighters' career decision rate averaging {avg_dec*100:.0f}%."
+    return base
+
+
 def explain_edge(row: dict, fighters_df: pd.DataFrame) -> str:
     if row["market"] == "Moneyline":
         return explain_moneyline(row, fighters_df)
@@ -90,4 +145,6 @@ def explain_edge(row: dict, fighters_df: pd.DataFrame) -> str:
         return explain_method(row, fighters_df)
     elif row["market"].startswith("Total Rounds"):
         return explain_total_rounds(row, fighters_df)
+    elif row["market"].startswith("Fight Outcome"):
+        return explain_goes_the_distance(row, fighters_df)
     return f"{row['fighter']} — {row['market']}: {row['edge_pct']:+.1f}% edge vs. the market."

@@ -55,6 +55,7 @@
   }
   .standout-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .standout-main { font-size: 14.5px; font-weight: 700; }
+  .standout-vs { font-size: 12px; font-weight: 400; color: var(--muted); }
   .standout-market { color: var(--accent2); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
   .standout-edge-badge {
     font-size: 16px; font-weight: 800; white-space: nowrap; border-radius: 8px; padding: 3px 9px;
@@ -213,7 +214,7 @@
     <div class="standout-card">
       <div class="standout-top">
         <div>
-          <div class="standout-main">{{ p.fighter }}{% if p.opponent %} vs {{ p.opponent }}{% endif %}</div>
+          <div class="standout-main">{{ p.fighter }}<span class="standout-vs">{% if p.opponent %} (vs. {{ p.opponent }}){% endif %}</span></div>
           <div class="standout-market">{{ p.market }}</div>
         </div>
         <div class="standout-edge-badge {{ 'edge-pos' if p.edge_pct > 0 else 'edge-neg' }}">{{ p.edge_pct }}%</div>

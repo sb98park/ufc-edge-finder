@@ -60,13 +60,20 @@ def group_edges_by_card(
         fighter_field = edge_dict["fighter"]
 
         if " vs " in fighter_field:
-            names = _split_total_rounds_fighter_field(fighter_field)
+            row_pair = _split_total_rounds_fighter_field(fighter_field)
+        elif edge_dict.get("opponent"):
+            # Moneyline/Method rows: require BOTH the fighter AND their listed
+            # opponent to match a tracked fight's exact pair. Matching on the
+            # fighter's name alone is what let a stale/unrelated row (e.g. a
+            # leftover "vs a different opponent" line) get folded into the
+            # wrong fight just because one name happened to overlap.
+            row_pair = {edge_dict["fighter"], edge_dict["opponent"]}
         else:
-            names = {fighter_field}
+            row_pair = {fighter_field}
 
         matched = False
         for fight in fights:
-            if names & fight["fighters"]:
+            if row_pair == fight["fighters"]:
                 fight["edges"].append(edge_dict)
                 matched = True
                 break
@@ -90,7 +97,7 @@ def group_edges_by_card(
             )
             model_only = []
             if projection:
-                for row in projection["method_rows"] + projection["rounds_rows"]:
+                for row in projection["method_rows"] + projection["rounds_rows"] + projection["distance_rows"]:
                     if row["market"] not in live_markets:
                         model_only.append(row)
             fight["model_only_rows"] = model_only
@@ -108,13 +115,18 @@ def group_edges_by_card(
 def top_standout_props(
     edges_df: pd.DataFrame, fighters_df: pd.DataFrame | None = None, n: int = 5, min_edge: float = 5.0
 ) -> list[dict]:
-    """The headline 'worth a look' props, sorted by biggest absolute edge."""
+    """
+    The headline 'worth a look' props. Only positive edges qualify -- a
+    negative edge just means the OTHER side of that same line is the value
+    play, which will already show up as its own positive-edge entry, so
+    showing both is redundant and confusing (looks like two different
+    findings when it's really one).
+    """
     if edges_df.empty:
         return []
-    standout = edges_df[edges_df["edge_pct"].abs() >= min_edge].copy()
-    standout["abs_edge"] = standout["edge_pct"].abs()
-    standout = standout.sort_values("abs_edge", ascending=False).head(n)
-    records = standout.drop(columns="abs_edge").to_dict("records")
+    standout = edges_df[edges_df["edge_pct"] >= min_edge].copy()
+    standout = standout.sort_values("edge_pct", ascending=False).head(n)
+    records = standout.to_dict("records")
     for r in records:
         try:
             r["model_fair_odds"] = format_american_odds(implied_prob_to_american(r["model_prob"]))
