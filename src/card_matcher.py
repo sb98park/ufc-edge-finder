@@ -4,11 +4,25 @@ upcoming fight card (data/fight_cards.csv) so the site can group everything
 by event -> fight, instead of one flat table.
 """
 
+import re
+import unicodedata
+
 import pandas as pd
 
 from src.rationale import explain_edge
 from src.model_preview import build_fight_preview, build_full_market_projection
 from src.odds_utils import implied_prob_to_american, format_american_odds
+
+
+def _normalize_name(name: str) -> str:
+    """
+    Strips accents and standardizes punctuation so minor spelling differences
+    between sources (e.g. Polymarket listing 'Benoît Saint Denis' while our
+    data has 'Benoit Saint-Denis') don't cause a real fight to silently miss
+    its match and get dumped into 'unmatched' instead.
+    """
+    normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9 ]", " ", normalized.lower()).strip()
 
 
 def load_fight_cards(path: str = "data/fight_cards.csv") -> pd.DataFrame:
@@ -47,6 +61,7 @@ def group_edges_by_card(
             "fighter_a": row["fighter_a"],
             "fighter_b": row["fighter_b"],
             "fighters": {row["fighter_a"], row["fighter_b"]},
+            "fighters_normalized": {_normalize_name(row["fighter_a"]), _normalize_name(row["fighter_b"])},
             "preview": preview,
             "edges": [],
         })
@@ -72,8 +87,9 @@ def group_edges_by_card(
             row_pair = {fighter_field}
 
         matched = False
+        row_pair_normalized = {_normalize_name(n) for n in row_pair}
         for fight in fights:
-            if row_pair == fight["fighters"]:
+            if row_pair_normalized == fight["fighters_normalized"]:
                 fight["edges"].append(edge_dict)
                 matched = True
                 break

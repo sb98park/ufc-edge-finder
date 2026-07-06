@@ -77,33 +77,58 @@ python find_ev_bets.py                  # default: flag anything with |edge| >= 
 python find_ev_bets.py --min-edge 8     # stricter threshold
 ```
 
-This pulls **live moneyline, method of victory, and total rounds props
-directly from DraftKings** (via their unofficial JSON endpoints — same
-data their own site displays, no login needed), runs every line through
-the model, and flags anything where the model disagrees with the market
-by more than your threshold. Falls back to The Odds API (moneyline only)
-if DraftKings' endpoints are unreachable or have changed shape.
+This pulls live odds through a three-way fallback chain, runs every line
+through the model, and flags anything where the model disagrees with the
+market by more than your threshold.
 
-**Important honesty note about the DraftKings scraper**
-(`src/draftkings_scraper.py`): DraftKings has no official public API.
-This uses documented-by-the-community, unofficial endpoints their own
-website calls. That means:
-- It could break without warning if DraftKings changes their JSON structure
-- It's a legal/ToS gray area — you're not hacking anything (no login,
-  no auth bypass), but it's also not sanctioned use, so keep request
-  volume low and don't build anything commercial on top of it
-- I built and unit-tested the parser against DraftKings' documented JSON
-  shape, but couldn't test it against their live servers (this dev
-  environment has no internet access) — if it returns nothing, the
-  likely fix is opening DevTools on sportsbook.draftkings.com/leagues/mma/ufc
-  and checking whether the endpoint URL or JSON field names have moved
+### Data source priority: Polymarket → DraftKings → The Odds API
 
-**FanDuel**: their site is much more locked down (heavy bot detection,
-no clean unofficial JSON pattern like DK's), so I didn't build a scraper
-for it. If you want FanDuel props specifically, the realistic options are
-a paid aggregator (OpticOdds, OddsPapi, or an Apify actor) that normalizes
-FanDuel + DraftKings + others into one clean feed — worth it if you want
-this to be reliable long-term rather than best-effort.
+1. **Polymarket (`src/polymarket_source.py`) — primary source.** Polymarket's
+   Gamma API (`gamma-api.polymarket.com`) is fully public, no auth required,
+   and is Polymarket's actual documented API (unlike DraftKings below), so
+   it should be far more stable long-term. It's a peer-to-peer prediction
+   market, not a sportsbook, so prices carry no bookmaker vig. Prices come
+   back as 0–1 probabilities and are converted to familiar American odds
+   format (+150, -180) before anything touches the site — you'll never see
+   a raw percentage where an odds line should be.
+2. **DraftKings (`src/draftkings_scraper.py`) — fallback.** DraftKings has
+   no official public API at all. This uses unofficial, reverse-engineered
+   endpoints their own website calls. Real risks: it can break without
+   warning if DraftKings changes their JSON structure, and — worth knowing
+   specifically because this runs on GitHub Actions — cloud/CI IP ranges
+   are exactly the kind of traffic sites like this tend to block or
+   rate-limit. If Polymarket doesn't have a market for something DraftKings
+   does, this is the fallback.
+3. **The Odds API (`src/live_odds.py`) — last resort.** Moneyline only for
+   MMA on their platform, used only if both of the above fail.
+
+**FanDuel**: not scraped directly — their site has much heavier bot
+detection with no clean unofficial pattern like DraftKings has. If you
+want FanDuel specifically, a paid aggregator (OpticOdds, OddsPapi) is the
+realistic path.
+
+### Honest limitations of the Polymarket integration
+
+Polymarket's API is properly documented, which makes this meaningfully
+more trustworthy than the DraftKings scraper — but a few things are still
+best-effort:
+- **Market discovery** is done by pulling active events sorted by volume
+  and filtering client-side for "UFC" in the title (Gamma's `/events`
+  endpoint has no free-text search), so a very low-volume or oddly-titled
+  event could be missed.
+- **Prop questions** (method of victory, rounds, goes-the-distance) are
+  classified by keyword-matching the market's question text, and the
+  specific fighter/opponent is pulled from the event title rather than the
+  question itself, since Yes/No prop questions don't always name the
+  opponent. This is a reasonable approach but hasn't been verified against
+  Polymarket's live servers from this dev environment (no internet access
+  here) — if props come back empty or misattributed, that's the first
+  place to check.
+- Fighter names are matched to your tracked card with accent/punctuation
+  normalization (e.g. Polymarket's "Benoît Saint Denis" correctly matches
+  your data's "Benoit Saint-Denis"), so minor spelling differences between
+  sources shouldn't cause a real fight to silently disappear into
+  "unmatched."
 
 ## Getting the live, auto-updating GitHub Pages site
 
@@ -113,26 +138,27 @@ you can open on your phone that keeps itself current — no server needed.
 
 ### Setup (one-time)
 
-1. **Get a free API key** at [the-odds-api.com](https://the-odds-api.com)
-   (free tier covers this fine at low request volume).
-2. **Add it as a repo secret**: on GitHub, go to your repo →
-   Settings → Secrets and variables → Actions → New repository secret →
-   name it `ODDS_API_KEY`, paste your key.
+1. **Nothing required for odds data** — Polymarket (primary) and
+   DraftKings (fallback) both need zero setup or API keys.
+2. **Optional**: get a free key at [the-odds-api.com](https://the-odds-api.com)
+   as a last-resort fallback if both of the above ever fail, and add it as
+   a repo secret (Settings → Secrets and variables → Actions → New
+   repository secret → name `ODDS_API_KEY`). Skippable — the site works
+   without it as long as Polymarket or DraftKings are reachable.
 3. **Enable GitHub Pages**: Settings → Pages → under "Build and deployment",
    set Source to "Deploy from a branch", branch `main`, folder `/docs`.
-4. Push to `main`. The workflow runs automatically on push, on a 4-hour
-   schedule after that, and any time you trigger it manually from the
-   Actions tab.
+4. Push to `main`. The workflow runs automatically on push, on a schedule
+   after that, and any time you trigger it manually from the Actions tab.
 5. Your live link will be `https://<your-username>.github.io/<repo-name>/`
 
 ### Important limitation
 
-The Odds API currently only provides **moneyline (h2h)** odds for MMA —
-no method-of-victory or round-totals markets yet. So the live auto-updating
-page only shows moneyline edges. If you want prop edges for a specific
-upcoming card, update `data/upcoming_props.csv` manually with lines from
-your sportsbook and run the local Flask app (`python app.py`) — that part
-still supports the fuller prop analysis.
+Coverage depends on which source actually responds: Polymarket has real
+prop markets (method, rounds, goes-the-distance) when they exist for a
+given fight, DraftKings similarly covers moneyline + props when its
+endpoints are reachable, but The Odds API (the last-resort fallback) is
+moneyline-only for MMA. Check the "Odds via ___" badge at the top of the
+site to see which source actually served that refresh.
 
 ## Ideas to extend
 

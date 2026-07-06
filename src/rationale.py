@@ -7,6 +7,8 @@ whether it's a real signal or a model blind spot.
 
 import pandas as pd
 
+from src.odds_utils import format_american_odds
+
 
 def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
     row = fighters_df[fighters_df["name"] == name]
@@ -36,7 +38,7 @@ def explain_moneyline(row: dict, fighters_df: pd.DataFrame) -> str:
     base = (
         f"The model puts {row['fighter']}'s win probability at {row['model_prob']*100:.0f}%, "
         f"{edge_dir} than the market's {row['book_fair_prob']*100:.0f}% implied probability "
-        f"at {row['odds_american']} ({row['edge_pct']:+.1f}% edge)."
+        f"at {format_american_odds(row['odds_american'])} ({row['edge_pct']:+.1f}% edge)."
     )
 
     opponent = row.get("opponent")
@@ -84,7 +86,7 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
     stats = _fighter_stats(fighters_df, row["fighter"])
     method = row["market"].replace("Method: ", "")
     base = (
-        f"{row['fighter']} to win by {method} is priced at {row['odds_american']} "
+        f"{row['fighter']} to win by {method} is priced at {format_american_odds(row['odds_american'])} "
         f"({row['book_fair_prob']*100:.0f}% implied), while the model estimates {row['model_prob']*100:.0f}% "
         f"({row['edge_pct']:+.1f}% edge)."
     )
@@ -108,7 +110,7 @@ def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
             finish_rates.append(s["finish_rate"])
 
     base = (
-        f"{row['market']} at {row['odds_american']} implies {row['book_fair_prob']*100:.0f}%, "
+        f"{row['market']} at {format_american_odds(row['odds_american'])} implies {row['book_fair_prob']*100:.0f}%, "
         f"vs. the model's {row['model_prob']*100:.0f}% ({row['edge_pct']:+.1f}% edge)."
     )
     if finish_rates:
@@ -129,7 +131,7 @@ def explain_goes_the_distance(row: dict, fighters_df: pd.DataFrame) -> str:
             dec_rates.append(s["dec_rate"])
 
     base = (
-        f"{row['market']} at {row['odds_american']} implies {row['book_fair_prob']*100:.0f}%, "
+        f"{row['market']} at {format_american_odds(row['odds_american'])} implies {row['book_fair_prob']*100:.0f}%, "
         f"vs. the model's {row['model_prob']*100:.0f}% ({row['edge_pct']:+.1f}% edge)."
     )
     if dec_rates:
