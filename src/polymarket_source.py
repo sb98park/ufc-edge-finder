@@ -51,29 +51,73 @@ def _safe_json_loads(value, default=None):
         return default if default is not None else []
 
 
-def fetch_ufc_events(limit: int = 200) -> list[dict]:
+def _find_mma_tag_id() -> str | None:
     """
-    Gamma has no text search on /events, so pull active/open events ordered
-    by volume and filter client-side for UFC-titled events.
+    Gamma's /sports endpoint returns tag metadata per sport. Filtering events
+    by this tag_id is far more reliable than sorting all active events
+    (across the entire platform) by volume and hoping UFC cracks the top N --
+    it won't, since political/crypto markets dwarf individual MMA fights in
+    platform-wide dollar volume even though MMA markets are significant
+    within their own category.
     """
+    resp = requests.get(f"{GAMMA_BASE}/sports", headers=HEADERS, timeout=20)
+    resp.raise_for_status()
+    sports = resp.json()
+    for sport in sports:
+        label = (sport.get("label") or sport.get("name") or sport.get("slug") or "").lower()
+        if "mma" in label or "ufc" in label:
+            tag_id = sport.get("id") or sport.get("tagId") or sport.get("tag_id")
+            print(f"[polymarket] found MMA/UFC tag: {label!r} (tag_id={tag_id})")
+            return str(tag_id) if tag_id is not None else None
+    print(f"[polymarket] no MMA/UFC tag found among {len(sports)} sports")
+    return None
+
+
+def _fetch_events_by_tag(tag_id: str, limit: int = 200) -> list[dict]:
     resp = requests.get(
         f"{GAMMA_BASE}/events",
-        params={"active": "true", "closed": "false", "limit": limit, "order": "volume", "ascending": "false"},
+        params={"tag_id": tag_id, "active": "true", "closed": "false", "limit": limit},
         headers=HEADERS, timeout=20,
     )
-    if resp.status_code != 200:
-        print(f"[polymarket] events request returned status {resp.status_code}, body preview: {resp.text[:200]!r}")
     resp.raise_for_status()
     events = resp.json()
-    print(f"[polymarket] fetched {len(events)} total active events")
+    print(f"[polymarket] tag-based lookup returned {len(events)} events")
+    return [e for e in events if "ufc" in (e.get("title") or "").lower() or "ufc" in (e.get("slug") or "").lower()]
 
-    ufc_events = [e for e in events if "ufc" in (e.get("title") or "").lower() or "ufc" in (e.get("slug") or "").lower()]
-    print(f"[polymarket] {len(ufc_events)} matched 'ufc' in title/slug")
-    if ufc_events:
-        total_markets = sum(len(e.get("markets", [])) for e in ufc_events)
-        print(f"[polymarket] those events contain {total_markets} total nested markets")
-        print(f"[polymarket] sample event title: {ufc_events[0].get('title')!r}")
-    return ufc_events
+
+def _fetch_events_by_volume_fallback(limit: int = 200, pages: int = 3) -> list[dict]:
+    """Backup discovery if tag lookup fails: paginate through volume-sorted events instead of just the first page."""
+    all_ufc_events = []
+    for page in range(pages):
+        resp = requests.get(
+            f"{GAMMA_BASE}/events",
+            params={"active": "true", "closed": "false", "limit": limit, "offset": page * limit,
+                     "order": "volume", "ascending": "false"},
+            headers=HEADERS, timeout=20,
+        )
+        resp.raise_for_status()
+        events = resp.json()
+        if not events:
+            break
+        all_ufc_events.extend(
+            e for e in events if "ufc" in (e.get("title") or "").lower() or "ufc" in (e.get("slug") or "").lower()
+        )
+    print(f"[polymarket] volume-sorted fallback (paginated) found {len(all_ufc_events)} UFC events")
+    return all_ufc_events
+
+
+def fetch_ufc_events(limit: int = 200) -> list[dict]:
+    try:
+        tag_id = _find_mma_tag_id()
+        if tag_id:
+            ufc_events = _fetch_events_by_tag(tag_id, limit)
+            if ufc_events:
+                return ufc_events
+            print("[polymarket] tag-based lookup found no UFC-titled events, falling back to volume-sorted pagination")
+    except Exception as exc:
+        print(f"[polymarket] tag lookup failed ({exc}), falling back to volume-sorted pagination")
+
+    return _fetch_events_by_volume_fallback(limit)
 
 
 def _extract_method(text: str) -> str | None:
