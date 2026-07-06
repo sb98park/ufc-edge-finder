@@ -149,21 +149,96 @@ def _extract_matchup_from_title(event_title: str) -> tuple[str, str] | None:
     return None
 
 
+def _parse_multi_outcome_market(
+    outcomes: list, prices: list, question: str, event_title: str,
+    title_pair: tuple[str, str] | None, fight_id: str,
+) -> list[dict]:
+    """
+    Handles markets with 3+ outcomes in one shot -- e.g. a single 'How does
+    the fight end?' market with outcomes ['KO/TKO', 'Submission', 'Decision']
+    instead of three separate Yes/No questions. Also handles round-by-round
+    markets (outcomes like 'Round 1', 'Round 2', ..., 'Decision') by mapping
+    each round outcome into an equivalent Under/Over total-rounds price.
+    """
+    if not title_pair:
+        return []
+    fighter_a, fighter_b = title_pair
+    fighter = fighter_a if fighter_a.split()[-1].lower() in question.lower() else (
+        fighter_b if fighter_b.split()[-1].lower() in question.lower() else None
+    )
+
+    rows = []
+    round_outcomes = []  # (round_number, price) pairs, if this looks like a round-by-round market
+
+    for outcome_label, price_raw in zip(outcomes, prices):
+        try:
+            price = float(price_raw)
+        except (TypeError, ValueError):
+            continue
+
+        method = _extract_method(outcome_label)
+        if method and fighter:
+            try:
+                odds = implied_prob_to_american(price)
+            except (ValueError, ZeroDivisionError):
+                continue
+            rows.append({
+                "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
+                "market": "Method", "selection": fighter, "selection_method": method,
+                "odds_american": odds,
+            })
+            continue
+
+        round_match = re.search(r"round\s*(\d+)", outcome_label.lower())
+        if round_match:
+            round_outcomes.append((int(round_match.group(1)), price))
+
+    # Round-by-round outcomes -> derive Under/Over total-rounds prices at each
+    # boundary by summing cumulative probability (e.g. P(under 2.5) = P(round 1) + P(round 2))
+    if round_outcomes:
+        round_outcomes.sort()
+        cumulative = 0.0
+        for round_num, price in round_outcomes:
+            cumulative += price
+            line = round_num + 0.5
+            try:
+                under_odds = implied_prob_to_american(min(0.99, cumulative))
+                over_odds = implied_prob_to_american(max(0.01, 1 - cumulative))
+            except (ValueError, ZeroDivisionError):
+                continue
+            rows.append({
+                "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
+                "market": "TotalRounds", "selection": f"Under {line}", "selection_method": str(line),
+                "odds_american": under_odds,
+            })
+            rows.append({
+                "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
+                "market": "TotalRounds", "selection": f"Over {line}", "selection_method": str(line),
+                "odds_american": over_odds,
+            })
+
+    return rows
+
+
 def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     """Turns one Gamma market object into 0+ rows matching our upcoming-props schema."""
     question = market.get("question", "")
     outcomes = _safe_json_loads(market.get("outcomes"))
     prices = _safe_json_loads(market.get("outcomePrices"))
-    if len(outcomes) != 2 or len(prices) != 2:
+    if len(outcomes) < 2 or len(outcomes) != len(prices):
         return []
+
+    fight_id = event_title  # group by event, not individual market id, so all markets for one fight share a key
+    title_pair = _extract_matchup_from_title(event_title)
+
+    if len(outcomes) > 2:
+        return _parse_multi_outcome_market(outcomes, prices, question, event_title, title_pair, fight_id)
 
     try:
         price_a, price_b = float(prices[0]), float(prices[1])
     except (TypeError, ValueError):
         return []
 
-    fight_id = event_title  # group by event, not individual market id, so all markets for one fight share a key
-    title_pair = _extract_matchup_from_title(event_title)
     rows = []
 
     is_yes_no = {o.strip().lower() for o in outcomes} == {"yes", "no"}
@@ -240,9 +315,13 @@ def fetch_polymarket_ufc_props() -> list[dict]:
     events = fetch_ufc_events()
     rows = []
     markets_seen = 0
+    outcome_count_histogram: dict[int, int] = {}
     for event in events:
         for market in event.get("markets", []):
             markets_seen += 1
+            outcomes = _safe_json_loads(market.get("outcomes"))
+            outcome_count_histogram[len(outcomes)] = outcome_count_histogram.get(len(outcomes), 0) + 1
             rows.extend(_classify_and_parse_market(market, event.get("title", "")))
+    print(f"[polymarket] outcome-count breakdown across all markets: {outcome_count_histogram}")
     print(f"[polymarket] classified {markets_seen} markets into {len(rows)} usable rows")
     return rows
