@@ -69,7 +69,17 @@ def _find_mma_tag_id() -> str | None:
             tag_id = sport.get("id") or sport.get("tagId") or sport.get("tag_id")
             print(f"[polymarket] found MMA/UFC tag: {label!r} (tag_id={tag_id})")
             return str(tag_id) if tag_id is not None else None
-    print(f"[polymarket] no MMA/UFC tag found among {len(sports)} sports")
+
+    # No exact match -- show anything combat-sports-adjacent so we can spot
+    # the real label name instead of just knowing the exact match failed
+    combat_adjacent = [
+        (s.get("label") or s.get("name") or s.get("slug") or "")
+        for s in sports
+        if any(kw in (s.get("label") or s.get("name") or s.get("slug") or "").lower()
+               for kw in ["fight", "combat", "box", "wrestl", "martial"])
+    ]
+    print(f"[polymarket] no exact MMA/UFC tag found among {len(sports)} sports")
+    print(f"[polymarket] combat-sports-adjacent labels found: {combat_adjacent[:15]}")
     return None
 
 
@@ -316,12 +326,28 @@ def fetch_polymarket_ufc_props() -> list[dict]:
     rows = []
     markets_seen = 0
     outcome_count_histogram: dict[int, int] = {}
+    dropped_samples = []  # actual raw content of dropped markets, to see real phrasing instead of guessing
+
     for event in events:
         for market in event.get("markets", []):
             markets_seen += 1
             outcomes = _safe_json_loads(market.get("outcomes"))
             outcome_count_histogram[len(outcomes)] = outcome_count_histogram.get(len(outcomes), 0) + 1
-            rows.extend(_classify_and_parse_market(market, event.get("title", "")))
+
+            parsed = _classify_and_parse_market(market, event.get("title", ""))
+            rows.extend(parsed)
+
+            if not parsed and len(dropped_samples) < 8:
+                dropped_samples.append({
+                    "event_title": event.get("title", "")[:80],
+                    "question": market.get("question", "")[:100],
+                    "outcomes": outcomes,
+                })
+
     print(f"[polymarket] outcome-count breakdown across all markets: {outcome_count_histogram}")
     print(f"[polymarket] classified {markets_seen} markets into {len(rows)} usable rows")
+    if dropped_samples:
+        print(f"[polymarket] sample of {len(dropped_samples)} DROPPED markets (actual raw content, not a guess):")
+        for s in dropped_samples:
+            print(f"  event={s['event_title']!r} | question={s['question']!r} | outcomes={s['outcomes']}")
     return rows
