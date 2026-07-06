@@ -28,7 +28,10 @@ import requests
 from src.odds_utils import implied_prob_to_american
 
 GAMMA_BASE = "https://gamma-api.polymarket.com"
-HEADERS = {"User-Agent": "Mozilla/5.0 (personal research script)"}
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+}
 
 METHOD_KEYWORDS = {
     "ko/tko": "KO/TKO", "knockout": "KO/TKO", "tko": "KO/TKO",
@@ -58,9 +61,19 @@ def fetch_ufc_events(limit: int = 200) -> list[dict]:
         params={"active": "true", "closed": "false", "limit": limit, "order": "volume", "ascending": "false"},
         headers=HEADERS, timeout=20,
     )
+    if resp.status_code != 200:
+        print(f"[polymarket] events request returned status {resp.status_code}, body preview: {resp.text[:200]!r}")
     resp.raise_for_status()
     events = resp.json()
-    return [e for e in events if "ufc" in (e.get("title") or "").lower() or "ufc" in (e.get("slug") or "").lower()]
+    print(f"[polymarket] fetched {len(events)} total active events")
+
+    ufc_events = [e for e in events if "ufc" in (e.get("title") or "").lower() or "ufc" in (e.get("slug") or "").lower()]
+    print(f"[polymarket] {len(ufc_events)} matched 'ufc' in title/slug")
+    if ufc_events:
+        total_markets = sum(len(e.get("markets", [])) for e in ufc_events)
+        print(f"[polymarket] those events contain {total_markets} total nested markets")
+        print(f"[polymarket] sample event title: {ufc_events[0].get('title')!r}")
+    return ufc_events
 
 
 def _extract_method(text: str) -> str | None:
@@ -182,7 +195,10 @@ def fetch_polymarket_ufc_props() -> list[dict]:
     """Convenience wrapper: find UFC events, parse every nested market."""
     events = fetch_ufc_events()
     rows = []
+    markets_seen = 0
     for event in events:
         for market in event.get("markets", []):
+            markets_seen += 1
             rows.extend(_classify_and_parse_market(market, event.get("title", "")))
+    print(f"[polymarket] classified {markets_seen} markets into {len(rows)} usable rows")
     return rows

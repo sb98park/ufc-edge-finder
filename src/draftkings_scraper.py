@@ -19,8 +19,10 @@ import time
 import requests
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (personal research script)",
-    "Accept": "application/json",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://sportsbook.draftkings.com/leagues/mma/ufc",
 }
 LEAGUES_URL = "https://sportsbook.draftkings.com/sites/US-SB/api/v3/leagues?format=json"
 EVENTGROUP_URL = "https://sportsbook.draftkings.com/sites/US-SB/api/v5/eventgroups/{event_group_id}?format=json"
@@ -31,6 +33,8 @@ REQUEST_DELAY_SECONDS = 1.5
 def find_mma_event_group_id() -> str | None:
     """Looks up the current eventGroupId DraftKings uses for MMA/UFC."""
     resp = requests.get(LEAGUES_URL, headers=HEADERS, timeout=15)
+    if resp.status_code != 200:
+        print(f"[draftkings] leagues request returned status {resp.status_code}, body preview: {resp.text[:200]!r}")
     resp.raise_for_status()
     data = resp.json()
 
