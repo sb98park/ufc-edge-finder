@@ -53,6 +53,19 @@
   .chevron { color: var(--muted); font-size: 12px; transition: transform 0.15s; }
   details[open] .chevron { transform: rotate(90deg); }
   .no-edges { color: var(--muted); font-size: 12px; padding: 0 14px 12px; }
+  .rationale {
+    font-size: 12px; color: var(--muted); margin-top: 6px;
+    line-height: 1.4; border-top: 1px solid #2a2410; padding-top: 6px;
+  }
+  .model-preview {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; margin: 12px 14px 8px; font-size: 12.5px; color: var(--text); line-height: 1.5;
+  }
+  .preview-label { color: var(--accent); font-weight: 700; }
+  .rationale-row td {
+    font-size: 11.5px; color: var(--muted); line-height: 1.4;
+    padding-top: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
 
   .fight-body { padding: 0 14px 14px; }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -86,6 +99,30 @@
   <div class="notice">{{ live_error }}</div>
   {% endif %}
 
+  <details class="fight-card" style="margin-bottom: 22px;">
+    <summary>
+      <div class="matchup">🔍 How the model works</div>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="fight-body" style="font-size: 12.5px; line-height: 1.6; color: var(--text);">
+      <p><strong>Base rating:</strong> blends Elo (built from recorded fight history, when it exists)
+      with a stats-based rating from career win rate, finish rate, experience, and reach — so a fighter
+      with no tracked fight history isn't just defaulted to a flat, meaningless 50/50.</p>
+      <p><strong>Style matchup adjustment ("styles make fights"):</strong> takedown accuracy vs. the
+      opponent's takedown defense (wrestling advantage), striking accuracy differential, and durability
+      (how often each fighter has actually been finished before, and by what method) all shift the base
+      rating gap before it's converted to a win probability.</p>
+      <p><strong>Method-of-victory props:</strong> blend a fighter's own career finish tendency (65%
+      weight) with how often this specific opponent has been finished that way before (35% weight) —
+      a big KO rate matters less against someone who's never been knocked out.</p>
+      <p><strong>Total rounds:</strong> a simplified proxy using both fighters' combined finish rate.</p>
+      <p style="color: var(--muted);"><strong>Honest limitations:</strong> striking/takedown/durability
+      stats are sample data for now (not yet a live feed from UFCStats or similar) — see the README for
+      how to refresh them for real accuracy. This is a systematic way to weigh public stats, not a
+      trained predictive model, and it can't see recent form, injuries, or camp changes.</p>
+    </div>
+  </details>
+
   {% if standout_props %}
   <div class="standout-section">
     <div class="standout-title">🔥 Standout Props This Refresh</div>
@@ -94,6 +131,7 @@
       <div>
         <div class="standout-main">{{ p.fighter }} — {{ p.market }}</div>
         <div class="standout-sub">Odds {{ p.odds_american | american }} · Model {{ p.model_prob }} vs. Book {{ p.book_fair_prob }} · ½-Kelly {{ p.half_kelly_stake_pct }}%</div>
+        {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
       </div>
       <div class="standout-edge {{ 'edge-pos' if p.edge_pct > 0 else 'edge-neg' }}">{{ p.edge_pct }}%</div>
     </div>
@@ -120,6 +158,11 @@
       </div>
     </summary>
     <div class="fight-body">
+      {% if fight.preview %}
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
+      </div>
+      {% endif %}
       {% if fight.edges %}
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
@@ -133,10 +176,13 @@
           <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
           <td>{{ row.half_kelly_stake_pct }}%</td>
         </tr>
+        {% if row.rationale %}
+        <tr class="rationale-row"><td colspan="7">{{ row.rationale }}</td></tr>
+        {% endif %}
         {% endfor %}
       </table>
       {% else %}
-      <div class="no-edges">No live odds matched to this fight yet.</div>
+      <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
       {% endif %}
     </div>
   </details>

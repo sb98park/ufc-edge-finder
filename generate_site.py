@@ -47,8 +47,8 @@ def main():
     except Exception as exc:
         live_error = f"Couldn't fetch live odds: {exc}"
 
-    events, unmatched_df = group_edges_by_card(edges_df, cards_df)
-    standout_props = top_standout_props(edges_df, n=5, min_edge=5.0)
+    events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings)
+    standout_props = top_standout_props(edges_df, fighters_df, n=5, min_edge=5.0)
 
     rankings_df = pd.DataFrame(
         [{"fighter": f, "elo": r} for f, r in elo_ratings.items()]

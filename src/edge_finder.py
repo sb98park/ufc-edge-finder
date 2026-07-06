@@ -11,9 +11,12 @@ pure stats model can't see.
 import pandas as pd
 
 from .odds_utils import american_to_implied_prob, remove_vig_two_way, edge_percent, kelly_fraction
+from .matchup_model import predict_matchup
 
 
-def compute_moneyline_edges(upcoming_df: pd.DataFrame, elo_ratings: dict[str, float]) -> pd.DataFrame:
+def compute_moneyline_edges(
+    upcoming_df: pd.DataFrame, elo_ratings: dict[str, float], fighters_df: pd.DataFrame | None = None
+) -> pd.DataFrame:
     rows = []
     ml = upcoming_df[upcoming_df["market"] == "Moneyline"]
 
@@ -22,10 +25,18 @@ def compute_moneyline_edges(upcoming_df: pd.DataFrame, elo_ratings: dict[str, fl
             continue  # need both sides of the moneyline to devig
 
         a, b = group.iloc[0], group.iloc[1]
-        elo_a = elo_ratings.get(a["selection"], 1500.0)
-        elo_b = elo_ratings.get(b["selection"], 1500.0)
 
-        model_prob_a = 1.0 / (1.0 + 10 ** ((elo_b - elo_a) / 400.0))
+        matchup = None
+        if fighters_df is not None:
+            matchup = predict_matchup(a["selection"], b["selection"], fighters_df, elo_ratings)
+
+        if matchup:
+            model_prob_a = matchup["prob_a"]
+        else:
+            # fallback: plain rating gap if we don't have style stats for these fighters
+            elo_a = elo_ratings.get(a["selection"], 1500.0)
+            elo_b = elo_ratings.get(b["selection"], 1500.0)
+            model_prob_a = 1.0 / (1.0 + 10 ** ((elo_b - elo_a) / 400.0))
         model_prob_b = 1.0 - model_prob_a
 
         imp_a = american_to_implied_prob(a["odds_american"])
@@ -54,12 +65,15 @@ def compute_moneyline_edges(upcoming_df: pd.DataFrame, elo_ratings: dict[str, fl
 
 def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Method-of-victory props (KO/TKO, Submission, Decision), priced off each
-    fighter's historical finish rate. Simplified on purpose -- treat as a
-    first-pass screen, not gospel.
+    Method-of-victory props (KO/TKO, Submission, Decision). Blends the
+    fighter's own career finish tendency with how often THIS SPECIFIC
+    opponent has actually lost that way before -- a fighter with a big
+    KO rate means less if the opponent has never been finished by strikes.
     """
     rows = []
     props = upcoming_df[upcoming_df["market"] == "Method"]
+
+    method_loss_col = {"KO/TKO": "ko_losses", "SUB": "sub_losses", "DEC": "dec_losses"}
 
     for _, row in props.iterrows():
         stats = fighters_df[fighters_df["name"] == row["selection"]]
@@ -73,9 +87,24 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
             "SUB": f["sub_wins"] / total_wins,
             "DEC": f["dec_wins"] / total_wins,
         }
-        model_p = rate_map.get(row["selection_method"])
-        if model_p is None:
+        own_rate = rate_map.get(row["selection_method"])
+        if own_rate is None:
             continue
+
+        # find the opponent to factor in their specific vulnerability
+        opponent_name = row["fighter_b"] if row["selection"] == row["fighter_a"] else row["fighter_a"]
+        opp_stats = fighters_df[fighters_df["name"] == opponent_name]
+
+        model_p = own_rate
+        if not opp_stats.empty:
+            opp = opp_stats.iloc[0]
+            opp_losses = max(int(opp["losses"]), 1) if opp["losses"] else 0
+            if opp_losses:
+                col = method_loss_col[row["selection_method"]]
+                opp_vulnerability = opp[col] / opp_losses
+                # 65% weight on the fighter's own tendency, 35% on this
+                # specific opponent's demonstrated vulnerability to it
+                model_p = 0.65 * own_rate + 0.35 * opp_vulnerability
 
         imp = american_to_implied_prob(row["odds_american"])
 
@@ -187,7 +216,7 @@ def attach_fight_meta(edges_df: pd.DataFrame, fight_list_df: pd.DataFrame) -> pd
 
 def find_all_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame, elo_ratings: dict[str, float]) -> pd.DataFrame:
     frames = [
-        compute_moneyline_edges(upcoming_df, elo_ratings),
+        compute_moneyline_edges(upcoming_df, elo_ratings, fighters_df),
         compute_method_edges(upcoming_df, fighters_df),
         compute_total_rounds_edges(upcoming_df, fighters_df),
     ]

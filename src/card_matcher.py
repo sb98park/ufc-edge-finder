@@ -6,6 +6,9 @@ by event -> fight, instead of one flat table.
 
 import pandas as pd
 
+from src.rationale import explain_edge
+from src.model_preview import build_fight_preview
+
 
 def load_fight_cards(path: str = "data/fight_cards.csv") -> pd.DataFrame:
     return pd.read_csv(path)
@@ -15,16 +18,26 @@ def _split_total_rounds_fighter_field(fighter_field: str) -> set[str]:
     return {name.strip() for name in fighter_field.split(" vs ")}
 
 
-def group_edges_by_card(edges_df: pd.DataFrame, cards_df: pd.DataFrame) -> tuple[list[dict], pd.DataFrame]:
+def group_edges_by_card(
+    edges_df: pd.DataFrame,
+    cards_df: pd.DataFrame,
+    fighters_df: pd.DataFrame | None = None,
+    effective_ratings: dict[str, float] | None = None,
+) -> tuple[list[dict], pd.DataFrame]:
     """
     Returns (events, unmatched_edges):
       events: list of {event_name, event_date, fights: [{fighter_a, fighter_b,
-               weight_class, card_position, edges: [...]}]}
+               weight_class, card_position, edges: [...], preview: {...}}]}
       unmatched_edges: edges whose fighters aren't on data/fight_cards.csv
                (still useful, just can't be grouped into a known card)
     """
     fights = []
     for _, row in cards_df.iterrows():
+        preview = None
+        if fighters_df is not None and effective_ratings is not None:
+            preview = build_fight_preview(
+                row["fighter_a"], row["fighter_b"], fighters_df, effective_ratings
+            )
         fights.append({
             "event_name": row["event_name"],
             "event_date": row["event_date"],
@@ -33,6 +46,7 @@ def group_edges_by_card(edges_df: pd.DataFrame, cards_df: pd.DataFrame) -> tuple
             "fighter_a": row["fighter_a"],
             "fighter_b": row["fighter_b"],
             "fighters": {row["fighter_a"], row["fighter_b"]},
+            "preview": preview,
             "edges": [],
         })
 
@@ -40,6 +54,8 @@ def group_edges_by_card(edges_df: pd.DataFrame, cards_df: pd.DataFrame) -> tuple
 
     for _, edge in edges_df.iterrows():
         edge_dict = edge.to_dict()
+        if fighters_df is not None:
+            edge_dict["rationale"] = explain_edge(edge_dict, fighters_df)
         fighter_field = edge_dict["fighter"]
 
         if " vs " in fighter_field:
@@ -72,11 +88,17 @@ def group_edges_by_card(edges_df: pd.DataFrame, cards_df: pd.DataFrame) -> tuple
     return events, unmatched_df
 
 
-def top_standout_props(edges_df: pd.DataFrame, n: int = 5, min_edge: float = 5.0) -> list[dict]:
+def top_standout_props(
+    edges_df: pd.DataFrame, fighters_df: pd.DataFrame | None = None, n: int = 5, min_edge: float = 5.0
+) -> list[dict]:
     """The headline 'worth a look' props, sorted by biggest absolute edge."""
     if edges_df.empty:
         return []
     standout = edges_df[edges_df["edge_pct"].abs() >= min_edge].copy()
     standout["abs_edge"] = standout["edge_pct"].abs()
     standout = standout.sort_values("abs_edge", ascending=False).head(n)
-    return standout.drop(columns="abs_edge").to_dict("records")
+    records = standout.drop(columns="abs_edge").to_dict("records")
+    if fighters_df is not None:
+        for r in records:
+            r["rationale"] = explain_edge(r, fighters_df)
+    return records
