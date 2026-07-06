@@ -53,6 +53,19 @@
   .chevron { color: var(--muted); font-size: 12px; transition: transform 0.15s; }
   details[open] .chevron { transform: rotate(90deg); }
   .no-edges { color: var(--muted); font-size: 12px; padding: 0 14px 12px; }
+  .rationale {
+    font-size: 12px; color: var(--muted); margin-top: 6px;
+    line-height: 1.4; border-top: 1px solid #2a2410; padding-top: 6px;
+  }
+  .model-preview {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; margin: 12px 14px 8px; font-size: 12.5px; color: var(--text); line-height: 1.5;
+  }
+  .preview-label { color: var(--accent); font-weight: 700; }
+  .rationale-row td {
+    font-size: 11.5px; color: var(--muted); line-height: 1.4;
+    padding-top: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
 
   .fight-body { padding: 0 14px 14px; }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -74,7 +87,7 @@
 <body>
   <h1>🥋 UFC Edge Finder</h1>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
-  <div class="updated">Last updated: 2026-07-06 18:09 UTC · source: The Odds API (moneyline only) · auto-refreshes every few hours</div>
+  <div class="updated">Last updated: 2026-07-06 18:27 UTC · source: The Odds API (moneyline only) · auto-refreshes every few hours</div>
 
   <div class="disclaimer">
     For analysis and education only, not betting advice. A flagged edge means the model disagrees
@@ -84,48 +97,77 @@
 
   
 
+  <details class="fight-card" style="margin-bottom: 22px;">
+    <summary>
+      <div class="matchup">🔍 How the model works</div>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="fight-body" style="font-size: 12.5px; line-height: 1.6; color: var(--text);">
+      <p><strong>Base rating:</strong> blends Elo (built from recorded fight history, when it exists)
+      with a stats-based rating from career win rate, finish rate, experience, and reach — so a fighter
+      with no tracked fight history isn't just defaulted to a flat, meaningless 50/50.</p>
+      <p><strong>Style matchup adjustment ("styles make fights"):</strong> takedown accuracy vs. the
+      opponent's takedown defense (wrestling advantage), striking accuracy differential, and durability
+      (how often each fighter has actually been finished before, and by what method) all shift the base
+      rating gap before it's converted to a win probability.</p>
+      <p><strong>Method-of-victory props:</strong> blend a fighter's own career finish tendency (65%
+      weight) with how often this specific opponent has been finished that way before (35% weight) —
+      a big KO rate matters less against someone who's never been knocked out.</p>
+      <p><strong>Total rounds:</strong> a simplified proxy using both fighters' combined finish rate.</p>
+      <p style="color: var(--muted);"><strong>Honest limitations:</strong> striking/takedown/durability
+      stats are sample data for now (not yet a live feed from UFCStats or similar) — see the README for
+      how to refresh them for real accuracy. This is a systematic way to weigh public stats, not a
+      trained predictive model, and it can't see recent form, injuries, or camp changes.</p>
+    </div>
+  </details>
+
   
   <div class="standout-section">
     <div class="standout-title">🔥 Standout Props This Refresh</div>
     
     <div class="standout-card">
       <div>
-        <div class="standout-main">Elisha Ellison — Moneyline</div>
-        <div class="standout-sub">Odds +1100 · Model 0.48 vs. Book 0.08 · ½-Kelly 21.61%</div>
+        <div class="standout-main">Conor McGregor — Moneyline</div>
+        <div class="standout-sub">Odds +185 · Model 0.678 vs. Book 0.336 · ½-Kelly 25.21%</div>
+        <div class="rationale">The model puts Conor McGregor's win probability at 68%, higher than the market's 34% implied probability at 185.0 (+34.2% edge). That's built on a 22-6 record (79% win rate) and a 91% finish rate.</div>
       </div>
-      <div class="standout-edge edge-pos">39.98%</div>
-    </div>
-    
-    <div class="standout-card">
-      <div>
-        <div class="standout-main">Gable Steveson — Moneyline</div>
-        <div class="standout-sub">Odds -2500 · Model 0.52 vs. Book 0.92 · ½-Kelly 0.0%</div>
-      </div>
-      <div class="standout-edge edge-neg">-39.98%</div>
+      <div class="standout-edge edge-pos">34.18%</div>
     </div>
     
     <div class="standout-card">
       <div>
         <div class="standout-main">Max Holloway — Moneyline</div>
-        <div class="standout-sub">Odds -225 · Model 0.287 vs. Book 0.664 · ½-Kelly 0.0%</div>
+        <div class="standout-sub">Odds -225 · Model 0.322 vs. Book 0.664 · ½-Kelly 0.0%</div>
+        <div class="rationale">The model puts Max Holloway's win probability at 32%, lower than the market's 66% implied probability at -225.0 (-34.2% edge). That's built on a 26-7 record (79% win rate) and a 54% finish rate.</div>
       </div>
-      <div class="standout-edge edge-neg">-37.66%</div>
+      <div class="standout-edge edge-neg">-34.18%</div>
     </div>
     
     <div class="standout-card">
       <div>
-        <div class="standout-main">Conor McGregor — Moneyline</div>
-        <div class="standout-sub">Odds +185 · Model 0.713 vs. Book 0.336 · ½-Kelly 27.89%</div>
+        <div class="standout-main">Arman Tsarukyan — Moneyline</div>
+        <div class="standout-sub">Odds -500 · Model 0.5 vs. Book 0.802 · ½-Kelly 0.0%</div>
+        <div class="rationale">The model puts Arman Tsarukyan's win probability at 50%, lower than the market's 80% implied probability at -500.0 (-30.2% edge).</div>
       </div>
-      <div class="standout-edge edge-pos">37.66%</div>
+      <div class="standout-edge edge-neg">-30.17%</div>
     </div>
     
     <div class="standout-card">
       <div>
         <div class="standout-main">Justin Gaethje — Moneyline</div>
         <div class="standout-sub">Odds +385 · Model 0.5 vs. Book 0.198 · ½-Kelly 18.51%</div>
+        <div class="rationale">The model puts Justin Gaethje's win probability at 50%, higher than the market's 20% implied probability at 385.0 (+30.2% edge).</div>
       </div>
       <div class="standout-edge edge-pos">30.17%</div>
+    </div>
+    
+    <div class="standout-card">
+      <div>
+        <div class="standout-main">Paulo Henrique Costa — Moneyline</div>
+        <div class="standout-sub">Odds +375 · Model 0.5 vs. Book 0.202 · ½-Kelly 18.33%</div>
+        <div class="rationale">The model puts Paulo Henrique Costa's win probability at 50%, higher than the market's 20% implied probability at 375.0 (+29.8% edge).</div>
+      </div>
+      <div class="standout-edge edge-pos">29.83%</div>
     </div>
     
   </div>
@@ -151,6 +193,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Conor McGregor at 68% to beat Max Holloway (Striker vs. Striker). If Conor McGregor wins, ko/tko is the most likely path (86% of their career wins have come that way). Combined finish rate between both fighters is 72%, leaning under on total rounds. Style note: Max Holloway has been finished less often historically, a durability factor.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -158,21 +205,27 @@
           <td>Conor McGregor</td>
           <td>Moneyline</td>
           <td>+185</td>
-          <td>0.713</td>
+          <td>0.678</td>
           <td>0.336</td>
-          <td class="edge-pos">37.66%</td>
-          <td>27.89%</td>
+          <td class="edge-pos">34.18%</td>
+          <td>25.21%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Conor McGregor's win probability at 68%, higher than the market's 34% implied probability at 185.0 (+34.2% edge). That's built on a 22-6 record (79% win rate) and a 91% finish rate.</td></tr>
+        
         
         <tr>
           <td>Max Holloway</td>
           <td>Moneyline</td>
           <td>-225</td>
-          <td>0.287</td>
+          <td>0.322</td>
           <td>0.664</td>
-          <td class="edge-neg">-37.66%</td>
+          <td class="edge-neg">-34.18%</td>
           <td>0.0%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Max Holloway's win probability at 32%, lower than the market's 66% implied probability at -225.0 (-34.2% edge). That's built on a 26-7 record (79% win rate) and a 54% finish rate.</td></tr>
+        
         
         <tr>
           <td>Conor McGregor</td>
@@ -183,6 +236,9 @@
           <td class="edge-pos">22.37%</td>
           <td>24.86%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Conor McGregor's win probability at 80%, higher than the market's 57% implied probability at -145.0 (+22.4% edge). That's built on a 22-6 record (79% win rate) and a 91% finish rate.</td></tr>
+        
         
       </table>
       
@@ -202,6 +258,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Paddy Pimblett at 50% to beat Benoit Saint-Denis (Wrestler/Grappler vs. Balanced). If Paddy Pimblett wins, submission is the most likely path (45% of their career wins have come that way). Combined finish rate between both fighters is 81%, leaning under on total rounds.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -209,21 +270,27 @@
           <td>Paddy Pimblett</td>
           <td>Moneyline</td>
           <td>+114</td>
-          <td>0.511</td>
+          <td>0.504</td>
           <td>0.441</td>
-          <td class="edge-pos">6.97%</td>
-          <td>4.09%</td>
+          <td class="edge-pos">6.32%</td>
+          <td>3.49%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Paddy Pimblett's win probability at 50%, higher than the market's 44% implied probability at 114.0 (+6.3% edge). That's built on a 22-3 record (88% win rate) and a 77% finish rate.</td></tr>
+        
         
         <tr>
           <td>Benoit Saint-Denis</td>
           <td>Moneyline</td>
           <td>-145</td>
-          <td>0.489</td>
+          <td>0.496</td>
           <td>0.559</td>
-          <td class="edge-neg">-6.97%</td>
+          <td class="edge-neg">-6.32%</td>
           <td>0.0%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Benoit Saint-Denis's win probability at 50%, lower than the market's 56% implied probability at -145.0 (-6.3% edge). That's built on a 14-3 record (82% win rate) and a 86% finish rate.</td></tr>
+        
         
       </table>
       
@@ -243,6 +310,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Mario Bautista at 70% to beat Cory Sandhagen (Striker vs. Wrestler/Grappler). If Mario Bautista wins, ko/tko is the most likely path (43% of their career wins have come that way). Combined finish rate between both fighters is 66%, leaning under on total rounds. Style note: Mario Bautista has been finished less often historically, a durability factor.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -250,21 +322,27 @@
           <td>Mario Bautista</td>
           <td>Moneyline</td>
           <td>+124</td>
-          <td>0.617</td>
+          <td>0.704</td>
           <td>0.43</td>
-          <td class="edge-pos">18.7%</td>
-          <td>15.41%</td>
+          <td class="edge-pos">27.38%</td>
+          <td>23.25%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Mario Bautista's win probability at 70%, higher than the market's 43% implied probability at 124.0 (+27.4% edge). That's built on a 14-1 record (93% win rate) and a 71% finish rate.</td></tr>
+        
         
         <tr>
           <td>Cory Sandhagen</td>
           <td>Moneyline</td>
           <td>-145</td>
-          <td>0.383</td>
+          <td>0.296</td>
           <td>0.57</td>
-          <td class="edge-neg">-18.7%</td>
+          <td class="edge-neg">-27.38%</td>
           <td>0.0%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Cory Sandhagen's win probability at 30%, lower than the market's 57% implied probability at -145.0 (-27.4% edge). That's built on a 18-5 record (78% win rate) and a 61% finish rate.</td></tr>
+        
         
       </table>
       
@@ -284,6 +362,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Lone'er Kavanagh at 76% to beat Brandon Royval (Balanced vs. Balanced). If Lone'er Kavanagh wins, submission is the most likely path (46% of their career wins have come that way). Combined finish rate between both fighters is 81%, leaning under on total rounds. Style note: Lone'er Kavanagh has been finished less often historically, a durability factor.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -291,21 +374,27 @@
           <td>Lone'er Kavanagh</td>
           <td>Moneyline</td>
           <td>-225</td>
-          <td>0.669</td>
+          <td>0.762</td>
           <td>0.664</td>
-          <td class="edge-pos">0.53%</td>
-          <td>0.0%</td>
+          <td class="edge-pos">9.79%</td>
+          <td>11.25%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Lone'er Kavanagh's win probability at 76%, higher than the market's 66% implied probability at -225.0 (+9.8% edge). That's built on a 13-1 record (93% win rate) and a 85% finish rate.</td></tr>
+        
         
         <tr>
           <td>Brandon Royval</td>
           <td>Moneyline</td>
           <td>+185</td>
-          <td>0.331</td>
+          <td>0.238</td>
           <td>0.336</td>
-          <td class="edge-neg">-0.53%</td>
+          <td class="edge-neg">-9.79%</td>
           <td>0.0%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Brandon Royval's win probability at 24%, lower than the market's 34% implied probability at 185.0 (-9.8% edge). That's built on a 17-8 record (68% win rate) and a 76% finish rate.</td></tr>
+        
         
       </table>
       
@@ -325,6 +414,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Terrance McKinney at 63% to beat King Green (Balanced vs. Striker). If Terrance McKinney wins, ko/tko is the most likely path (76% of their career wins have come that way). Combined finish rate between both fighters is 74%, leaning under on total rounds. Style note: King Green has been finished less often historically, a durability factor.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -337,6 +431,9 @@
           <td class="edge-pos">21.42%</td>
           <td>17.71%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts King Green's win probability at 64%, higher than the market's 43% implied probability at 126.0 (+21.4% edge). That's built on a 35-21 record (62% win rate) and a 54% finish rate.</td></tr>
+        
         
       </table>
       
@@ -356,6 +453,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Nikita Krylov at 55% to beat Robert Whittaker (Striker vs. Wrestler/Grappler). If Nikita Krylov wins, submission is the most likely path (50% of their career wins have come that way). Combined finish rate between both fighters is 69%, leaning under on total rounds.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -363,21 +465,27 @@
           <td>Nikita Krylov</td>
           <td>Moneyline</td>
           <td>+122</td>
-          <td>0.581</td>
+          <td>0.551</td>
           <td>0.434</td>
-          <td class="edge-pos">14.68%</td>
-          <td>11.89%</td>
+          <td class="edge-pos">11.72%</td>
+          <td>9.19%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Nikita Krylov's win probability at 55%, higher than the market's 43% implied probability at 122.0 (+11.7% edge). That's built on a 30-10 record (75% win rate) and a 83% finish rate.</td></tr>
+        
         
         <tr>
           <td>Robert Whittaker</td>
           <td>Moneyline</td>
           <td>-142</td>
-          <td>0.419</td>
+          <td>0.449</td>
           <td>0.566</td>
-          <td class="edge-neg">-14.68%</td>
+          <td class="edge-neg">-11.72%</td>
           <td>0.0%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Robert Whittaker's win probability at 45%, lower than the market's 57% implied probability at -142.0 (-11.7% edge). That's built on a 26-8 record (76% win rate) and a 54% finish rate.</td></tr>
+        
         
       </table>
       
@@ -397,6 +505,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Gable Steveson at 70% to beat Elisha Ellison (Wrestler/Grappler vs. Striker). If Gable Steveson wins, ko/tko is the most likely path (100% of their career wins have come that way). Combined finish rate between both fighters is 86%, leaning under on total rounds. Style note: Gable Steveson's takedown accuracy vs. the opponent's takedown defense gives a real wrestling-based edge here.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -404,21 +517,27 @@
           <td>Elisha Ellison</td>
           <td>Moneyline</td>
           <td>+1100</td>
-          <td>0.48</td>
+          <td>0.302</td>
           <td>0.08</td>
-          <td class="edge-pos">39.98%</td>
-          <td>21.61%</td>
+          <td class="edge-pos">22.27%</td>
+          <td>11.95%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Elisha Ellison's win probability at 30%, higher than the market's 8% implied probability at 1100.0 (+22.3% edge). That's built on a 7-3 record (70% win rate) and a 71% finish rate.</td></tr>
+        
         
         <tr>
           <td>Gable Steveson</td>
           <td>Moneyline</td>
           <td>-2500</td>
-          <td>0.52</td>
+          <td>0.698</td>
           <td>0.92</td>
-          <td class="edge-neg">-39.98%</td>
+          <td class="edge-neg">-22.27%</td>
           <td>0.0%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Gable Steveson's win probability at 70%, lower than the market's 92% implied probability at -2500.0 (-22.3% edge). That's built on a 3-0 record (100% win rate) and a 100% finish rate.</td></tr>
+        
         
       </table>
       
@@ -438,6 +557,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Adrian Yanez at 61% to beat Cody Garbrandt (Striker vs. Striker). If Adrian Yanez wins, ko/tko is the most likely path (61% of their career wins have come that way). Combined finish rate between both fighters is 60%, leaning under on total rounds.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -445,21 +569,27 @@
           <td>Cody Garbrandt</td>
           <td>Moneyline</td>
           <td>+325</td>
-          <td>0.406</td>
+          <td>0.393</td>
           <td>0.226</td>
-          <td class="edge-pos">17.96%</td>
-          <td>11.14%</td>
+          <td class="edge-pos">16.69%</td>
+          <td>10.3%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Cody Garbrandt's win probability at 39%, higher than the market's 23% implied probability at 325.0 (+16.7% edge). That's built on a 15-7 record (68% win rate) and a 53% finish rate.</td></tr>
+        
         
         <tr>
           <td>Adrian Yanez</td>
           <td>Moneyline</td>
           <td>-415</td>
-          <td>0.594</td>
+          <td>0.607</td>
           <td>0.774</td>
-          <td class="edge-neg">-17.96%</td>
+          <td class="edge-neg">-16.69%</td>
           <td>0.0%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Adrian Yanez's win probability at 61%, lower than the market's 77% implied probability at -415.0 (-16.7% edge). That's built on a 18-5 record (78% win rate) and a 67% finish rate.</td></tr>
+        
         
       </table>
       
@@ -479,18 +609,26 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Luke Riley at 63% to beat Kai Kamaka III (Balanced vs. Striker). If Luke Riley wins, ko/tko is the most likely path (43% of their career wins have come that way). Combined finish rate between both fighters is 66%, leaning under on total rounds. Style note: Luke Riley has been finished less often historically, a durability factor.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
         <tr>
           <td>Luke Riley</td>
           <td>Moneyline</td>
-          <td>-310</td>
-          <td>0.5</td>
-          <td>0.721</td>
-          <td class="edge-neg">-22.11%</td>
+          <td>-300</td>
+          <td>0.729</td>
+          <td>0.718</td>
+          <td class="edge-pos">1.06%</td>
           <td>0.0%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Luke Riley's win probability at 73%, higher than the market's 72% implied probability at -300.0 (+1.1% edge). That's built on a 7-0 record (100% win rate) and a 71% finish rate.</td></tr>
+        
         
       </table>
       
@@ -510,6 +648,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Damian Pinas at 53% to beat Cesar Almeida (Wrestler/Grappler vs. Striker). If Damian Pinas wins, ko/tko is the most likely path (78% of their career wins have come that way). Combined finish rate between both fighters is 78%, leaning under on total rounds. Style note: Damian Pinas has been finished less often historically, a durability factor.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -517,21 +660,27 @@
           <td>Cesar Almeida</td>
           <td>Moneyline</td>
           <td>+185</td>
-          <td>0.5</td>
+          <td>0.467</td>
           <td>0.336</td>
-          <td class="edge-pos">16.36%</td>
-          <td>11.49%</td>
+          <td class="edge-pos">13.04%</td>
+          <td>8.92%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Cesar Almeida's win probability at 47%, higher than the market's 34% implied probability at 185.0 (+13.0% edge). That's built on a 9-1 record (90% win rate) and a 78% finish rate.</td></tr>
+        
         
         <tr>
           <td>Damian Pinas</td>
           <td>Moneyline</td>
           <td>-225</td>
-          <td>0.5</td>
+          <td>0.533</td>
           <td>0.664</td>
-          <td class="edge-neg">-16.36%</td>
+          <td class="edge-neg">-13.04%</td>
           <td>0.0%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Damian Pinas's win probability at 53%, lower than the market's 66% implied probability at -225.0 (-13.0% edge). That's built on a 9-3 record (75% win rate) and a 78% finish rate.</td></tr>
+        
         
       </table>
       
@@ -551,6 +700,11 @@
     </summary>
     <div class="fight-body">
       
+      <div class="model-preview">
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Ryan Gandra at 73% to beat Zach Reese (Balanced vs. Striker). If Ryan Gandra wins, ko/tko is the most likely path (50% of their career wins have come that way). Combined finish rate between both fighters is 83%, leaning under on total rounds. Style note: Ryan Gandra has been finished less often historically, a durability factor.
+      </div>
+      
+      
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
@@ -558,11 +712,14 @@
           <td>Ryan Gandra</td>
           <td>Moneyline</td>
           <td>-136</td>
-          <td>0.5</td>
+          <td>0.802</td>
           <td>0.555</td>
-          <td class="edge-neg">-5.49%</td>
-          <td>0.0%</td>
+          <td class="edge-pos">24.68%</td>
+          <td>26.55%</td>
         </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Ryan Gandra's win probability at 80%, higher than the market's 56% implied probability at -136.5 (+24.7% edge). That's built on a 10-0 record (100% win rate) and a 80% finish rate.</td></tr>
+        
         
       </table>
       
@@ -607,11 +764,6 @@
     </tr>
     
     <tr>
-      <td>Kai Kamaka</td><td>Moneyline</td><td>+242</td>
-      <td class="edge-pos">22.11%</td>
-    </tr>
-    
-    <tr>
       <td>Cody Durden</td><td>Moneyline</td><td>+215</td>
       <td class="edge-pos">19.58%</td>
     </tr>
@@ -637,11 +789,6 @@
     </tr>
     
     <tr>
-      <td>Zachary Reese</td><td>Moneyline</td><td>+116</td>
-      <td class="edge-pos">5.49%</td>
-    </tr>
-    
-    <tr>
       <td>Ilia Topuria</td><td>Moneyline</td><td>-250</td>
       <td class="edge-pos">3.63%</td>
     </tr>
@@ -657,8 +804,8 @@
     </tr>
     
     <tr>
-      <td>Tracy Cortez</td><td>Moneyline</td><td>-108</td>
-      <td class="edge-pos">0.74%</td>
+      <td>Tracy Cortez</td><td>Moneyline</td><td>-105</td>
+      <td class="edge-pos">1.08%</td>
     </tr>
     
     <tr>
@@ -672,8 +819,13 @@
     </tr>
     
     <tr>
+      <td>Kai Kamaka</td><td>Moneyline</td><td>+240</td>
+      <td class="edge-neg">-1.06%</td>
+    </tr>
+    
+    <tr>
       <td>Wang Cong</td><td>Moneyline</td><td>-115</td>
-      <td class="edge-neg">-0.74%</td>
+      <td class="edge-neg">-1.08%</td>
     </tr>
     
     <tr>
@@ -732,6 +884,11 @@
     </tr>
     
     <tr>
+      <td>Zachary Reese</td><td>Moneyline</td><td>+116</td>
+      <td class="edge-neg">-24.68%</td>
+    </tr>
+    
+    <tr>
       <td>Josh Hokit</td><td>Moneyline</td><td>-160</td>
       <td class="edge-neg">-24.85%</td>
     </tr>
@@ -771,9 +928,9 @@
     
     <tr><td>Jon Jones</td><td>1743.7</td></tr>
     
-    <tr><td>Benoit Saint-Denis</td><td>1742.3</td></tr>
+    <tr><td>Ryan Gandra</td><td>1742.7</td></tr>
     
-    <tr><td>Benoit Saint Denis</td><td>1739.2</td></tr>
+    <tr><td>Benoit Saint-Denis</td><td>1742.3</td></tr>
     
     <tr><td>Conor McGregor</td><td>1735.2</td></tr>
     
@@ -781,7 +938,15 @@
     
     <tr><td>Nikita Krylov</td><td>1714.0</td></tr>
     
+    <tr><td>Cesar Almeida</td><td>1714.0</td></tr>
+    
+    <tr><td>Damian Pinas</td><td>1680.7</td></tr>
+    
+    <tr><td>Zach Reese</td><td>1679.9</td></tr>
+    
     <tr><td>Cory Sandhagen</td><td>1673.0</td></tr>
+    
+    <tr><td>Luke Riley</td><td>1671.8</td></tr>
     
     <tr><td>Adrian Yanez</td><td>1669.3</td></tr>
     
@@ -792,6 +957,8 @@
     <tr><td>Robert Whittaker</td><td>1657.1</td></tr>
     
     <tr><td>Islam Makhachev</td><td>1656.2</td></tr>
+    
+    <tr><td>Kai Kamaka III</td><td>1651.4</td></tr>
     
     <tr><td>Tom Aspinall</td><td>1648.9</td></tr>
     
