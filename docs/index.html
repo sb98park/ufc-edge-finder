@@ -55,6 +55,7 @@
   }
   .standout-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .standout-main { font-size: 14.5px; font-weight: 700; }
+  .standout-vs { font-size: 12px; font-weight: 400; color: var(--muted); }
   .standout-market { color: var(--accent2); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
   .standout-edge-badge {
     font-size: 16px; font-weight: 800; white-space: nowrap; border-radius: 8px; padding: 3px 9px;
@@ -168,7 +169,7 @@
   <h1>🥋 UFC Edge Finder</h1>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
   <div class="meta-row">
-    <span class="badge">🕒 2026-07-06 21:01 UTC</span>
+    <span class="badge">🕒 2026-07-06 21:23 UTC</span>
     <span class="badge book">📊 Odds via The Odds API (moneyline only)</span>
     <span class="badge">🔄 refreshes every few hours</span>
   </div>
@@ -211,30 +212,7 @@
     <div class="standout-card">
       <div class="standout-top">
         <div>
-          <div class="standout-main">Cory Sandhagen vs Mario Bautista</div>
-          <div class="standout-market">Moneyline</div>
-        </div>
-        <div class="standout-edge-badge edge-neg">-27.38%</div>
-      </div>
-      <div class="odds-compare">
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book">-145</div>
-        </div>
-        <div class="odds-compare-arrow">→</div>
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Model Says</div>
-          <div class="odds-compare-value model">+238</div>
-        </div>
-      </div>
-      <div class="standout-sub">½-Kelly suggested stake: 0.0% of bankroll</div>
-      <div class="rationale">The model puts Cory Sandhagen's win probability at 30%, lower than the market's 57% implied probability at -145.0 (-27.4% edge). That's built on a 18-5 record (78% win rate) and a 61% finish rate.</div>
-    </div>
-    
-    <div class="standout-card">
-      <div class="standout-top">
-        <div>
-          <div class="standout-main">Mario Bautista vs Cory Sandhagen</div>
+          <div class="standout-main">Mario Bautista<span class="standout-vs"> (vs. Cory Sandhagen)</span></div>
           <div class="standout-market">Moneyline</div>
         </div>
         <div class="standout-edge-badge edge-pos">27.38%</div>
@@ -251,59 +229,13 @@
         </div>
       </div>
       <div class="standout-sub">½-Kelly suggested stake: 23.25% of bankroll</div>
-      <div class="rationale">The model puts Mario Bautista's win probability at 70%, higher than the market's 43% implied probability at 124.0 (+27.4% edge). That's built on a 14-1 record (93% win rate) and a 71% finish rate.</div>
+      <div class="rationale">The model puts Mario Bautista's win probability at 70%, higher than the market's 43% implied probability at 124.0 (+27.4% edge). Biggest factors in that number: Mario Bautista having been finished less often historically.</div>
     </div>
     
     <div class="standout-card">
       <div class="standout-top">
         <div>
-          <div class="standout-main">Ryan Gandra vs Zachary Reese</div>
-          <div class="standout-market">Moneyline</div>
-        </div>
-        <div class="standout-edge-badge edge-pos">24.91%</div>
-      </div>
-      <div class="odds-compare">
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book">-135</div>
-        </div>
-        <div class="odds-compare-arrow">→</div>
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Model Says</div>
-          <div class="odds-compare-value model">-405</div>
-        </div>
-      </div>
-      <div class="standout-sub">½-Kelly suggested stake: 26.7% of bankroll</div>
-      <div class="rationale">The model puts Ryan Gandra's win probability at 80%, higher than the market's 55% implied probability at -135.0 (+24.9% edge). That's built on a 10-0 record (100% win rate) and a 80% finish rate.</div>
-    </div>
-    
-    <div class="standout-card">
-      <div class="standout-top">
-        <div>
-          <div class="standout-main">Conor McGregor vs Jorge Masvidal</div>
-          <div class="standout-market">Moneyline</div>
-        </div>
-        <div class="standout-edge-badge edge-pos">22.37%</div>
-      </div>
-      <div class="odds-compare">
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book">-145</div>
-        </div>
-        <div class="odds-compare-arrow">→</div>
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Model Says</div>
-          <div class="odds-compare-value model">-388</div>
-        </div>
-      </div>
-      <div class="standout-sub">½-Kelly suggested stake: 24.86% of bankroll</div>
-      <div class="rationale">The model puts Conor McGregor's win probability at 80%, higher than the market's 57% implied probability at -145.0 (+22.4% edge). That's built on a 22-6 record (79% win rate) and a 91% finish rate.</div>
-    </div>
-    
-    <div class="standout-card">
-      <div class="standout-top">
-        <div>
-          <div class="standout-main">Elisha Ellison vs Gable Steveson</div>
+          <div class="standout-main">Elisha Ellison<span class="standout-vs"> (vs. Gable Steveson)</span></div>
           <div class="standout-market">Moneyline</div>
         </div>
         <div class="standout-edge-badge edge-pos">22.27%</div>
@@ -320,7 +252,76 @@
         </div>
       </div>
       <div class="standout-sub">½-Kelly suggested stake: 11.95% of bankroll</div>
-      <div class="rationale">The model puts Elisha Ellison's win probability at 30%, higher than the market's 8% implied probability at 1100.0 (+22.3% edge). That's built on a 7-3 record (70% win rate) and a 71% finish rate.</div>
+      <div class="rationale">The model puts Elisha Ellison's win probability at 30%, higher than the market's 8% implied probability at 1100.0 (+22.3% edge). Biggest factors in that number: Gable Steveson's takedown accuracy vs. the opponent's takedown defense, Elisha Ellison's striking accuracy edge, Gable Steveson having been finished less often historically.</div>
+    </div>
+    
+    <div class="standout-card">
+      <div class="standout-top">
+        <div>
+          <div class="standout-main">Cody Garbrandt<span class="standout-vs"> (vs. Adrian Yanez)</span></div>
+          <div class="standout-market">Moneyline</div>
+        </div>
+        <div class="standout-edge-badge edge-pos">16.69%</div>
+      </div>
+      <div class="odds-compare">
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Book Price</div>
+          <div class="odds-compare-value book">+325</div>
+        </div>
+        <div class="odds-compare-arrow">→</div>
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Model Says</div>
+          <div class="odds-compare-value model">+154</div>
+        </div>
+      </div>
+      <div class="standout-sub">½-Kelly suggested stake: 10.3% of bankroll</div>
+      <div class="rationale">The model puts Cody Garbrandt's win probability at 39%, higher than the market's 23% implied probability at 325.0 (+16.7% edge). That's built on a 15-7 record (68% win rate) and a 53% finish rate, with no major style, durability, or layoff mismatch pulling the number further.</div>
+    </div>
+    
+    <div class="standout-card">
+      <div class="standout-top">
+        <div>
+          <div class="standout-main">Cesar Almeida<span class="standout-vs"> (vs. Damian Pinas)</span></div>
+          <div class="standout-market">Moneyline</div>
+        </div>
+        <div class="standout-edge-badge edge-pos">13.04%</div>
+      </div>
+      <div class="odds-compare">
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Book Price</div>
+          <div class="odds-compare-value book">+185</div>
+        </div>
+        <div class="odds-compare-arrow">→</div>
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Model Says</div>
+          <div class="odds-compare-value model">+114</div>
+        </div>
+      </div>
+      <div class="standout-sub">½-Kelly suggested stake: 8.92% of bankroll</div>
+      <div class="rationale">The model puts Cesar Almeida's win probability at 47%, higher than the market's 34% implied probability at 185.0 (+13.0% edge). Biggest factors in that number: Damian Pinas's striking accuracy edge, Damian Pinas having been finished less often historically.</div>
+    </div>
+    
+    <div class="standout-card">
+      <div class="standout-top">
+        <div>
+          <div class="standout-main">Nikita Krylov<span class="standout-vs"> (vs. Robert Whittaker)</span></div>
+          <div class="standout-market">Moneyline</div>
+        </div>
+        <div class="standout-edge-badge edge-pos">11.72%</div>
+      </div>
+      <div class="odds-compare">
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Book Price</div>
+          <div class="odds-compare-value book">+122</div>
+        </div>
+        <div class="odds-compare-arrow">→</div>
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Model Says</div>
+          <div class="odds-compare-value model">-123</div>
+        </div>
+      </div>
+      <div class="standout-sub">½-Kelly suggested stake: 9.19% of bankroll</div>
+      <div class="rationale">The model puts Nikita Krylov's win probability at 55%, higher than the market's 43% implied probability at 122.0 (+11.7% edge). Biggest factors in that number: Robert Whittaker's striking accuracy edge.</div>
     </div>
     
   </div>
@@ -332,42 +333,42 @@
   
   <div class="parlay-card bankroll">
     <div class="parlay-top">
-      <div class="parlay-odds">+194</div>
-      <div class="parlay-prob">Model-estimated hit rate: 63.8%</div>
+      <div class="parlay-odds">+224</div>
+      <div class="parlay-prob">Model-estimated hit rate: 53.6%</div>
     </div>
     <ul class="parlay-legs">
       
-      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor ML (-145)</li>
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Ryan Gandra ML (-135)</li>
-      
-    </ul>
-  </div>
-  
-  <div class="parlay-card bankroll">
-    <div class="parlay-top">
-      <div class="parlay-odds">+151</div>
-      <div class="parlay-prob">Model-estimated hit rate: 61.1%</div>
-    </div>
-    <ul class="parlay-legs">
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Lone'er Kavanagh ML (-225)</li>
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Ryan Gandra ML (-135)</li>
-      
-    </ul>
-  </div>
-  
-  <div class="parlay-card bankroll">
-    <div class="parlay-top">
-      <div class="parlay-odds">+144</div>
-      <div class="parlay-prob">Model-estimated hit rate: 60.6%</div>
-    </div>
-    <ul class="parlay-legs">
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor ML (-145)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Mario Bautista ML (+124)</li>
       
       <li class="parlay-leg"><span class="parlay-leg-num">2</span>Lone'er Kavanagh ML (-225)</li>
+      
+    </ul>
+  </div>
+  
+  <div class="parlay-card bankroll">
+    <div class="parlay-top">
+      <div class="parlay-odds">+110</div>
+      <div class="parlay-prob">Model-estimated hit rate: 49.8%</div>
+    </div>
+    <ul class="parlay-legs">
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Max Holloway ML (-220)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Lone'er Kavanagh ML (-225)</li>
+      
+    </ul>
+  </div>
+  
+  <div class="parlay-card bankroll">
+    <div class="parlay-top">
+      <div class="parlay-odds">+133</div>
+      <div class="parlay-prob">Model-estimated hit rate: 49.1%</div>
+    </div>
+    <ul class="parlay-legs">
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Mario Bautista ML (+124)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Gable Steveson ML (-2500)</li>
       
     </ul>
   </div>
@@ -381,26 +382,8 @@
   
   <div class="parlay-card lotto">
     <div class="parlay-top">
-      <div class="parlay-odds">+1389</div>
-      <div class="parlay-prob">Model-estimated hit rate: 28.73%</div>
-    </div>
-    <ul class="parlay-legs">
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor ML (-145)</li>
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Mario Bautista ML (+124)</li>
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">3</span>King Green ML (+126)</li>
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">4</span>Ryan Gandra ML (-135)</li>
-      
-    </ul>
-  </div>
-  
-  <div class="parlay-card lotto">
-    <div class="parlay-top">
-      <div class="parlay-odds">+1173</div>
-      <div class="parlay-prob">Model-estimated hit rate: 27.53%</div>
+      <div class="parlay-odds">+1275</div>
+      <div class="parlay-prob">Model-estimated hit rate: 21.08%</div>
     </div>
     <ul class="parlay-legs">
       
@@ -408,27 +391,39 @@
       
       <li class="parlay-leg"><span class="parlay-leg-num">2</span>Lone'er Kavanagh ML (-225)</li>
       
-      <li class="parlay-leg"><span class="parlay-leg-num">3</span>King Green ML (+126)</li>
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">4</span>Ryan Gandra ML (-135)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">3</span>Cody Garbrandt ML (+325)</li>
       
     </ul>
   </div>
   
   <div class="parlay-card lotto">
     <div class="parlay-top">
-      <div class="parlay-odds">+1136</div>
-      <div class="parlay-prob">Model-estimated hit rate: 27.29%</div>
+      <div class="parlay-odds">+1317</div>
+      <div class="parlay-prob">Model-estimated hit rate: 18.12%</div>
     </div>
     <ul class="parlay-legs">
       
-      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor ML (-145)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Mario Bautista ML (+124)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Nikita Krylov ML (+122)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">3</span>Cesar Almeida ML (+185)</li>
+      
+    </ul>
+  </div>
+  
+  <div class="parlay-card lotto">
+    <div class="parlay-top">
+      <div class="parlay-odds">+1285</div>
+      <div class="parlay-prob">Model-estimated hit rate: 18.07%</div>
+    </div>
+    <ul class="parlay-legs">
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Max Holloway ML (-220)</li>
       
       <li class="parlay-leg"><span class="parlay-leg-num">2</span>Mario Bautista ML (+124)</li>
       
-      <li class="parlay-leg"><span class="parlay-leg-num">3</span>Lone'er Kavanagh ML (-225)</li>
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">4</span>King Green ML (+126)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">3</span>Cody Garbrandt ML (+325)</li>
       
     </ul>
   </div>
@@ -467,19 +462,6 @@
         <tr>
           <td>Conor McGregor</td>
           <td>Moneyline</td>
-          <td>-145</td>
-          <td>0.795</td>
-          <td>0.571</td>
-          <td class="edge-pos">22.37%</td>
-          <td>24.86%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">The model puts Conor McGregor's win probability at 80%, higher than the market's 57% implied probability at -145.0 (+22.4% edge). That's built on a 22-6 record (79% win rate) and a 91% finish rate.</td></tr>
-        
-        
-        <tr>
-          <td>Conor McGregor</td>
-          <td>Moneyline</td>
           <td>+180</td>
           <td>0.347</td>
           <td>0.342</td>
@@ -487,7 +469,7 @@
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Conor McGregor's win probability at 35%, higher than the market's 34% implied probability at 180.0 (+0.5% edge). That's built on a 22-6 record (79% win rate) and a 91% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Conor McGregor's win probability at 35%, higher than the market's 34% implied probability at 180.0 (+0.5% edge). Biggest factors in that number: Max Holloway having been finished less often historically, Conor McGregor coming off a 5.0-year layoff (ring rust risk).</td></tr>
         
         
         <tr>
@@ -500,7 +482,7 @@
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Max Holloway's win probability at 65%, lower than the market's 66% implied probability at -220.0 (-0.5% edge). That's built on a 26-7 record (79% win rate) and a 54% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Max Holloway's win probability at 65%, lower than the market's 66% implied probability at -220.0 (-0.5% edge). Biggest factors in that number: Max Holloway having been finished less often historically, Conor McGregor coming off a 5.0-year layoff (ring rust risk).</td></tr>
         
         
       </table>
@@ -523,9 +505,13 @@
         
         <tr><td>Max Holloway</td><td>Method: Decision</td><td>27.2%</td></tr>
         
-        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Under</td><td>72.4%</td></tr>
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Under 2.5</td><td>72.4%</td></tr>
         
-        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Over</td><td>27.6%</td></tr>
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Over 2.5</td><td>27.6%</td></tr>
+        
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Fight Outcome: Goes The Distance</td><td>27.6%</td></tr>
+        
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Fight Outcome: Ends In Finish</td><td>72.4%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -564,7 +550,7 @@
           <td>3.49%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Paddy Pimblett's win probability at 50%, higher than the market's 44% implied probability at 114.0 (+6.3% edge). That's built on a 22-3 record (88% win rate) and a 77% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Paddy Pimblett's win probability at 50%, higher than the market's 44% implied probability at 114.0 (+6.3% edge). That's built on a 22-3 record (88% win rate) and a 77% finish rate, with no major style, durability, or layoff mismatch pulling the number further.</td></tr>
         
         
         <tr>
@@ -577,7 +563,7 @@
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Benoit Saint-Denis's win probability at 50%, lower than the market's 56% implied probability at -145.0 (-6.3% edge). That's built on a 14-3 record (82% win rate) and a 86% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Benoit Saint-Denis's win probability at 50%, lower than the market's 56% implied probability at -145.0 (-6.3% edge). That's built on a 14-3 record (82% win rate) and a 86% finish rate, with no major style, durability, or layoff mismatch pulling the number further.</td></tr>
         
         
       </table>
@@ -600,9 +586,13 @@
         
         <tr><td>Paddy Pimblett</td><td>Method: Decision</td><td>13.3%</td></tr>
         
-        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Under</td><td>81.5%</td></tr>
+        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Under 2.5</td><td>81.5%</td></tr>
         
-        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Over</td><td>18.5%</td></tr>
+        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Over 2.5</td><td>18.5%</td></tr>
+        
+        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Fight Outcome: Goes The Distance</td><td>18.5%</td></tr>
+        
+        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Fight Outcome: Ends In Finish</td><td>81.5%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -641,7 +631,7 @@
           <td>23.25%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Mario Bautista's win probability at 70%, higher than the market's 43% implied probability at 124.0 (+27.4% edge). That's built on a 14-1 record (93% win rate) and a 71% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Mario Bautista's win probability at 70%, higher than the market's 43% implied probability at 124.0 (+27.4% edge). Biggest factors in that number: Mario Bautista having been finished less often historically.</td></tr>
         
         
         <tr>
@@ -654,7 +644,7 @@
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Cory Sandhagen's win probability at 30%, lower than the market's 57% implied probability at -145.0 (-27.4% edge). That's built on a 18-5 record (78% win rate) and a 61% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Cory Sandhagen's win probability at 30%, lower than the market's 57% implied probability at -145.0 (-27.4% edge). Biggest factors in that number: Mario Bautista having been finished less often historically.</td></tr>
         
         
       </table>
@@ -677,9 +667,13 @@
         
         <tr><td>Mario Bautista</td><td>Method: Decision</td><td>22.9%</td></tr>
         
-        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Under</td><td>66.3%</td></tr>
+        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Under 2.5</td><td>66.3%</td></tr>
         
-        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Over</td><td>33.7%</td></tr>
+        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Over 2.5</td><td>33.7%</td></tr>
+        
+        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Fight Outcome: Goes The Distance</td><td>33.7%</td></tr>
+        
+        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Fight Outcome: Ends In Finish</td><td>66.3%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -718,7 +712,7 @@
           <td>11.25%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Lone'er Kavanagh's win probability at 76%, higher than the market's 66% implied probability at -225.0 (+9.8% edge). That's built on a 13-1 record (93% win rate) and a 85% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Lone'er Kavanagh's win probability at 76%, higher than the market's 66% implied probability at -225.0 (+9.8% edge). Biggest factors in that number: Lone'er Kavanagh having been finished less often historically.</td></tr>
         
         
         <tr>
@@ -731,7 +725,7 @@
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Brandon Royval's win probability at 24%, lower than the market's 34% implied probability at 185.0 (-9.8% edge). That's built on a 17-8 record (68% win rate) and a 76% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Brandon Royval's win probability at 24%, lower than the market's 34% implied probability at 185.0 (-9.8% edge). Biggest factors in that number: Lone'er Kavanagh having been finished less often historically.</td></tr>
         
         
       </table>
@@ -754,9 +748,13 @@
         
         <tr><td>Lone'er Kavanagh</td><td>Method: Decision</td><td>17.6%</td></tr>
         
-        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Under</td><td>80.5%</td></tr>
+        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Under 2.5</td><td>80.5%</td></tr>
         
-        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Over</td><td>19.5%</td></tr>
+        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Over 2.5</td><td>19.5%</td></tr>
+        
+        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Fight Outcome: Goes The Distance</td><td>19.5%</td></tr>
+        
+        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Fight Outcome: Ends In Finish</td><td>80.5%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -781,24 +779,7 @@
       
 
       
-      <div class="market-group-label">📊 Live lines vs. model</div>
-      <table>
-        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
-        
-        <tr>
-          <td>King Green</td>
-          <td>Moneyline</td>
-          <td>+126</td>
-          <td>0.64</td>
-          <td>0.426</td>
-          <td class="edge-pos">21.42%</td>
-          <td>17.71%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">The model puts King Green's win probability at 64%, higher than the market's 43% implied probability at 126.0 (+21.4% edge). That's built on a 35-21 record (62% win rate) and a 54% finish rate.</td></tr>
-        
-        
-      </table>
+      <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
       
 
       
@@ -818,9 +799,13 @@
         
         <tr><td>Terrance McKinney</td><td>Method: Decision</td><td>13.9%</td></tr>
         
-        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Under</td><td>74.2%</td></tr>
+        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Under 2.5</td><td>74.2%</td></tr>
         
-        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Over</td><td>25.8%</td></tr>
+        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Over 2.5</td><td>25.8%</td></tr>
+        
+        <tr><td>King Green vs Terrance McKinney</td><td>Fight Outcome: Goes The Distance</td><td>25.8%</td></tr>
+        
+        <tr><td>King Green vs Terrance McKinney</td><td>Fight Outcome: Ends In Finish</td><td>74.2%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -859,7 +844,7 @@
           <td>9.19%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Nikita Krylov's win probability at 55%, higher than the market's 43% implied probability at 122.0 (+11.7% edge). That's built on a 30-10 record (75% win rate) and a 83% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Nikita Krylov's win probability at 55%, higher than the market's 43% implied probability at 122.0 (+11.7% edge). Biggest factors in that number: Robert Whittaker's striking accuracy edge.</td></tr>
         
         
         <tr>
@@ -872,7 +857,7 @@
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Robert Whittaker's win probability at 45%, lower than the market's 57% implied probability at -142.0 (-11.7% edge). That's built on a 26-8 record (76% win rate) and a 54% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Robert Whittaker's win probability at 45%, lower than the market's 57% implied probability at -142.0 (-11.7% edge). Biggest factors in that number: Robert Whittaker's striking accuracy edge.</td></tr>
         
         
       </table>
@@ -895,9 +880,13 @@
         
         <tr><td>Nikita Krylov</td><td>Method: Decision</td><td>13.2%</td></tr>
         
-        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Under</td><td>68.6%</td></tr>
+        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Under 2.5</td><td>68.6%</td></tr>
         
-        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Over</td><td>31.4%</td></tr>
+        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Over 2.5</td><td>31.4%</td></tr>
+        
+        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Fight Outcome: Goes The Distance</td><td>31.4%</td></tr>
+        
+        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Fight Outcome: Ends In Finish</td><td>68.6%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -936,7 +925,7 @@
           <td>11.95%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Elisha Ellison's win probability at 30%, higher than the market's 8% implied probability at 1100.0 (+22.3% edge). That's built on a 7-3 record (70% win rate) and a 71% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Elisha Ellison's win probability at 30%, higher than the market's 8% implied probability at 1100.0 (+22.3% edge). Biggest factors in that number: Gable Steveson's takedown accuracy vs. the opponent's takedown defense, Elisha Ellison's striking accuracy edge, Gable Steveson having been finished less often historically.</td></tr>
         
         
         <tr>
@@ -949,7 +938,7 @@
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Gable Steveson's win probability at 70%, lower than the market's 92% implied probability at -2500.0 (-22.3% edge). That's built on a 3-0 record (100% win rate) and a 100% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Gable Steveson's win probability at 70%, lower than the market's 92% implied probability at -2500.0 (-22.3% edge). Biggest factors in that number: Gable Steveson's takedown accuracy vs. the opponent's takedown defense, Elisha Ellison's striking accuracy edge, Gable Steveson having been finished less often historically.</td></tr>
         
         
       </table>
@@ -972,9 +961,13 @@
         
         <tr><td>Elisha Ellison</td><td>Method: Decision</td><td>8.6%</td></tr>
         
-        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Under</td><td>85.7%</td></tr>
+        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Under 2.5</td><td>85.7%</td></tr>
         
-        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Over</td><td>14.3%</td></tr>
+        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Over 2.5</td><td>14.3%</td></tr>
+        
+        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Fight Outcome: Goes The Distance</td><td>14.3%</td></tr>
+        
+        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Fight Outcome: Ends In Finish</td><td>85.7%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -1013,7 +1006,7 @@
           <td>10.3%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Cody Garbrandt's win probability at 39%, higher than the market's 23% implied probability at 325.0 (+16.7% edge). That's built on a 15-7 record (68% win rate) and a 53% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Cody Garbrandt's win probability at 39%, higher than the market's 23% implied probability at 325.0 (+16.7% edge). That's built on a 15-7 record (68% win rate) and a 53% finish rate, with no major style, durability, or layoff mismatch pulling the number further.</td></tr>
         
         
         <tr>
@@ -1026,7 +1019,7 @@
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Adrian Yanez's win probability at 61%, lower than the market's 77% implied probability at -415.0 (-16.7% edge). That's built on a 18-5 record (78% win rate) and a 67% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Adrian Yanez's win probability at 61%, lower than the market's 77% implied probability at -415.0 (-16.7% edge). That's built on a 18-5 record (78% win rate) and a 67% finish rate, with no major style, durability, or layoff mismatch pulling the number further.</td></tr>
         
         
       </table>
@@ -1049,9 +1042,13 @@
         
         <tr><td>Adrian Yanez</td><td>Method: Decision</td><td>19.2%</td></tr>
         
-        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Under</td><td>60.0%</td></tr>
+        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Under 2.5</td><td>60.0%</td></tr>
         
-        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Over</td><td>40.0%</td></tr>
+        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Over 2.5</td><td>40.0%</td></tr>
+        
+        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Fight Outcome: Goes The Distance</td><td>40.0%</td></tr>
+        
+        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Fight Outcome: Ends In Finish</td><td>60.0%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -1076,24 +1073,7 @@
       
 
       
-      <div class="market-group-label">📊 Live lines vs. model</div>
-      <table>
-        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
-        
-        <tr>
-          <td>Luke Riley</td>
-          <td>Moneyline</td>
-          <td>-290</td>
-          <td>0.729</td>
-          <td>0.714</td>
-          <td class="edge-pos">1.53%</td>
-          <td>0.0%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">The model puts Luke Riley's win probability at 73%, higher than the market's 71% implied probability at -290.0 (+1.5% edge). That's built on a 7-0 record (100% win rate) and a 71% finish rate.</td></tr>
-        
-        
-      </table>
+      <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
       
 
       
@@ -1113,9 +1093,13 @@
         
         <tr><td>Kai Kamaka III</td><td>Method: Decision</td><td>14.4%</td></tr>
         
-        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Under</td><td>66.5%</td></tr>
+        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Under 2.5</td><td>66.5%</td></tr>
         
-        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Over</td><td>33.5%</td></tr>
+        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Over 2.5</td><td>33.5%</td></tr>
+        
+        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Fight Outcome: Goes The Distance</td><td>33.5%</td></tr>
+        
+        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Fight Outcome: Ends In Finish</td><td>66.5%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -1154,7 +1138,7 @@
           <td>8.92%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Cesar Almeida's win probability at 47%, higher than the market's 34% implied probability at 185.0 (+13.0% edge). That's built on a 9-1 record (90% win rate) and a 78% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Cesar Almeida's win probability at 47%, higher than the market's 34% implied probability at 185.0 (+13.0% edge). Biggest factors in that number: Damian Pinas's striking accuracy edge, Damian Pinas having been finished less often historically.</td></tr>
         
         
         <tr>
@@ -1167,7 +1151,7 @@
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">The model puts Damian Pinas's win probability at 53%, lower than the market's 66% implied probability at -225.0 (-13.0% edge). That's built on a 9-3 record (75% win rate) and a 78% finish rate.</td></tr>
+        <tr class="rationale-row"><td colspan="7">The model puts Damian Pinas's win probability at 53%, lower than the market's 66% implied probability at -225.0 (-13.0% edge). Biggest factors in that number: Damian Pinas's striking accuracy edge, Damian Pinas having been finished less often historically.</td></tr>
         
         
       </table>
@@ -1190,9 +1174,13 @@
         
         <tr><td>Damian Pinas</td><td>Method: Decision</td><td>7.7%</td></tr>
         
-        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Under</td><td>77.8%</td></tr>
+        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Under 2.5</td><td>77.8%</td></tr>
         
-        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Over</td><td>22.2%</td></tr>
+        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Over 2.5</td><td>22.2%</td></tr>
+        
+        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Fight Outcome: Goes The Distance</td><td>22.2%</td></tr>
+        
+        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Fight Outcome: Ends In Finish</td><td>77.8%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -1217,24 +1205,7 @@
       
 
       
-      <div class="market-group-label">📊 Live lines vs. model</div>
-      <table>
-        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
-        
-        <tr>
-          <td>Ryan Gandra</td>
-          <td>Moneyline</td>
-          <td>-135</td>
-          <td>0.802</td>
-          <td>0.553</td>
-          <td class="edge-pos">24.91%</td>
-          <td>26.7%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">The model puts Ryan Gandra's win probability at 80%, higher than the market's 55% implied probability at -135.0 (+24.9% edge). That's built on a 10-0 record (100% win rate) and a 80% finish rate.</td></tr>
-        
-        
-      </table>
+      <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
       
 
       
@@ -1254,9 +1225,13 @@
         
         <tr><td>Zach Reese</td><td>Method: Decision</td><td>3.8%</td></tr>
         
-        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Under</td><td>82.9%</td></tr>
+        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Under 2.5</td><td>82.9%</td></tr>
         
-        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Over</td><td>17.1%</td></tr>
+        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Over 2.5</td><td>17.1%</td></tr>
+        
+        <tr><td>Ryan Gandra vs Zach Reese</td><td>Fight Outcome: Goes The Distance</td><td>17.1%</td></tr>
+        
+        <tr><td>Ryan Gandra vs Zach Reese</td><td>Fight Outcome: Ends In Finish</td><td>82.9%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -1303,6 +1278,14 @@
   
   <div class="line-card">
     <div>
+      <div class="line-matchup">Ryan Gandra vs Zachary Reese</div>
+      <div class="line-market">Moneyline · -135</div>
+    </div>
+    <div class="line-edge edge-pos">24.91%</div>
+  </div>
+  
+  <div class="line-card">
+    <div>
       <div class="line-matchup">Alex Pereira vs Josh Hokit</div>
       <div class="line-market">Moneyline · +140</div>
     </div>
@@ -1315,6 +1298,22 @@
       <div class="line-market">Moneyline · +252</div>
     </div>
     <div class="line-edge edge-pos">22.69%</div>
+  </div>
+  
+  <div class="line-card">
+    <div>
+      <div class="line-matchup">Conor McGregor vs Jorge Masvidal</div>
+      <div class="line-market">Moneyline · -145</div>
+    </div>
+    <div class="line-edge edge-pos">22.37%</div>
+  </div>
+  
+  <div class="line-card">
+    <div>
+      <div class="line-matchup">King Green vs Terrance Mckinney</div>
+      <div class="line-market">Moneyline · +126</div>
+    </div>
+    <div class="line-edge edge-pos">21.42%</div>
   </div>
   
   <div class="line-card">
@@ -1387,6 +1386,14 @@
       <div class="line-market">Moneyline · +270</div>
     </div>
     <div class="line-edge edge-pos">2.88%</div>
+  </div>
+  
+  <div class="line-card">
+    <div>
+      <div class="line-matchup">Luke Riley vs Kai Kamaka</div>
+      <div class="line-market">Moneyline · -290</div>
+    </div>
+    <div class="line-edge edge-pos">1.53%</div>
   </div>
   
   <div class="line-card">
