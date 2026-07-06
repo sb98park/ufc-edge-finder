@@ -19,6 +19,8 @@ systematic way to weight publicly available stats a bit closer to how
 people actually reason about matchups, instead of just comparing records.
 """
 
+import datetime as dt
+
 import pandas as pd
 
 # How many Elo-equivalent rating points a fully-realized stylistic
@@ -28,9 +30,33 @@ WRESTLING_ADVANTAGE_SCALE = 300.0
 STRIKING_ADVANTAGE_SCALE = 150.0
 DURABILITY_SCALE = 120.0
 
+# Ring rust: no penalty for a normal 6-12 month camp cycle. Beyond a year
+# away, each additional year away costs more -- extended layoffs (multi-year,
+# often tied to serious injury) are a real, well-documented risk factor in
+# combat sports, not just "conventional wisdom."
+LAYOFF_GRACE_YEARS = 1.0
+LAYOFF_PENALTY_PER_YEAR = 60.0
+LAYOFF_PENALTY_CAP = 300.0
+
 
 def _get(row: pd.Series, col: str, default: float) -> float:
     return float(row[col]) if col in row and pd.notna(row[col]) else default
+
+
+def layoff_years(row: pd.Series, reference_date: dt.date | None = None) -> float | None:
+    if "last_fight_date" not in row or pd.isna(row["last_fight_date"]):
+        return None
+    reference_date = reference_date or dt.date.today()
+    last_fight = pd.to_datetime(row["last_fight_date"]).date()
+    return (reference_date - last_fight).days / 365.25
+
+
+def layoff_penalty(row: pd.Series, reference_date: dt.date | None = None) -> float:
+    years_away = layoff_years(row, reference_date)
+    if years_away is None or years_away <= LAYOFF_GRACE_YEARS:
+        return 0.0
+    penalty = LAYOFF_PENALTY_PER_YEAR * (years_away - LAYOFF_GRACE_YEARS)
+    return -min(penalty, LAYOFF_PENALTY_CAP)
 
 
 def classify_style(row: pd.Series) -> str:
@@ -74,13 +100,20 @@ def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
     finish_loss_rate_b = (row_b.get("ko_losses", 0) + row_b.get("sub_losses", 0)) / losses_b if row_b.get("losses", 0) else 0
     durability_adj = (finish_loss_rate_b - finish_loss_rate_a) * DURABILITY_SCALE
 
-    total_adj = wrestling_adj + striking_adj + durability_adj
+    layoff_adj_a = layoff_penalty(row_a)
+    layoff_adj_b = layoff_penalty(row_b)
+    layoff_adj = layoff_adj_a - layoff_adj_b  # penalize A if A has the longer layoff, and vice versa
+
+    total_adj = wrestling_adj + striking_adj + durability_adj + layoff_adj
 
     return {
         "total_adjustment": total_adj,
         "wrestling_adjustment": wrestling_adj,
         "striking_adjustment": striking_adj,
         "durability_adjustment": durability_adj,
+        "layoff_adjustment": layoff_adj,
+        "layoff_years_a": layoff_years(row_a),
+        "layoff_years_b": layoff_years(row_b),
         "style_a": classify_style(row_a),
         "style_b": classify_style(row_b),
     }

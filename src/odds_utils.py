@@ -17,6 +17,21 @@ def american_to_implied_prob(odds: float) -> float:
         return -odds / (-odds + 100.0)
 
 
+def american_to_decimal(odds_american) -> float:
+    """Convert a sportsbook's American odds into decimal (payout multiplier) odds."""
+    odds_american = float(odds_american)
+    if odds_american > 0:
+        return 1.0 + odds_american / 100.0
+    return 1.0 + 100.0 / abs(odds_american)
+
+
+def decimal_to_american(decimal_odds_value: float) -> float:
+    """Inverse of the above -- used after combining parlay legs to show a familiar American price."""
+    if decimal_odds_value >= 2.0:
+        return (decimal_odds_value - 1.0) * 100.0
+    return -100.0 / (decimal_odds_value - 1.0)
+
+
 def implied_prob_to_american(prob: float) -> float:
     """Inverse of the above, useful for sanity checks."""
     if prob <= 0 or prob >= 1:

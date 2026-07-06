@@ -43,13 +43,14 @@ def compute_moneyline_edges(
         imp_b = american_to_implied_prob(b["odds_american"])
         fair_a, fair_b = remove_vig_two_way(imp_a, imp_b)
 
-        for fighter, model_p, fair_p, odds in [
-            (a["selection"], model_prob_a, fair_a, a["odds_american"]),
-            (b["selection"], model_prob_b, fair_b, b["odds_american"]),
+        for fighter, opponent, model_p, fair_p, odds in [
+            (a["selection"], b["selection"], model_prob_a, fair_a, a["odds_american"]),
+            (b["selection"], a["selection"], model_prob_b, fair_b, b["odds_american"]),
         ]:
             rows.append({
                 "fight_id": fight_id,
                 "fighter": fighter,
+                "opponent": opponent,
                 "market": "Moneyline",
                 "odds_american": odds,
                 "model_prob": round(model_p, 3),
@@ -111,6 +112,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
         rows.append({
             "fight_id": row["fight_id"],
             "fighter": row["selection"],
+            "opponent": opponent_name,
             "market": f"Method: {row['selection_method']}",
             "odds_american": row["odds_american"],
             "model_prob": round(model_p, 3),

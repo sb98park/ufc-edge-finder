@@ -7,7 +7,8 @@ by event -> fight, instead of one flat table.
 import pandas as pd
 
 from src.rationale import explain_edge
-from src.model_preview import build_fight_preview
+from src.model_preview import build_fight_preview, build_full_market_projection
+from src.odds_utils import implied_prob_to_american, format_american_odds
 
 
 def load_fight_cards(path: str = "data/fight_cards.csv") -> pd.DataFrame:
@@ -76,11 +77,27 @@ def group_edges_by_card(
     # group fights into events, preserving card order
     events_map: dict[tuple, dict] = {}
     for fight in fights:
+        # sort each fight's edges by |edge_pct| descending so the juiciest line shows first
+        fight["edges"].sort(key=lambda e: abs(e.get("edge_pct", 0)), reverse=True)
+
+        # fill in model-only projections for any method/rounds markets the
+        # live book didn't happen to cover for this fight, so there's always
+        # something to look at beyond moneyline
+        if fighters_df is not None and effective_ratings is not None:
+            live_markets = {e["market"] for e in fight["edges"]}
+            projection = build_full_market_projection(
+                fight["fighter_a"], fight["fighter_b"], fighters_df, effective_ratings
+            )
+            model_only = []
+            if projection:
+                for row in projection["method_rows"] + projection["rounds_rows"]:
+                    if row["market"] not in live_markets:
+                        model_only.append(row)
+            fight["model_only_rows"] = model_only
+
         key = (fight["event_name"], fight["event_date"])
         if key not in events_map:
             events_map[key] = {"event_name": fight["event_name"], "event_date": fight["event_date"], "fights": []}
-        # sort each fight's edges by |edge_pct| descending so the juiciest line shows first
-        fight["edges"].sort(key=lambda e: abs(e.get("edge_pct", 0)), reverse=True)
         events_map[key]["fights"].append(fight)
 
     events = list(events_map.values())
@@ -98,7 +115,11 @@ def top_standout_props(
     standout["abs_edge"] = standout["edge_pct"].abs()
     standout = standout.sort_values("abs_edge", ascending=False).head(n)
     records = standout.drop(columns="abs_edge").to_dict("records")
-    if fighters_df is not None:
-        for r in records:
+    for r in records:
+        try:
+            r["model_fair_odds"] = format_american_odds(implied_prob_to_american(r["model_prob"]))
+        except (ValueError, ZeroDivisionError):
+            r["model_fair_odds"] = "N/A"
+        if fighters_df is not None:
             r["rationale"] = explain_edge(r, fighters_df)
     return records

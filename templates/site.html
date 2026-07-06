@@ -6,88 +6,172 @@
 <title>UFC Edge Finder</title>
 <style>
   :root {
-    --bg: #0b0d11; --panel: #15181f; --panel2: #1b1f28; --border: #262b36;
+    --bg: #0a0c10; --panel: #14171f; --panel2: #1a1e28; --border: #262b36;
     --text: #eef0f2; --muted: #8a8f9a; --green: #3ddc84;
-    --red: #ff5c5c; --accent: #d4af37;
+    --red: #ff5c5c; --accent: #d4af37; --accent2: #e8c766;
   }
   * { box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 18px; }
-  h1 { font-size: 21px; margin: 0 0 2px; }
-  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
-  .updated { color: var(--muted); font-size: 11px; margin-bottom: 18px; }
+  body {
+    background: radial-gradient(circle at top, #12151c, #0a0c10 60%);
+    color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    margin: 0; padding: 16px; max-width: 720px; margin-inline: auto;
+  }
+  h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: 0.3px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 20px;
+    padding: 4px 11px; font-size: 11px; color: var(--muted);
+  }
+  .badge.book { border-color: #3a2f14; color: var(--accent2); }
 
   .disclaimer, .notice {
     background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: var(--muted); margin-bottom: 18px;
+    padding: 10px 14px; border-radius: 8px; font-size: 12.5px; color: var(--muted); margin-bottom: 16px;
   }
   .notice { border-left-color: var(--red); }
 
-  .standout-section { margin-bottom: 26px; }
-  .standout-title { font-size: 15px; color: var(--accent); margin-bottom: 10px; }
-  .standout-card {
-    background: linear-gradient(135deg, #1c1710, #15181f);
-    border: 1px solid #3a2f14; border-radius: 10px;
-    padding: 12px 14px; margin-bottom: 8px;
-    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  details.info-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 20px; overflow: hidden;
   }
-  .standout-main { font-size: 14px; font-weight: 600; }
-  .standout-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .standout-edge { font-size: 18px; font-weight: 700; white-space: nowrap; }
+  details.info-card summary {
+    padding: 12px 14px; cursor: pointer; list-style: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; font-size: 13.5px;
+  }
+  details.info-card summary::-webkit-details-marker { display: none; }
+  .chevron { color: var(--muted); font-size: 12px; transition: transform 0.15s; }
+  details[open] .chevron { transform: rotate(90deg); }
+  .info-body { padding: 0 14px 14px; font-size: 12.5px; line-height: 1.6; color: var(--text); }
+  .info-body p { margin: 10px 0; }
+
+  /* Standout props: modern card grid */
+  .standout-title { font-size: 15px; color: var(--accent); margin-bottom: 10px; font-weight: 700; }
+  .standout-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 26px; }
+  .standout-card {
+    background: linear-gradient(145deg, #1d1810, #14171f 65%);
+    border: 1px solid #3a2f14; border-radius: 14px; padding: 14px 16px;
+  }
+  .standout-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .standout-main { font-size: 14.5px; font-weight: 700; }
+  .standout-market { color: var(--accent2); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
+  .standout-edge-badge {
+    font-size: 16px; font-weight: 800; white-space: nowrap; border-radius: 8px; padding: 3px 9px;
+  }
+  .odds-compare {
+    display: flex; align-items: center; gap: 10px; margin: 10px 0;
+    background: #0f1218; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+  }
+  .odds-compare-col { flex: 1; text-align: center; }
+  .odds-compare-label { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; }
+  .odds-compare-value { font-size: 19px; font-weight: 800; margin-top: 2px; }
+  .odds-compare-value.book { color: var(--muted); }
+  .odds-compare-value.model { color: var(--accent2); }
+  .odds-compare-arrow { color: var(--muted); font-size: 16px; }
+  .standout-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .rationale {
+    font-size: 12px; color: var(--muted); margin-top: 8px;
+    line-height: 1.45; border-top: 1px solid #2a2410; padding-top: 8px;
+  }
+
+  /* Parlay sections */
+  .parlay-section-title { font-size: 15px; margin: 28px 0 10px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .parlay-section-title.bankroll { color: var(--green); }
+  .parlay-section-title.lotto { color: #c77dff; }
+  .parlay-subtitle { font-size: 11.5px; color: var(--muted); margin: -6px 0 12px; }
+  .parlay-card {
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; border: 1px solid var(--border);
+  }
+  .parlay-card.bankroll { background: linear-gradient(145deg, #10251a, #14171f 65%); border-color: #1e4a2f; }
+  .parlay-card.lotto { background: linear-gradient(145deg, #21102b, #14171f 65%); border-color: #4a1e5a; }
+  .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .parlay-odds { font-size: 22px; font-weight: 800; }
+  .parlay-card.bankroll .parlay-odds { color: var(--green); }
+  .parlay-card.lotto .parlay-odds { color: #c77dff; }
+  .parlay-prob { font-size: 11px; color: var(--muted); }
+  .parlay-legs { list-style: none; margin: 0; padding: 0; }
+  .parlay-leg {
+    font-size: 12.5px; padding: 7px 0; border-bottom: 1px dashed var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .parlay-leg:last-child { border-bottom: none; }
+  .parlay-leg-num {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--panel2);
+    display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); flex-shrink: 0;
+  }
+  .parlay-note { font-size: 10.5px; color: var(--muted); margin-top: 8px; }
+  .no-parlays { font-size: 12px; color: var(--muted); padding: 4px 0 8px; }
 
   .event-header { margin: 26px 0 10px; }
-  .event-name { font-size: 17px; font-weight: 700; }
+  .event-name { font-size: 18px; font-weight: 700; }
   .event-date { color: var(--muted); font-size: 12px; }
 
   details.fight-card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-    margin-bottom: 10px; overflow: hidden;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 12px; overflow: hidden;
   }
   details.fight-card summary {
-    padding: 12px 14px; cursor: pointer; list-style: none;
+    padding: 14px 16px; cursor: pointer; list-style: none;
     display: flex; justify-content: space-between; align-items: center; gap: 10px;
   }
   details.fight-card summary::-webkit-details-marker { display: none; }
-  .matchup { font-size: 14.5px; font-weight: 600; }
-  .weight-class { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
-  .card-position { color: var(--accent); font-size: 11px; font-weight: 600; }
-  .chevron { color: var(--muted); font-size: 12px; transition: transform 0.15s; }
-  details[open] .chevron { transform: rotate(90deg); }
-  .no-edges { color: var(--muted); font-size: 12px; padding: 0 14px 12px; }
-  .rationale {
-    font-size: 12px; color: var(--muted); margin-top: 6px;
-    line-height: 1.4; border-top: 1px solid #2a2410; padding-top: 6px;
+  .matchup { font-size: 15px; font-weight: 700; }
+  .weight-class { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+  .card-position {
+    color: var(--accent); font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    background: #241f10; border-radius: 12px; padding: 3px 9px; display: inline-block; margin-bottom: 4px;
   }
+  .no-edges { color: var(--muted); font-size: 12px; padding: 0 16px 14px; }
+
+  .fight-body { padding: 0 16px 16px; }
   .model-preview {
-    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 12px; margin: 12px 14px 8px; font-size: 12.5px; color: var(--text); line-height: 1.5;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin: 4px 0 14px; font-size: 12.5px; color: var(--text); line-height: 1.55;
   }
   .preview-label { color: var(--accent); font-weight: 700; }
-  .rationale-row td {
-    font-size: 11.5px; color: var(--muted); line-height: 1.4;
-    padding-top: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border);
-  }
 
-  .fight-body { padding: 0 14px 14px; }
+  .market-group-label {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
+    margin: 14px 0 6px; font-weight: 700;
+  }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  th, td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+  th, td { padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); }
   th { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; }
   tr:last-child td { border-bottom: none; }
   .edge-pos { color: var(--green); font-weight: 700; }
   .edge-neg { color: var(--red); }
+  .rationale-row td {
+    font-size: 11.5px; color: var(--muted); line-height: 1.45;
+    padding-top: 0; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .model-only-table td { color: var(--muted); font-style: italic; }
+  .model-only-note { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-  .section-title { font-size: 14px; margin: 24px 0 10px; color: var(--accent); }
-  .rankings-table { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .section-title { font-size: 14px; margin: 26px 0 10px; color: var(--accent); font-weight: 700; }
+  .rankings-table, .lines-table { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+  .line-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .line-matchup { font-size: 13.5px; font-weight: 600; }
+  .line-market { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .line-edge { font-size: 15px; font-weight: 700; white-space: nowrap; }
 
   @media (max-width: 480px) {
     th, td { padding: 6px 5px; font-size: 11.5px; }
-    .standout-card { flex-direction: column; align-items: flex-start; }
   }
 </style>
 </head>
 <body>
   <h1>🥋 UFC Edge Finder</h1>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
-  <div class="updated">Last updated: {{ generated_at }} · source: {{ source or "unavailable" }} · auto-refreshes every few hours</div>
+  <div class="meta-row">
+    <span class="badge">🕒 {{ generated_at }}</span>
+    <span class="badge book">📊 Odds via {{ source or "unavailable" }}</span>
+    <span class="badge">🔄 refreshes every few hours</span>
+  </div>
 
   <div class="disclaimer">
     For analysis and education only, not betting advice. A flagged edge means the model disagrees
@@ -99,12 +183,9 @@
   <div class="notice">{{ live_error }}</div>
   {% endif %}
 
-  <details class="fight-card" style="margin-bottom: 22px;">
-    <summary>
-      <div class="matchup">🔍 How the model works</div>
-      <span class="chevron">▶</span>
-    </summary>
-    <div class="fight-body" style="font-size: 12.5px; line-height: 1.6; color: var(--text);">
+  <details class="info-card">
+    <summary><span>🔍 How the model works</span><span class="chevron">▶</span></summary>
+    <div class="info-body">
       <p><strong>Base rating:</strong> blends Elo (built from recorded fight history, when it exists)
       with a stats-based rating from career win rate, finish rate, experience, and reach — so a fighter
       with no tracked fight history isn't just defaulted to a flat, meaningless 50/50.</p>
@@ -112,31 +193,91 @@
       opponent's takedown defense (wrestling advantage), striking accuracy differential, and durability
       (how often each fighter has actually been finished before, and by what method) all shift the base
       rating gap before it's converted to a win probability.</p>
+      <p><strong>Layoff / ring rust:</strong> fighters returning from more than a year away take a
+      rating penalty that scales with time away — a real, documented risk in combat sports, not just a
+      hunch.</p>
       <p><strong>Method-of-victory props:</strong> blend a fighter's own career finish tendency (65%
-      weight) with how often this specific opponent has been finished that way before (35% weight) —
-      a big KO rate matters less against someone who's never been knocked out.</p>
+      weight) with how often this specific opponent has been finished that way before (35% weight).</p>
       <p><strong>Total rounds:</strong> a simplified proxy using both fighters' combined finish rate.</p>
       <p style="color: var(--muted);"><strong>Honest limitations:</strong> striking/takedown/durability
       stats are sample data for now (not yet a live feed from UFCStats or similar) — see the README for
       how to refresh them for real accuracy. This is a systematic way to weigh public stats, not a
-      trained predictive model, and it can't see recent form, injuries, or camp changes.</p>
+      trained predictive model, and it can't see recent form or camp changes beyond what's noted above.</p>
     </div>
   </details>
 
   {% if standout_props %}
-  <div class="standout-section">
-    <div class="standout-title">🔥 Standout Props This Refresh</div>
+  <div class="standout-title">🔥 Standout Props This Refresh</div>
+  <div class="standout-grid">
     {% for p in standout_props %}
     <div class="standout-card">
-      <div>
-        <div class="standout-main">{{ p.fighter }} — {{ p.market }}</div>
-        <div class="standout-sub">Odds {{ p.odds_american | american }} · Model {{ p.model_prob }} vs. Book {{ p.book_fair_prob }} · ½-Kelly {{ p.half_kelly_stake_pct }}%</div>
-        {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
+      <div class="standout-top">
+        <div>
+          <div class="standout-main">{{ p.fighter }}{% if p.opponent %} vs {{ p.opponent }}{% endif %}</div>
+          <div class="standout-market">{{ p.market }}</div>
+        </div>
+        <div class="standout-edge-badge {{ 'edge-pos' if p.edge_pct > 0 else 'edge-neg' }}">{{ p.edge_pct }}%</div>
       </div>
-      <div class="standout-edge {{ 'edge-pos' if p.edge_pct > 0 else 'edge-neg' }}">{{ p.edge_pct }}%</div>
+      <div class="odds-compare">
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Book Price</div>
+          <div class="odds-compare-value book">{{ p.odds_american | american }}</div>
+        </div>
+        <div class="odds-compare-arrow">→</div>
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Model Says</div>
+          <div class="odds-compare-value model">{{ p.model_fair_odds }}</div>
+        </div>
+      </div>
+      <div class="standout-sub">½-Kelly suggested stake: {{ p.half_kelly_stake_pct }}% of bankroll</div>
+      {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
     </div>
     {% endfor %}
   </div>
+  {% endif %}
+
+  {% if bankroll_parlays %}
+  <div class="parlay-section-title bankroll">💰 Bankroll Builder</div>
+  <div class="parlay-subtitle">Modest 2-3 leg combos in the +100 to +300 range, built from picks the model favors.</div>
+  {% for p in bankroll_parlays %}
+  <div class="parlay-card bankroll">
+    <div class="parlay-top">
+      <div class="parlay-odds">{{ p.combined_american_display }}</div>
+      <div class="parlay-prob">Model-estimated hit rate: {{ (p.combined_prob*100)|round(1) }}%</div>
+    </div>
+    <ul class="parlay-legs">
+      {% for leg in p.legs %}
+      <li class="parlay-leg"><span class="parlay-leg-num">{{ loop.index }}</span>{{ leg }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+  <div class="parlay-note">Assumes each leg is independent — same-card fights aren't perfectly independent in reality, so treat the hit-rate estimate as optimistic.</div>
+  {% elif events %}
+  <div class="parlay-section-title bankroll">💰 Bankroll Builder</div>
+  <div class="no-parlays">Not enough live-priced legs on this card yet to build a parlay in this payout range.</div>
+  {% endif %}
+
+  {% if lotto_parlays %}
+  <div class="parlay-section-title lotto">🎰 Lotto Parlays</div>
+  <div class="parlay-subtitle">Longer-shot 3-5 leg combos at +1000 or better — still long shots, ranked by the model's best combined odds of hitting.</div>
+  {% for p in lotto_parlays %}
+  <div class="parlay-card lotto">
+    <div class="parlay-top">
+      <div class="parlay-odds">{{ p.combined_american_display }}</div>
+      <div class="parlay-prob">Model-estimated hit rate: {{ (p.combined_prob*100)|round(2) }}%</div>
+    </div>
+    <ul class="parlay-legs">
+      {% for leg in p.legs %}
+      <li class="parlay-leg"><span class="parlay-leg-num">{{ loop.index }}</span>{{ leg }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+  <div class="parlay-note">These are long shots by design — meant as a "worth a small stab" section, not a plan.</div>
+  {% elif events %}
+  <div class="parlay-section-title lotto">🎰 Lotto Parlays</div>
+  <div class="no-parlays">Not enough live-priced legs on this card yet to build a +1000 parlay.</div>
   {% endif %}
 
   {% for event in events %}
@@ -149,13 +290,11 @@
   <details class="fight-card">
     <summary>
       <div>
+        <div class="card-position">{{ fight.card_position }}</div>
         <div class="matchup">{{ fight.fighter_a }} vs {{ fight.fighter_b }}</div>
         <div class="weight-class">{{ fight.weight_class }}</div>
       </div>
-      <div style="text-align:right">
-        <div class="card-position">{{ fight.card_position }}</div>
-        <span class="chevron">▶</span>
-      </div>
+      <span class="chevron">▶</span>
     </summary>
     <div class="fight-body">
       {% if fight.preview %}
@@ -163,7 +302,9 @@
         <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
       </div>
       {% endif %}
+
       {% if fight.edges %}
+      <div class="market-group-label">📊 Live lines vs. model</div>
       <table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         {% for row in fight.edges %}
@@ -184,25 +325,36 @@
       {% else %}
       <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
       {% endif %}
+
+      {% if fight.model_only_rows %}
+      <div class="market-group-label">🧮 Model projection (no live book line to compare yet)</div>
+      <table class="model-only-table">
+        <tr><th>Selection</th><th>Market</th><th>Model Prob</th></tr>
+        {% for row in fight.model_only_rows %}
+        <tr><td>{{ row.fighter }}</td><td>{{ row.market }}</td><td>{{ (row.model_prob*100)|round(1) }}%</td></tr>
+        {% endfor %}
+      </table>
+      <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
+      {% endif %}
     </div>
   </details>
   {% endfor %}
   {% endfor %}
 
   {% if unmatched %}
-  <div class="section-title">Other Live Lines (not on a tracked card)</div>
-  <table class="rankings-table">
-    <tr><th>Fighter</th><th>Market</th><th>Odds</th><th>Edge %</th></tr>
-    {% for row in unmatched %}
-    <tr>
-      <td>{{ row.fighter }}</td><td>{{ row.market }}</td><td>{{ row.odds_american | american }}</td>
-      <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
-    </tr>
-    {% endfor %}
-  </table>
+  <div class="section-title">📡 Other Live Lines (not on a tracked card)</div>
+  {% for row in unmatched %}
+  <div class="line-card">
+    <div>
+      <div class="line-matchup">{{ row.fighter }}{% if row.opponent %} vs {{ row.opponent }}{% endif %}</div>
+      <div class="line-market">{{ row.market }} · {{ row.odds_american | american }}</div>
+    </div>
+    <div class="line-edge {{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</div>
+  </div>
+  {% endfor %}
   {% endif %}
 
-  <div class="section-title">Elo Rankings (from fight history)</div>
+  <div class="section-title">📈 Elo Rankings (from fight history)</div>
   <table class="rankings-table">
     <tr><th>Fighter</th><th>Elo</th></tr>
     {% for row in rankings %}

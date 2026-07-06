@@ -18,6 +18,7 @@ from src.live_props import get_live_props
 from src.card_matcher import load_fight_cards, group_edges_by_card, top_standout_props
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
+from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -48,7 +49,18 @@ def main():
         live_error = f"Couldn't fetch live odds: {exc}"
 
     events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings)
-    standout_props = top_standout_props(edges_df, fighters_df, n=5, min_edge=5.0)
+
+    # Standout props should only ever be fighters on OUR tracked card --
+    # DraftKings' MMA feed includes other events too, and those shouldn't
+    # bleed into "this weekend's" standout picks.
+    tracked_edges = pd.DataFrame(
+        [edge for event in events for fight in event["fights"] for edge in fight["edges"]]
+    )
+    standout_props = top_standout_props(tracked_edges, fighters_df, n=5, min_edge=5.0)
+
+    tracked_edges_list = tracked_edges.to_dict("records") if not tracked_edges.empty else []
+    bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list)
+    lotto_parlays = build_lotto_parlays(tracked_edges_list)
 
     rankings_df = pd.DataFrame(
         [{"fighter": f, "elo": r} for f, r in elo_ratings.items()]
@@ -62,6 +74,8 @@ def main():
         events=events,
         unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
         standout_props=standout_props,
+        bankroll_parlays=bankroll_parlays,
+        lotto_parlays=lotto_parlays,
         rankings=rankings_df.to_dict("records"),
         live_error=live_error,
         source=source,
