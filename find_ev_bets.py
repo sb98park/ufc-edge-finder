@@ -24,6 +24,7 @@ from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
+from src.card_matcher import load_fight_cards, assign_canonical_fight_ids
 
 DATA_DIR = "data"
 
@@ -42,12 +43,14 @@ def main():
     args = parser.parse_args()
 
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
+    cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
     elo_ratings = build_ratings(fighters_df)
 
     upcoming_df, source = get_live_props()
     if upcoming_df.empty:
         print("No live props available right now.")
         return
+    upcoming_df = assign_canonical_fight_ids(upcoming_df, cards_df)
 
     edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings)
     edges_df["odds_american"] = edges_df["odds_american"].apply(format_american_odds)

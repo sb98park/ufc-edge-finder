@@ -29,6 +29,39 @@ def load_fight_cards(path: str = "data/fight_cards.csv") -> pd.DataFrame:
     return pd.read_csv(path)
 
 
+def assign_canonical_fight_ids(upcoming_df: pd.DataFrame, cards_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Different odds sources assign their own internal fight IDs -- Polymarket
+    might call the McGregor/Holloway fight 'e1' while DraftKings calls it
+    '1'. If a moneyline comes from one source and a rounds prop for the
+    SAME real fight comes from another, they'd end up with different
+    fight_id values and the parlay builder would treat them as two
+    unrelated fights instead of bundling them as a same-fight combo.
+
+    This reassigns fight_id based on the normalized fighter pair matched
+    against the tracked card, so every row for the same real fight shares
+    one consistent ID no matter which source it came from.
+    """
+    if upcoming_df.empty:
+        return upcoming_df
+
+    card_pairs = {}
+    for i, row in cards_df.iterrows():
+        key = frozenset({_normalize_name(row["fighter_a"]), _normalize_name(row["fighter_b"])})
+        card_pairs[key] = f"card_{i}"
+
+    def canonical_id(row):
+        fighter_a, fighter_b = row.get("fighter_a"), row.get("fighter_b")
+        if not fighter_a or not fighter_b:
+            return row.get("fight_id")
+        key = frozenset({_normalize_name(fighter_a), _normalize_name(fighter_b)})
+        return card_pairs.get(key, f"untracked_{'_'.join(sorted(key))}")
+
+    df = upcoming_df.copy()
+    df["fight_id"] = df.apply(canonical_id, axis=1)
+    return df
+
+
 def _split_total_rounds_fighter_field(fighter_field: str) -> set[str]:
     return {name.strip() for name in fighter_field.split(" vs ")}
 

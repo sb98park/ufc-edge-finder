@@ -208,7 +208,7 @@
   </details>
 
   {% if standout_props %}
-  <div class="standout-title">🔥 Standout Props This Refresh</div>
+  <div class="standout-title">🔥 Standout Props for {{ event_short_name }}</div>
   <div class="standout-grid">
     {% for p in standout_props %}
     <div class="standout-card">
@@ -239,7 +239,7 @@
 
   {% if bankroll_parlays %}
   <div class="parlay-section-title bankroll">💰 Bankroll Builder</div>
-  <div class="parlay-subtitle">Modest 2-3 leg combos in the +100 to +300 range, built from picks the model favors.</div>
+  <div class="parlay-subtitle">Modest 2-3 leg combos in the +100 to +300 range, built from picks the model favors — including same-fight combos (e.g. a fighter's moneyline stacked with a rounds or method prop from that same bout) where they're not contradictory.</div>
   {% for p in bankroll_parlays %}
   <div class="parlay-card bankroll">
     <div class="parlay-top">
@@ -261,7 +261,7 @@
 
   {% if lotto_parlays %}
   <div class="parlay-section-title lotto">🎰 Lotto Parlays</div>
-  <div class="parlay-subtitle">Longer-shot 3-5 leg combos at +1000 or better — still long shots, ranked by the model's best combined odds of hitting.</div>
+  <div class="parlay-subtitle">Longer-shot 3-5 leg combos at +1000 or better — mixing legs across fights and within the same fight (same-game-parlay style), ranked by the model's best combined odds of hitting.</div>
   {% for p in lotto_parlays %}
   <div class="parlay-card lotto">
     <div class="parlay-top">

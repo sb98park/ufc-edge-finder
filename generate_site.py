@@ -15,7 +15,7 @@ from jinja2 import Environment, FileSystemLoader
 from src.elo import EloRatingSystem
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
-from src.card_matcher import load_fight_cards, group_edges_by_card, top_standout_props
+from src.card_matcher import load_fight_cards, group_edges_by_card, top_standout_props, assign_canonical_fight_ids
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
@@ -42,6 +42,7 @@ def main():
 
     try:
         upcoming_df, source = get_live_props()
+        upcoming_df = assign_canonical_fight_ids(upcoming_df, cards_df)
         edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings)
         if edges_df.empty:
             live_error = f"No usable live odds returned right now (source: {source})."
@@ -66,6 +67,9 @@ def main():
         [{"fighter": f, "elo": r} for f, r in elo_ratings.items()]
     ).sort_values("elo", ascending=False).reset_index(drop=True)
 
+    # e.g. "UFC 329: McGregor vs. Holloway 2" -> "UFC 329", for the standout props header
+    event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
+
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
     template = env.get_template("site.html")
@@ -74,6 +78,7 @@ def main():
         events=events,
         unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
         standout_props=standout_props,
+        event_short_name=event_short_name,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
         rankings=rankings_df.to_dict("records"),
