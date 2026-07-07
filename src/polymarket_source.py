@@ -83,6 +83,19 @@ def _find_mma_tag_id() -> str | None:
     return None
 
 
+def _is_individual_fight_event(event: dict) -> bool:
+    """
+    'UFC' alone in the title isn't enough -- it also matches year-end
+    championship futures markets like 'Who will be UFC Flyweight champion
+    at the end of 2026?' (confirmed via live diagnostic output, not a
+    guess). An actual fight-vs-fight event always has a 'vs' in the title
+    ('UFC 329: Max Holloway vs. Conor McGregor'); futures/ranking markets
+    never do. Requiring both is what actually separates the two.
+    """
+    combined = f"{event.get('title') or ''} {event.get('slug') or ''}".lower()
+    return "ufc" in combined and bool(re.search(r"\bvs\.?\b", combined))
+
+
 def _fetch_events_by_tag(tag_id: str, limit: int = 200) -> list[dict]:
     resp = requests.get(
         f"{GAMMA_BASE}/events",
@@ -92,7 +105,7 @@ def _fetch_events_by_tag(tag_id: str, limit: int = 200) -> list[dict]:
     resp.raise_for_status()
     events = resp.json()
     print(f"[polymarket] tag-based lookup returned {len(events)} events")
-    return [e for e in events if "ufc" in (e.get("title") or "").lower() or "ufc" in (e.get("slug") or "").lower()]
+    return [e for e in events if _is_individual_fight_event(e)]
 
 
 def _fetch_events_by_volume_fallback(limit: int = 200, pages: int = 3) -> list[dict]:
@@ -109,9 +122,7 @@ def _fetch_events_by_volume_fallback(limit: int = 200, pages: int = 3) -> list[d
         events = resp.json()
         if not events:
             break
-        all_ufc_events.extend(
-            e for e in events if "ufc" in (e.get("title") or "").lower() or "ufc" in (e.get("slug") or "").lower()
-        )
+        all_ufc_events.extend(e for e in events if _is_individual_fight_event(e))
     print(f"[polymarket] volume-sorted fallback (paginated) found {len(all_ufc_events)} UFC events")
     return all_ufc_events
 
