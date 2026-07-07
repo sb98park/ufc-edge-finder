@@ -123,22 +123,57 @@ def _fetch_events_by_volume_fallback(limit: int = 200, pages: int = 3) -> list[d
         if not events:
             break
         all_ufc_events.extend(e for e in events if _is_individual_fight_event(e))
-    print(f"[polymarket] volume-sorted fallback (paginated) found {len(all_ufc_events)} UFC events")
+    print(f"[polymarket] volume-sorted fallback found {len(all_ufc_events)} UFC events")
+    return all_ufc_events
+
+
+def _fetch_events_by_end_date(limit: int = 200, pages: int = 3) -> list[dict]:
+    """
+    Individual MMA fights rank far too low in PLATFORM-WIDE dollar volume to
+    surface reliably even hundreds of events deep (political/crypto markets
+    dwarf them). But an imminent event like this weekend's card will have a
+    very near-term end date regardless of its relative volume, so sorting by
+    soonest-ending is a much more reliable way to actually find it.
+    """
+    all_ufc_events = []
+    for page in range(pages):
+        resp = requests.get(
+            f"{GAMMA_BASE}/events",
+            params={"active": "true", "closed": "false", "limit": limit, "offset": page * limit,
+                     "order": "endDate", "ascending": "true"},
+            headers=HEADERS, timeout=20,
+        )
+        resp.raise_for_status()
+        events = resp.json()
+        if not events:
+            break
+        all_ufc_events.extend(e for e in events if _is_individual_fight_event(e))
+    print(f"[polymarket] end-date-sorted fallback found {len(all_ufc_events)} UFC events")
     return all_ufc_events
 
 
 def fetch_ufc_events(limit: int = 200) -> list[dict]:
+    found: dict[str, dict] = {}  # keyed by slug/title to dedupe across strategies
+
     try:
         tag_id = _find_mma_tag_id()
         if tag_id:
-            ufc_events = _fetch_events_by_tag(tag_id, limit)
-            if ufc_events:
-                return ufc_events
-            print("[polymarket] tag-based lookup found no UFC-titled events, falling back to volume-sorted pagination")
+            for e in _fetch_events_by_tag(tag_id, limit):
+                found[e.get("slug") or e.get("title")] = e
     except Exception as exc:
-        print(f"[polymarket] tag lookup failed ({exc}), falling back to volume-sorted pagination")
+        print(f"[polymarket] tag lookup failed ({exc})")
 
-    return _fetch_events_by_volume_fallback(limit)
+    # Always run both fallback strategies too and merge -- an imminent event
+    # should surface via end-date sorting even when volume sorting misses it,
+    # and vice versa for a high-volume event with a further-out end date.
+    for e in _fetch_events_by_end_date(limit):
+        found[e.get("slug") or e.get("title")] = e
+    for e in _fetch_events_by_volume_fallback(limit):
+        found[e.get("slug") or e.get("title")] = e
+
+    events = list(found.values())
+    print(f"[polymarket] {len(events)} unique UFC fight events found after merging all discovery strategies")
+    return events
 
 
 def _extract_method(text: str) -> str | None:
