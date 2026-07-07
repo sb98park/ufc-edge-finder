@@ -143,15 +143,6 @@ def build_fight_preview(
                 f"regardless of what their career numbers say."
             )
 
-    quick_return_note = ""
-    for name, row, flagged in [(fighter_a, row_a, matchup["quick_return_flag_a"]), (fighter_b, row_b, matchup["quick_return_flag_b"])]:
-        if flagged:
-            method_label = row.get("last_fight_method", "finish")
-            quick_return_note += (
-                f" {name} is coming back quickly after being finished by {method_label} in their last fight — "
-                f"a short turnaround from a finish carries real risk that career numbers alone won't show."
-            )
-
     reach_diff = row_a["reach_in"] - row_b["reach_in"]
     reach_note = ""
     if abs(reach_diff) >= 4:
@@ -166,6 +157,15 @@ def build_fight_preview(
                 f" {name} is a genuine round-1 threat — {rate*100:.0f}% of their career wins have come "
                 f"before the first round even ends, which should pull any rounds/distance line lower "
                 f"regardless of who's favored to win outright."
+            )
+
+    quick_return_note = ""
+    for name, row, flagged in [(fighter_a, row_a, matchup["quick_return_flag_a"]), (fighter_b, row_b, matchup["quick_return_flag_b"])]:
+        if flagged:
+            method_label = row.get("last_fight_method", "finish")
+            quick_return_note += (
+                f" {name} is coming back quickly after being finished by {method_label} in their last fight — "
+                f"a short turnaround from a finish carries real risk that career numbers alone won't show."
             )
 
     narrative = (
@@ -187,6 +187,9 @@ def build_fight_preview(
             "stance": row.get("stance"),
             "style": classify_style(row),
             "record": f"{int(row['wins'])}-{int(row['losses'])}",
+            "ko_wins": int(row["ko_wins"]) if pd.notna(row.get("ko_wins")) else None,
+            "sub_wins": int(row["sub_wins"]) if pd.notna(row.get("sub_wins")) else None,
+            "dec_wins": int(row["dec_wins"]) if pd.notna(row.get("dec_wins")) else None,
             "last_fight_date": row.get("last_fight_date") if pd.notna(row.get("last_fight_date")) else None,
             "last_fight_result": row.get("last_fight_result") if pd.notna(row.get("last_fight_result")) else None,
             "last_fight_method": row.get("last_fight_method") if pd.notna(row.get("last_fight_method")) else None,

@@ -23,6 +23,7 @@ from src.card_matcher import (
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
+from src.line_movement import load_snapshot, save_snapshot, annotate_movement
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -47,43 +48,56 @@ def main():
 
     try:
         upcoming_df, source = get_live_props()
-        # Canonicalize against BOTH this week's and future cards, so if a
-        # future fight's odds come from two different sources with two
-        # different native fight_ids, they still pair up correctly instead
-        # of being treated as two separate, half-complete fights.
         all_known_cards = pd.concat([cards_df, future_cards_df], ignore_index=True)
         upcoming_df = assign_canonical_fight_ids(upcoming_df, all_known_cards)
         edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings)
+
+        if not edges_df.empty:
+            previous_snapshot = load_snapshot()
+            edge_records = edges_df.to_dict("records")
+            annotate_movement(edge_records, previous_snapshot)
+            edges_df = pd.DataFrame(edge_records)
+
         if edges_df.empty:
             live_error = f"No usable live odds returned right now (source: {source})."
     except Exception as exc:
         live_error = f"Couldn't fetch live odds: {exc}"
 
     events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings)
-
-    # Future cards: reuse the same matching+preview machinery against next
-    # weekend's (and the following week's) verified UFC events, working off
-    # whatever live odds weren't already claimed by this week's card. Model
-    # previews always generate even with zero live odds found.
     future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings)
+    upcoming_other_fights = group_unmatched_by_fight(still_unmatched_df)
 
-    # Standout props should only ever be fighters on OUR tracked card --
-    # DraftKings' MMA feed includes other events too, and those shouldn't
-    # bleed into "this weekend's" standout picks.
     tracked_edges = pd.DataFrame(
         [edge for event in events for fight in event["fights"] for edge in fight["edges"]]
     )
     standout_props = top_standout_props(tracked_edges, fighters_df, n=5, min_edge=5.0)
 
     tracked_edges_list = tracked_edges.to_dict("records") if not tracked_edges.empty else []
-    bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list)
-    lotto_parlays = build_lotto_parlays(tracked_edges_list)
 
-    # Whatever's left after matching against BOTH this week's card AND the
-    # known future cards -- genuinely random other stuff the odds sources returned.
-    upcoming_other_fights = group_unmatched_by_fight(still_unmatched_df)
+    model_only_by_fight = {}
+    for event in events:
+        for fight in event["fights"]:
+            fid = fight["edges"][0]["fight_id"] if fight["edges"] else None
+            if fid is None and fight.get("model_only_rows"):
+                fid = f"{fight['fighter_a']}|{fight['fighter_b']}"
+            if fid is not None and fight.get("model_only_rows"):
+                model_only_by_fight[fid] = fight["model_only_rows"]
 
-    # e.g. "UFC 329: McGregor vs. Holloway 2" -> "UFC 329", for the standout props header
+    bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight)
+    lotto_parlays = build_lotto_parlays(tracked_edges_list, model_only_by_fight)
+
+    # Notable line movement across everything we track, for its own section
+    all_display_edges = tracked_edges_list + [
+        edge for event in future_events for fight in event["fights"] for edge in fight["edges"]
+    ]
+    notable_movements = sorted(
+        [e for e in all_display_edges if e.get("movement") and e["movement"].get("notable")],
+        key=lambda e: e["movement"]["pct_change"], reverse=True,
+    )[:8]
+
+    if not edges_df.empty:
+        save_snapshot(edges_df.to_dict("records"))
+
     event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
 
     env = Environment(loader=FileSystemLoader("templates"))
@@ -98,6 +112,7 @@ def main():
         event_short_name=event_short_name,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
+        notable_movements=notable_movements,
         upcoming_other_fights=upcoming_other_fights,
         live_error=live_error,
         source=source,

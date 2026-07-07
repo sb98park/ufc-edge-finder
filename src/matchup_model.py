@@ -60,9 +60,7 @@ def layoff_penalty(row: pd.Series, reference_date: dt.date | None = None) -> flo
 
 
 # Coming back too SOON after being finished carries real, documented risk --
-# the opposite problem from ring rust. Six months is a rough dividing line;
-# a fighter finished by strikes or submission and back in the cage within
-# a few months hasn't had much recovery time, physically or mentally.
+# the opposite problem from ring rust. Six months is a rough dividing line.
 QUICK_RETURN_THRESHOLD_YEARS = 0.5
 QUICK_RETURN_PENALTY_CAP = 150.0
 

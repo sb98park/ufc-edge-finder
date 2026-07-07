@@ -66,14 +66,10 @@ def get_live_props() -> tuple[pd.DataFrame, str]:
 
     combined_rows = pm_rows + supplemental
 
-    # Final safety net: even within ONE source, the same specific bet can
-    # show up twice -- e.g. confirmed live, the same fighter/method/odds
-    # combo appeared at two different prices, most likely from Polymarket
-    # having two separate market listings covering the same fight (a
-    # moneyline-focused event and a props-focused event both matching the
-    # 'ufc ... vs ...' discovery filter). Keep only the first occurrence of
-    # each exact bet so a parlay can't accidentally use "the same leg"
-    # twice at two different prices.
+    # Final safety net: the same specific bet can show up twice at two
+    # different prices (confirmed live) -- most likely from Polymarket
+    # having two separate market listings covering the same fight. Keep
+    # only the first occurrence of each exact bet.
     seen = set()
     deduped = []
     dupes_removed = 0

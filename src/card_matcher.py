@@ -31,12 +31,8 @@ def load_fight_cards(path: str = "data/fight_cards.csv") -> pd.DataFrame:
 
 def group_unmatched_by_fight(unmatched_df: pd.DataFrame) -> list[dict]:
     """
-    Groups live odds for fights NOT on the tracked card -- next weekend's
-    event, or whatever else is currently live on the odds sources -- by
-    fighter pair, so they can show as a genuine preview of what's coming up
-    next instead of a flat, hard-to-scan list. Model evaluation for these
-    will often be thin (opponents likely aren't in fighters.csv yet), which
-    is expected and shown honestly rather than faked.
+    Groups live odds for fights NOT on any tracked card by fighter pair, so
+    they show as a genuine preview instead of a flat, hard-to-scan list.
     """
     if unmatched_df.empty:
         return []
@@ -55,7 +51,7 @@ def group_unmatched_by_fight(unmatched_df: pd.DataFrame) -> list[dict]:
         elif opponent:
             fighter_a, fighter_b = fighter_field, opponent
         else:
-            continue  # can't identify a pair to group by, skip
+            continue
 
         key = frozenset({fighter_a, fighter_b})
         if key not in fights:
@@ -65,7 +61,6 @@ def group_unmatched_by_fight(unmatched_df: pd.DataFrame) -> list[dict]:
     result = list(fights.values())
     for fight in result:
         fight["edges"].sort(key=lambda e: abs(e.get("edge_pct", 0)), reverse=True)
-    # surface fights with more available data (more markets/legs found) first
     result.sort(key=lambda f: len(f["edges"]), reverse=True)
     return result
 
