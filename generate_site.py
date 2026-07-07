@@ -39,6 +39,7 @@ def main():
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
     elo_ratings = build_ratings(fighters_df)
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
+    future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")
 
     live_error = None
     edges_df = pd.DataFrame()
@@ -46,7 +47,12 @@ def main():
 
     try:
         upcoming_df, source = get_live_props()
-        upcoming_df = assign_canonical_fight_ids(upcoming_df, cards_df)
+        # Canonicalize against BOTH this week's and future cards, so if a
+        # future fight's odds come from two different sources with two
+        # different native fight_ids, they still pair up correctly instead
+        # of being treated as two separate, half-complete fights.
+        all_known_cards = pd.concat([cards_df, future_cards_df], ignore_index=True)
+        upcoming_df = assign_canonical_fight_ids(upcoming_df, all_known_cards)
         edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings)
         if edges_df.empty:
             live_error = f"No usable live odds returned right now (source: {source})."
@@ -54,6 +60,12 @@ def main():
         live_error = f"Couldn't fetch live odds: {exc}"
 
     events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings)
+
+    # Future cards: reuse the same matching+preview machinery against next
+    # weekend's (and the following week's) verified UFC events, working off
+    # whatever live odds weren't already claimed by this week's card. Model
+    # previews always generate even with zero live odds found.
+    future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings)
 
     # Standout props should only ever be fighters on OUR tracked card --
     # DraftKings' MMA feed includes other events too, and those shouldn't
@@ -67,10 +79,9 @@ def main():
     bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list)
     lotto_parlays = build_lotto_parlays(tracked_edges_list)
 
-    # Fights found on odds sources that AREN'T part of this weekend's tracked
-    # card -- next weekend's event, or whatever else is currently live --
-    # grouped into a genuine preview instead of a flat "unmatched" dump.
-    upcoming_other_fights = group_unmatched_by_fight(unmatched_df)
+    # Whatever's left after matching against BOTH this week's card AND the
+    # known future cards -- genuinely random other stuff the odds sources returned.
+    upcoming_other_fights = group_unmatched_by_fight(still_unmatched_df)
 
     # e.g. "UFC 329: McGregor vs. Holloway 2" -> "UFC 329", for the standout props header
     event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
@@ -81,6 +92,7 @@ def main():
 
     html = template.render(
         events=events,
+        future_events=future_events,
         unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
         standout_props=standout_props,
         event_short_name=event_short_name,
@@ -96,7 +108,7 @@ def main():
     with open(OUTPUT_PATH, "w") as f:
         f.write(html)
 
-    print(f"Wrote {OUTPUT_PATH} ({len(events)} events, {len(standout_props)} standout props flagged)")
+    print(f"Wrote {OUTPUT_PATH} ({len(events)} events, {len(future_events)} future events, {len(standout_props)} standout props flagged)")
 
 
 if __name__ == "__main__":

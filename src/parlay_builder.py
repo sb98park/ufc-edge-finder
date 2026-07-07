@@ -60,7 +60,13 @@ def _leg_family(market: str) -> str:
 
 
 def _is_contradiction(leg_a: dict, leg_b: dict) -> bool:
-    """Catches the specific real contradictions between a winner-family and length-family leg."""
+    """
+    Blocks both real contradictions AND redundant pairs. A redundant pair
+    isn't impossible to happen together -- it's the SAME claim stated twice
+    (e.g. "wins by KO/TKO" already means "ends in finish"), so combining
+    them double-counts one signal as if it were two independent risks,
+    which is not how these are priced and not a valid parlay in practice.
+    """
     markets = {leg_a["market"], leg_b["market"]}
     is_decision = any(m.startswith("Method: DEC") for m in markets)
     is_finish_method = any(m.startswith("Method: KO") or m.startswith("Method: SUB") for m in markets)
@@ -72,6 +78,10 @@ def _is_contradiction(leg_a: dict, leg_b: dict) -> bool:
         return True  # winning by decision means it went the full distance
     if is_finish_method and is_goes_distance:
         return True  # a finish contradicts "goes the distance"
+    if is_finish_method and is_ends_in_finish:
+        return True  # redundant: "wins by KO/TKO or SUB" already IS "ends in finish"
+    if is_decision and is_goes_distance:
+        return True  # redundant: "wins by decision" already IS "goes the distance"
     return False
 
 
