@@ -26,6 +26,7 @@ def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
         "reach_in": r["reach_in"],
         "wins": int(r["wins"]),
         "losses": int(r["losses"]),
+        "first_round_finish_pct": float(r["first_round_finish_pct"]) if "first_round_finish_pct" in r and pd.notna(r["first_round_finish_pct"]) else None,
     }
 
 
@@ -104,10 +105,13 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
 def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
     names = row["fighter"].split(" vs ")
     finish_rates = []
+    fast_finishers = []
     for name in names:
         s = _fighter_stats(fighters_df, name.strip())
         if s:
             finish_rates.append(s["finish_rate"])
+            if s["first_round_finish_pct"] and s["first_round_finish_pct"] >= 0.6:
+                fast_finishers.append((name.strip(), s["first_round_finish_pct"]))
 
     base = (
         f"{row['market']} at {format_american_odds(row['odds_american'])} implies {row['book_fair_prob']*100:.0f}%, "
@@ -116,9 +120,11 @@ def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
     if finish_rates:
         avg_finish = sum(finish_rates) / len(finish_rates)
         base += (
-            f" This leans on a combined {avg_finish*100:.0f}% finish rate between both fighters — "
-            f"a simplified proxy for fight length, not a real per-round simulation."
+            f" This leans on a combined {avg_finish*100:.0f}% finish rate between both fighters."
         )
+    if fast_finishers:
+        for name, rate in fast_finishers:
+            base += f" Worth flagging: {rate*100:.0f}% of {name}'s career wins have come in round 1 specifically."
     return base
 
 

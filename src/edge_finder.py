@@ -135,12 +135,16 @@ def _extract_round_line(selection: str) -> float | None:
 
 def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Over/Under total rounds props, estimated from each fighter's historical
-    finish rate. A fight card often offers multiple lines (1.5, 2.5, 3.5) for
-    the same fight -- these are grouped separately so they don't collide,
-    with probability adjusted per line (a lower line is stricter/less likely
-    to hit "Under" than a higher one). Still a simplified proxy, not a real
-    per-round simulation.
+    Over/Under total rounds props. A fight card often offers multiple lines
+    (1.5, 2.5, 3.5) for the same fight -- these are grouped separately so
+    they don't collide.
+
+    For the 1.5 line specifically ("does it end in round 1"), this uses each
+    fighter's actual first_round_finish_pct directly -- a fighter like
+    Terrance McKinney (16 of 17 wins finished in round 1, never gone to a
+    decision) should swing this line hard, and a generic finish-rate proxy
+    was missing that entirely. Other lines blend that same signal in rather
+    than relying purely on a generic linear adjustment.
     """
     rows = []
     props = upcoming_df[upcoming_df["market"] == "TotalRounds"].copy()
@@ -152,21 +156,33 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
     for (fight_id, line), group in props.groupby(["fight_id", "_line"]):
         fighters_in_fight = group["fighter_a"].iloc[0], group["fighter_b"].iloc[0]
         finish_rates = []
+        first_round_rates = []
         for name in fighters_in_fight:
             stats = fighters_df[fighters_df["name"] == name]
             if stats.empty:
                 continue
             f = stats.iloc[0]
             total_wins = max(int(f["wins"]), 1)
-            finish_rate = (f["ko_wins"] + f["sub_wins"]) / total_wins
-            finish_rates.append(finish_rate)
+            finish_rates.append((f["ko_wins"] + f["sub_wins"]) / total_wins)
+            if "first_round_finish_pct" in f and pd.notna(f["first_round_finish_pct"]):
+                first_round_rates.append(float(f["first_round_finish_pct"]))
 
         if not finish_rates:
             continue
 
         combined_finish_rate = sum(finish_rates) / len(finish_rates)
-        if line is not None:
-            model_prob_under = combined_finish_rate - (REFERENCE_LINE - line) * ADJUSTMENT_PER_ROUND
+        combined_first_round_rate = sum(first_round_rates) / len(first_round_rates) if first_round_rates else None
+
+        if line is not None and line <= 1.5 and combined_first_round_rate is not None:
+            # the literal, most verifiable case: does it end in round 1
+            model_prob_under = combined_first_round_rate
+        elif line is not None:
+            base = combined_finish_rate - (REFERENCE_LINE - line) * ADJUSTMENT_PER_ROUND
+            # blend in the fast-finisher signal even for longer lines, rather
+            # than only using it for the 1.5 boundary
+            if combined_first_round_rate is not None:
+                base = 0.7 * base + 0.3 * combined_first_round_rate
+            model_prob_under = base
         else:
             model_prob_under = combined_finish_rate
         model_prob_under = min(0.95, max(0.05, model_prob_under))

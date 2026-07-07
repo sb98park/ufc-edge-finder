@@ -144,9 +144,11 @@ def _find_parlays(
     max_american: float | None,
     min_leg_prob: float,
     max_results: int,
+    label: str = "parlay",
 ) -> list[dict]:
     eligible = [p for p in pieces if p["model_prob"] >= min_leg_prob]
     results = []
+    best_miss = None  # track the closest we got, even if nothing qualified
 
     for count in leg_counts:
         if len(eligible) < count:
@@ -157,11 +159,22 @@ def _find_parlays(
                 continue  # no two pieces from the same fight
 
             parlay = _combine(combo)
+
+            if best_miss is None or abs(parlay["combined_american"] - min_american) < abs(best_miss["combined_american"] - min_american):
+                best_miss = parlay
+
             if parlay["combined_american"] < min_american:
                 continue
             if max_american is not None and parlay["combined_american"] > max_american:
                 continue
             results.append(parlay)
+
+    if not results:
+        distinct_fights = len({p["fight_id"] for p in eligible})
+        print(f"[{label}] no combos found: {len(eligible)} eligible pieces across {distinct_fights} distinct fights "
+              f"(need >= {min(leg_counts)} distinct fights). "
+              f"Closest miss: {best_miss['combined_american_display'] if best_miss else 'none tried'} "
+              f"(target: {min_american:+.0f}{'+' if max_american is None else f' to {max_american:+.0f}'})")
 
     results.sort(key=lambda p: p["combined_prob"], reverse=True)
     return results[:max_results]
@@ -172,7 +185,7 @@ def build_bankroll_builder_parlays(tracked_edges: list[dict], max_results: int =
     pieces = _build_candidate_pieces(tracked_edges)
     return _find_parlays(
         pieces, leg_counts=(2, 3), min_american=100, max_american=320,
-        min_leg_prob=0.50, max_results=max_results,
+        min_leg_prob=0.50, max_results=max_results, label="bankroll",
     )
 
 
@@ -181,5 +194,5 @@ def build_lotto_parlays(tracked_edges: list[dict], max_results: int = 3) -> list
     pieces = _build_candidate_pieces(tracked_edges)
     return _find_parlays(
         pieces, leg_counts=(3, 4, 5), min_american=1000, max_american=None,
-        min_leg_prob=0.15, max_results=max_results,
+        min_leg_prob=0.15, max_results=max_results, label="lotto",
     )

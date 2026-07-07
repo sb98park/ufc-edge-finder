@@ -67,13 +67,19 @@ def build_full_market_projection(
         (row_a["ko_wins"] + row_a["sub_wins"]) / max(int(row_a["wins"]), 1)
         + (row_b["ko_wins"] + row_b["sub_wins"]) / max(int(row_b["wins"]), 1)
     ) / 2
-    # Uses the 2.5 reference line to match the most commonly-offered live
-    # line format ("Total Rounds Under 2.5") -- if the book offers a
-    # different line (1.5, 3.5), this projection just won't dedupe against
-    # it and both will show, which is a reasonable fallback.
+
+    first_round_rates = [
+        float(r["first_round_finish_pct"]) for r in (row_a, row_b)
+        if "first_round_finish_pct" in r and pd.notna(r["first_round_finish_pct"])
+    ]
+    combined_first_round_rate = sum(first_round_rates) / len(first_round_rates) if first_round_rates else combined_finish_rate * 0.5
+
+    rounds_2_5 = 0.7 * combined_finish_rate + 0.3 * combined_first_round_rate
     rounds_rows = [
-        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 2.5", "model_prob": round(combined_finish_rate, 3)},
-        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 2.5", "model_prob": round(1 - combined_finish_rate, 3)},
+        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 1.5", "model_prob": round(combined_first_round_rate, 3)},
+        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 1.5", "model_prob": round(1 - combined_first_round_rate, 3)},
+        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 2.5", "model_prob": round(rounds_2_5, 3)},
+        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 2.5", "model_prob": round(1 - rounds_2_5, 3)},
     ]
 
     dec_rate_a = row_a["dec_wins"] / max(int(row_a["wins"]), 1)
@@ -143,6 +149,16 @@ def build_fight_preview(
         longer = fighter_a if reach_diff > 0 else fighter_b
         reach_note = f" {longer} also holds a notable reach advantage ({abs(reach_diff):.0f} inches)."
 
+    fast_finisher_note = ""
+    for name, row in [(fighter_a, row_a), (fighter_b, row_b)]:
+        rate = row.get("first_round_finish_pct")
+        if pd.notna(rate) and rate >= 0.6:
+            fast_finisher_note += (
+                f" {name} is a genuine round-1 threat — {rate*100:.0f}% of their career wins have come "
+                f"before the first round even ends, which should pull any rounds/distance line lower "
+                f"regardless of who's favored to win outright."
+            )
+
     narrative = (
         f"Model favors {favorite} at {favorite_prob*100:.0f}% over {underdog} "
         f"({matchup['style_a']} vs. {matchup['style_b']} stylistically). "
@@ -150,7 +166,7 @@ def build_fight_preview(
         f"({method_rates[likely_method]*100:.0f}% of {favorite.split()[-1]}'s career wins). "
         f"Combined finish rate between both fighters sits at {combined_finish_rate*100:.0f}%, "
         f"leaning {rounds_lean.lower()} on total rounds."
-        f"{style_note}{reach_note}{layoff_note}"
+        f"{style_note}{reach_note}{layoff_note}{fast_finisher_note}"
     )
 
     return {

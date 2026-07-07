@@ -8,6 +8,7 @@ disagreements. Run by GitHub Actions on a schedule; can also run locally:
 
 import datetime as dt
 import os
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
@@ -84,7 +85,7 @@ def main():
         rankings=rankings_df.to_dict("records"),
         live_error=live_error,
         source=source,
-        generated_at=dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        generated_at=dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET"),
     )
 
     os.makedirs("docs", exist_ok=True)
