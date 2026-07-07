@@ -56,6 +56,13 @@
   .standout-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .standout-main { font-size: 14.5px; font-weight: 700; }
   .standout-vs { font-size: 12px; font-weight: 400; color: var(--muted); }
+  .dog-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; border-radius: 10px;
+    padding: 2px 7px; margin-left: 6px; vertical-align: middle;
+  }
+  .dog-badge.fav { background: #1a2a3a; color: #6db3f2; }
+  .dog-badge.dog { background: #2a1a3a; color: #c77dff; }
+  .dog-badge-sm { font-size: 11px; margin-left: 4px; }
   .standout-market { color: var(--accent2); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
   .standout-edge-badge {
     font-size: 16px; font-weight: 800; white-space: nowrap; border-radius: 8px; padding: 3px 9px;
@@ -169,7 +176,7 @@
   <h1>🥋 UFC Edge Finder</h1>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
   <div class="meta-row">
-    <span class="badge">🕒 2026-07-07 10:53 UTC</span>
+    <span class="badge">🕒 2026-07-07 07:44 AM ET</span>
     <span class="badge book">📊 Odds via Polymarket</span>
     <span class="badge">🔄 refreshes every few hours</span>
   </div>
@@ -197,7 +204,9 @@
       hunch.</p>
       <p><strong>Method-of-victory props:</strong> blend a fighter's own career finish tendency (65%
       weight) with how often this specific opponent has been finished that way before (35% weight).</p>
-      <p><strong>Total rounds:</strong> a simplified proxy using both fighters' combined finish rate.</p>
+      <p><strong>Total rounds:</strong> blends combined finish rate with each fighter's first-round finish
+      percentage — a fighter who finishes most fights in round 1 (e.g. someone with a proven track record
+      of very fast finishes) pulls the "under" line meaningfully regardless of who's favored to win outright.</p>
       <p style="color: var(--muted);"><strong>Honest limitations:</strong> striking/takedown/durability
       stats are sample data for now (not yet a live feed from UFCStats or similar) — see the README for
       how to refresh them for real accuracy. This is a systematic way to weigh public stats, not a
@@ -213,7 +222,9 @@
       <div class="standout-top">
         <div>
           <div class="standout-main">Conor McGregor<span class="standout-vs"> (vs. Max Holloway)</span></div>
-          <div class="standout-market">Method: KO/TKO</div>
+          <div class="standout-market">Method: KO/TKO
+            
+          </div>
         </div>
         <div class="standout-edge-badge edge-pos">43.14%</div>
       </div>
@@ -236,7 +247,9 @@
       <div class="standout-top">
         <div>
           <div class="standout-main">Gable Steveson<span class="standout-vs"> (vs. Elisha Ellison)</span></div>
-          <div class="standout-market">Method: KO/TKO</div>
+          <div class="standout-market">Method: KO/TKO
+            
+          </div>
         </div>
         <div class="standout-edge-badge edge-pos">38.33%</div>
       </div>
@@ -259,7 +272,9 @@
       <div class="standout-top">
         <div>
           <div class="standout-main">Brandon Royval vs Lone'er Kavanagh<span class="standout-vs"> (vs. nan)</span></div>
-          <div class="standout-market">Fight Outcome: Ends In Finish</div>
+          <div class="standout-market">Fight Outcome: Ends In Finish
+            
+          </div>
         </div>
         <div class="standout-edge-badge edge-pos">37.04%</div>
       </div>
@@ -282,7 +297,11 @@
       <div class="standout-top">
         <div>
           <div class="standout-main">Paddy Pimblett<span class="standout-vs"> (vs. Benoît Saint Denis)</span></div>
-          <div class="standout-market">Moneyline</div>
+          <div class="standout-market">Moneyline
+            
+              <span class="dog-badge dog">🐶 Underdog</span>
+            
+          </div>
         </div>
         <div class="standout-edge-badge edge-pos">36.32%</div>
       </div>
@@ -305,7 +324,9 @@
       <div class="standout-top">
         <div>
           <div class="standout-main">Gable Steveson vs Elisha Ellison<span class="standout-vs"> (vs. nan)</span></div>
-          <div class="standout-market">Fight Outcome: Ends In Finish</div>
+          <div class="standout-market">Fight Outcome: Ends In Finish
+            
+          </div>
         </div>
         <div class="standout-edge-badge edge-pos">33.21%</div>
       </div>
@@ -475,14 +496,14 @@
         <tr>
           <td>Max Holloway</td>
           <td>Method: KO/TKO</td>
-          <td>-199</td>
+          <td>-190</td>
           <td>0.467</td>
-          <td>0.665</td>
-          <td class="edge-neg">-19.83%</td>
+          <td>0.655</td>
+          <td class="edge-neg">-18.83%</td>
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">Max Holloway to win by KO/TKO is priced at -199 (66% implied), while the model estimates 47% (-19.8% edge). That blends their career tendency (KO/TKO in 54% of wins, submission in 0%, decision in 46%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
+        <tr class="rationale-row"><td colspan="7">Max Holloway to win by KO/TKO is priced at -190 (66% implied), while the model estimates 47% (-18.8% edge). That blends their career tendency (KO/TKO in 54% of wins, submission in 0%, decision in 46%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
         
         
         <tr>
@@ -499,32 +520,6 @@
         
         
         <tr>
-          <td>Max Holloway vs Conor McGregor</td>
-          <td>Fight Outcome: Goes The Distance</td>
-          <td>+355</td>
-          <td>0.276</td>
-          <td>0.22</td>
-          <td class="edge-pos">5.62%</td>
-          <td>3.6%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">Fight Outcome: Goes The Distance at +355 implies 22%, vs. the model's 28% (+5.6% edge). Based on both fighters' career decision rate averaging 28%.</td></tr>
-        
-        
-        <tr>
-          <td>Max Holloway vs Conor McGregor</td>
-          <td>Fight Outcome: Ends In Finish</td>
-          <td>-355</td>
-          <td>0.724</td>
-          <td>0.78</td>
-          <td class="edge-neg">-5.62%</td>
-          <td>0.0%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">Fight Outcome: Ends In Finish at -355 implies 78%, vs. the model's 72% (-5.6% edge). Based on both fighters' career decision rate averaging 28%.</td></tr>
-        
-        
-        <tr>
           <td>Max Holloway</td>
           <td>Method: SUB</td>
           <td>+1438</td>
@@ -538,7 +533,33 @@
         
         
         <tr>
-          <td>Conor McGregor</td>
+          <td>Max Holloway vs Conor McGregor</td>
+          <td>Fight Outcome: Goes The Distance</td>
+          <td>+344</td>
+          <td>0.276</td>
+          <td>0.225</td>
+          <td class="edge-pos">5.12%</td>
+          <td>3.3%</td>
+        </tr>
+        
+        <tr class="rationale-row"><td colspan="7">Fight Outcome: Goes The Distance at +344 implies 22%, vs. the model's 28% (+5.1% edge). Based on both fighters' career decision rate averaging 28%.</td></tr>
+        
+        
+        <tr>
+          <td>Max Holloway vs Conor McGregor</td>
+          <td>Fight Outcome: Ends In Finish</td>
+          <td>-344</td>
+          <td>0.724</td>
+          <td>0.775</td>
+          <td class="edge-neg">-5.12%</td>
+          <td>0.0%</td>
+        </tr>
+        
+        <tr class="rationale-row"><td colspan="7">Fight Outcome: Ends In Finish at -344 implies 78%, vs. the model's 72% (-5.1% edge). Based on both fighters' career decision rate averaging 28%.</td></tr>
+        
+        
+        <tr>
+          <td>Conor McGregor<span class="dog-badge-sm dog">🐶</span></td>
           <td>Moneyline</td>
           <td>+190</td>
           <td>0.347</td>
@@ -551,7 +572,7 @@
         
         
         <tr>
-          <td>Max Holloway</td>
+          <td>Max Holloway<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
           <td>-190</td>
           <td>0.653</td>
@@ -579,9 +600,13 @@
         
         <tr><td>Max Holloway</td><td>Method: Decision</td><td>27.2%</td></tr>
         
-        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Under 2.5</td><td>72.4%</td></tr>
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Under 1.5</td><td>36.0%</td></tr>
         
-        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Over 2.5</td><td>27.6%</td></tr>
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Over 1.5</td><td>64.0%</td></tr>
+        
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Under 2.5</td><td>61.5%</td></tr>
+        
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Over 2.5</td><td>38.5%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -611,7 +636,7 @@
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         
         <tr>
-          <td>Paddy Pimblett</td>
+          <td>Paddy Pimblett<span class="dog-badge-sm dog">🐶</span></td>
           <td>Moneyline</td>
           <td>+125</td>
           <td>0.808</td>
@@ -624,7 +649,7 @@
         
         
         <tr>
-          <td>Benoît Saint Denis</td>
+          <td>Benoît Saint Denis<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
           <td>-125</td>
           <td>0.192</td>
@@ -639,27 +664,27 @@
         <tr>
           <td>Paddy Pimblett</td>
           <td>Method: SUB</td>
-          <td>+160</td>
+          <td>+163</td>
           <td>0.455</td>
-          <td>0.385</td>
-          <td class="edge-pos">6.95%</td>
-          <td>5.65%</td>
+          <td>0.38</td>
+          <td class="edge-pos">7.45%</td>
+          <td>6.01%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">Paddy Pimblett to win by SUB is priced at +160 (38% implied), while the model estimates 46% (+7.0% edge). That blends their career tendency (KO/TKO in 32% of wins, submission in 45%, decision in 23%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
+        <tr class="rationale-row"><td colspan="7">Paddy Pimblett to win by SUB is priced at +163 (38% implied), while the model estimates 46% (+7.5% edge). That blends their career tendency (KO/TKO in 32% of wins, submission in 45%, decision in 23%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
         
         
         <tr>
           <td>Paddy Pimblett</td>
           <td>Method: KO/TKO</td>
-          <td>+167</td>
+          <td>+156</td>
           <td>0.318</td>
-          <td>0.375</td>
-          <td class="edge-neg">-5.68%</td>
+          <td>0.39</td>
+          <td class="edge-neg">-7.18%</td>
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">Paddy Pimblett to win by KO/TKO is priced at +167 (38% implied), while the model estimates 32% (-5.7% edge). That blends their career tendency (KO/TKO in 32% of wins, submission in 45%, decision in 23%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
+        <tr class="rationale-row"><td colspan="7">Paddy Pimblett to win by KO/TKO is priced at +156 (39% implied), while the model estimates 32% (-7.2% edge). That blends their career tendency (KO/TKO in 32% of wins, submission in 45%, decision in 23%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
         
         
         <tr>
@@ -691,9 +716,13 @@
         
         <tr><td>Paddy Pimblett</td><td>Method: Decision</td><td>13.3%</td></tr>
         
-        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Under 2.5</td><td>81.5%</td></tr>
+        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Under 1.5</td><td>41.0%</td></tr>
         
-        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Over 2.5</td><td>18.5%</td></tr>
+        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Over 1.5</td><td>59.0%</td></tr>
+        
+        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Under 2.5</td><td>69.3%</td></tr>
+        
+        <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Total Rounds Over 2.5</td><td>30.7%</td></tr>
         
         <tr><td>Benoit Saint-Denis vs Paddy Pimblett</td><td>Fight Outcome: Goes The Distance</td><td>18.5%</td></tr>
         
@@ -742,9 +771,13 @@
         
         <tr><td>Mario Bautista</td><td>Method: Decision</td><td>22.9%</td></tr>
         
-        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Under 2.5</td><td>66.3%</td></tr>
+        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Under 1.5</td><td>33.5%</td></tr>
         
-        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Over 2.5</td><td>33.7%</td></tr>
+        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Over 1.5</td><td>66.5%</td></tr>
+        
+        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Under 2.5</td><td>56.4%</td></tr>
+        
+        <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Total Rounds Over 2.5</td><td>43.6%</td></tr>
         
         <tr><td>Cory Sandhagen vs Mario Bautista</td><td>Fight Outcome: Goes The Distance</td><td>33.7%</td></tr>
         
@@ -856,7 +889,7 @@
         
         
         <tr>
-          <td>Lone'er Kavanagh</td>
+          <td>Lone'er Kavanagh<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
           <td>-199</td>
           <td>0.762</td>
@@ -869,7 +902,7 @@
         
         
         <tr>
-          <td>Brandon Royval</td>
+          <td>Brandon Royval<span class="dog-badge-sm dog">🐶</span></td>
           <td>Moneyline</td>
           <td>+199</td>
           <td>0.238</td>
@@ -897,9 +930,13 @@
         
         <tr><td>Lone'er Kavanagh</td><td>Method: Decision</td><td>17.6%</td></tr>
         
-        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Under 2.5</td><td>80.5%</td></tr>
+        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Under 1.5</td><td>40.0%</td></tr>
         
-        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Over 2.5</td><td>19.5%</td></tr>
+        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Over 1.5</td><td>60.0%</td></tr>
+        
+        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Under 2.5</td><td>68.4%</td></tr>
+        
+        <tr><td>Brandon Royval vs Lone'er Kavanagh</td><td>Total Rounds Over 2.5</td><td>31.6%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -919,7 +956,7 @@
     <div class="fight-body">
       
       <div class="model-preview">
-        <span class="preview-label">🧠 Model Preview:</span> Model favors Terrance McKinney at 63% over King Green (Balanced vs. Striker stylistically). Path to victory most likely runs through ko/tko (76% of McKinney's career wins). Combined finish rate between both fighters sits at 74%, leaning under on total rounds. King Green has been finished less often historically, a durability factor working in their favor.
+        <span class="preview-label">🧠 Model Preview:</span> Model favors Terrance McKinney at 61% over King Green (Balanced vs. Striker stylistically). Path to victory most likely runs through ko/tko (82% of McKinney's career wins). Combined finish rate between both fighters sits at 77%, leaning under on total rounds. King Green has been finished less often historically, a durability factor working in their favor. Terrance McKinney is a genuine round-1 threat — 94% of their career wins have come before the first round even ends, which should pull any rounds/distance line lower regardless of who's favored to win outright.
       </div>
       
 
@@ -932,25 +969,29 @@
       <table class="model-only-table">
         <tr><th>Selection</th><th>Market</th><th>Model Prob</th></tr>
         
-        <tr><td>King Green</td><td>Method: KO/TKO</td><td>14.8%</td></tr>
+        <tr><td>King Green</td><td>Method: KO/TKO</td><td>13.2%</td></tr>
         
-        <tr><td>King Green</td><td>Method: Submission</td><td>9.0%</td></tr>
+        <tr><td>King Green</td><td>Method: Submission</td><td>13.9%</td></tr>
         
-        <tr><td>King Green</td><td>Method: Decision</td><td>13.2%</td></tr>
+        <tr><td>King Green</td><td>Method: Decision</td><td>11.5%</td></tr>
         
-        <tr><td>Terrance McKinney</td><td>Method: KO/TKO</td><td>37.6%</td></tr>
+        <tr><td>Terrance McKinney</td><td>Method: KO/TKO</td><td>39.0%</td></tr>
         
-        <tr><td>Terrance McKinney</td><td>Method: Submission</td><td>11.4%</td></tr>
+        <tr><td>Terrance McKinney</td><td>Method: Submission</td><td>11.1%</td></tr>
         
-        <tr><td>Terrance McKinney</td><td>Method: Decision</td><td>13.9%</td></tr>
+        <tr><td>Terrance McKinney</td><td>Method: Decision</td><td>11.3%</td></tr>
         
-        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Under 2.5</td><td>74.2%</td></tr>
+        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Under 1.5</td><td>60.5%</td></tr>
         
-        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Over 2.5</td><td>25.8%</td></tr>
+        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Over 1.5</td><td>39.5%</td></tr>
         
-        <tr><td>King Green vs Terrance McKinney</td><td>Fight Outcome: Goes The Distance</td><td>25.8%</td></tr>
+        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Under 2.5</td><td>72.1%</td></tr>
         
-        <tr><td>King Green vs Terrance McKinney</td><td>Fight Outcome: Ends In Finish</td><td>74.2%</td></tr>
+        <tr><td>King Green vs Terrance McKinney</td><td>Total Rounds Over 2.5</td><td>27.9%</td></tr>
+        
+        <tr><td>King Green vs Terrance McKinney</td><td>Fight Outcome: Goes The Distance</td><td>22.9%</td></tr>
+        
+        <tr><td>King Green vs Terrance McKinney</td><td>Fight Outcome: Ends In Finish</td><td>77.1%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -995,9 +1036,13 @@
         
         <tr><td>Nikita Krylov</td><td>Method: Decision</td><td>13.2%</td></tr>
         
-        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Under 2.5</td><td>68.6%</td></tr>
+        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Under 1.5</td><td>34.5%</td></tr>
         
-        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Over 2.5</td><td>31.4%</td></tr>
+        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Over 1.5</td><td>65.5%</td></tr>
+        
+        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Under 2.5</td><td>58.4%</td></tr>
+        
+        <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Total Rounds Over 2.5</td><td>41.6%</td></tr>
         
         <tr><td>Robert Whittaker vs Nikita Krylov</td><td>Fight Outcome: Goes The Distance</td><td>31.4%</td></tr>
         
@@ -1109,7 +1154,7 @@
         
         
         <tr>
-          <td>Elisha Ellison</td>
+          <td>Elisha Ellison<span class="dog-badge-sm dog">🐶</span></td>
           <td>Moneyline</td>
           <td>+1158</td>
           <td>0.302</td>
@@ -1122,7 +1167,7 @@
         
         
         <tr>
-          <td>Gable Steveson</td>
+          <td>Gable Steveson<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
           <td>-1158</td>
           <td>0.698</td>
@@ -1150,9 +1195,13 @@
         
         <tr><td>Elisha Ellison</td><td>Method: Decision</td><td>8.6%</td></tr>
         
-        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Under 2.5</td><td>85.7%</td></tr>
+        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Under 1.5</td><td>43.0%</td></tr>
         
-        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Over 2.5</td><td>14.3%</td></tr>
+        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Over 1.5</td><td>57.0%</td></tr>
+        
+        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Under 2.5</td><td>72.9%</td></tr>
+        
+        <tr><td>Gable Steveson vs Elisha Ellison</td><td>Total Rounds Over 2.5</td><td>27.1%</td></tr>
         
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
@@ -1197,9 +1246,13 @@
         
         <tr><td>Adrian Yanez</td><td>Method: Decision</td><td>19.2%</td></tr>
         
-        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Under 2.5</td><td>60.0%</td></tr>
+        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Under 1.5</td><td>30.0%</td></tr>
         
-        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Over 2.5</td><td>40.0%</td></tr>
+        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Over 1.5</td><td>70.0%</td></tr>
+        
+        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Under 2.5</td><td>51.0%</td></tr>
+        
+        <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Total Rounds Over 2.5</td><td>49.0%</td></tr>
         
         <tr><td>Cody Garbrandt vs Adrian Yanez</td><td>Fight Outcome: Goes The Distance</td><td>40.0%</td></tr>
         
@@ -1248,9 +1301,13 @@
         
         <tr><td>Kai Kamaka III</td><td>Method: Decision</td><td>14.4%</td></tr>
         
-        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Under 2.5</td><td>66.5%</td></tr>
+        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Under 1.5</td><td>33.5%</td></tr>
         
-        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Over 2.5</td><td>33.5%</td></tr>
+        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Over 1.5</td><td>66.5%</td></tr>
+        
+        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Under 2.5</td><td>56.6%</td></tr>
+        
+        <tr><td>Luke Riley vs Kai Kamaka III</td><td>Total Rounds Over 2.5</td><td>43.4%</td></tr>
         
         <tr><td>Luke Riley vs Kai Kamaka III</td><td>Fight Outcome: Goes The Distance</td><td>33.5%</td></tr>
         
@@ -1299,9 +1356,13 @@
         
         <tr><td>Damian Pinas</td><td>Method: Decision</td><td>7.7%</td></tr>
         
-        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Under 2.5</td><td>77.8%</td></tr>
+        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Under 1.5</td><td>39.0%</td></tr>
         
-        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Over 2.5</td><td>22.2%</td></tr>
+        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Over 1.5</td><td>61.0%</td></tr>
+        
+        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Under 2.5</td><td>66.1%</td></tr>
+        
+        <tr><td>Cesar Almeida vs Damian Pinas</td><td>Total Rounds Over 2.5</td><td>33.9%</td></tr>
         
         <tr><td>Cesar Almeida vs Damian Pinas</td><td>Fight Outcome: Goes The Distance</td><td>22.2%</td></tr>
         
@@ -1350,9 +1411,13 @@
         
         <tr><td>Zach Reese</td><td>Method: Decision</td><td>3.8%</td></tr>
         
-        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Under 2.5</td><td>82.9%</td></tr>
+        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Under 1.5</td><td>41.5%</td></tr>
         
-        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Over 2.5</td><td>17.1%</td></tr>
+        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Over 1.5</td><td>58.5%</td></tr>
+        
+        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Under 2.5</td><td>70.4%</td></tr>
+        
+        <tr><td>Ryan Gandra vs Zach Reese</td><td>Total Rounds Over 2.5</td><td>29.6%</td></tr>
         
         <tr><td>Ryan Gandra vs Zach Reese</td><td>Fight Outcome: Goes The Distance</td><td>17.1%</td></tr>
         
@@ -1386,7 +1451,7 @@
     
     <tr><td>Conor McGregor</td><td>1735.2</td></tr>
     
-    <tr><td>Terrance McKinney</td><td>1716.7</td></tr>
+    <tr><td>Terrance McKinney</td><td>1725.6</td></tr>
     
     <tr><td>Nikita Krylov</td><td>1714.0</td></tr>
     
