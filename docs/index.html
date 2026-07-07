@@ -138,6 +138,11 @@
     padding: 12px 14px; margin: 4px 0 14px; font-size: 12.5px; color: var(--text); line-height: 1.55;
   }
   .preview-label { color: var(--accent); font-weight: 700; }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
+  .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
+  .compare-table th { color: var(--accent2); font-size: 11.5px; font-weight: 700; }
+  .compare-table td:first-child { text-align: left; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .compare-table tr:last-child td { border-bottom: none; }
 
   .market-group-label {
     font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
@@ -176,7 +181,7 @@
   <h1>🥋 UFC Edge Finder</h1>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
   <div class="meta-row">
-    <span class="badge">🕒 2026-07-07 08:28 AM ET</span>
+    <span class="badge">🕒 2026-07-07 08:49 AM ET</span>
     <span class="badge book">📊 Odds via Polymarket</span>
     <span class="badge">🔄 refreshes every few hours</span>
   </div>
@@ -273,51 +278,78 @@
     <div class="standout-card">
       <div class="standout-top">
         <div>
-          <div class="standout-main">Paddy Pimblett<span class="standout-vs"> (vs. Benoît Saint Denis)</span></div>
-          <div class="standout-market">Method: SUB
+          <div class="standout-main">Gable Steveson<span class="standout-vs"> (vs. Elisha Ellison)</span></div>
+          <div class="standout-market">Method: KO/TKO
             
           </div>
         </div>
-        <div class="standout-edge-badge edge-pos">6.95%</div>
+        <div class="standout-edge-badge edge-pos">29.83%</div>
       </div>
       <div class="odds-compare">
         <div class="odds-compare-col">
           <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book">+160</div>
+          <div class="odds-compare-value book">-141</div>
         </div>
         <div class="odds-compare-arrow">→</div>
         <div class="odds-compare-col">
           <div class="odds-compare-label">Model Says</div>
-          <div class="odds-compare-value model">+120</div>
+          <div class="odds-compare-value model">-755</div>
         </div>
       </div>
-      <div class="standout-sub">½-Kelly suggested stake: 5.65% of bankroll</div>
-      <div class="rationale">Paddy Pimblett to win by SUB is priced at +160 (38% implied), while the model estimates 46% (+7.0% edge). That blends their career tendency (KO/TKO in 32% of wins, submission in 45%, decision in 23%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</div>
+      <div class="standout-sub">½-Kelly suggested stake: 35.94% of bankroll</div>
+      <div class="rationale">Gable Steveson to win by KO/TKO is priced at -141 (58% implied), while the model estimates 88% (+29.8% edge). That blends their career tendency (KO/TKO in 100% of wins, submission in 0%, decision in 0%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</div>
     </div>
     
     <div class="standout-card">
       <div class="standout-top">
         <div>
-          <div class="standout-main">Max Holloway<span class="standout-vs"> (vs. Conor McGregor)</span></div>
-          <div class="standout-market">Method: SUB
+          <div class="standout-main">Elisha Ellison<span class="standout-vs"> (vs. Gable Steveson)</span></div>
+          <div class="standout-market">Method: KO/TKO
             
           </div>
         </div>
-        <div class="standout-edge-badge edge-pos">5.17%</div>
+        <div class="standout-edge-badge edge-pos">22.93%</div>
       </div>
       <div class="odds-compare">
         <div class="odds-compare-col">
           <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book">+1438</div>
+          <div class="odds-compare-value book">+106</div>
         </div>
         <div class="odds-compare-arrow">→</div>
         <div class="odds-compare-col">
           <div class="odds-compare-label">Model Says</div>
-          <div class="odds-compare-value model">+755</div>
+          <div class="odds-compare-value model">-250</div>
         </div>
       </div>
-      <div class="standout-sub">½-Kelly suggested stake: 2.76% of bankroll</div>
-      <div class="rationale">Max Holloway to win by SUB is priced at +1438 (6% implied), while the model estimates 12% (+5.2% edge). That blends their career tendency (KO/TKO in 54% of wins, submission in 0%, decision in 46%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</div>
+      <div class="standout-sub">½-Kelly suggested stake: 22.26% of bankroll</div>
+      <div class="rationale">Elisha Ellison to win by KO/TKO is priced at +106 (48% implied), while the model estimates 71% (+22.9% edge). That blends their career tendency (KO/TKO in 71% of wins, submission in 0%, decision in 29%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</div>
+    </div>
+    
+    <div class="standout-card">
+      <div class="standout-top">
+        <div>
+          <div class="standout-main">Elisha Ellison<span class="standout-vs"> (vs. Gable Steveson)</span></div>
+          <div class="standout-market">Moneyline
+            
+              <span class="dog-badge dog">🐶 Underdog</span>
+            
+          </div>
+        </div>
+        <div class="standout-edge-badge edge-pos">22.29%</div>
+      </div>
+      <div class="odds-compare">
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Book Price</div>
+          <div class="odds-compare-value book">+1158</div>
+        </div>
+        <div class="odds-compare-arrow">→</div>
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Model Says</div>
+          <div class="odds-compare-value model">+231</div>
+        </div>
+      </div>
+      <div class="standout-sub">½-Kelly suggested stake: 12.11% of bankroll</div>
+      <div class="rationale">The model puts Elisha Ellison's win probability at 30%, higher than the market's 8% implied probability at +1158 (+22.3% edge). Biggest factors in that number: Gable Steveson's takedown accuracy vs. the opponent's takedown defense, Elisha Ellison's striking accuracy edge, Gable Steveson having been finished less often historically.</div>
     </div>
     
   </div>
@@ -329,28 +361,42 @@
   
   <div class="parlay-card bankroll">
     <div class="parlay-top">
-      <div class="parlay-odds">+219</div>
-      <div class="parlay-prob">Model-estimated hit rate: 58.5%</div>
+      <div class="parlay-odds">+284</div>
+      <div class="parlay-prob">Model-estimated hit rate: 71.4%</div>
     </div>
     <ul class="parlay-legs">
       
-      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Max Holloway vs Conor McGregor — Ends In Finish (-239)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Paddy Pimblett ML (+125)</li>
       
-      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Paddy Pimblett ML (+125)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Gable Steveson by KO/TKO (-141)</li>
       
     </ul>
   </div>
   
   <div class="parlay-card bankroll">
     <div class="parlay-top">
-      <div class="parlay-odds">+243</div>
-      <div class="parlay-prob">Model-estimated hit rate: 52.8%</div>
+      <div class="parlay-odds">+161</div>
+      <div class="parlay-prob">Model-estimated hit rate: 57.7%</div>
     </div>
     <ul class="parlay-legs">
       
       <li class="parlay-leg"><span class="parlay-leg-num">1</span>Max Holloway ML (-190)</li>
       
-      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Paddy Pimblett ML (+125)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Gable Steveson by KO/TKO (-141)</li>
+      
+    </ul>
+  </div>
+  
+  <div class="parlay-card bankroll">
+    <div class="parlay-top">
+      <div class="parlay-odds">+144</div>
+      <div class="parlay-prob">Model-estimated hit rate: 56.4%</div>
+    </div>
+    <ul class="parlay-legs">
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Paddy Pimblett ML (+125)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Gable Steveson ML (-1158)</li>
       
     </ul>
   </div>
@@ -364,42 +410,48 @@
   
   <div class="parlay-card lotto">
     <div class="parlay-top">
-      <div class="parlay-odds">+1063</div>
-      <div class="parlay-prob">Model-estimated hit rate: 14.56%</div>
+      <div class="parlay-odds">+1272</div>
+      <div class="parlay-prob">Model-estimated hit rate: 50.73%</div>
     </div>
     <ul class="parlay-legs">
       
-      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Max Holloway ML (-190) + Max Holloway vs Conor McGregor — Goes The Distance (+239)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor by KO/TKO (+257)</li>
       
       <li class="parlay-leg"><span class="parlay-leg-num">2</span>Paddy Pimblett ML (+125)</li>
       
-    </ul>
-  </div>
-  
-  <div class="parlay-card lotto">
-    <div class="parlay-top">
-      <div class="parlay-odds">+1244</div>
-      <div class="parlay-prob">Model-estimated hit rate: 8.2%</div>
-    </div>
-    <ul class="parlay-legs">
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Max Holloway ML (-190) + Max Holloway vs Conor McGregor — Goes The Distance (+239)</li>
-      
-      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Paddy Pimblett by SUB (+160)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">3</span>Gable Steveson by KO/TKO (-141)</li>
       
     </ul>
   </div>
   
   <div class="parlay-card lotto">
     <div class="parlay-top">
-      <div class="parlay-odds">+1227</div>
-      <div class="parlay-prob">Model-estimated hit rate: 5.73%</div>
+      <div class="parlay-odds">+1555</div>
+      <div class="parlay-prob">Model-estimated hit rate: 41.02%</div>
     </div>
     <ul class="parlay-legs">
       
-      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Max Holloway ML (-190) + Max Holloway vs Conor McGregor — Goes The Distance (+239)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor by KO/TKO (+257)</li>
       
-      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Paddy Pimblett by KO/TKO (+156)</li>
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Paddy Pimblett ML (+125)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">3</span>Elisha Ellison by KO/TKO (+106)</li>
+      
+    </ul>
+  </div>
+  
+  <div class="parlay-card lotto">
+    <div class="parlay-top">
+      <div class="parlay-odds">+1013</div>
+      <div class="parlay-prob">Model-estimated hit rate: 24.76%</div>
+    </div>
+    <ul class="parlay-legs">
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor ML (+190)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Paddy Pimblett ML (+125)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">3</span>Gable Steveson by KO/TKO (-141)</li>
       
     </ul>
   </div>
@@ -429,6 +481,22 @@
         <span class="preview-label">🧠 Model Preview:</span> Model favors Max Holloway at 65% over Conor McGregor (Striker vs. Striker stylistically). Path to victory most likely runs through ko/tko (54% of Holloway's career wins). Combined finish rate between both fighters sits at 72%, leaning under on total rounds. Max Holloway has been finished less often historically, a durability factor working in their favor. Conor McGregor also holds a notable reach advantage (5 inches). Conor McGregor is returning from a 5.0-year layoff, which carries real ring-rust risk regardless of what their career numbers say.
       </div>
       
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Conor McGregor</th><th>Max Holloway</th></tr>
+        <tr><td>Record</td><td>22-6</td><td>26-7</td></tr>
+        <tr><td>Age</td><td>37</td><td>34</td></tr>
+        <tr><td>Height</td><td>69"</td><td>71"</td></tr>
+        <tr><td>Reach</td><td>74"</td><td>69"</td></tr>
+        <tr><td>Stance</td><td>Southpaw</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Striker</td><td>Striker</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2021-07-10<br>(L by KO/TKO)</td>
+          <td>2026-03-14<br>(L by DEC)</td>
+        </tr>
+      </table>
+      
+      
 
       
       <div class="market-group-label">📊 Live lines vs. model</div>
@@ -451,53 +519,14 @@
         <tr>
           <td>Max Holloway</td>
           <td>Method: KO/TKO</td>
-          <td>-194</td>
+          <td>-117</td>
           <td>0.467</td>
-          <td>0.66</td>
-          <td class="edge-neg">-19.33%</td>
+          <td>0.54</td>
+          <td class="edge-neg">-7.33%</td>
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">Max Holloway to win by KO/TKO is priced at -194 (66% implied), while the model estimates 47% (-19.3% edge). That blends their career tendency (KO/TKO in 54% of wins, submission in 0%, decision in 46%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
-        
-        
-        <tr>
-          <td>Max Holloway</td>
-          <td>Method: SUB</td>
-          <td>+1438</td>
-          <td>0.117</td>
-          <td>0.065</td>
-          <td class="edge-pos">5.17%</td>
-          <td>2.76%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">Max Holloway to win by SUB is priced at +1438 (6% implied), while the model estimates 12% (+5.2% edge). That blends their career tendency (KO/TKO in 54% of wins, submission in 0%, decision in 46%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
-        
-        
-        <tr>
-          <td>Max Holloway vs Conor McGregor</td>
-          <td>Fight Outcome: Ends In Finish</td>
-          <td>-239</td>
-          <td>0.724</td>
-          <td>0.705</td>
-          <td class="edge-pos">1.88%</td>
-          <td>3.18%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">Fight Outcome: Ends In Finish at -239 implies 70%, vs. the model's 72% (+1.9% edge). Based on both fighters' career decision rate averaging 28%.</td></tr>
-        
-        
-        <tr>
-          <td>Max Holloway vs Conor McGregor</td>
-          <td>Fight Outcome: Goes The Distance</td>
-          <td>+239</td>
-          <td>0.276</td>
-          <td>0.295</td>
-          <td class="edge-neg">-1.88%</td>
-          <td>0.0%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">Fight Outcome: Goes The Distance at +239 implies 30%, vs. the model's 28% (-1.9% edge). Based on both fighters' career decision rate averaging 28%.</td></tr>
+        <tr class="rationale-row"><td colspan="7">Max Holloway to win by KO/TKO is priced at -117 (54% implied), while the model estimates 47% (-7.3% edge). That blends their career tendency (KO/TKO in 54% of wins, submission in 0%, decision in 46%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
         
         
         <tr>
@@ -550,6 +579,10 @@
         
         <tr><td>Conor McGregor vs Max Holloway</td><td>Total Rounds Over 2.5</td><td>38.5%</td></tr>
         
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Fight Outcome: Goes The Distance</td><td>27.6%</td></tr>
+        
+        <tr><td>Conor McGregor vs Max Holloway</td><td>Fight Outcome: Ends In Finish</td><td>72.4%</td></tr>
+        
       </table>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
       
@@ -570,6 +603,22 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> Model favors Paddy Pimblett at 50% over Benoit Saint-Denis (Wrestler/Grappler vs. Balanced stylistically). Path to victory most likely runs through submission (45% of Pimblett's career wins). Combined finish rate between both fighters sits at 81%, leaning under on total rounds.
       </div>
+      
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Benoit Saint-Denis</th><th>Paddy Pimblett</th></tr>
+        <tr><td>Record</td><td>14-3</td><td>22-3</td></tr>
+        <tr><td>Age</td><td>30</td><td>31</td></tr>
+        <tr><td>Height</td><td>70"</td><td>70"</td></tr>
+        <tr><td>Reach</td><td>73"</td><td>71"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Wrestler/Grappler</td><td>Balanced</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-01-10<br>(W by KO/TKO)</td>
+          <td>2026-01-24<br>(L by DEC)</td>
+        </tr>
+      </table>
+      
       
 
       
@@ -606,27 +655,14 @@
         <tr>
           <td>Paddy Pimblett</td>
           <td>Method: KO/TKO</td>
-          <td>+156</td>
+          <td>+190</td>
           <td>0.318</td>
-          <td>0.39</td>
-          <td class="edge-neg">-7.18%</td>
+          <td>0.345</td>
+          <td class="edge-neg">-2.68%</td>
           <td>0.0%</td>
         </tr>
         
-        <tr class="rationale-row"><td colspan="7">Paddy Pimblett to win by KO/TKO is priced at +156 (39% implied), while the model estimates 32% (-7.2% edge). That blends their career tendency (KO/TKO in 32% of wins, submission in 45%, decision in 23%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
-        
-        
-        <tr>
-          <td>Paddy Pimblett</td>
-          <td>Method: SUB</td>
-          <td>+160</td>
-          <td>0.455</td>
-          <td>0.385</td>
-          <td class="edge-pos">6.95%</td>
-          <td>5.65%</td>
-        </tr>
-        
-        <tr class="rationale-row"><td colspan="7">Paddy Pimblett to win by SUB is priced at +160 (38% implied), while the model estimates 46% (+7.0% edge). That blends their career tendency (KO/TKO in 32% of wins, submission in 45%, decision in 23%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
+        <tr class="rationale-row"><td colspan="7">Paddy Pimblett to win by KO/TKO is priced at +190 (34% implied), while the model estimates 32% (-2.7% edge). That blends their career tendency (KO/TKO in 32% of wins, submission in 45%, decision in 23%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
         
         
       </table>
@@ -677,6 +713,22 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> Model favors Mario Bautista at 70% over Cory Sandhagen (Striker vs. Wrestler/Grappler stylistically). Path to victory most likely runs through ko/tko (43% of Bautista's career wins). Combined finish rate between both fighters sits at 66%, leaning under on total rounds. Mario Bautista has been finished less often historically, a durability factor working in their favor.
       </div>
+      
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Cory Sandhagen</th><th>Mario Bautista</th></tr>
+        <tr><td>Record</td><td>18-5</td><td>14-1</td></tr>
+        <tr><td>Age</td><td>34</td><td>—</td></tr>
+        <tr><td>Height</td><td>71"</td><td>67"</td></tr>
+        <tr><td>Reach</td><td>70"</td><td>68"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Striker</td><td>Wrestler/Grappler</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-02-20<br>(L by DEC)</td>
+          <td>2025-12-05</td>
+        </tr>
+      </table>
+      
       
 
       
@@ -733,6 +785,22 @@
         <span class="preview-label">🧠 Model Preview:</span> Model favors Lone'er Kavanagh at 76% over Brandon Royval (Balanced vs. Balanced stylistically). Path to victory most likely runs through submission (46% of Kavanagh's career wins). Combined finish rate between both fighters sits at 81%, leaning under on total rounds. Lone'er Kavanagh has been finished less often historically, a durability factor working in their favor.
       </div>
       
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Brandon Royval</th><th>Lone'er Kavanagh</th></tr>
+        <tr><td>Record</td><td>17-8</td><td>13-1</td></tr>
+        <tr><td>Age</td><td>33</td><td>—</td></tr>
+        <tr><td>Height</td><td>66"</td><td>68"</td></tr>
+        <tr><td>Reach</td><td>68"</td><td>68"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Balanced</td><td>Balanced</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2025-12-01<br>(L by KO/TKO)</td>
+          <td>2025-10-20</td>
+        </tr>
+      </table>
+      
+      
 
       
       <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
@@ -787,6 +855,22 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> Model favors Terrance McKinney at 61% over King Green (Balanced vs. Striker stylistically). Path to victory most likely runs through ko/tko (82% of McKinney's career wins). Combined finish rate between both fighters sits at 77%, leaning under on total rounds. King Green has been finished less often historically, a durability factor working in their favor. Terrance McKinney is a genuine round-1 threat — 94% of their career wins have come before the first round even ends, which should pull any rounds/distance line lower regardless of who's favored to win outright.
       </div>
+      
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>King Green</th><th>Terrance McKinney</th></tr>
+        <tr><td>Record</td><td>35-21</td><td>17-6</td></tr>
+        <tr><td>Age</td><td>—</td><td>31</td></tr>
+        <tr><td>Height</td><td>71"</td><td>71"</td></tr>
+        <tr><td>Reach</td><td>74"</td><td>74"</td></tr>
+        <tr><td>Stance</td><td>Southpaw</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Balanced</td><td>Striker</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-01-25</td>
+          <td>2026-02-14<br>(W by KO/TKO)</td>
+        </tr>
+      </table>
+      
       
 
       
@@ -843,6 +927,22 @@
         <span class="preview-label">🧠 Model Preview:</span> Model favors Nikita Krylov at 55% over Robert Whittaker (Striker vs. Wrestler/Grappler stylistically). Path to victory most likely runs through submission (50% of Krylov's career wins). Combined finish rate between both fighters sits at 69%, leaning under on total rounds. Nikita Krylov also holds a notable reach advantage (5 inches).
       </div>
       
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Robert Whittaker</th><th>Nikita Krylov</th></tr>
+        <tr><td>Record</td><td>26-8</td><td>30-10</td></tr>
+        <tr><td>Age</td><td>35</td><td>—</td></tr>
+        <tr><td>Height</td><td>71"</td><td>75"</td></tr>
+        <tr><td>Reach</td><td>71"</td><td>76"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Striker</td><td>Wrestler/Grappler</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2025-12-20</td>
+          <td>2026-01-05<br>(W by SUB)</td>
+        </tr>
+      </table>
+      
+      
 
       
       <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
@@ -898,9 +998,81 @@
         <span class="preview-label">🧠 Model Preview:</span> Model favors Gable Steveson at 70% over Elisha Ellison (Wrestler/Grappler vs. Striker stylistically). Path to victory most likely runs through ko/tko (100% of Steveson's career wins). Combined finish rate between both fighters sits at 86%, leaning under on total rounds. Gable Steveson's takedown accuracy against the opponent's takedown defense gives a real wrestling-based edge here.
       </div>
       
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Gable Steveson</th><th>Elisha Ellison</th></tr>
+        <tr><td>Record</td><td>3-0</td><td>7-3</td></tr>
+        <tr><td>Age</td><td>—</td><td>—</td></tr>
+        <tr><td>Height</td><td>73"</td><td>74"</td></tr>
+        <tr><td>Reach</td><td>75"</td><td>78"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Wrestler/Grappler</td><td>Striker</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-03-15</td>
+          <td>2025-11-01</td>
+        </tr>
+      </table>
+      
+      
 
       
-      <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
+      <div class="market-group-label">📊 Live lines vs. model</div>
+      <table>
+        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
+        
+        <tr>
+          <td>Gable Steveson</td>
+          <td>Method: KO/TKO</td>
+          <td>-141</td>
+          <td>0.883</td>
+          <td>0.585</td>
+          <td class="edge-pos">29.83%</td>
+          <td>35.94%</td>
+        </tr>
+        
+        <tr class="rationale-row"><td colspan="7">Gable Steveson to win by KO/TKO is priced at -141 (58% implied), while the model estimates 88% (+29.8% edge). That blends their career tendency (KO/TKO in 100% of wins, submission in 0%, decision in 0%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
+        
+        
+        <tr>
+          <td>Elisha Ellison</td>
+          <td>Method: KO/TKO</td>
+          <td>+106</td>
+          <td>0.714</td>
+          <td>0.485</td>
+          <td class="edge-pos">22.93%</td>
+          <td>22.26%</td>
+        </tr>
+        
+        <tr class="rationale-row"><td colspan="7">Elisha Ellison to win by KO/TKO is priced at +106 (48% implied), while the model estimates 71% (+22.9% edge). That blends their career tendency (KO/TKO in 71% of wins, submission in 0%, decision in 29%) with how often this specific opponent has actually lost that way before -- a fighter's finishing rate matters less if the person across from them has never been finished that way.</td></tr>
+        
+        
+        <tr>
+          <td>Elisha Ellison<span class="dog-badge-sm dog">🐶</span></td>
+          <td>Moneyline</td>
+          <td>+1158</td>
+          <td>0.302</td>
+          <td>0.08</td>
+          <td class="edge-pos">22.29%</td>
+          <td>12.11%</td>
+        </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Elisha Ellison's win probability at 30%, higher than the market's 8% implied probability at +1158 (+22.3% edge). Biggest factors in that number: Gable Steveson's takedown accuracy vs. the opponent's takedown defense, Elisha Ellison's striking accuracy edge, Gable Steveson having been finished less often historically.</td></tr>
+        
+        
+        <tr>
+          <td>Gable Steveson<span class="dog-badge-sm fav">⭐</span></td>
+          <td>Moneyline</td>
+          <td>-1158</td>
+          <td>0.698</td>
+          <td>0.92</td>
+          <td class="edge-neg">-22.29%</td>
+          <td>0.0%</td>
+        </tr>
+        
+        <tr class="rationale-row"><td colspan="7">The model puts Gable Steveson's win probability at 70%, lower than the market's 92% implied probability at -1158 (-22.3% edge). Biggest factors in that number: Gable Steveson's takedown accuracy vs. the opponent's takedown defense, Elisha Ellison's striking accuracy edge, Gable Steveson having been finished less often historically.</td></tr>
+        
+        
+      </table>
       
 
       
@@ -908,13 +1080,9 @@
       <table class="model-only-table">
         <tr><th>Selection</th><th>Market</th><th>Model Prob</th></tr>
         
-        <tr><td>Gable Steveson</td><td>Method: KO/TKO</td><td>61.6%</td></tr>
-        
         <tr><td>Gable Steveson</td><td>Method: Submission</td><td>0.0%</td></tr>
         
         <tr><td>Gable Steveson</td><td>Method: Decision</td><td>8.1%</td></tr>
-        
-        <tr><td>Elisha Ellison</td><td>Method: KO/TKO</td><td>21.6%</td></tr>
         
         <tr><td>Elisha Ellison</td><td>Method: Submission</td><td>0.0%</td></tr>
         
@@ -952,6 +1120,22 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> Model favors Adrian Yanez at 61% over Cody Garbrandt (Striker vs. Striker stylistically). Path to victory most likely runs through ko/tko (61% of Yanez's career wins). Combined finish rate between both fighters sits at 60%, leaning under on total rounds.
       </div>
+      
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Cody Garbrandt</th><th>Adrian Yanez</th></tr>
+        <tr><td>Record</td><td>15-7</td><td>18-5</td></tr>
+        <tr><td>Age</td><td>—</td><td>—</td></tr>
+        <tr><td>Height</td><td>65"</td><td>68"</td></tr>
+        <tr><td>Reach</td><td>68"</td><td>67"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Striker</td><td>Striker</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2025-11-15</td>
+          <td>2026-01-10</td>
+        </tr>
+      </table>
+      
       
 
       
@@ -1008,6 +1192,22 @@
         <span class="preview-label">🧠 Model Preview:</span> Model favors Luke Riley at 63% over Kai Kamaka III (Balanced vs. Striker stylistically). Path to victory most likely runs through ko/tko (43% of Riley's career wins). Combined finish rate between both fighters sits at 66%, leaning under on total rounds. Luke Riley has been finished less often historically, a durability factor working in their favor.
       </div>
       
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Luke Riley</th><th>Kai Kamaka III</th></tr>
+        <tr><td>Record</td><td>7-0</td><td>13-5</td></tr>
+        <tr><td>Age</td><td>—</td><td>—</td></tr>
+        <tr><td>Height</td><td>71"</td><td>69"</td></tr>
+        <tr><td>Reach</td><td>72"</td><td>72"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Balanced</td><td>Striker</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-02-20</td>
+          <td>2025-12-05</td>
+        </tr>
+      </table>
+      
+      
 
       
       <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
@@ -1063,6 +1263,22 @@
         <span class="preview-label">🧠 Model Preview:</span> Model favors Damian Pinas at 53% over Cesar Almeida (Wrestler/Grappler vs. Striker stylistically). Path to victory most likely runs through ko/tko (78% of Pinas's career wins). Combined finish rate between both fighters sits at 78%, leaning under on total rounds. Damian Pinas has been finished less often historically, a durability factor working in their favor.
       </div>
       
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Cesar Almeida</th><th>Damian Pinas</th></tr>
+        <tr><td>Record</td><td>9-1</td><td>9-3</td></tr>
+        <tr><td>Age</td><td>—</td><td>—</td></tr>
+        <tr><td>Height</td><td>74"</td><td>74"</td></tr>
+        <tr><td>Reach</td><td>76"</td><td>76"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Wrestler/Grappler</td><td>Striker</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-03-01</td>
+          <td>2025-10-20</td>
+        </tr>
+      </table>
+      
+      
 
       
       <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
@@ -1117,6 +1333,22 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> Model favors Ryan Gandra at 73% over Zach Reese (Balanced vs. Striker stylistically). Path to victory most likely runs through ko/tko (50% of Gandra's career wins). Combined finish rate between both fighters sits at 83%, leaning under on total rounds. Ryan Gandra has been finished less often historically, a durability factor working in their favor.
       </div>
+      
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Ryan Gandra</th><th>Zach Reese</th></tr>
+        <tr><td>Record</td><td>10-0</td><td>7-2</td></tr>
+        <tr><td>Age</td><td>—</td><td>—</td></tr>
+        <tr><td>Height</td><td>73"</td><td>75"</td></tr>
+        <tr><td>Reach</td><td>74"</td><td>77"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Balanced</td><td>Striker</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-01-25</td>
+          <td>2026-02-14</td>
+        </tr>
+      </table>
+      
       
 
       
@@ -1185,6 +1417,22 @@
         <span class="preview-label">🧠 Model Preview:</span> Model favors Dricus Du Plessis at 57% over Kamaru Usman (Wrestler/Grappler vs. Wrestler/Grappler stylistically). Path to victory most likely runs through ko/tko (52% of Plessis's career wins). Combined finish rate between both fighters sits at 67%, leaning under on total rounds. Kamaru Usman has been finished less often historically, a durability factor working in their favor. Kamaru Usman is returning from a 3.3-year layoff, which carries real ring-rust risk regardless of what their career numbers say.
       </div>
       
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Dricus Du Plessis</th><th>Kamaru Usman</th></tr>
+        <tr><td>Record</td><td>23-3</td><td>21-4</td></tr>
+        <tr><td>Age</td><td>—</td><td>—</td></tr>
+        <tr><td>Height</td><td>73"</td><td>71"</td></tr>
+        <tr><td>Reach</td><td>75"</td><td>76"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Wrestler/Grappler</td><td>Wrestler/Grappler</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-01-05</td>
+          <td>2023-03-04</td>
+        </tr>
+      </table>
+      
+      
 
       
       <div class="no-edges">No live odds matched yet — model projection above still applies.</div>
@@ -1238,6 +1486,22 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> Model favors Christian Leroy Duncan at 64% over Jared Cannonier (Striker vs. Striker stylistically). Path to victory most likely runs through ko/tko (54% of Duncan's career wins). Combined finish rate between both fighters sits at 71%, leaning under on total rounds.
       </div>
+      
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Jared Cannonier</th><th>Christian Leroy Duncan</th></tr>
+        <tr><td>Record</td><td>18-9</td><td>13-2</td></tr>
+        <tr><td>Age</td><td>—</td><td>—</td></tr>
+        <tr><td>Height</td><td>71"</td><td>73"</td></tr>
+        <tr><td>Reach</td><td>76"</td><td>76"</td></tr>
+        <tr><td>Stance</td><td>Southpaw</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Striker</td><td>Striker</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2025-08-01</td>
+          <td>2025-11-01</td>
+        </tr>
+      </table>
+      
       
 
       
@@ -1440,6 +1704,22 @@
         <span class="preview-label">🧠 Model Preview:</span> Model favors Magomed Ankalaev at 59% over Khalil Rountree Jr. (Balanced vs. Striker stylistically). Path to victory most likely runs through decision (48% of Ankalaev's career wins). Combined finish rate between both fighters sits at 63%, leaning under on total rounds.
       </div>
       
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Magomed Ankalaev</th><th>Khalil Rountree Jr.</th></tr>
+        <tr><td>Record</td><td>21-2</td><td>15-7</td></tr>
+        <tr><td>Age</td><td>—</td><td>—</td></tr>
+        <tr><td>Height</td><td>75"</td><td>73"</td></tr>
+        <tr><td>Reach</td><td>76"</td><td>79"</td></tr>
+        <tr><td>Stance</td><td>Southpaw</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Balanced</td><td>Striker</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-03-01</td>
+          <td>2026-03-01</td>
+        </tr>
+      </table>
+      
+      
 
       
       <div class="no-edges">No live odds matched yet — model projection above still applies.</div>
@@ -1493,6 +1773,22 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> Model favors Umar Nurmagomedov at 50% over David Martinez (Wrestler/Grappler vs. Balanced stylistically). Path to victory most likely runs through submission (35% of Nurmagomedov's career wins). Combined finish rate between both fighters sits at 68%, leaning under on total rounds.
       </div>
+      
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>Umar Nurmagomedov</th><th>David Martinez</th></tr>
+        <tr><td>Record</td><td>20-1</td><td>14-1</td></tr>
+        <tr><td>Age</td><td>—</td><td>—</td></tr>
+        <tr><td>Height</td><td>67"</td><td>66"</td></tr>
+        <tr><td>Reach</td><td>68"</td><td>67"</td></tr>
+        <tr><td>Stance</td><td>Orthodox</td><td>Orthodox</td></tr>
+        <tr><td>Style</td><td>Wrestler/Grappler</td><td>Balanced</td></tr>
+        <tr><td>Last Fight</td>
+          <td>2026-03-01</td>
+          <td>2026-03-01</td>
+        </tr>
+      </table>
+      
       
 
       
