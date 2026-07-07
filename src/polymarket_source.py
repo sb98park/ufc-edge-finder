@@ -107,7 +107,8 @@ def _fetch_events_by_tag(tag_id: str, limit: int = 200) -> list[dict]:
     resp.raise_for_status()
     events = resp.json()
     matched = [e for e in events if _is_individual_fight_event(e)]
-    print(f"[polymarket] tag_id={tag_id}: {len(events)} raw events, {len(matched)} matched the fight filter")
+    sample_titles = [e.get("title", "")[:40] for e in events[:3]]
+    print(f"[polymarket] tag_id={tag_id}: {len(events)} raw events, {len(matched)} matched the fight filter, sample: {sample_titles}")
     return matched
 
 
