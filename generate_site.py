@@ -23,7 +23,7 @@ from src.card_matcher import (
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
-from src.line_movement import load_snapshot, save_snapshot, annotate_movement
+from src.line_movement import load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -45,6 +45,7 @@ def main():
     live_error = None
     edges_df = pd.DataFrame()
     source = None
+    previous_snapshot = load_snapshot()
 
     try:
         upcoming_df, source = get_live_props()
@@ -53,7 +54,6 @@ def main():
         edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings)
 
         if not edges_df.empty:
-            previous_snapshot = load_snapshot()
             edge_records = edges_df.to_dict("records")
             annotate_movement(edge_records, previous_snapshot)
             edges_df = pd.DataFrame(edge_records)
@@ -96,7 +96,13 @@ def main():
     )[:8]
 
     if not edges_df.empty:
-        save_snapshot(edges_df.to_dict("records"))
+        updated_snapshot = save_snapshot(edges_df.to_dict("records"), previous_snapshot)
+    else:
+        updated_snapshot = previous_snapshot
+
+    for event in events + future_events:
+        for fight in event["fights"]:
+            attach_charts_to_fight(fight, updated_snapshot)
 
     event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
 

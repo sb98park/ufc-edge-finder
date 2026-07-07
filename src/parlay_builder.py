@@ -231,31 +231,33 @@ def _find_parlays(
     return _select_diverse(results, max_results)
 
 
-def _select_diverse(results: list[dict], max_results: int, max_shared_legs: int = 0) -> list[dict]:
+def _select_diverse(results: list[dict], max_results: int) -> list[dict]:
     """
     Picking the top N by raw probability tends to produce near-duplicates --
     if one leg has an unusually high individual probability, almost every
-    top-ranked combo ends up including it. This greedily requires ZERO leg
-    overlap between selected parlays where possible, falling back only when
-    the data genuinely doesn't support full diversity.
+    top-ranked combo ends up including it. This tries progressively looser
+    overlap tolerances (0 shared legs first, then 1, then 2...) rather than
+    jumping straight from "zero overlap" to "no constraint at all" -- lotto
+    in particular has a much smaller pool of genuinely long-shot-priced legs
+    than bankroll does, so a hard 0-or-unlimited jump was reusing the same
+    1-2 standout legs across every slot far more than necessary.
     """
-    selected = []
-    for parlay in results:
-        fight_id_set = set(parlay["fight_ids"])
-        too_similar = any(
-            len(fight_id_set & set(chosen["fight_ids"])) > max_shared_legs
-            for chosen in selected
-        )
-        if not too_similar:
-            selected.append(parlay)
+    max_possible_overlap = max((len(r["fight_ids"]) for r in results), default=1)
+    for max_shared in range(0, max_possible_overlap + 1):
+        selected = []
+        for parlay in results:
+            fight_id_set = set(parlay["fight_ids"])
+            too_similar = any(
+                len(fight_id_set & set(chosen["fight_ids"])) > max_shared
+                for chosen in selected
+            )
+            if not too_similar:
+                selected.append(parlay)
+            if len(selected) >= max_results:
+                return selected
         if len(selected) >= max_results:
             return selected
 
-    for parlay in results:
-        if len(selected) >= max_results:
-            break
-        if parlay not in selected:
-            selected.append(parlay)
     return selected
 
 

@@ -93,6 +93,15 @@ def build_full_market_projection(
     return {"method_rows": method_rows, "rounds_rows": rounds_rows, "distance_rows": distance_rows}
 
 
+def _confidence_label(favorite_prob: float) -> str:
+    if favorite_prob >= 0.75:
+        return "High Confidence"
+    elif favorite_prob >= 0.60:
+        return "Medium Confidence"
+    else:
+        return "Low Confidence"
+
+
 def build_fight_preview(
     fighter_a: str, fighter_b: str,
     fighters_df: pd.DataFrame,
@@ -190,6 +199,9 @@ def build_fight_preview(
             "ko_wins": int(row["ko_wins"]) if pd.notna(row.get("ko_wins")) else None,
             "sub_wins": int(row["sub_wins"]) if pd.notna(row.get("sub_wins")) else None,
             "dec_wins": int(row["dec_wins"]) if pd.notna(row.get("dec_wins")) else None,
+            "ko_losses": int(row["ko_losses"]) if pd.notna(row.get("ko_losses")) else None,
+            "sub_losses": int(row["sub_losses"]) if pd.notna(row.get("sub_losses")) else None,
+            "dec_losses": int(row["dec_losses"]) if pd.notna(row.get("dec_losses")) else None,
             "last_fight_date": row.get("last_fight_date") if pd.notna(row.get("last_fight_date")) else None,
             "last_fight_result": row.get("last_fight_result") if pd.notna(row.get("last_fight_result")) else None,
             "last_fight_method": row.get("last_fight_method") if pd.notna(row.get("last_fight_method")) else None,
@@ -203,6 +215,7 @@ def build_fight_preview(
         "underdog": underdog,
         "likely_method": likely_method,
         "likely_method_rate": round(method_rates[likely_method], 3),
+        "confidence_label": _confidence_label(favorite_prob),
         "rounds_lean": rounds_lean,
         "combined_finish_rate": round(combined_finish_rate, 3),
         "style_a": matchup["style_a"],

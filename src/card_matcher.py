@@ -61,6 +61,17 @@ def group_unmatched_by_fight(unmatched_df: pd.DataFrame) -> list[dict]:
     result = list(fights.values())
     for fight in result:
         fight["edges"].sort(key=lambda e: abs(e.get("edge_pct", 0)), reverse=True)
+
+    # Filter out orphaned single-market noise (e.g. just a stray Under/Over
+    # with no moneyline and nothing else) -- keep only fights that have
+    # either a real moneyline or multiple market types, since a single
+    # isolated rounds line with no other context isn't a useful preview.
+    def _is_substantial(fight: dict) -> bool:
+        markets = {e.get("market") for e in fight["edges"]}
+        has_moneyline = "Moneyline" in markets
+        return has_moneyline or len(markets) >= 2
+
+    result = [f for f in result if _is_substantial(f)]
     result.sort(key=lambda f: len(f["edges"]), reverse=True)
     return result
 
