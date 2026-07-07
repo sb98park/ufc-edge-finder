@@ -51,40 +51,6 @@ def _safe_json_loads(value, default=None):
         return default if default is not None else []
 
 
-def _find_mma_tag_ids() -> list[str]:
-    """
-    Gamma's /sports endpoint returns tag metadata per sport. Filtering events
-    by tag_id is far more reliable than sorting all active events (across
-    the entire platform) by volume and hoping UFC cracks the top N -- it
-    won't, since political/crypto markets dwarf individual MMA fights in
-    platform-wide dollar volume even though MMA markets are significant
-    within their own category.
-
-    The sport identifier field is literally called "sport" (confirmed via
-    live diagnostic), and tags come back as a comma-separated string. A
-    sport can list MULTIPLE tags, and not all of them are sport-specific --
-    e.g. tag "1" showed up on both the UFC and NCAAB entries in a live
-    dump, meaning it's a shared generic "Sports" category, not a UFC-only
-    one. Rather than guess which specific tag id is the meaningful one,
-    this returns all of them and queries each, merging results.
-    """
-    resp = requests.get(f"{GAMMA_BASE}/sports", headers=HEADERS, timeout=20)
-    resp.raise_for_status()
-    sports = resp.json()
-
-    for sport in sports:
-        sport_code = (sport.get("sport") or "").lower()
-        if sport_code in ("mma", "ufc"):
-            tags_str = sport.get("tags", "")
-            tag_ids = [t.strip() for t in str(tags_str).split(",") if t.strip()]
-            print(f"[polymarket] found sport code {sport_code!r}, tags={tag_ids}")
-            return tag_ids
-
-    sample_codes = [s.get("sport") for s in sports[:30]]
-    print(f"[polymarket] no MMA/UFC sport code found among {len(sports)} sports; sample codes: {sample_codes}")
-    return []
-
-
 def _is_individual_fight_event(event: dict) -> bool:
     """
     'UFC' alone in the title isn't enough -- it also matches year-end
@@ -98,28 +64,22 @@ def _is_individual_fight_event(event: dict) -> bool:
     return "ufc" in combined and bool(re.search(r"\bvs\.?\b", combined))
 
 
-def _fetch_events_by_tag(tag_id: str, limit: int = 200) -> list[dict]:
-    resp = requests.get(
-        f"{GAMMA_BASE}/events",
-        params={"tag_id": tag_id, "active": "true", "closed": "false", "limit": limit},
-        headers=HEADERS, timeout=20,
-    )
-    resp.raise_for_status()
-    events = resp.json()
-    matched = [e for e in events if _is_individual_fight_event(e)]
-    sample_titles = [e.get("title", "")[:40] for e in events[:3]]
-    print(f"[polymarket] tag_id={tag_id}: {len(events)} raw events, {len(matched)} matched the fight filter, sample: {sample_titles}")
-    return matched
-
-
 def _fetch_events_by_volume_fallback(limit: int = 200, pages: int = 10) -> list[dict]:
     """
-    Backup discovery if tag lookup fails: paginate through volume-sorted
-    events instead of just the first page. Each page is fetched defensively
-    -- Gamma's /events endpoint has a real max offset limit (confirmed via
-    a live 422 error around offset=2200), and without per-page error
-    handling, hitting that limit on a later page would throw an exception
-    that discards every event found on all the successful earlier pages.
+    Paginate through volume-sorted active events, filtering for real UFC
+    fight matchups. This is the only discovery strategy confirmed to work --
+    Gamma's tag_id filter parameter was tested directly and conclusively
+    proven to be silently ignored (tag_id=1 returned World Cup/NFL markets,
+    tag_id=100639 returned esports markets like Half-Life 3 and League of
+    Legends -- neither related to UFC at all, same result regardless of
+    which tag was passed). End-date sorting was also tried and confirmed to
+    be dominated by elections resolving soon and 5-minute crypto markets.
+
+    Each page is fetched defensively -- Gamma's /events endpoint has a real
+    max offset limit (confirmed via a live 422 error around offset=2200),
+    and without per-page error handling, hitting that limit on a later page
+    would throw an exception that discards every event found on all the
+    successful earlier pages.
     """
     all_ufc_events = []
     for page in range(pages):
@@ -140,27 +100,12 @@ def _fetch_events_by_volume_fallback(limit: int = 200, pages: int = 10) -> list[
             break
         matched = [e for e in events if _is_individual_fight_event(e)]
         all_ufc_events.extend(matched)
-    print(f"[polymarket] volume-sorted fallback found {len(all_ufc_events)} UFC events")
+    print(f"[polymarket] volume-sorted discovery found {len(all_ufc_events)} UFC events")
     return all_ufc_events
 
 
 def fetch_ufc_events(limit: int = 200) -> list[dict]:
-    found: dict[str, dict] = {}  # keyed by slug/title to dedupe across strategies
-
-    try:
-        tag_ids = _find_mma_tag_ids()
-        for tag_id in tag_ids:
-            for e in _fetch_events_by_tag(tag_id, limit):
-                found[e.get("slug") or e.get("title")] = e
-    except Exception as exc:
-        print(f"[polymarket] tag lookup failed ({exc})")
-
-    # Volume-sorted pagination as a backup/supplement -- confirmed live to
-    # find real fight events, just needs enough depth since individual MMA
-    # fights rank far below the platform's biggest political/crypto markets.
-    # (End-date sorting was tried and confirmed to be a dead end -- it's
-    # dominated by elections resolving soon and 5-minute crypto markets,
-    # not multi-day-out events like this.)
+    found: dict[str, dict] = {}  # keyed by slug/title to dedupe
     for e in _fetch_events_by_volume_fallback(limit, pages=10):
         found[e.get("slug") or e.get("title")] = e
 
