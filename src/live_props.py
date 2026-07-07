@@ -24,6 +24,12 @@ def _pair_key(row: dict) -> frozenset | None:
     return frozenset({_normalize_name(fighter_a), _normalize_name(fighter_b)})
 
 
+def _bet_key(row: dict) -> tuple:
+    """Full identity of a specific bet -- fighter pair + market + exact selection, not just the fight."""
+    pair = _pair_key(row) or frozenset({row.get("fighter_a"), row.get("fighter_b")})
+    return (pair, row.get("market"), row.get("selection"), row.get("selection_method"))
+
+
 def get_live_props() -> tuple[pd.DataFrame, str]:
     sources_used = []
     pm_rows, dk_rows = [], []
@@ -59,5 +65,27 @@ def get_live_props() -> tuple[pd.DataFrame, str]:
     supplemental = [r for r in dk_rows if (_pair_key(r), r["market"]) not in covered]
 
     combined_rows = pm_rows + supplemental
+
+    # Final safety net: even within ONE source, the same specific bet can
+    # show up twice -- e.g. confirmed live, the same fighter/method/odds
+    # combo appeared at two different prices, most likely from Polymarket
+    # having two separate market listings covering the same fight (a
+    # moneyline-focused event and a props-focused event both matching the
+    # 'ufc ... vs ...' discovery filter). Keep only the first occurrence of
+    # each exact bet so a parlay can't accidentally use "the same leg"
+    # twice at two different prices.
+    seen = set()
+    deduped = []
+    dupes_removed = 0
+    for row in combined_rows:
+        key = _bet_key(row)
+        if key in seen:
+            dupes_removed += 1
+            continue
+        seen.add(key)
+        deduped.append(row)
+    if dupes_removed:
+        print(f"[live_props] removed {dupes_removed} duplicate bet(s) (same fighter/market/selection, different price)")
+
     source_label = " + ".join(sources_used) if len(sources_used) > 1 else sources_used[0]
-    return pd.DataFrame(combined_rows), source_label
+    return pd.DataFrame(deduped), source_label

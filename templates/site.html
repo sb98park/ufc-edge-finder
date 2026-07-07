@@ -355,25 +355,34 @@
   {% endfor %}
   {% endfor %}
 
-  {% if unmatched %}
-  <div class="section-title">📡 Other Live Lines (not on a tracked card)</div>
-  {% for row in unmatched %}
-  <div class="line-card">
-    <div>
-      <div class="line-matchup">{{ row.fighter }}{% if row.opponent %} vs {{ row.opponent }}{% endif %}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ '⭐' if row.odds_american < 0 else '🐶' }}</span>{% endif %}</div>
-      <div class="line-market">{{ row.market }} · {{ row.odds_american | american }}</div>
+  {% if upcoming_other_fights %}
+  <div class="section-title">📅 Other Upcoming Fights</div>
+  <div class="parlay-subtitle">Live odds found for fights beyond this week's card — next weekend's event, or whatever else the odds sources currently have listed. Model evaluation may be limited if these fighters aren't in the database yet.</div>
+  {% for fight in upcoming_other_fights %}
+  <details class="fight-card">
+    <summary>
+      <div>
+        <div class="matchup">{{ fight.fighter_a }} vs {{ fight.fighter_b }}</div>
+      </div>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="fight-body">
+      <table>
+        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th></tr>
+        {% for row in fight.edges %}
+        <tr>
+          <td>{{ row.fighter }}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ '⭐' if row.odds_american < 0 else '🐶' }}</span>{% endif %}</td>
+          <td>{{ row.market }}</td>
+          <td>{{ row.odds_american | american }}</td>
+          <td>{{ row.model_prob }}</td>
+          <td>{{ row.book_fair_prob }}</td>
+          <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
+        </tr>
+        {% endfor %}
+      </table>
     </div>
-    <div class="line-edge {{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</div>
-  </div>
+  </details>
   {% endfor %}
   {% endif %}
-
-  <div class="section-title">📈 Elo Rankings (from fight history)</div>
-  <table class="rankings-table">
-    <tr><th>Fighter</th><th>Elo</th></tr>
-    {% for row in rankings %}
-    <tr><td>{{ row.fighter }}</td><td>{{ "%.1f"|format(row.elo) }}</td></tr>
-    {% endfor %}
-  </table>
 </body>
 </html>

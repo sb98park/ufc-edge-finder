@@ -124,13 +124,16 @@ def _combine(pieces: tuple[dict, ...]) -> dict:
     combined_decimal = 1.0
     combined_prob = 1.0
     labels = []
+    fight_ids = []
     for piece in pieces:
         combined_decimal *= piece["decimal_odds"]
         combined_prob *= piece["model_prob"]
         labels.append(piece["label"])
+        fight_ids.append(piece["fight_id"])
     combined_american = decimal_to_american(combined_decimal)
     return {
         "legs": labels,
+        "fight_ids": fight_ids,
         "combined_american": round(combined_american),
         "combined_american_display": format_american_odds(combined_american),
         "combined_prob": round(combined_prob, 4),
@@ -175,9 +178,41 @@ def _find_parlays(
               f"(need >= {min(leg_counts)} distinct fights). "
               f"Closest miss: {best_miss['combined_american_display'] if best_miss else 'none tried'} "
               f"(target: {min_american:+.0f}{'+' if max_american is None else f' to {max_american:+.0f}'})")
+        return []
 
     results.sort(key=lambda p: p["combined_prob"], reverse=True)
-    return results[:max_results]
+    return _select_diverse(results, max_results)
+
+
+def _select_diverse(results: list[dict], max_results: int, max_shared_legs: int = 0) -> list[dict]:
+    """
+    Picking the top N by raw probability tends to produce near-duplicates --
+    if one leg (e.g. a specific fighter's moneyline) has an unusually high
+    individual probability, almost every top-ranked combo ends up including
+    it. This greedily skips candidates that share too many legs with an
+    already-picked parlay, so the slate actually offers different bets
+    instead of the same core pick repeated with one leg swapped.
+    """
+    selected = []
+    for parlay in results:
+        fight_id_set = set(parlay["fight_ids"])
+        too_similar = any(
+            len(fight_id_set & set(chosen["fight_ids"])) > max_shared_legs
+            for chosen in selected
+        )
+        if not too_similar:
+            selected.append(parlay)
+        if len(selected) >= max_results:
+            return selected
+
+    # Not enough sufficiently-diverse combos existed -- backfill with the
+    # next-best remaining ones rather than returning fewer than asked for.
+    for parlay in results:
+        if len(selected) >= max_results:
+            break
+        if parlay not in selected:
+            selected.append(parlay)
+    return selected
 
 
 def build_bankroll_builder_parlays(tracked_edges: list[dict], max_results: int = 3) -> list[dict]:
@@ -190,9 +225,9 @@ def build_bankroll_builder_parlays(tracked_edges: list[dict], max_results: int =
 
 
 def build_lotto_parlays(tracked_edges: list[dict], max_results: int = 3) -> list[dict]:
-    """3-5 piece combos at +1000 or higher, ranked by best combined hit probability among the long shots."""
+    """+1000 or higher combos, 2-5 pieces -- leg count doesn't matter, only the payout does."""
     pieces = _build_candidate_pieces(tracked_edges)
     return _find_parlays(
-        pieces, leg_counts=(3, 4, 5), min_american=1000, max_american=None,
+        pieces, leg_counts=(2, 3, 4, 5), min_american=1000, max_american=None,
         min_leg_prob=0.15, max_results=max_results, label="lotto",
     )

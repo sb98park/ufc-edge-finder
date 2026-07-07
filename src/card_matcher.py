@@ -29,6 +29,47 @@ def load_fight_cards(path: str = "data/fight_cards.csv") -> pd.DataFrame:
     return pd.read_csv(path)
 
 
+def group_unmatched_by_fight(unmatched_df: pd.DataFrame) -> list[dict]:
+    """
+    Groups live odds for fights NOT on the tracked card -- next weekend's
+    event, or whatever else is currently live on the odds sources -- by
+    fighter pair, so they can show as a genuine preview of what's coming up
+    next instead of a flat, hard-to-scan list. Model evaluation for these
+    will often be thin (opponents likely aren't in fighters.csv yet), which
+    is expected and shown honestly rather than faked.
+    """
+    if unmatched_df.empty:
+        return []
+
+    fights: dict[frozenset, dict] = {}
+    for _, row in unmatched_df.iterrows():
+        row_dict = row.to_dict()
+        fighter_field = row_dict.get("fighter", "")
+        opponent = row_dict.get("opponent")
+
+        if " vs " in str(fighter_field):
+            names = [n.strip() for n in fighter_field.split(" vs ")]
+            if len(names) != 2:
+                continue
+            fighter_a, fighter_b = names
+        elif opponent:
+            fighter_a, fighter_b = fighter_field, opponent
+        else:
+            continue  # can't identify a pair to group by, skip
+
+        key = frozenset({fighter_a, fighter_b})
+        if key not in fights:
+            fights[key] = {"fighter_a": fighter_a, "fighter_b": fighter_b, "edges": []}
+        fights[key]["edges"].append(row_dict)
+
+    result = list(fights.values())
+    for fight in result:
+        fight["edges"].sort(key=lambda e: abs(e.get("edge_pct", 0)), reverse=True)
+    # surface fights with more available data (more markets/legs found) first
+    result.sort(key=lambda f: len(f["edges"]), reverse=True)
+    return result
+
+
 def assign_canonical_fight_ids(upcoming_df: pd.DataFrame, cards_df: pd.DataFrame) -> pd.DataFrame:
     """
     Different odds sources assign their own internal fight IDs -- Polymarket

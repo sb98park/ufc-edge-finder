@@ -16,7 +16,10 @@ from jinja2 import Environment, FileSystemLoader
 from src.elo import EloRatingSystem
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
-from src.card_matcher import load_fight_cards, group_edges_by_card, top_standout_props, assign_canonical_fight_ids
+from src.card_matcher import (
+    load_fight_cards, group_edges_by_card, top_standout_props,
+    assign_canonical_fight_ids, group_unmatched_by_fight,
+)
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
@@ -64,9 +67,10 @@ def main():
     bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list)
     lotto_parlays = build_lotto_parlays(tracked_edges_list)
 
-    rankings_df = pd.DataFrame(
-        [{"fighter": f, "elo": r} for f, r in elo_ratings.items()]
-    ).sort_values("elo", ascending=False).reset_index(drop=True)
+    # Fights found on odds sources that AREN'T part of this weekend's tracked
+    # card -- next weekend's event, or whatever else is currently live --
+    # grouped into a genuine preview instead of a flat "unmatched" dump.
+    upcoming_other_fights = group_unmatched_by_fight(unmatched_df)
 
     # e.g. "UFC 329: McGregor vs. Holloway 2" -> "UFC 329", for the standout props header
     event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
@@ -82,7 +86,7 @@ def main():
         event_short_name=event_short_name,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
-        rankings=rankings_df.to_dict("records"),
+        upcoming_other_fights=upcoming_other_fights,
         live_error=live_error,
         source=source,
         generated_at=dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET"),
