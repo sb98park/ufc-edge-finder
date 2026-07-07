@@ -63,6 +63,10 @@ def _find_mma_tag_id() -> str | None:
     resp = requests.get(f"{GAMMA_BASE}/sports", headers=HEADERS, timeout=20)
     resp.raise_for_status()
     sports = resp.json()
+
+    if sports:
+        print(f"[polymarket] RAW first /sports entry (to find real field names): {json.dumps(sports[0])[:500]}")
+
     for sport in sports:
         label = (sport.get("label") or sport.get("name") or sport.get("slug") or "").lower()
         if "mma" in label or "ufc" in label:
@@ -122,7 +126,12 @@ def _fetch_events_by_volume_fallback(limit: int = 200, pages: int = 3) -> list[d
         events = resp.json()
         if not events:
             break
-        all_ufc_events.extend(e for e in events if _is_individual_fight_event(e))
+        matched = [e for e in events if _is_individual_fight_event(e)]
+        if matched and not all_ufc_events:
+            # first real fight event found -- dump its raw structure so we
+            # can see actual field names (dates, tags, etc.) instead of guessing
+            print(f"[polymarket] RAW matched event structure (first found): {json.dumps(matched[0])[:800]}")
+        all_ufc_events.extend(matched)
     print(f"[polymarket] volume-sorted fallback found {len(all_ufc_events)} UFC events")
     return all_ufc_events
 
@@ -147,6 +156,11 @@ def _fetch_events_by_end_date(limit: int = 200, pages: int = 3) -> list[dict]:
         events = resp.json()
         if not events:
             break
+        if page == 0:
+            # peek at what's actually dominating this sort, since it returned
+            # zero matches -- helps tell us whether the sort key is even valid
+            sample_titles = [e.get("title", "")[:60] for e in events[:5]]
+            print(f"[polymarket] end-date sort first-page sample titles: {sample_titles}")
         all_ufc_events.extend(e for e in events if _is_individual_fight_event(e))
     print(f"[polymarket] end-date-sorted fallback found {len(all_ufc_events)} UFC events")
     return all_ufc_events
@@ -168,7 +182,7 @@ def fetch_ufc_events(limit: int = 200) -> list[dict]:
     # and vice versa for a high-volume event with a further-out end date.
     for e in _fetch_events_by_end_date(limit):
         found[e.get("slug") or e.get("title")] = e
-    for e in _fetch_events_by_volume_fallback(limit):
+    for e in _fetch_events_by_volume_fallback(limit, pages=15):
         found[e.get("slug") or e.get("title")] = e
 
     events = list(found.values())
