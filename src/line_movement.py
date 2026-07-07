@@ -111,6 +111,13 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict) -> None:
     ml_entry = full_snapshot.get(ml_key)
     fight["moneyline_chart"] = build_sparkline_svg(ml_entry["history"]) if ml_entry else None
 
+    # If this fight HAS live odds this run but doesn't have a chart yet
+    # (only 1 history point logged so far), say so explicitly rather than
+    # just silently showing nothing -- makes it clear more refreshes will
+    # fill this in, instead of looking like charts only exist for one fight.
+    has_live_ml = any(e.get("market") == "Moneyline" for e in fight.get("edges", []))
+    fight["chart_building"] = has_live_ml and not fight["moneyline_chart"]
+
     other_charts = []
     seen_keys = {ml_key}
     for edge in fight.get("edges", []):
@@ -147,8 +154,30 @@ def build_sparkline_svg(history: list[dict], width: int = 280, height: int = 100
         return None
 
     min_p, max_p = min(probs), max(probs)
-    range_p = (max_p - min_p) or 0.1
-    # pad the range a bit so the line doesn't touch the very top/bottom edge
+    raw_range = max_p - min_p
+
+    # Genuinely flat (or near-flat) price history is real, honest
+    # information -- draw a clean flat line at the ACTUAL value with a
+    # clear "stable" label, instead of the old behavior of padding to a
+    # fake range and drawing the line through an arbitrary midpoint, which
+    # looked like a rendering bug rather than "the price hasn't moved."
+    is_stable = raw_range < 0.005  # less than half a percentage point of movement
+
+    if is_stable:
+        pct = round(probs[-1] * 100)
+        left_pad, right_pad, top_pad, bottom_pad = 34, 12, 14, 20
+        plot_w = width - left_pad - right_pad
+        y = height / 2
+        return (
+            f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" class="sparkline" role="img" '
+            f'aria-label="Price has been stable at {pct}%">'
+            f'<line x1="{left_pad}" y1="{y:.1f}" x2="{left_pad + plot_w:.1f}" y2="{y:.1f}" '
+            f'stroke="#8a8f9a" stroke-width="2" stroke-dasharray="4,3"/>'
+            f'<text x="{left_pad}" y="{y - 10:.1f}" font-size="11" font-weight="700" fill="#8a8f9a">{pct}% · stable, no significant movement yet</text>'
+            f'</svg>'
+        )
+
+    range_p = raw_range
     pad_p = range_p * 0.15
     min_p, max_p = max(0.0, min_p - pad_p), min(1.0, max_p + pad_p)
     range_p = max_p - min_p

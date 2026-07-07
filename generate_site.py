@@ -22,7 +22,7 @@ from src.card_matcher import (
 )
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
-from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
+from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays, build_moonshot_parlays
 from src.line_movement import load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight
 
 DATA_DIR = "data"
@@ -84,6 +84,7 @@ def main():
 
     bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight)
     lotto_parlays = build_lotto_parlays(tracked_edges_list, model_only_by_fight)
+    moonshot_parlays = build_moonshot_parlays(tracked_edges_list, model_only_by_fight)
 
     # Notable line movement across everything we track, for its own section
     all_display_edges = tracked_edges_list + [
@@ -117,6 +118,7 @@ def main():
         event_short_name=event_short_name,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
+        moonshot_parlays=moonshot_parlays,
         notable_movements=notable_movements,
         live_error=live_error,
         source=source,

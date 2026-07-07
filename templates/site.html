@@ -106,6 +106,7 @@
   .parlay-section-title { font-size: 15px; margin: 28px 0 10px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
   .parlay-section-title.bankroll { color: var(--green); }
   .parlay-section-title.lotto { color: #c77dff; }
+  .parlay-section-title.moonshot { color: #ffb347; }
   .parlay-section-title.movement { color: #6db3f2; }
   .parlay-subtitle { font-size: 11.5px; color: var(--muted); margin: -6px 0 12px; line-height: 1.5; }
   .parlay-card {
@@ -113,10 +114,12 @@
   }
   .parlay-card.bankroll { background: linear-gradient(145deg, #10251a, #14171f 65%); border-color: #1e4a2f; }
   .parlay-card.lotto { background: linear-gradient(145deg, #21102b, #14171f 65%); border-color: #4a1e5a; }
+  .parlay-card.moonshot { background: linear-gradient(145deg, #2b1c05, #14171f 65%); border-color: #5a3e14; }
   .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .parlay-odds { font-size: 22px; font-weight: 800; }
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
   .parlay-card.lotto .parlay-odds { color: #c77dff; }
+  .parlay-card.moonshot .parlay-odds { color: #ffb347; }
   .parlay-prob { font-size: 11px; color: var(--muted); }
   .parlay-legs { list-style: none; margin: 0; padding: 0; }
   .parlay-leg {
@@ -164,6 +167,7 @@
     padding: 10px 12px; margin: 8px 0; text-align: center;
   }
   .chart-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-align: left; }
+  .chart-placeholder-text { font-size: 11.5px; color: var(--muted); text-align: left; padding: 8px 0; }
   .sparkline { display: block; max-width: 100%; height: auto; }
   details.chart-toggle {
     background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
@@ -345,6 +349,11 @@
         <div class="market-group-label">📈 Moneyline Movement</div>
         {{ fight.moneyline_chart | safe }}
       </div>
+      {% elif fight.chart_building %}
+      <div class="chart-block chart-placeholder">
+        <div class="market-group-label">📈 Moneyline Movement</div>
+        <div class="chart-placeholder-text">Chart building — needs one more refresh to show a trend line.</div>
+      </div>
       {% endif %}
       {% if fight.other_charts %}
       <details class="chart-toggle">
@@ -486,6 +495,28 @@
   <div class="parlay-note">These are long shots by design — meant as a "worth a small stab" section, not a plan.</div>
   {% elif events %}
   <div class="parlay-section-title lotto">🎰 Lotto Parlays</div>
+  <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
+  {% endif %}
+
+  {% if moonshot_parlays %}
+  <div class="parlay-section-title moonshot">🚀 Moonshot</div>
+  <div class="parlay-subtitle">+5000 or better. This has essentially no business hitting — any leg count, purely for fun, ranked by the model's best combined odds among everything that clears the bar.</div>
+  {% for p in moonshot_parlays %}
+  <div class="parlay-card moonshot">
+    <div class="parlay-top">
+      <div class="parlay-odds">{{ p.combined_american_display }}</div>
+      <div class="parlay-prob">Model-estimated hit rate: {{ (p.combined_prob*100)|round(3) }}%</div>
+    </div>
+    <ul class="parlay-legs">
+      {% for leg in p.legs %}
+      <li class="parlay-leg"><span class="parlay-leg-num">{{ loop.index }}</span>{{ leg }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+  <div class="parlay-note">Treat this exactly like buying a lottery ticket — fun to dream on, not a strategy.</div>
+  {% elif events %}
+  <div class="parlay-section-title moonshot">🚀 Moonshot</div>
   <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
   {% endif %}
 

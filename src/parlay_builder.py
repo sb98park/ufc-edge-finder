@@ -277,3 +277,18 @@ def build_lotto_parlays(tracked_edges: list[dict], model_only_by_fight: dict | N
         pieces, leg_counts=(2, 3, 4, 5), min_american=1000, max_american=None,
         min_leg_prob=0.15, max_results=max_results, label="lotto",
     )
+
+
+def build_moonshot_parlays(tracked_edges: list[dict], model_only_by_fight: dict | None = None, max_results: int = 3) -> list[dict]:
+    """
+    +5000 or higher, any leg count from 2 up to 8. This has essentially no
+    business hitting -- it's the "why not" tier, built purely for fun. Even
+    the longest of long shots still gets ranked by the model's best combined
+    probability among everything that clears the bar, so it's the "best
+    worst bet" rather than a totally random pile of legs.
+    """
+    pieces = _build_candidate_pieces(tracked_edges, model_only_by_fight)
+    return _find_parlays(
+        pieces, leg_counts=(2, 3, 4, 5, 6, 7, 8), min_american=5000, max_american=None,
+        min_leg_prob=0.05, max_results=max_results, label="moonshot",
+    )
