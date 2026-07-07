@@ -106,6 +106,7 @@
   .parlay-section-title { font-size: 15px; margin: 28px 0 10px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
   .parlay-section-title.bankroll { color: var(--green); }
   .parlay-section-title.lotto { color: #c77dff; }
+  .parlay-section-title.moonshot { color: #ffb347; }
   .parlay-section-title.movement { color: #6db3f2; }
   .parlay-subtitle { font-size: 11.5px; color: var(--muted); margin: -6px 0 12px; line-height: 1.5; }
   .parlay-card {
@@ -113,10 +114,12 @@
   }
   .parlay-card.bankroll { background: linear-gradient(145deg, #10251a, #14171f 65%); border-color: #1e4a2f; }
   .parlay-card.lotto { background: linear-gradient(145deg, #21102b, #14171f 65%); border-color: #4a1e5a; }
+  .parlay-card.moonshot { background: linear-gradient(145deg, #2b1c05, #14171f 65%); border-color: #5a3e14; }
   .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .parlay-odds { font-size: 22px; font-weight: 800; }
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
   .parlay-card.lotto .parlay-odds { color: #c77dff; }
+  .parlay-card.moonshot .parlay-odds { color: #ffb347; }
   .parlay-prob { font-size: 11px; color: var(--muted); }
   .parlay-legs { list-style: none; margin: 0; padding: 0; }
   .parlay-leg {
@@ -164,6 +167,7 @@
     padding: 10px 12px; margin: 8px 0; text-align: center;
   }
   .chart-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-align: left; }
+  .chart-placeholder-text { font-size: 11.5px; color: var(--muted); text-align: left; padding: 8px 0; }
   .sparkline { display: block; max-width: 100%; height: auto; }
   details.chart-toggle {
     background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
@@ -235,7 +239,7 @@
   <h1>🥋 UFC Edge Finder</h1>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
   <div class="meta-row">
-    <span class="badge">🕒 2026-07-07 05:53 PM ET</span>
+    <span class="badge">🕒 2026-07-07 06:05 PM ET</span>
     <span class="badge book">📊 Odds via Polymarket</span>
     <span class="badge">🔄 refreshes every few hours</span>
   </div>
@@ -465,6 +469,85 @@
   
 
   
+  <div class="parlay-section-title moonshot">🚀 Moonshot</div>
+  <div class="parlay-subtitle">+5000 or better. This has essentially no business hitting — any leg count, purely for fun, ranked by the model's best combined odds among everything that clears the bar.</div>
+  
+  <div class="parlay-card moonshot">
+    <div class="parlay-top">
+      <div class="parlay-odds">+5005</div>
+      <div class="parlay-prob">Model-estimated hit rate: 5.67%</div>
+    </div>
+    <ul class="parlay-legs">
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor by KO/TKO (+245)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Lone'er Kavanagh ML (-199)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">3</span>Benoit Saint-Denis vs Paddy Pimblett Under 2.5 rounds (-226 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">4</span>Cory Sandhagen vs Mario Bautista — Ends In Finish (-197 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">5</span>King Green vs Terrance McKinney Under 2.5 rounds (-258 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">6</span>Robert Whittaker vs Nikita Krylov Over 1.5 rounds (-190 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">7</span>Luke Riley vs Kai Kamaka III Over 1.5 rounds (-199 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">8</span>Ryan Gandra vs Zach Reese Under 2.5 rounds (-238 model)</li>
+      
+    </ul>
+  </div>
+  
+  <div class="parlay-card moonshot">
+    <div class="parlay-top">
+      <div class="parlay-odds">+5007</div>
+      <div class="parlay-prob">Model-estimated hit rate: 3.52%</div>
+    </div>
+    <ul class="parlay-legs">
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor by KO/TKO (+245)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Brandon Royval ML (+199)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">3</span>Cory Sandhagen vs Mario Bautista Over 1.5 rounds (-199 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">4</span>Robert Whittaker vs Nikita Krylov Over 1.5 rounds (-190 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">5</span>Cody Garbrandt vs Adrian Yanez Over 1.5 rounds (-233 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">6</span>Cesar Almeida vs Damian Pinas Under 2.5 rounds (-195 model)</li>
+      
+    </ul>
+  </div>
+  
+  <div class="parlay-card moonshot">
+    <div class="parlay-top">
+      <div class="parlay-odds">+5008</div>
+      <div class="parlay-prob">Model-estimated hit rate: 3.52%</div>
+    </div>
+    <ul class="parlay-legs">
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">1</span>Conor McGregor by KO/TKO (+245)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">2</span>Brandon Royval ML (+199)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">3</span>King Green vs Terrance McKinney Under 2.5 rounds (-258 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">4</span>Gable Steveson vs Elisha Ellison Under 2.5 rounds (-269 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">5</span>Cody Garbrandt vs Adrian Yanez Over 1.5 rounds (-233 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">6</span>Cesar Almeida vs Damian Pinas — Ends In Finish (-350 model)</li>
+      
+      <li class="parlay-leg"><span class="parlay-leg-num">7</span>Ryan Gandra vs Zach Reese Under 2.5 rounds (-238 model)</li>
+      
+    </ul>
+  </div>
+  
+  <div class="parlay-note">Treat this exactly like buying a lottery ticket — fun to dream on, not a strategy.</div>
+  
+
+  
   <div class="event-header">
     <div class="event-name">UFC 329: McGregor vs. Holloway 2</div>
     <div class="event-date">2026-07-11</div>
@@ -515,7 +598,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Probability moved from 34% to 34%"><polygon points="34,80 34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0 268.0,80" fill="#3ddc84" opacity="0.12"/><polyline points="34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="268.0" cy="47.0" r="3.5" fill="#3ddc84"/><text x="268.0" y="39.0" font-size="11" font-weight="700" fill="#3ddc84" text-anchor="end">34%</text></svg>
+        <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Price has been stable at 34%"><line x1="34" y1="50.0" x2="268.0" y2="50.0" stroke="#8a8f9a" stroke-width="2" stroke-dasharray="4,3"/><text x="34" y="40.0" font-size="11" font-weight="700" fill="#8a8f9a">34% · stable, no significant movement yet</text></svg>
       </div>
       
       
@@ -525,17 +608,17 @@
           
           <div class="chart-block">
             <div class="chart-label">Conor McGregor — Method: KO/TKO</div>
-            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Probability moved from 29% to 29%"><polygon points="34,80 34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0 268.0,80" fill="#3ddc84" opacity="0.12"/><polyline points="34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="268.0" cy="47.0" r="3.5" fill="#3ddc84"/><text x="268.0" y="39.0" font-size="11" font-weight="700" fill="#3ddc84" text-anchor="end">29%</text></svg>
+            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Price has been stable at 29%"><line x1="34" y1="50.0" x2="268.0" y2="50.0" stroke="#8a8f9a" stroke-width="2" stroke-dasharray="4,3"/><text x="34" y="40.0" font-size="11" font-weight="700" fill="#8a8f9a">29% · stable, no significant movement yet</text></svg>
           </div>
           
           <div class="chart-block">
             <div class="chart-label">Max Holloway — Method: KO/TKO</div>
-            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Probability moved from 54% to 54%"><polygon points="34,80 34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0 268.0,80" fill="#3ddc84" opacity="0.12"/><polyline points="34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="268.0" cy="47.0" r="3.5" fill="#3ddc84"/><text x="268.0" y="39.0" font-size="11" font-weight="700" fill="#3ddc84" text-anchor="end">54%</text></svg>
+            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Price has been stable at 54%"><line x1="34" y1="50.0" x2="268.0" y2="50.0" stroke="#8a8f9a" stroke-width="2" stroke-dasharray="4,3"/><text x="34" y="40.0" font-size="11" font-weight="700" fill="#8a8f9a">54% · stable, no significant movement yet</text></svg>
           </div>
           
           <div class="chart-block">
             <div class="chart-label">Max Holloway — Moneyline</div>
-            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Probability moved from 66% to 66%"><polygon points="34,80 34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0 268.0,80" fill="#3ddc84" opacity="0.12"/><polyline points="34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="268.0" cy="47.0" r="3.5" fill="#3ddc84"/><text x="268.0" y="39.0" font-size="11" font-weight="700" fill="#3ddc84" text-anchor="end">66%</text></svg>
+            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Price has been stable at 66%"><line x1="34" y1="50.0" x2="268.0" y2="50.0" stroke="#8a8f9a" stroke-width="2" stroke-dasharray="4,3"/><text x="34" y="40.0" font-size="11" font-weight="700" fill="#8a8f9a">66% · stable, no significant movement yet</text></svg>
           </div>
           
         </div>
@@ -846,7 +929,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Probability moved from 34% to 34%"><polygon points="34,80 34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0 268.0,80" fill="#3ddc84" opacity="0.12"/><polyline points="34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="268.0" cy="47.0" r="3.5" fill="#3ddc84"/><text x="268.0" y="39.0" font-size="11" font-weight="700" fill="#3ddc84" text-anchor="end">34%</text></svg>
+        <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Price has been stable at 34%"><line x1="34" y1="50.0" x2="268.0" y2="50.0" stroke="#8a8f9a" stroke-width="2" stroke-dasharray="4,3"/><text x="34" y="40.0" font-size="11" font-weight="700" fill="#8a8f9a">34% · stable, no significant movement yet</text></svg>
       </div>
       
       
@@ -856,17 +939,17 @@
           
           <div class="chart-block">
             <div class="chart-label">Brandon Royval — Method: KO/TKO</div>
-            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Probability moved from 49% to 49%"><line x1="34" y1="14.0" x2="268" y2="14.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="28" y="17.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><polygon points="34,80 34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0 268.0,80" fill="#3ddc84" opacity="0.12"/><polyline points="34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="268.0" cy="47.0" r="3.5" fill="#3ddc84"/><text x="268.0" y="39.0" font-size="11" font-weight="700" fill="#3ddc84" text-anchor="end">49%</text></svg>
+            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Price has been stable at 49%"><line x1="34" y1="50.0" x2="268.0" y2="50.0" stroke="#8a8f9a" stroke-width="2" stroke-dasharray="4,3"/><text x="34" y="40.0" font-size="11" font-weight="700" fill="#8a8f9a">49% · stable, no significant movement yet</text></svg>
           </div>
           
           <div class="chart-block">
             <div class="chart-label">Lone'er Kavanagh — Method: KO/TKO</div>
-            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Probability moved from 50% to 50%"><line x1="34" y1="47.0" x2="268" y2="47.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="28" y="50.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><polygon points="34,80 34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0 268.0,80" fill="#3ddc84" opacity="0.12"/><polyline points="34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="268.0" cy="47.0" r="3.5" fill="#3ddc84"/><text x="268.0" y="39.0" font-size="11" font-weight="700" fill="#3ddc84" text-anchor="end">50%</text></svg>
+            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Price has been stable at 50%"><line x1="34" y1="50.0" x2="268.0" y2="50.0" stroke="#8a8f9a" stroke-width="2" stroke-dasharray="4,3"/><text x="34" y="40.0" font-size="11" font-weight="700" fill="#8a8f9a">50% · stable, no significant movement yet</text></svg>
           </div>
           
           <div class="chart-block">
             <div class="chart-label">Lone'er Kavanagh — Moneyline</div>
-            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Probability moved from 66% to 66%"><polygon points="34,80 34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0 268.0,80" fill="#3ddc84" opacity="0.12"/><polyline points="34.0,47.0 92.5,47.0 151.0,47.0 209.5,47.0 268.0,47.0" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="268.0" cy="47.0" r="3.5" fill="#3ddc84"/><text x="268.0" y="39.0" font-size="11" font-weight="700" fill="#3ddc84" text-anchor="end">66%</text></svg>
+            <svg width="280" height="100" viewBox="0 0 280 100" class="sparkline" role="img" aria-label="Price has been stable at 66%"><line x1="34" y1="50.0" x2="268.0" y2="50.0" stroke="#8a8f9a" stroke-width="2" stroke-dasharray="4,3"/><text x="34" y="40.0" font-size="11" font-weight="700" fill="#8a8f9a">66% · stable, no significant movement yet</text></svg>
           </div>
           
         </div>
