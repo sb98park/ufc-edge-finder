@@ -51,19 +51,22 @@ def _safe_json_loads(value, default=None):
         return default if default is not None else []
 
 
-def _find_mma_tag_id() -> str | None:
+def _find_mma_tag_ids() -> list[str]:
     """
     Gamma's /sports endpoint returns tag metadata per sport. Filtering events
-    by this tag_id is far more reliable than sorting all active events
-    (across the entire platform) by volume and hoping UFC cracks the top N --
-    it won't, since political/crypto markets dwarf individual MMA fights in
+    by tag_id is far more reliable than sorting all active events (across
+    the entire platform) by volume and hoping UFC cracks the top N -- it
+    won't, since political/crypto markets dwarf individual MMA fights in
     platform-wide dollar volume even though MMA markets are significant
     within their own category.
 
-    Confirmed via live diagnostic output: the sport identifier field is
-    literally called "sport" (a short code like "ncaab" for NCAA basketball),
-    not "label"/"name"/"slug" -- and tags come back as a comma-separated
-    string, not a single tag_id field.
+    The sport identifier field is literally called "sport" (confirmed via
+    live diagnostic), and tags come back as a comma-separated string. A
+    sport can list MULTIPLE tags, and not all of them are sport-specific --
+    e.g. tag "1" showed up on both the UFC and NCAAB entries in a live
+    dump, meaning it's a shared generic "Sports" category, not a UFC-only
+    one. Rather than guess which specific tag id is the meaningful one,
+    this returns all of them and queries each, merging results.
     """
     resp = requests.get(f"{GAMMA_BASE}/sports", headers=HEADERS, timeout=20)
     resp.raise_for_status()
@@ -74,13 +77,12 @@ def _find_mma_tag_id() -> str | None:
         if sport_code in ("mma", "ufc"):
             tags_str = sport.get("tags", "")
             tag_ids = [t.strip() for t in str(tags_str).split(",") if t.strip()]
-            if tag_ids:
-                print(f"[polymarket] found sport code {sport_code!r}, tags={tag_ids}")
-                return tag_ids[0]
+            print(f"[polymarket] found sport code {sport_code!r}, tags={tag_ids}")
+            return tag_ids
 
     sample_codes = [s.get("sport") for s in sports[:30]]
     print(f"[polymarket] no MMA/UFC sport code found among {len(sports)} sports; sample codes: {sample_codes}")
-    return None
+    return []
 
 
 def _is_individual_fight_event(event: dict) -> bool:
@@ -104,8 +106,9 @@ def _fetch_events_by_tag(tag_id: str, limit: int = 200) -> list[dict]:
     )
     resp.raise_for_status()
     events = resp.json()
-    print(f"[polymarket] tag-based lookup returned {len(events)} events")
-    return [e for e in events if _is_individual_fight_event(e)]
+    matched = [e for e in events if _is_individual_fight_event(e)]
+    print(f"[polymarket] tag_id={tag_id}: {len(events)} raw events, {len(matched)} matched the fight filter")
+    return matched
 
 
 def _fetch_events_by_volume_fallback(limit: int = 200, pages: int = 10) -> list[dict]:
@@ -144,8 +147,8 @@ def fetch_ufc_events(limit: int = 200) -> list[dict]:
     found: dict[str, dict] = {}  # keyed by slug/title to dedupe across strategies
 
     try:
-        tag_id = _find_mma_tag_id()
-        if tag_id:
+        tag_ids = _find_mma_tag_ids()
+        for tag_id in tag_ids:
             for e in _fetch_events_by_tag(tag_id, limit):
                 found[e.get("slug") or e.get("title")] = e
     except Exception as exc:
