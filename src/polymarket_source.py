@@ -127,6 +127,13 @@ def _extract_round_line(text: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _fighter_name_in_text(fighter_name: str, text: str) -> bool:
+    """Checks if any meaningful name part (first or last, skipping short tokens like initials) appears in the text."""
+    text_lower = text.lower()
+    parts = [p for p in fighter_name.lower().split() if len(p) > 2]
+    return any(part in text_lower for part in parts)
+
+
 def _extract_matchup_from_title(event_title: str) -> tuple[str, str] | None:
     """
     Event titles follow a consistent 'X vs. Y' pattern (e.g. 'UFC 329: Max
@@ -157,9 +164,9 @@ def _parse_multi_outcome_market(
     if not title_pair:
         return []
     fighter_a, fighter_b = title_pair
-    fighter = fighter_a if fighter_a.split()[-1].lower() in question.lower() else (
-        fighter_b if fighter_b.split()[-1].lower() in question.lower() else None
-    )
+    a_matched = _fighter_name_in_text(fighter_a, question)
+    b_matched = _fighter_name_in_text(fighter_b, question)
+    fighter = fighter_a if (a_matched and not b_matched) else (fighter_b if (b_matched and not a_matched) else None)
 
     rows = []
     round_outcomes = []  # (round_number, price) pairs, if this looks like a round-by-round market
@@ -261,10 +268,22 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     method = _extract_method(question)
     round_line = _extract_round_line(question)
 
-    # best-effort: which of the two fighters is this specific prop about?
-    fighter = fighter_a if fighter_a.split()[-1].lower() in question.lower() else (
-        fighter_b if fighter_b.split()[-1].lower() in question.lower() else fighter_a
-    )
+    # Which of the two fighters is this specific prop about? Checking both
+    # first AND last name tokens (not just last name) is more robust against
+    # nicknames/short forms. Critically: if neither fighter is confidently
+    # matched, DROP the row instead of silently defaulting to fighter_a --
+    # a wrong attribution (crediting one fighter's real price to the other)
+    # is worse than a missing data point, and a prior version of this code
+    # had exactly that silent-default bug.
+    a_matched = _fighter_name_in_text(fighter_a, question)
+    b_matched = _fighter_name_in_text(fighter_b, question)
+
+    if a_matched and not b_matched:
+        fighter = fighter_a
+    elif b_matched and not a_matched:
+        fighter = fighter_b
+    else:
+        return []  # ambiguous or unmatched -- don't guess
 
     try:
         yes_odds = implied_prob_to_american(price_a)

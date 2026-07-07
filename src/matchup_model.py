@@ -59,6 +59,24 @@ def layoff_penalty(row: pd.Series, reference_date: dt.date | None = None) -> flo
     return -min(penalty, LAYOFF_PENALTY_CAP)
 
 
+# Coming back too SOON after being finished carries real, documented risk --
+# the opposite problem from ring rust. Six months is a rough dividing line;
+# a fighter finished by strikes or submission and back in the cage within
+# a few months hasn't had much recovery time, physically or mentally.
+QUICK_RETURN_THRESHOLD_YEARS = 0.5
+QUICK_RETURN_PENALTY_CAP = 150.0
+
+
+def quick_return_penalty(row: pd.Series, reference_date: dt.date | None = None) -> float:
+    if row.get("last_fight_result") != "L" or row.get("last_fight_method") not in ("KO/TKO", "SUB"):
+        return 0.0  # only a finish loss carries this specific risk, not a decision loss
+    years_away = layoff_years(row, reference_date)
+    if years_away is None or years_away >= QUICK_RETURN_THRESHOLD_YEARS:
+        return 0.0
+    severity = (QUICK_RETURN_THRESHOLD_YEARS - years_away) / QUICK_RETURN_THRESHOLD_YEARS
+    return -severity * QUICK_RETURN_PENALTY_CAP
+
+
 def classify_style(row: pd.Series) -> str:
     td_acc = _get(row, "td_accuracy_pct", 20)
     strike_acc = _get(row, "strike_accuracy_pct", 45)
@@ -104,7 +122,11 @@ def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
     layoff_adj_b = layoff_penalty(row_b)
     layoff_adj = layoff_adj_a - layoff_adj_b  # penalize A if A has the longer layoff, and vice versa
 
-    total_adj = wrestling_adj + striking_adj + durability_adj + layoff_adj
+    quick_return_adj_a = quick_return_penalty(row_a)
+    quick_return_adj_b = quick_return_penalty(row_b)
+    quick_return_adj = quick_return_adj_a - quick_return_adj_b
+
+    total_adj = wrestling_adj + striking_adj + durability_adj + layoff_adj + quick_return_adj
 
     return {
         "total_adjustment": total_adj,
@@ -114,6 +136,9 @@ def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
         "layoff_adjustment": layoff_adj,
         "layoff_years_a": layoff_years(row_a),
         "layoff_years_b": layoff_years(row_b),
+        "quick_return_adjustment": quick_return_adj,
+        "quick_return_flag_a": quick_return_adj_a < 0,
+        "quick_return_flag_b": quick_return_adj_b < 0,
         "style_a": classify_style(row_a),
         "style_b": classify_style(row_b),
     }

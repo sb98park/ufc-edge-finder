@@ -138,6 +138,11 @@
     padding: 12px 14px; margin: 4px 0 14px; font-size: 12.5px; color: var(--text); line-height: 1.55;
   }
   .preview-label { color: var(--accent); font-weight: 700; }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
+  .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
+  .compare-table th { color: var(--accent2); font-size: 11.5px; font-weight: 700; }
+  .compare-table td:first-child { text-align: left; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .compare-table tr:last-child td { border-bottom: none; }
 
   .market-group-label {
     font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
@@ -315,6 +320,22 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
       </div>
+      {% if fight.preview.comparison %}
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>{{ fight.preview.comparison.a.name }}</th><th>{{ fight.preview.comparison.b.name }}</th></tr>
+        <tr><td>Record</td><td>{{ fight.preview.comparison.a.record }}</td><td>{{ fight.preview.comparison.b.record }}</td></tr>
+        <tr><td>Age</td><td>{{ fight.preview.comparison.a.age or "—" }}</td><td>{{ fight.preview.comparison.b.age or "—" }}</td></tr>
+        <tr><td>Height</td><td>{{ fight.preview.comparison.a.height_in }}"</td><td>{{ fight.preview.comparison.b.height_in }}"</td></tr>
+        <tr><td>Reach</td><td>{{ fight.preview.comparison.a.reach_in }}"</td><td>{{ fight.preview.comparison.b.reach_in }}"</td></tr>
+        <tr><td>Stance</td><td>{{ fight.preview.comparison.a.stance }}</td><td>{{ fight.preview.comparison.b.stance }}</td></tr>
+        <tr><td>Style</td><td>{{ fight.preview.comparison.a.style }}</td><td>{{ fight.preview.comparison.b.style }}</td></tr>
+        <tr><td>Last Fight</td>
+          <td>{% if fight.preview.comparison.a.last_fight_date %}{{ fight.preview.comparison.a.last_fight_date }}{% if fight.preview.comparison.a.last_fight_result %}<br>({{ fight.preview.comparison.a.last_fight_result }} by {{ fight.preview.comparison.a.last_fight_method }}){% endif %}{% else %}—{% endif %}</td>
+          <td>{% if fight.preview.comparison.b.last_fight_date %}{{ fight.preview.comparison.b.last_fight_date }}{% if fight.preview.comparison.b.last_fight_result %}<br>({{ fight.preview.comparison.b.last_fight_result }} by {{ fight.preview.comparison.b.last_fight_method }}){% endif %}{% else %}—{% endif %}</td>
+        </tr>
+      </table>
+      {% endif %}
       {% endif %}
 
       {% if fight.edges %}
@@ -379,6 +400,22 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
       </div>
+      {% if fight.preview.comparison %}
+      <div class="market-group-label">⚖️ Fighter Comparison</div>
+      <table class="compare-table">
+        <tr><th></th><th>{{ fight.preview.comparison.a.name }}</th><th>{{ fight.preview.comparison.b.name }}</th></tr>
+        <tr><td>Record</td><td>{{ fight.preview.comparison.a.record }}</td><td>{{ fight.preview.comparison.b.record }}</td></tr>
+        <tr><td>Age</td><td>{{ fight.preview.comparison.a.age or "—" }}</td><td>{{ fight.preview.comparison.b.age or "—" }}</td></tr>
+        <tr><td>Height</td><td>{{ fight.preview.comparison.a.height_in }}"</td><td>{{ fight.preview.comparison.b.height_in }}"</td></tr>
+        <tr><td>Reach</td><td>{{ fight.preview.comparison.a.reach_in }}"</td><td>{{ fight.preview.comparison.b.reach_in }}"</td></tr>
+        <tr><td>Stance</td><td>{{ fight.preview.comparison.a.stance }}</td><td>{{ fight.preview.comparison.b.stance }}</td></tr>
+        <tr><td>Style</td><td>{{ fight.preview.comparison.a.style }}</td><td>{{ fight.preview.comparison.b.style }}</td></tr>
+        <tr><td>Last Fight</td>
+          <td>{% if fight.preview.comparison.a.last_fight_date %}{{ fight.preview.comparison.a.last_fight_date }}{% if fight.preview.comparison.a.last_fight_result %}<br>({{ fight.preview.comparison.a.last_fight_result }} by {{ fight.preview.comparison.a.last_fight_method }}){% endif %}{% else %}—{% endif %}</td>
+          <td>{% if fight.preview.comparison.b.last_fight_date %}{{ fight.preview.comparison.b.last_fight_date }}{% if fight.preview.comparison.b.last_fight_result %}<br>({{ fight.preview.comparison.b.last_fight_result }} by {{ fight.preview.comparison.b.last_fight_method }}){% endif %}{% else %}—{% endif %}</td>
+        </tr>
+      </table>
+      {% endif %}
       {% endif %}
 
       {% if fight.edges %}

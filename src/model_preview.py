@@ -8,7 +8,7 @@ clearly labeled as a projection rather than a live-market edge.
 
 import pandas as pd
 
-from src.matchup_model import predict_matchup
+from src.matchup_model import predict_matchup, classify_style
 
 
 def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
@@ -143,6 +143,15 @@ def build_fight_preview(
                 f"regardless of what their career numbers say."
             )
 
+    quick_return_note = ""
+    for name, row, flagged in [(fighter_a, row_a, matchup["quick_return_flag_a"]), (fighter_b, row_b, matchup["quick_return_flag_b"])]:
+        if flagged:
+            method_label = row.get("last_fight_method", "finish")
+            quick_return_note += (
+                f" {name} is coming back quickly after being finished by {method_label} in their last fight — "
+                f"a short turnaround from a finish carries real risk that career numbers alone won't show."
+            )
+
     reach_diff = row_a["reach_in"] - row_b["reach_in"]
     reach_note = ""
     if abs(reach_diff) >= 4:
@@ -166,8 +175,24 @@ def build_fight_preview(
         f"({method_rates[likely_method]*100:.0f}% of {favorite.split()[-1]}'s career wins). "
         f"Combined finish rate between both fighters sits at {combined_finish_rate*100:.0f}%, "
         f"leaning {rounds_lean.lower()} on total rounds."
-        f"{style_note}{reach_note}{layoff_note}{fast_finisher_note}"
+        f"{style_note}{reach_note}{layoff_note}{quick_return_note}{fast_finisher_note}"
     )
+
+    def _fighter_card(name: str, row: pd.Series) -> dict:
+        return {
+            "name": name,
+            "age": int(row["age"]) if pd.notna(row.get("age")) else None,
+            "height_in": row.get("height_in"),
+            "reach_in": row.get("reach_in"),
+            "stance": row.get("stance"),
+            "style": classify_style(row),
+            "record": f"{int(row['wins'])}-{int(row['losses'])}",
+            "last_fight_date": row.get("last_fight_date") if pd.notna(row.get("last_fight_date")) else None,
+            "last_fight_result": row.get("last_fight_result") if pd.notna(row.get("last_fight_result")) else None,
+            "last_fight_method": row.get("last_fight_method") if pd.notna(row.get("last_fight_method")) else None,
+        }
+
+    comparison = {"a": _fighter_card(fighter_a, row_a), "b": _fighter_card(fighter_b, row_b)}
 
     return {
         "favorite": favorite,
@@ -180,4 +205,5 @@ def build_fight_preview(
         "style_a": matchup["style_a"],
         "style_b": matchup["style_b"],
         "narrative": narrative,
+        "comparison": comparison,
     }
