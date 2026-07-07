@@ -182,6 +182,33 @@ def _extract_round_line(text: str) -> str | None:
     return match.group(1) if match else None
 
 
+CLOB_BASE = "https://clob.polymarket.com"
+
+
+def fetch_price_history(token_id: str, interval: str = "max") -> list[dict]:
+    """
+    Pulls REAL historical price data for a specific outcome token from
+    Polymarket's CLOB API -- this is the same data backing Polymarket's own
+    price charts, going back to when the market opened, not just what we've
+    accumulated ourselves since this site started tracking. Public, no auth.
+    Returns [{"t": unix_timestamp, "p": price_0_to_1}, ...].
+    """
+    if not token_id:
+        return []
+    try:
+        resp = requests.get(
+            f"{CLOB_BASE}/prices-history",
+            params={"market": token_id, "interval": interval},
+            headers=HEADERS, timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("history", [])
+    except Exception as exc:
+        print(f"[polymarket] price history fetch failed for token {token_id}: {exc}")
+        return []
+
+
 def _fighter_name_in_text(fighter_name: str, text: str) -> bool:
     """Checks if any meaningful name part (first or last, skipping short tokens like initials) appears in the text."""
     text_lower = text.lower()
@@ -308,11 +335,16 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     rows = []
 
     is_yes_no = {o.strip().lower() for o in outcomes} == {"yes", "no"}
+    clob_token_ids = _safe_json_loads(market.get("clobTokenIds"))
 
     if not is_yes_no:
         # outcomes ARE the two fighter names -- a moneyline market
         fighter_a, fighter_b = outcomes[0], outcomes[1]
-        for fighter, opponent, price in [(fighter_a, fighter_b, price_a), (fighter_b, fighter_a, price_b)]:
+        token_a = clob_token_ids[0] if len(clob_token_ids) >= 2 else None
+        token_b = clob_token_ids[1] if len(clob_token_ids) >= 2 else None
+        for fighter, opponent, price, token_id in [
+            (fighter_a, fighter_b, price_a, token_a), (fighter_b, fighter_a, price_b, token_b)
+        ]:
             try:
                 odds = implied_prob_to_american(price)
             except (ValueError, ZeroDivisionError):
@@ -320,7 +352,7 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
             rows.append({
                 "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
                 "market": "Moneyline", "selection": fighter, "selection_method": "",
-                "odds_american": odds,
+                "odds_american": odds, "clob_token_id": token_id,
             })
         return rows
 

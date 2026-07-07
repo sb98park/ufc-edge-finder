@@ -46,9 +46,17 @@ def main():
     edges_df = pd.DataFrame()
     source = None
     previous_snapshot = load_snapshot()
+    token_id_map = {}
 
     try:
         upcoming_df, source = get_live_props()
+        if not upcoming_df.empty and "clob_token_id" in upcoming_df.columns:
+            ml_rows = upcoming_df[upcoming_df["market"] == "Moneyline"]
+            token_id_map = {
+                row["selection"]: row["clob_token_id"]
+                for _, row in ml_rows.iterrows()
+                if pd.notna(row.get("clob_token_id"))
+            }
         all_known_cards = pd.concat([cards_df, future_cards_df], ignore_index=True)
         upcoming_df = assign_canonical_fight_ids(upcoming_df, all_known_cards)
         edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings)
@@ -102,7 +110,7 @@ def main():
 
     for event in events + future_events:
         for fight in event["fights"]:
-            attach_charts_to_fight(fight, updated_snapshot)
+            attach_charts_to_fight(fight, updated_snapshot, token_id_map)
 
     event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
 
