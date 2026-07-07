@@ -13,7 +13,7 @@ import re
 import pandas as pd
 
 from .odds_utils import american_to_implied_prob, remove_vig_two_way, edge_percent, kelly_fraction
-from .matchup_model import predict_matchup
+from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability
 
 
 def compute_moneyline_edges(
@@ -68,13 +68,17 @@ def compute_moneyline_edges(
 
 def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Method-of-victory props (KO/TKO, Submission, Decision). Blends the
-    fighter's own career finish tendency with how often THIS SPECIFIC
-    opponent has actually lost that way before -- a fighter with a big
-    KO rate means less if the opponent has never been finished by strikes.
+    Method-of-victory props (KO/TKO, Submission, Decision). Prior-informed
+    blend: starts at the DIVISIONAL baseline rate for that method (a
+    heavyweight fight has an inherently higher baseline KO/TKO rate than a
+    strawweight fight, which leans toward decisions), then shifts toward
+    the fighter's own career tendency (weighted by experience), then further
+    incorporates how often THIS SPECIFIC opponent has actually lost that
+    way before.
     """
     rows = []
     props = upcoming_df[upcoming_df["market"] == "Method"]
+    divisional_priors = compute_divisional_method_priors(fighters_df)
 
     method_loss_col = {"KO/TKO": "ko_losses", "SUB": "sub_losses", "DEC": "dec_losses"}
 
@@ -98,16 +102,17 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
         opponent_name = row["fighter_b"] if row["selection"] == row["fighter_a"] else row["fighter_a"]
         opp_stats = fighters_df[fighters_df["name"] == opponent_name]
 
-        model_p = own_rate
+        divisional_prior = divisional_priors.get(f["weight_class"], {}).get(row["selection_method"], own_rate)
+
+        opp_vulnerability = own_rate  # fallback if opponent data is missing
         if not opp_stats.empty:
             opp = opp_stats.iloc[0]
             opp_losses = max(int(opp["losses"]), 1) if opp["losses"] else 0
             if opp_losses:
                 col = method_loss_col[row["selection_method"]]
                 opp_vulnerability = opp[col] / opp_losses
-                # 65% weight on the fighter's own tendency, 35% on this
-                # specific opponent's demonstrated vulnerability to it
-                model_p = 0.65 * own_rate + 0.35 * opp_vulnerability
+
+        model_p = blend_method_probability(divisional_prior, own_rate, opp_vulnerability, total_wins)
 
         imp = american_to_implied_prob(row["odds_american"])
 

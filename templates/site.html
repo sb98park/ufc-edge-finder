@@ -256,22 +256,34 @@
       <p><strong>Base rating:</strong> blends Elo (built from recorded fight history, when it exists)
       with a stats-based rating from career win rate, finish rate, experience, and reach.</p>
       <p><strong>Style matchup adjustment ("styles make fights"):</strong> takedown accuracy vs. the
-      opponent's takedown defense, striking accuracy differential, and durability (how often each fighter
-      has been finished before) all shift the base rating gap.</p>
+      opponent's takedown defense (or control time percentage, when populated — a fighter who goes
+      1-for-5 on takedowns but holds 4 minutes of control is more effective than raw accuracy implies),
+      striking accuracy and volume differential (SLpM minus SApM, when populated), and durability all
+      shift the base rating gap.</p>
+      <p><strong>Age cliff by weight class:</strong> the decline threshold varies a lot by division —
+      Flyweight/Bantamweight/Featherweight/Strawweight start seeing a real decline past 35, while
+      Heavyweight and Light Heavyweight often sustain into the late 30s. A flat age penalty across all
+      divisions would be wrong in both directions.</p>
       <p><strong>Layoff / ring rust vs. quick return:</strong> fighters back after more than a year away
       take a ring-rust penalty; fighters back too SOON after being finished (under ~6 months) take a
-      separate, opposite-direction penalty — both are real, documented risks in combat sports.</p>
-      <p><strong>Method-of-victory props:</strong> blend a fighter's own career finish tendency (65%
-      weight) with how often this specific opponent has been finished that way before (35% weight).</p>
-      <p><strong>Total rounds:</strong> blends combined finish rate with each fighter's first-round finish
-      percentage — a proven fast finisher pulls the "under" line meaningfully.</p>
-      <p><strong>Line movement:</strong> each refresh is compared against the last saved snapshot to show
-      real price movement. Honest limitation: this tracks PRICE only, not bet volume or who's behind a
-      move — true "sharp money" detection needs handle/ticket-count data no free source provides, so this
-      is labeled as "notable movement," not a sharp-money claim.</p>
-      <p style="color: var(--muted);"><strong>Other limitations:</strong> striking/takedown/durability
-      stats are sample data for now, not yet a live feed. This is a systematic way to weigh public stats,
-      not a trained predictive model, and it can't see recent form or camp changes beyond what's noted above.</p>
+      separate, opposite-direction penalty.</p>
+      <p><strong>Missed weight:</strong> a documented red flag for a rushed or broken camp — factored in
+      when known, though real weigh-in history isn't fully populated for the roster yet (see limitations).</p>
+      <p><strong>Method-of-victory props:</strong> prior-informed blend — starts at the DIVISIONAL average
+      rate for that method (heavyweight fights have an inherently higher baseline KO/TKO rate than
+      strawweight, which leans toward decisions), shifts toward the fighter's own career tendency
+      (weighted by experience), then further incorporates the specific opponent's demonstrated vulnerability.</p>
+      <p><strong>Total rounds:</strong> blends combined finish rate with first-round finish percentage.
+      Main events get 5-round-calibrated lines (3.5/4.5) instead of 3-round lines (1.5/2.5), since
+      there's simply more scheduled fight to cover.</p>
+      <p><strong>Line movement:</strong> each refresh is compared against saved history to show real price
+      movement and render an actual chart. Honest limitation: this tracks PRICE only, not bet volume or
+      who's behind a move — true "sharp money" detection needs handle/ticket-count data no free source
+      provides, so this is labeled "notable movement," not a sharp-money claim.</p>
+      <p style="color: var(--muted);"><strong>Honest data limitations:</strong> strike-volume (SLpM/SApM),
+      control-time percentage, and missed-weight history are new schema fields the model is built to use,
+      but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather
+      than guess) until real data backs them. Everything else above is live and active.</p>
     </div>
   </details>
 
@@ -494,34 +506,6 @@
     <div class="event-date">{{ event.event_date }}</div>
   </div>
   {% for fight in event.fights %}{{ render_fight_card(fight) }}{% endfor %}
-  {% endfor %}
-  {% endif %}
-
-  {% if upcoming_other_fights %}
-  <div class="section-title">📅 Other Upcoming Fights</div>
-  <div class="parlay-subtitle">Live odds found for fights beyond the tracked cards above. Model evaluation may be limited if these fighters aren't in the database yet.</div>
-  {% for fight in upcoming_other_fights %}
-  <details class="fight-card">
-    <summary>
-      <div><div class="matchup">{{ fight.fighter_a }} vs {{ fight.fighter_b }}</div></div>
-      <span class="chevron">▶</span>
-    </summary>
-    <div class="fight-body">
-      <div class="table-scroll"><table>
-        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th></tr>
-        {% for row in fight.edges %}
-        <tr>
-          <td>{{ row.fighter }}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ '⭐' if row.odds_american < 0 else '🐶' }}</span>{% endif %}</td>
-          <td>{{ row.market }}</td>
-          <td>{{ odds_cell(row) }}</td>
-          <td>{{ row.model_prob }}</td>
-          <td>{{ row.book_fair_prob }}</td>
-          <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
-        </tr>
-        {% endfor %}
-      </table></div>
-    </div>
-  </details>
   {% endfor %}
   {% endif %}
 </body>

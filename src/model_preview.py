@@ -8,7 +8,7 @@ clearly labeled as a projection rather than a live-market edge.
 
 import pandas as pd
 
-from src.matchup_model import predict_matchup, classify_style
+from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability
 
 
 def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
@@ -16,8 +16,8 @@ def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
     return match.iloc[0] if not match.empty else None
 
 
-def _method_vulnerability_blend(fighter_row: pd.Series, opponent_row: pd.Series, method: str) -> float:
-    """Same 65/35 blend used in edge_finder.compute_method_edges, but usable without a live line."""
+def _method_vulnerability_blend(fighter_row: pd.Series, opponent_row: pd.Series, method: str, divisional_priors: dict) -> float:
+    """Same prior-informed blend used in edge_finder.compute_method_edges, but usable without a live line."""
     total_wins = max(int(fighter_row["wins"]), 1)
     rate_map = {
         "KO/TKO": fighter_row["ko_wins"] / total_wins,
@@ -26,24 +26,33 @@ def _method_vulnerability_blend(fighter_row: pd.Series, opponent_row: pd.Series,
     }
     own_rate = rate_map[method]
 
+    # divisional_priors keys use the short form ("SUB"/"DEC") from edge_finder
+    method_key_map = {"KO/TKO": "KO/TKO", "Submission": "SUB", "Decision": "DEC"}
+    divisional_prior = divisional_priors.get(fighter_row["weight_class"], {}).get(method_key_map[method], own_rate)
+
     opp_losses = max(int(opponent_row["losses"]), 1) if opponent_row["losses"] else 0
-    if not opp_losses:
-        return own_rate
     loss_col = {"KO/TKO": "ko_losses", "Submission": "sub_losses", "Decision": "dec_losses"}[method]
-    opp_vulnerability = opponent_row[loss_col] / opp_losses
-    return 0.65 * own_rate + 0.35 * opp_vulnerability
+    opp_vulnerability = opponent_row[loss_col] / opp_losses if opp_losses else own_rate
+
+    return blend_method_probability(divisional_prior, own_rate, opp_vulnerability, total_wins)
 
 
 def build_full_market_projection(
     fighter_a: str, fighter_b: str,
     fighters_df: pd.DataFrame,
     effective_ratings: dict[str, float],
+    is_five_round: bool = False,
 ) -> dict | None:
     """
     Model-only projections for method-of-victory (both fighters, all three
     methods) and total rounds -- shown even when the live book doesn't
     happen to offer that market for this particular fight, clearly labeled
     as a projection rather than an odds comparison.
+
+    is_five_round: main events (and title fights) are scheduled for 5 rounds
+    instead of 3, meaning there's simply more fight left to cover -- the
+    relevant round-total lines shift up (3.5/4.5 instead of 1.5/2.5), and a
+    "goes the distance" outcome takes noticeably longer to happen.
     """
     row_a, row_b = _fighter_row(fighters_df, fighter_a), _fighter_row(fighters_df, fighter_b)
     if row_a is None or row_b is None:
@@ -51,13 +60,14 @@ def build_full_market_projection(
 
     matchup = predict_matchup(fighter_a, fighter_b, fighters_df, effective_ratings)
     prob_a, prob_b = matchup["prob_a"], matchup["prob_b"]
+    divisional_priors = compute_divisional_method_priors(fighters_df)
 
     method_rows = []
     for name, row, opp_row, win_prob in [
         (fighter_a, row_a, row_b, prob_a), (fighter_b, row_b, row_a, prob_b)
     ]:
         for method in ["KO/TKO", "Submission", "Decision"]:
-            method_given_win = _method_vulnerability_blend(row, opp_row, method)
+            method_given_win = _method_vulnerability_blend(row, opp_row, method, divisional_priors)
             combined_prob = win_prob * method_given_win
             method_rows.append({
                 "fighter": name, "market": f"Method: {method}", "model_prob": round(combined_prob, 3),
@@ -74,13 +84,27 @@ def build_full_market_projection(
     ]
     combined_first_round_rate = sum(first_round_rates) / len(first_round_rates) if first_round_rates else combined_finish_rate * 0.5
 
-    rounds_2_5 = 0.7 * combined_finish_rate + 0.3 * combined_first_round_rate
-    rounds_rows = [
-        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 1.5", "model_prob": round(combined_first_round_rate, 3)},
-        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 1.5", "model_prob": round(1 - combined_first_round_rate, 3)},
-        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 2.5", "model_prob": round(rounds_2_5, 3)},
-        {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 2.5", "model_prob": round(1 - rounds_2_5, 3)},
-    ]
+    if is_five_round:
+        # More scheduled rounds means more time for a finish to still
+        # happen even after an early-rounds proxy (first_round_rate) misses
+        # -- shift the "mid" line up to 3.5 and add a later 4.5 checkpoint
+        # instead of 3-round-fight-calibrated 1.5/2.5.
+        rounds_mid = 0.55 * combined_finish_rate + 0.45 * combined_first_round_rate
+        rounds_late = min(0.95, combined_finish_rate + 0.15)  # by round 4.5, most finishes have happened
+        rounds_rows = [
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 3.5", "model_prob": round(rounds_mid, 3)},
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 3.5", "model_prob": round(1 - rounds_mid, 3)},
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 4.5", "model_prob": round(rounds_late, 3)},
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 4.5", "model_prob": round(1 - rounds_late, 3)},
+        ]
+    else:
+        rounds_2_5 = 0.7 * combined_finish_rate + 0.3 * combined_first_round_rate
+        rounds_rows = [
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 1.5", "model_prob": round(combined_first_round_rate, 3)},
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 1.5", "model_prob": round(1 - combined_first_round_rate, 3)},
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 2.5", "model_prob": round(rounds_2_5, 3)},
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 2.5", "model_prob": round(1 - rounds_2_5, 3)},
+        ]
 
     dec_rate_a = row_a["dec_wins"] / max(int(row_a["wins"]), 1)
     dec_rate_b = row_b["dec_wins"] / max(int(row_b["wins"]), 1)
@@ -106,6 +130,7 @@ def build_fight_preview(
     fighter_a: str, fighter_b: str,
     fighters_df: pd.DataFrame,
     effective_ratings: dict[str, float],
+    is_five_round: bool = False,
 ) -> dict | None:
     row_a, row_b = _fighter_row(fighters_df, fighter_a), _fighter_row(fighters_df, fighter_b)
     if row_a is None or row_b is None:
@@ -177,6 +202,22 @@ def build_fight_preview(
                 f"a short turnaround from a finish carries real risk that career numbers alone won't show."
             )
 
+    age_cliff_note = ""
+    for name, row, flagged in [(fighter_a, row_a, matchup.get("age_cliff_flag_a")), (fighter_b, row_b, matchup.get("age_cliff_flag_b"))]:
+        if flagged:
+            age_cliff_note += (
+                f" {name} ({int(row['age'])}) is past the typical age cliff for {row['weight_class']} — "
+                f"this division tends to see a real decline past that point, independent of career record."
+            )
+
+    missed_weight_note = ""
+    for name, row in [(fighter_a, row_a), (fighter_b, row_b)]:
+        count = row.get("missed_weight_count")
+        if pd.notna(count) and count > 0:
+            missed_weight_note += f" {name} has missed weight {int(count)} time(s) before — a documented red flag for camp issues."
+
+    five_round_note = " This is scheduled for 5 rounds, not the usual 3 — cardio and championship rounds matter here." if is_five_round else ""
+
     narrative = (
         f"Model favors {favorite} at {favorite_prob*100:.0f}% over {underdog} "
         f"({matchup['style_a']} vs. {matchup['style_b']} stylistically). "
@@ -184,7 +225,7 @@ def build_fight_preview(
         f"({method_rates[likely_method]*100:.0f}% of {favorite.split()[-1]}'s career wins). "
         f"Combined finish rate between both fighters sits at {combined_finish_rate*100:.0f}%, "
         f"leaning {rounds_lean.lower()} on total rounds."
-        f"{style_note}{reach_note}{layoff_note}{quick_return_note}{fast_finisher_note}"
+        f"{style_note}{reach_note}{layoff_note}{quick_return_note}{age_cliff_note}{missed_weight_note}{five_round_note}{fast_finisher_note}"
     )
 
     def _fighter_card(name: str, row: pd.Series) -> dict:

@@ -129,9 +129,10 @@ def group_edges_by_card(
     fights = []
     for _, row in cards_df.iterrows():
         preview = None
+        is_five_round = str(row.get("card_position", "")).strip() == "Main Event"
         if fighters_df is not None and effective_ratings is not None:
             preview = build_fight_preview(
-                row["fighter_a"], row["fighter_b"], fighters_df, effective_ratings
+                row["fighter_a"], row["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round
             )
         fights.append({
             "event_name": row["event_name"],
@@ -188,8 +189,9 @@ def group_edges_by_card(
         # something to look at beyond moneyline
         if fighters_df is not None and effective_ratings is not None:
             live_markets = {e["market"] for e in fight["edges"]}
+            is_five_round = str(fight.get("card_position", "")).strip() == "Main Event"
             projection = build_full_market_projection(
-                fight["fighter_a"], fight["fighter_b"], fighters_df, effective_ratings
+                fight["fighter_a"], fight["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round
             )
             model_only = []
             if projection:

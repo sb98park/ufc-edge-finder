@@ -65,7 +65,6 @@ def main():
 
     events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings)
     future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings)
-    upcoming_other_fights = group_unmatched_by_fight(still_unmatched_df)
 
     tracked_edges = pd.DataFrame(
         [edge for event in events for fight in event["fights"] for edge in fight["edges"]]
@@ -119,7 +118,6 @@ def main():
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
         notable_movements=notable_movements,
-        upcoming_other_fights=upcoming_other_fights,
         live_error=live_error,
         source=source,
         generated_at=dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET"),

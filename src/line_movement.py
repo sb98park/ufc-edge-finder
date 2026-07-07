@@ -126,12 +126,13 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict) -> None:
     fight["other_charts"] = other_charts
 
 
-def build_sparkline_svg(history: list[dict], width: int = 220, height: int = 48) -> str | None:
+def build_sparkline_svg(history: list[dict], width: int = 280, height: int = 100) -> str | None:
     """
-    Renders a small SVG line chart of implied PROBABILITY over time (not raw
+    Renders an SVG line chart of implied PROBABILITY over time (not raw
     American odds, which have a non-linear scale around even money) --
-    similar in spirit to Polymarket's own price charts. Returns None if
-    there isn't enough history yet for a meaningful chart.
+    styled similarly to Polymarket's own price charts: percentage gridlines,
+    a start/end value callout, and a highlighted current-price dot. Returns
+    None if there isn't enough history yet for a meaningful chart.
     """
     if len(history) < 2:
         return None
@@ -146,28 +147,54 @@ def build_sparkline_svg(history: list[dict], width: int = 220, height: int = 48)
         return None
 
     min_p, max_p = min(probs), max(probs)
-    range_p = (max_p - min_p) or 1.0
-    padding = 4
-    plot_w, plot_h = width - 2 * padding, height - 2 * padding
+    range_p = (max_p - min_p) or 0.1
+    # pad the range a bit so the line doesn't touch the very top/bottom edge
+    pad_p = range_p * 0.15
+    min_p, max_p = max(0.0, min_p - pad_p), min(1.0, max_p + pad_p)
+    range_p = max_p - min_p
 
-    points = []
-    for i, p in enumerate(probs):
-        x = padding + (i / (len(probs) - 1)) * plot_w
-        y = padding + (1 - (p - min_p) / range_p) * plot_h
-        points.append(f"{x:.1f},{y:.1f}")
+    left_pad, right_pad, top_pad, bottom_pad = 34, 12, 14, 20
+    plot_w = width - left_pad - right_pad
+    plot_h = height - top_pad - bottom_pad
+
+    def x_at(i):
+        return left_pad + (i / (len(probs) - 1)) * plot_w
+
+    def y_at(p):
+        return top_pad + (1 - (p - min_p) / range_p) * plot_h
+
+    points = [f"{x_at(i):.1f},{y_at(p):.1f}" for i, p in enumerate(probs)]
+    polyline_points = " ".join(points)
+    area_points = f"{left_pad},{top_pad + plot_h} " + polyline_points + f" {left_pad + plot_w:.1f},{top_pad + plot_h}"
 
     line_color = "#3ddc84" if probs[-1] >= probs[0] else "#ff5c5c"
-    polyline_points = " ".join(points)
-    area_points = f"{padding:.1f},{height - padding:.1f} " + polyline_points + f" {width - padding:.1f},{height - padding:.1f}"
 
-    start_pct = round(probs[0] * 100)
+    # Horizontal gridlines at 25/50/75% (only the ones that actually fall
+    # within the visible probability range, so a tightly-clustered chart
+    # doesn't show meaningless gridlines miles off in unused space)
+    gridlines = []
+    for pct in (0.25, 0.50, 0.75):
+        if min_p <= pct <= max_p:
+            y = y_at(pct)
+            gridlines.append(
+                f'<line x1="{left_pad}" y1="{y:.1f}" x2="{left_pad + plot_w}" y2="{y:.1f}" '
+                f'stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/>'
+                f'<text x="{left_pad - 6}" y="{y + 3:.1f}" font-size="9" fill="#8a8f9a" text-anchor="end">{round(pct*100)}%</text>'
+            )
+
+    end_x, end_y = x_at(len(probs) - 1), y_at(probs[-1])
     end_pct = round(probs[-1] * 100)
+    start_pct = round(probs[0] * 100)
 
     return (
         f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" class="sparkline" role="img" '
         f'aria-label="Probability moved from {start_pct}% to {end_pct}%">'
+        + "".join(gridlines) +
         f'<polygon points="{area_points}" fill="{line_color}" opacity="0.12"/>'
         f'<polyline points="{polyline_points}" fill="none" stroke="{line_color}" stroke-width="2" '
         f'stroke-linejoin="round" stroke-linecap="round"/>'
+        f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{line_color}"/>'
+        f'<text x="{end_x:.1f}" y="{max(10, end_y - 8):.1f}" font-size="11" font-weight="700" fill="{line_color}" '
+        f'text-anchor="{"end" if end_x > width - 30 else "middle"}">{end_pct}%</text>'
         f'</svg>'
     )
