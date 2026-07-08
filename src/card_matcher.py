@@ -137,6 +137,7 @@ def group_edges_by_card(
         fights.append({
             "event_name": row["event_name"],
             "event_date": row["event_date"],
+            "event_start_time_et": row.get("event_start_time_et", "19:00"),
             "card_position": row["card_position"],
             "weight_class": row["weight_class"],
             "fighter_a": row["fighter_a"],
@@ -202,7 +203,10 @@ def group_edges_by_card(
 
         key = (fight["event_name"], fight["event_date"])
         if key not in events_map:
-            events_map[key] = {"event_name": fight["event_name"], "event_date": fight["event_date"], "fights": []}
+            events_map[key] = {
+                "event_name": fight["event_name"], "event_date": fight["event_date"],
+                "event_start_time_et": fight.get("event_start_time_et", "19:00"), "fights": [],
+            }
         events_map[key]["fights"].append(fight)
 
     events = list(events_map.values())

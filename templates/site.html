@@ -35,6 +35,53 @@
     margin-bottom: 10px; font-style: italic;
   }
   .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+  .countdown-card {
+    background: linear-gradient(135deg, #1a1508, #14171f 70%); border: 1px solid #3a2f14;
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; text-align: center;
+  }
+  .countdown-label { font-size: 11.5px; color: var(--accent2); font-weight: 600; margin-bottom: 3px; }
+  .countdown-time { font-size: 22px; font-weight: 800; letter-spacing: 0.3px; }
+
+  .quick-nav {
+    position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
+    padding: 8px 0; margin: 0 -16px 14px; padding-left: 16px; padding-right: 16px;
+    background: rgba(10,12,16,0.92); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border); scrollbar-width: none;
+  }
+  .quick-nav::-webkit-scrollbar { display: none; }
+  .quick-nav a {
+    flex-shrink: 0; font-size: 11.5px; font-weight: 600; color: var(--text); text-decoration: none;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;
+    white-space: nowrap;
+  }
+  .quick-nav a:active { background: var(--accent); color: #14171f; }
+
+  .whats-new-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: linear-gradient(135deg, #0f2a1e, #14171f 70%); border: 1px solid #1e4a2f;
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px;
+  }
+  .whats-new-text { color: var(--green); font-weight: 600; line-height: 1.4; }
+  .whats-new-dismiss {
+    background: none; border: none; color: var(--muted); font-size: 14px; cursor: pointer;
+    padding: 2px 6px; flex-shrink: 0;
+  }
+
+  .track-record-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 16px;
+  }
+  .track-record-title { font-size: 12.5px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .track-record-headline { font-size: 24px; font-weight: 800; }
+  .track-record-headline span { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .track-record-breakdown { margin-top: 8px; }
+  .track-record-conf-row {
+    display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0;
+    border-top: 1px solid var(--border);
+  }
+  .track-record-conf-label { color: var(--muted); }
+  .track-record-conf-value { font-weight: 700; }
+  .track-record-empty { font-size: 12px; color: var(--muted); line-height: 1.5; }
   .badge {
     display: inline-flex; align-items: center; gap: 5px;
     background: var(--panel2); border: 1px solid var(--border); border-radius: 20px;
@@ -291,6 +338,30 @@
   <div class="made-with-love">Made with love, by yours truly, SBP 🤍</div>
   <h1>🥋 UFC Edge Finder</h1>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
+
+  {% if countdown_target_iso %}
+  <div class="countdown-card" data-target="{{ countdown_target_iso }}">
+    <div class="countdown-label">⏱ {{ countdown_label }}</div>
+    <div class="countdown-time" id="countdown-display">calculating…</div>
+  </div>
+  {% endif %}
+
+  <nav class="quick-nav">
+    <a href="#section-trackrecord">📈 Track Record</a>
+    {% if standout_props %}<a href="#section-standout">🔥 Standout</a>{% endif %}
+    {% if notable_movements %}<a href="#section-movement">📊 Movement</a>{% endif %}
+    {% if bankroll_parlays %}<a href="#section-bankroll">💰 Bankroll</a>{% endif %}
+    {% if lotto_parlays %}<a href="#section-lotto">🎰 Lotto</a>{% endif %}
+    {% if moonshot_parlays %}<a href="#section-moonshot">🚀 Moonshot</a>{% endif %}
+    {% if events %}<a href="#section-thisweekend">🥊 This Card</a>{% endif %}
+    {% if future_events %}<a href="#section-future">🔮 Next Up</a>{% endif %}
+  </nav>
+
+  <div id="whats-new-banner" class="whats-new-banner" style="display:none;">
+    <div class="whats-new-text" id="whats-new-text"></div>
+    <button class="whats-new-dismiss" onclick="document.getElementById('whats-new-banner').style.display='none';">✕</button>
+  </div>
+
   <div class="meta-row">
     <span class="badge">🕒 {{ generated_at }}</span>
     <span class="badge book">📊 Odds via {{ source or "unavailable" }}</span>
@@ -306,6 +377,25 @@
   {% if live_error %}
   <div class="notice">{{ live_error }}</div>
   {% endif %}
+
+  <div class="track-record-card" id="section-trackrecord">
+    <div class="track-record-title">📈 Model Track Record</div>
+    {% if track_record %}
+    <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span>({{ track_record.accuracy_pct }}%)</span></div>
+    {% if track_record.by_confidence %}
+    <div class="track-record-breakdown">
+      {% for label, stats in track_record.by_confidence.items() %}
+      <div class="track-record-conf-row">
+        <span class="track-record-conf-label">{{ label }}</span>
+        <span class="track-record-conf-value">{{ stats.correct }}/{{ stats.total }} ({{ stats.accuracy_pct }}%)</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="track-record-empty">No results recorded yet — this fills in after cards happen. Tracking every prediction now so results are honest, not retroactive.</div>
+    {% endif %}
+  </div>
 
   <details class="info-card">
     <summary><span>🔍 How the model works</span><span class="chevron">▶</span></summary>
@@ -536,7 +626,7 @@
   {% endmacro %}
 
   {% if notable_movements %}
-  <div class="parlay-section-title movement">📊 Notable Line Movement</div>
+  <div class="parlay-section-title movement" id="section-movement">📊 Notable Line Movement</div>
   <div class="parlay-subtitle">Lines that have moved meaningfully (15%+) since the last refresh. This tracks real PRICE movement only — not bet volume or who's behind it, so treat this as "worth a second look," not confirmed sharp action.</div>
   {% for row in notable_movements %}
   <div class="line-card">
@@ -550,7 +640,7 @@
   {% endif %}
 
   {% if standout_props %}
-  <div class="standout-title">🔥 Standout Props for {{ event_short_name }}</div>
+  <div class="standout-title" id="section-standout">🔥 Standout Props for {{ event_short_name }}</div>
   <div class="standout-grid">
     {% for p in standout_props %}
     <div class="standout-card heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}">
@@ -587,7 +677,7 @@
   {% endif %}
 
   {% if bankroll_parlays %}
-  <div class="parlay-section-title bankroll">💰 Bankroll Builder</div>
+  <div class="parlay-section-title bankroll" id="section-bankroll">💰 Bankroll Builder</div>
   <div class="parlay-subtitle">2-3 leg combos in the +100 to +300 range, built from picks the model favors — including same-fight combos and model-projected legs (labeled "model") for fights with no live prop line yet.</div>
   {% for p in bankroll_parlays %}
   <div class="parlay-card bankroll">
@@ -604,12 +694,12 @@
   {% endfor %}
   <div class="parlay-note">Assumes each leg is independent — same-card fights aren't perfectly independent in reality, so treat the hit-rate estimate as optimistic. Legs marked "model" have no live book price to compare against.</div>
   {% elif events %}
-  <div class="parlay-section-title bankroll">💰 Bankroll Builder</div>
+  <div class="parlay-section-title bankroll" id="section-bankroll">💰 Bankroll Builder</div>
   <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
   {% endif %}
 
   {% if lotto_parlays %}
-  <div class="parlay-section-title lotto">🎰 Lotto Parlays</div>
+  <div class="parlay-section-title lotto" id="section-lotto">🎰 Lotto Parlays</div>
   <div class="parlay-subtitle">Long-shot combos at +1000 or better, any leg count — ranked by the model's best combined odds of hitting, drawing from across the whole card for real variety.</div>
   {% for p in lotto_parlays %}
   <div class="parlay-card lotto">
@@ -626,12 +716,12 @@
   {% endfor %}
   <div class="parlay-note">These are long shots by design — meant as a "worth a small stab" section, not a plan.</div>
   {% elif events %}
-  <div class="parlay-section-title lotto">🎰 Lotto Parlays</div>
+  <div class="parlay-section-title lotto" id="section-lotto">🎰 Lotto Parlays</div>
   <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
   {% endif %}
 
   {% if moonshot_parlays %}
-  <div class="parlay-section-title moonshot">🚀 Moonshot</div>
+  <div class="parlay-section-title moonshot" id="section-moonshot">🚀 Moonshot</div>
   <div class="parlay-subtitle">+5000 or better. This has essentially no business hitting — any leg count, purely for fun, ranked by the model's best combined odds among everything that clears the bar.</div>
   {% for p in moonshot_parlays %}
   <div class="parlay-card moonshot">
@@ -648,12 +738,12 @@
   {% endfor %}
   <div class="parlay-note">Treat this exactly like buying a lottery ticket — fun to dream on, not a strategy.</div>
   {% elif events %}
-  <div class="parlay-section-title moonshot">🚀 Moonshot</div>
+  <div class="parlay-section-title moonshot" id="section-moonshot">🚀 Moonshot</div>
   <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
   {% endif %}
 
   {% for event in events %}
-  <div class="event-header">
+  <div class="event-header" {% if loop.first %}id="section-thisweekend"{% endif %}>
     <div class="event-name">{{ event.event_name }}</div>
     <div class="event-date">{{ event.event_date }}</div>
   </div>
@@ -661,7 +751,7 @@
   {% endfor %}
 
   {% if future_events %}
-  <div class="section-title">🔮 Coming Up Next</div>
+  <div class="section-title" id="section-future">🔮 Coming Up Next</div>
   <div class="parlay-subtitle">Verified upcoming UFC cards beyond this weekend, sourced from official event announcements. Live odds included where available; model projections always shown otherwise.</div>
   {% for event in future_events %}
   <div class="event-header">
@@ -671,5 +761,62 @@
   {% for fight in event.fights %}{{ render_fight_card(fight) }}{% endfor %}
   {% endfor %}
   {% endif %}
+
+  <script>
+    // Countdown timer
+    (function() {
+      const card = document.querySelector('.countdown-card');
+      if (!card) return;
+      const target = new Date(card.dataset.target).getTime();
+      const display = document.getElementById('countdown-display');
+
+      function update() {
+        const now = Date.now();
+        const diff = target - now;
+        if (diff <= 0) {
+          display.textContent = 'Fight time! 🥊';
+          return;
+        }
+        const days = Math.floor(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        display.textContent = days > 0 ? `${days}d ${hours}h ${minutes}m` : `${hours}h ${minutes}m`;
+      }
+      update();
+      setInterval(update, 60000);
+    })();
+
+    // What's new since your last visit
+    (function() {
+      const STORAGE_KEY = 'ufc-edge-finder-last-snapshot';
+      const current = {{ whats_new_snapshot | tojson | safe }};
+
+      let previous = null;
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) previous = JSON.parse(raw);
+      } catch (e) { /* localStorage unavailable or corrupt -- just skip the comparison */ }
+
+      if (previous) {
+        const prevStandoutKeys = new Set((previous.standout || []).map(p => p.key));
+        const prevMovementKeys = new Set((previous.movements || []).map(m => m.key));
+
+        const newStandout = current.standout.filter(p => !prevStandoutKeys.has(p.key));
+        const newMovements = current.movements.filter(m => !prevMovementKeys.has(m.key));
+
+        if (newStandout.length > 0 || newMovements.length > 0) {
+          const parts = [];
+          if (newStandout.length > 0) parts.push(`${newStandout.length} new standout prop${newStandout.length > 1 ? 's' : ''}`);
+          if (newMovements.length > 0) parts.push(`${newMovements.length} new notable move${newMovements.length > 1 ? 's' : ''}`);
+          document.getElementById('whats-new-text').textContent = `✨ Since your last visit: ${parts.join(' · ')}`;
+          document.getElementById('whats-new-banner').style.display = 'flex';
+        }
+      }
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+      } catch (e) { /* storage full or unavailable -- next visit just won't have a diff */ }
+    })();
+  </script>
 </body>
 </html>

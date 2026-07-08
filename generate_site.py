@@ -7,6 +7,7 @@ disagreements. Run by GitHub Actions on a schedule; can also run locally:
 """
 
 import datetime as dt
+import json
 import os
 from zoneinfo import ZoneInfo
 
@@ -24,6 +25,7 @@ from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays, build_moonshot_parlays
 from src.line_movement import load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight
+from src.track_record import log_predictions, compute_track_record
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -104,11 +106,41 @@ def main():
         for fight in event["fights"]:
             attach_charts_to_fight(fight, updated_snapshot)
 
+    generated_at_str = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET")
+    log_predictions(events, generated_at_str)
+    track_record = compute_track_record()
+
     event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
+
+    # Countdown target: this weekend's tracked event if we have one, otherwise
+    # the nearest future card. ET is UTC-4 (EDT) for all currently tracked
+    # events (July-August) -- would need adjusting for events during EST months.
+    countdown_target_iso = None
+    countdown_label = None
+    next_event = events[0] if events else (future_events[0] if future_events else None)
+    if next_event:
+        countdown_target_iso = f"{next_event['event_date']}T{next_event.get('event_start_time_et', '19:00')}:00-04:00"
+        countdown_label = next_event["event_name"]
 
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
+    env.filters["tojson"] = lambda obj: json.dumps(obj, default=str)
     template = env.get_template("site.html")
+
+    # Lightweight snapshot for the "what's new since your last visit" strip --
+    # deliberately minimal (just enough to diff against) rather than dumping
+    # full row objects, since this gets embedded directly in the page and
+    # compared client-side via localStorage.
+    whats_new_snapshot = {
+        "standout": [
+            {"key": f"{p['fighter']}|{p['market']}", "label": f"{p['fighter']} {p['market']}", "edge_pct": p["edge_pct"]}
+            for p in standout_props
+        ],
+        "movements": [
+            {"key": f"{m['fighter']}|{m['market']}", "label": f"{m['fighter']} {m['market']}", "pct_change": m["movement"]["pct_change"]}
+            for m in notable_movements
+        ],
+    }
 
     html = template.render(
         events=events,
@@ -116,13 +148,17 @@ def main():
         unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
         standout_props=standout_props,
         event_short_name=event_short_name,
+        countdown_target_iso=countdown_target_iso,
+        countdown_label=countdown_label,
+        whats_new_snapshot=whats_new_snapshot,
+        track_record=track_record,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
         moonshot_parlays=moonshot_parlays,
         notable_movements=notable_movements,
         live_error=live_error,
         source=source,
-        generated_at=dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET"),
+        generated_at=generated_at_str,
     )
 
     os.makedirs("docs", exist_ok=True)
