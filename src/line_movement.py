@@ -240,6 +240,15 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict) -> None:
     token_a = next((e.get("clob_token_id") for e in ml_edges if e.get("fighter") == fighter_a), None)
     token_b = next((e.get("clob_token_id") for e in ml_edges if e.get("fighter") == fighter_b), None)
 
+    if ml_edges and not (token_a and token_b):
+        # Pinpoint diagnostic: shows exactly what's in ml_edges (fighter name
+        # as it actually appears, and whether a token is present on each row)
+        # so a name-matching mismatch is distinguishable from a genuinely
+        # missing token, instead of guessing again.
+        debug_rows = [(e.get("fighter"), bool(e.get("clob_token_id"))) for e in ml_edges]
+        print(f"[charts] token lookup failed for {fighter_a!r} vs {fighter_b!r} -- "
+              f"ml_edges fighter/has_token pairs: {debug_rows}")
+
     points_a = _clob_points(fetch_price_history(token_a)) if token_a else []
     points_b = _clob_points(fetch_price_history(token_b)) if token_b else []
 

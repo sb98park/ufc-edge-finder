@@ -24,6 +24,8 @@ def compute_moneyline_edges(
 
     for fight_id, group in ml.groupby("fight_id"):
         if len(group) != 2:
+            print(f"[edge_finder] moneyline skip for fight_id={fight_id!r}: {len(group)} row(s) instead of 2 "
+                  f"-- selections: {group['selection'].tolist()}")
             continue  # need both sides of the moneyline to devig
 
         a, b = group.iloc[0], group.iloc[1]
