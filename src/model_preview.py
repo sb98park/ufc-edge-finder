@@ -9,6 +9,7 @@ clearly labeled as a projection rather than a live-market edge.
 import pandas as pd
 
 from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges
+from src.radar_chart import compute_radar_metrics, build_radar_chart_svg
 
 
 def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
@@ -252,6 +253,10 @@ def build_fight_preview(
         }
 
     comparison = {"a": _fighter_card(fighter_a, row_a), "b": _fighter_card(fighter_b, row_b)}
+
+    radar_metrics_a = compute_radar_metrics(row_a.to_dict())
+    radar_metrics_b = compute_radar_metrics(row_b.to_dict())
+    radar_svg = build_radar_chart_svg(radar_metrics_a, radar_metrics_b, fighter_a, fighter_b)
     factor_badges = build_factor_badges(matchup)
     comparison["a"]["badges"] = factor_badges["a"]
     comparison["b"]["badges"] = factor_badges["b"]
@@ -269,4 +274,5 @@ def build_fight_preview(
         "style_b": matchup["style_b"],
         "narrative": narrative,
         "comparison": comparison,
+        "radar_svg": radar_svg,
     }

@@ -301,6 +301,14 @@
   .tape-bar-track { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--panel2); }
   .tape-bar-a { background: linear-gradient(90deg, transparent, var(--accent2)); border-radius: 3px 0 0 3px; }
   .tape-bar-b { background: linear-gradient(90deg, var(--muted), transparent); border-radius: 0 3px 3px 0; }
+
+  .radar-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
+  .radar-chart { display: block; max-width: 100%; height: auto; }
+  .radar-legend { display: flex; gap: 16px; margin-top: 4px; }
+  .radar-legend-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+  .radar-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .radar-dot.a { background: #d4af37; }
+  .radar-dot.b { background: #8a8f9a; }
   .compare-table td:first-child { text-align: left; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.3px; }
   .compare-table tr:last-child td { border-bottom: none; }
 
@@ -480,9 +488,18 @@
     {% endif %}
   {% endmacro %}
 
-  {% macro tale_of_the_tape(comparison) %}
+  {% macro tale_of_the_tape(comparison, radar_svg) %}
   {% if comparison %}
   <div class="market-group-label">📏 Tale of the Tape</div>
+  {% if radar_svg %}
+  <div class="radar-block">
+    {{ radar_svg | safe }}
+    <div class="radar-legend">
+      <span class="radar-legend-item"><span class="radar-dot a"></span>{{ comparison.a.name }}</span>
+      <span class="radar-legend-item"><span class="radar-dot b"></span>{{ comparison.b.name }}</span>
+    </div>
+  </div>
+  {% endif %}
   <div class="tape-block">
     {{ tape_bar("Age", comparison.a.age, comparison.b.age, "") }}
     {{ tape_bar("Reach", comparison.a.reach_in, comparison.b.reach_in, "\"") }}
@@ -574,7 +591,7 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
       </div>
-      {{ tale_of_the_tape(fight.preview.comparison) }}
+      {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg) }}
       {{ fighter_compare_table(fight.preview.comparison) }}
       {% endif %}
 
