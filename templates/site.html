@@ -277,7 +277,7 @@
   }
   .factor-badge.pos { background: #10251a; color: var(--green); }
   .factor-badge.neg { background: #2a1414; color: var(--red); }
-  .matchup-vs { text-align: center; flex-shrink: 0; padding: 0 4px; width: 92px; }
+  .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: 124px; min-width: 0; overflow: hidden; }
   .vs-text { display: block; font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: 0.5px; }
 
   .fighter-avatar {
@@ -290,13 +290,14 @@
   .weight-class-badge {
     margin-top: 4px; font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2px;
     color: var(--accent2); background: #241f10; border: 1px solid #3a2f14; border-radius: 10px;
-    padding: 2px 7px; white-space: normal; display: inline-block; max-width: 100%;
-    line-height: 1.3; word-break: break-word;
+    padding: 2px 7px; white-space: normal; display: inline-block; max-width: 116px; box-sizing: border-box;
+    line-height: 1.3; overflow-wrap: break-word;
   }
   .weight-class-badge.womens { color: #e88fc7; background: #2a1522; border-color: #4a1f3a; }
   .card-position {
     color: var(--accent); font-size: 9.5px; font-weight: 700; text-transform: uppercase;
-    background: #241f10; border-radius: 12px; padding: 2px 7px; display: inline-block; margin-bottom: 3px; white-space: nowrap;
+    background: #241f10; border-radius: 12px; padding: 2px 7px; display: inline-block; margin-bottom: 3px;
+    white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
   }
   .no-edges { color: var(--muted); font-size: 12px; padding: 0 16px 14px; }
 
