@@ -16,6 +16,7 @@ def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
         return None
     r = row.iloc[0]
     total_wins = max(int(r["wins"]), 1)
+    total_losses = max(int(r["losses"]), 1) if r["losses"] else 0
     total_fights = max(int(r["wins"]) + int(r["losses"]), 1)
     return {
         "win_pct": r["wins"] / total_fights,
@@ -23,9 +24,13 @@ def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
         "ko_rate": r["ko_wins"] / total_wins,
         "sub_rate": r["sub_wins"] / total_wins,
         "dec_rate": r["dec_wins"] / total_wins,
+        "ko_loss_rate": (r["ko_losses"] / total_losses) if total_losses else 0.0,
+        "sub_loss_rate": (r["sub_losses"] / total_losses) if total_losses else 0.0,
+        "dec_loss_rate": (r["dec_losses"] / total_losses) if total_losses else 0.0,
         "reach_in": r["reach_in"],
         "wins": int(r["wins"]),
         "losses": int(r["losses"]),
+        "weight_class": r["weight_class"],
         "first_round_finish_pct": float(r["first_round_finish_pct"]) if "first_round_finish_pct" in r and pd.notna(r["first_round_finish_pct"]) else None,
     }
 
@@ -91,37 +96,114 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
         f"({row['book_fair_prob']*100:.0f}% implied), while the model estimates {row['model_prob']*100:.0f}% "
         f"({row['edge_pct']:+.1f}% edge)."
     )
-    if stats:
-        base += (
-            f" That blends their career tendency (KO/TKO in {stats['ko_rate']*100:.0f}% of wins, "
-            f"submission in {stats['sub_rate']*100:.0f}%, decision in {stats['dec_rate']*100:.0f}%) "
-            f"with how often this specific opponent has actually lost that way before -- "
-            f"a fighter's finishing rate matters less if the person across from them has never "
-            f"been finished that way."
+    if not stats:
+        return base
+
+    rate_key = {"KO/TKO": "ko_rate", "SUB": "sub_rate", "DEC": "dec_rate"}.get(method)
+    loss_key = {"KO/TKO": "ko_loss_rate", "SUB": "sub_loss_rate", "DEC": "dec_loss_rate"}.get(method)
+    win_col = {"KO/TKO": "ko_wins", "SUB": "sub_wins", "DEC": "dec_wins"}.get(method)
+    if not rate_key:
+        return base
+    own_rate = stats[rate_key]
+
+    opponent = row.get("opponent")
+    opp_stats = _fighter_stats(fighters_df, opponent) if opponent else None
+    opp_vulnerability = opp_stats[loss_key] if opp_stats else None
+
+    weight_class = stats.get("weight_class")
+    divisional_rate = own_rate
+    if weight_class is not None and win_col:
+        div_group = fighters_df[fighters_df["weight_class"] == weight_class]
+        total_div_wins = div_group["wins"].sum()
+        if total_div_wins > 0:
+            divisional_rate = div_group[win_col].sum() / total_div_wins
+
+    div_gap = own_rate - divisional_rate
+    method_lower = method.lower().replace("ko/tko", "KO/TKO").replace("sub", "submission").replace("dec", "decision")
+
+    # Pick whichever angle is actually most distinctive about THIS matchup,
+    # rather than always leading with the same blended-factors sentence --
+    # different fights genuinely have different "why" depending on the data.
+
+    if opp_vulnerability is not None and opp_vulnerability < 0.08 and opp_stats["losses"] >= 2:
+        # opponent has essentially never lost this way -- worth naming directly as the tension
+        detail = (
+            f" Worth flagging directly: {opponent} has never lost by {method_lower} across "
+            f"{opp_stats['losses']} career loss(es), even though {row['fighter']} has finished "
+            f"{own_rate*100:.0f}% of wins that way -- the model still leans toward it, but this "
+            f"specific matchup history is a real headwind on the pick."
         )
-    return base
+    elif opp_vulnerability is not None and opp_vulnerability >= 0.45:
+        # opponent is genuinely vulnerable to this specific method -- lead with that
+        detail = (
+            f" {opponent} has gone down by {method_lower} in {opp_vulnerability*100:.0f}% of their "
+            f"career losses -- a real, specific vulnerability this matchup plays into, on top of "
+            f"{row['fighter']}'s own {own_rate*100:.0f}% career rate finishing fights that way."
+        )
+    elif abs(div_gap) >= 0.15 and weight_class:
+        # fighter's own rate is well off the divisional norm -- that's the interesting part
+        comparison = "well above" if div_gap > 0 else "well below"
+        detail = (
+            f" {row['fighter']}'s {own_rate*100:.0f}% career rate by {method_lower} runs {comparison} "
+            f"the {divisional_rate*100:.0f}% baseline for {weight_class} -- a real outlier for the "
+            f"division, not just a generic tendency."
+        )
+    elif stats["wins"] < 6:
+        # small sample -- worth being upfront that this leans on limited data
+        detail = (
+            f" Built on a smaller sample ({stats['wins']} career wins), so {row['fighter']}'s "
+            f"{own_rate*100:.0f}% rate by {method_lower} carries more uncertainty than a longer "
+            f"track record would."
+        )
+    else:
+        # nothing sharply distinctive -- fall back to the blended explanation, but vary the wording
+        detail = (
+            f" No single factor dominates here -- it's a blend of {row['fighter']}'s own "
+            f"{own_rate*100:.0f}% career rate by {method_lower} and how {opponent or 'their opponent'} "
+            f"has historically fared against that specific type of finish."
+        )
+
+    return base + detail
 
 
 def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
-    names = row["fighter"].split(" vs ")
-    finish_rates = []
+    names = [n.strip() for n in row["fighter"].split(" vs ")]
+    fighter_stats = []
     fast_finishers = []
     for name in names:
-        s = _fighter_stats(fighters_df, name.strip())
+        s = _fighter_stats(fighters_df, name)
         if s:
-            finish_rates.append(s["finish_rate"])
+            fighter_stats.append((name, s))
             if s["first_round_finish_pct"] and s["first_round_finish_pct"] >= 0.6:
-                fast_finishers.append((name.strip(), s["first_round_finish_pct"]))
+                fast_finishers.append((name, s["first_round_finish_pct"]))
 
     base = (
         f"{row['market']} at {format_american_odds(row['odds_american'])} implies {row['book_fair_prob']*100:.0f}%, "
         f"vs. the model's {row['model_prob']*100:.0f}% ({row['edge_pct']:+.1f}% edge)."
     )
-    if finish_rates:
-        avg_finish = sum(finish_rates) / len(finish_rates)
-        base += (
-            f" This leans on a combined {avg_finish*100:.0f}% finish rate between both fighters."
-        )
+
+    if len(fighter_stats) == 2:
+        (name_a, s_a), (name_b, s_b) = fighter_stats
+        rate_a, rate_b = s_a["finish_rate"], s_b["finish_rate"]
+        avg_finish = (rate_a + rate_b) / 2
+        gap = abs(rate_a - rate_b)
+
+        if gap >= 0.30:
+            # one fighter is a clear finisher, the other isn't -- the average would hide this, so name it directly
+            higher_name, higher_rate = (name_a, rate_a) if rate_a > rate_b else (name_b, rate_b)
+            lower_name, lower_rate = (name_b, rate_b) if rate_a > rate_b else (name_a, rate_a)
+            base += (
+                f" This one's lopsided on paper -- {higher_name} finishes {higher_rate*100:.0f}% of wins, "
+                f"while {lower_name} sits at just {lower_rate*100:.0f}%, so the combined number undersells "
+                f"how much this depends on which fighter's game show up."
+            )
+        elif avg_finish >= 0.65:
+            base += f" Both fighters finish often ({rate_a*100:.0f}% and {rate_b*100:.0f}% of their wins), which is the real driver here."
+        elif avg_finish <= 0.30:
+            base += f" Neither fighter finishes much ({rate_a*100:.0f}% and {rate_b*100:.0f}% of wins) -- this leans toward distance almost by default."
+        else:
+            base += f" A fairly even {avg_finish*100:.0f}% combined finish rate between the two, nothing lopsided either way."
+
     if fast_finishers:
         for name, rate in fast_finishers:
             base += f" Worth flagging: {rate*100:.0f}% of {name}'s career wins have come in round 1 specifically."
