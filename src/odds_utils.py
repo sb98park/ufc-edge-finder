@@ -75,12 +75,18 @@ def edge_percent(model_prob: float, book_fair_prob: float) -> float:
     return (model_prob - book_fair_prob) * 100.0
 
 
-def kelly_fraction(model_prob: float, american_odds: float, fraction: float = 0.5) -> float:
+def kelly_fraction(model_prob: float, american_odds: float, fraction: float = 0.25, max_stake_pct: float = 0.05) -> float:
     """
     Fractional Kelly stake sizing (as a fraction of bankroll).
-    `fraction` defaults to 0.5 (half-Kelly) since full Kelly is aggressive
-    and very sensitive to model error -- exactly the kind of thing worth
-    being conservative about with real money.
+
+    Uses quarter-Kelly, not half-Kelly -- and hard-caps the result at 5% of
+    bankroll regardless. This isn't just conservatism for its own sake: in
+    genuinely efficient sports betting markets, a probability gap large
+    enough to produce a raw half-Kelly stake above ~10% is itself a red flag
+    that the model is overconfident somewhere (a method-of-victory prop
+    resting on a small career sample, a stat that hasn't caught up to recent
+    injury/camp news, etc.) rather than a real edge that big. The cap
+    protects against staking real money on the model's own miscalibration.
     """
     american_odds = float(american_odds)
     b = (american_odds / 100.0) if american_odds > 0 else (100.0 / -american_odds)
@@ -89,4 +95,4 @@ def kelly_fraction(model_prob: float, american_odds: float, fraction: float = 0.
     if edge <= 0:
         return 0.0
     full_kelly = edge / b
-    return max(0.0, full_kelly * fraction)
+    return min(max(0.0, full_kelly * fraction), max_stake_pct)

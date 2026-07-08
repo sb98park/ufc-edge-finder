@@ -430,6 +430,12 @@
       movement and render an actual chart. Honest limitation: this tracks PRICE only, not bet volume or
       who's behind a move — true "sharp money" detection needs handle/ticket-count data no free source
       provides, so this is labeled "notable movement," not a sharp-money claim.</p>
+      <p><strong>Suggested stake:</strong> quarter-Kelly, hard-capped at 5% of bankroll regardless of the
+      math. In genuinely efficient sports betting markets, an edge large enough to produce a raw half-Kelly
+      stake above ~10% is itself a warning sign — it usually means the model is overconfident somewhere
+      (a method-of-victory prop resting on a small career sample, a stat that hasn't caught up to recent
+      injury or camp news) rather than a real edge that big. The cap exists to protect against staking
+      real money on the model's own miscalibration, not to suggest the edge itself is wrong.</p>
       <p style="color: var(--muted);"><strong>Honest data limitations:</strong> strike-volume (SLpM/SApM),
       control-time percentage, and missed-weight history are new schema fields the model is built to use,
       but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather
@@ -600,7 +606,7 @@
       {% if fight.edges %}
       <div class="market-group-label">📊 Live lines vs. model</div>
       <div class="table-scroll"><table>
-        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
+        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>Stake</th></tr>
         {% for row in fight.edges %}
         <tr class="edge-heat-{{ 3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0)) }}">
           <td>{{ row.fighter }}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ '⭐' if row.odds_american < 0 else '🐶' }}</span>{% endif %}</td>
@@ -609,7 +615,7 @@
           <td>{{ row.model_prob }}</td>
           <td>{{ row.book_fair_prob }}</td>
           <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
-          <td>{{ row.half_kelly_stake_pct }}%</td>
+          <td>{{ row.suggested_stake_pct }}%</td>
         </tr>
         {% if row.rationale %}
         <tr class="rationale-row"><td colspan="7">{{ row.rationale }}</td></tr>
@@ -678,7 +684,7 @@
         </div>
       </div>
       <div class="odds-compare-delta">Δ {{ ((p.model_prob - p.book_fair_prob)*100)|round(1) }} percentage points</div>
-      <div class="standout-sub">½-Kelly suggested stake: {{ p.half_kelly_stake_pct }}% of bankroll</div>
+      <div class="standout-sub">Suggested stake (¼-Kelly, capped at 5%): {{ p.suggested_stake_pct }}% of bankroll</div>
       {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
     </div>
     {% endfor %}

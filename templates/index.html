@@ -80,7 +80,7 @@
   <table>
     <tr>
       <th>Fighter</th><th>Market</th><th>Odds</th><th>Model Prob</th>
-      <th>Book Fair Prob</th><th>Edge %</th><th>½-Kelly Stake %</th>
+      <th>Book Fair Prob</th><th>Edge %</th><th>Suggested Stake %</th>
     </tr>
     {% for row in edges %}
     <tr>
@@ -90,7 +90,7 @@
       <td>{{ row.model_prob }}</td>
       <td>{{ row.book_fair_prob }}</td>
       <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
-      <td>{{ row.half_kelly_stake_pct }}%</td>
+      <td>{{ row.suggested_stake_pct }}%</td>
     </tr>
     {% endfor %}
   </table>

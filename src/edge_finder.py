@@ -58,7 +58,7 @@ def compute_moneyline_edges(
                 "model_prob": round(model_p, 3),
                 "book_fair_prob": round(fair_p, 3),
                 "edge_pct": round(edge_percent(model_p, fair_p), 2),
-                "half_kelly_stake_pct": round(kelly_fraction(model_p, odds) * 100, 2),
+                "suggested_stake_pct": round(kelly_fraction(model_p, odds) * 100, 2),
                 "clob_token_id": token_id,
             })
 
@@ -126,7 +126,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
             "model_prob": round(model_p, 3),
             "book_fair_prob": round(imp, 3),  # not devigged (single-sided prop)
             "edge_pct": round(edge_percent(model_p, imp), 2),
-            "half_kelly_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+            "suggested_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
         })
 
@@ -205,7 +205,7 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 "model_prob": round(model_p, 3),
                 "book_fair_prob": round(imp, 3),
                 "edge_pct": round(edge_percent(model_p, imp), 2),
-                "half_kelly_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+                "suggested_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
                 "clob_token_id": row.get("clob_token_id"),
             })
 
@@ -244,7 +244,7 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
             "model_prob": round(model_p, 3),
             "book_fair_prob": round(imp, 3),
             "edge_pct": round(edge_percent(model_p, imp), 2),
-            "half_kelly_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+            "suggested_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
         })
 
