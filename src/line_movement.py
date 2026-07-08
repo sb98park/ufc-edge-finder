@@ -249,6 +249,11 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict) -> None:
         points_a = _snapshot_points(entry_a["history"]) if entry_a else []
         entry_b = full_snapshot.get(f"{fighter_b}|Moneyline")
         points_b = _snapshot_points(entry_b["history"]) if entry_b else []
+        print(f"[charts] {fighter_a} vs {fighter_b}: using OWN SNAPSHOT data "
+              f"({len(points_a)} + {len(points_b)} points) -- no usable CLOB history")
+    else:
+        print(f"[charts] {fighter_a} vs {fighter_b}: using REAL CLOB data "
+              f"({len(points_a)} + {len(points_b)} points)")
 
     fight["moneyline_chart"] = build_dual_line_chart_svg(points_a, points_b, fighter_a, fighter_b)
 

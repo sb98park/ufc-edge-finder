@@ -195,15 +195,34 @@ def fetch_price_history(token_id: str, interval: str = "max") -> list[dict]:
     """
     if not token_id:
         return []
-    try:
-        resp = requests.get(
-            f"{CLOB_BASE}/prices-history",
-            params={"market": token_id, "interval": interval},
-            headers=HEADERS, timeout=15,
-        )
+
+    def _try_request(params: dict) -> list[dict]:
+        resp = requests.get(f"{CLOB_BASE}/prices-history", params=params, headers=HEADERS, timeout=15)
         resp.raise_for_status()
-        data = resp.json()
-        return data.get("history", [])
+        return resp.json().get("history", [])
+
+    try:
+        history = _try_request({"market": token_id, "interval": interval})
+
+        # If interval=max returned suspiciously few points, try explicit
+        # start/end timestamps instead -- a different parameter path in case
+        # "max" isn't behaving as documented for this market.
+        if len(history) < 5:
+            import time
+            fallback = _try_request({"market": token_id, "startTs": 0, "endTs": int(time.time())})
+            if len(fallback) > len(history):
+                print(f"[polymarket] interval=max returned only {len(history)} points for token "
+                      f"{token_id[:12]}...; startTs/endTs fallback returned {len(fallback)} instead")
+                history = fallback
+
+        if history:
+            from datetime import datetime, timezone
+            first_dt = datetime.fromtimestamp(history[0]["t"], tz=timezone.utc).strftime("%Y-%m-%d")
+            last_dt = datetime.fromtimestamp(history[-1]["t"], tz=timezone.utc).strftime("%Y-%m-%d")
+            print(f"[polymarket] price history for token {token_id[:12]}...: {len(history)} points, {first_dt} to {last_dt}")
+        else:
+            print(f"[polymarket] price history for token {token_id[:12]}... returned ZERO points (empty history)")
+        return history
     except Exception as exc:
         print(f"[polymarket] price history fetch failed for token {token_id}: {exc}")
         return []
@@ -342,6 +361,9 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
         fighter_a, fighter_b = outcomes[0], outcomes[1]
         token_a = clob_token_ids[0] if len(clob_token_ids) >= 2 else None
         token_b = clob_token_ids[1] if len(clob_token_ids) >= 2 else None
+        if not token_a or not token_b:
+            print(f"[polymarket] no clobTokenIds found for {fighter_a} vs {fighter_b} "
+                  f"(raw field: {market.get('clobTokenIds')!r}) -- chart will fall back to accumulated snapshot data")
         for fighter, opponent, price, token_id in [
             (fighter_a, fighter_b, price_a, token_a), (fighter_b, fighter_a, price_b, token_b)
         ]:
