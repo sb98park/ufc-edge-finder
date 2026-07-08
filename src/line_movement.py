@@ -225,45 +225,54 @@ def build_dual_line_chart_svg(
     )
 
 
-def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_id_map: dict | None = None) -> None:
+def attach_charts_to_fight(fight: dict, full_snapshot: dict) -> None:
     """
     Attaches a dual-line moneyline chart (always shown, using REAL CLOB
-    history when token IDs are available, falling back to our own
-    accumulated snapshot otherwise) and a list of single-line other-market
-    charts (shown behind a toggle).
+    history when a token ID is available on the edge itself, falling back
+    to our own accumulated snapshot otherwise) and a list of other-market
+    charts (method/rounds/distance, shown behind a toggle) -- same
+    real-data-first approach applies uniformly to every market type now,
+    since every edge carries its own clob_token_id when Polymarket provided one.
     """
-    token_id_map = token_id_map or {}
     fighter_a, fighter_b = fight["fighter_a"], fight["fighter_b"]
 
-    token_a, token_b = token_id_map.get(fighter_a), token_id_map.get(fighter_b)
+    ml_edges = [e for e in fight.get("edges", []) if e.get("market") == "Moneyline"]
+    token_a = next((e.get("clob_token_id") for e in ml_edges if e.get("fighter") == fighter_a), None)
+    token_b = next((e.get("clob_token_id") for e in ml_edges if e.get("fighter") == fighter_b), None)
+
     points_a = _clob_points(fetch_price_history(token_a)) if token_a else []
     points_b = _clob_points(fetch_price_history(token_b)) if token_b else []
 
     if len(points_a) < 2 and len(points_b) < 2:
         # no real CLOB history available -- fall back to our own accumulated snapshot
-        ml_key_a = f"{fighter_a}|Moneyline"
-        entry_a = full_snapshot.get(ml_key_a)
+        entry_a = full_snapshot.get(f"{fighter_a}|Moneyline")
         points_a = _snapshot_points(entry_a["history"]) if entry_a else []
-        ml_key_b = f"{fighter_b}|Moneyline"
-        entry_b = full_snapshot.get(ml_key_b)
+        entry_b = full_snapshot.get(f"{fighter_b}|Moneyline")
         points_b = _snapshot_points(entry_b["history"]) if entry_b else []
 
     fight["moneyline_chart"] = build_dual_line_chart_svg(points_a, points_b, fighter_a, fighter_b)
 
-    has_live_ml = any(e.get("market") == "Moneyline" for e in fight.get("edges", []))
+    has_live_ml = bool(ml_edges)
     fight["chart_building"] = has_live_ml and not fight["moneyline_chart"]
 
     other_charts = []
-    seen_keys = {f"{fighter_a}|Moneyline"}
+    seen_keys = {f"{fighter_a}|Moneyline", f"{fighter_b}|Moneyline"}
     for edge in fight.get("edges", []):
         key = f"{edge['fighter']}|{edge['market']}"
         if key in seen_keys:
             continue
         seen_keys.add(key)
-        entry = full_snapshot.get(key)
-        if entry:
-            points = _snapshot_points(entry["history"])
-            svg = build_dual_line_chart_svg(points, [], edge["fighter"], "", width=260, height=90) if len(points) >= 2 else None
+
+        points = []
+        token_id = edge.get("clob_token_id")
+        if token_id:
+            points = _clob_points(fetch_price_history(token_id))
+        if len(points) < 2:
+            entry = full_snapshot.get(key)
+            points = _snapshot_points(entry["history"]) if entry else []
+
+        if len(points) >= 2:
+            svg = build_dual_line_chart_svg(points, [], edge["fighter"], "", width=260, height=90)
             if svg:
                 other_charts.append({"label": f"{edge['fighter']} — {edge['market']}", "svg": svg})
     fight["other_charts"] = other_charts

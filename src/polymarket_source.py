@@ -387,33 +387,36 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     except (ValueError, ZeroDivisionError):
         return []
 
+    yes_token = clob_token_ids[0] if len(clob_token_ids) >= 1 else None
+    no_token = clob_token_ids[1] if len(clob_token_ids) >= 2 else None
+
     if method:
         rows.append({
             "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
             "market": "Method", "selection": fighter, "selection_method": method,
-            "odds_american": yes_odds,
+            "odds_american": yes_odds, "clob_token_id": yes_token,
         })
     elif "distance" in question.lower():
         rows.append({
             "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
             "market": "GoesTheDistance", "selection": "Goes The Distance", "selection_method": "",
-            "odds_american": yes_odds,
+            "odds_american": yes_odds, "clob_token_id": yes_token,
         })
         rows.append({
             "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
             "market": "GoesTheDistance", "selection": "Ends In Finish", "selection_method": "",
-            "odds_american": no_odds,
+            "odds_american": no_odds, "clob_token_id": no_token,
         })
     elif round_line:
         rows.append({
             "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
             "market": "TotalRounds", "selection": f"Under {round_line}", "selection_method": round_line,
-            "odds_american": yes_odds,
+            "odds_american": yes_odds, "clob_token_id": yes_token,
         })
         rows.append({
             "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
             "market": "TotalRounds", "selection": f"Over {round_line}", "selection_method": round_line,
-            "odds_american": no_odds,
+            "odds_american": no_odds, "clob_token_id": no_token,
         })
 
     return rows

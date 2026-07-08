@@ -30,6 +30,10 @@
 
   h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: 0.3px; }
   .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+  .made-with-love {
+    text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.3px;
+    margin-bottom: 10px; font-style: italic;
+  }
   .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
   .badge {
     display: inline-flex; align-items: center; gap: 5px;
@@ -143,15 +147,28 @@
     margin-bottom: 12px; overflow: hidden;
   }
   details.fight-card summary {
-    padding: 14px 16px; cursor: pointer; list-style: none;
-    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 14px 12px; cursor: pointer; list-style: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 6px;
   }
   details.fight-card summary::-webkit-details-marker { display: none; }
-  .matchup { font-size: 15px; font-weight: 700; }
-  .weight-class { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+
+  .matchup-header { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+  .matchup-fighter { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .matchup-fighter.right { flex-direction: row-reverse; text-align: right; }
+  .matchup-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; }
+  .matchup-vs { text-align: center; flex-shrink: 0; padding: 0 4px; }
+  .vs-text { display: block; font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: 0.5px; }
+
+  .fighter-avatar {
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; flex-shrink: 0; letter-spacing: -0.5px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 0 0 2px var(--panel), 0 0 0 3px rgba(212,175,55,0.25), 0 2px 6px rgba(0,0,0,0.3);
+  }
+
+  .weight-class { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; white-space: nowrap; }
   .card-position {
-    color: var(--accent); font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-    background: #241f10; border-radius: 12px; padding: 3px 9px; display: inline-block; margin-bottom: 4px;
+    color: var(--accent); font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+    background: #241f10; border-radius: 12px; padding: 2px 7px; display: inline-block; margin-bottom: 3px; white-space: nowrap;
   }
   .no-edges { color: var(--muted); font-size: 12px; padding: 0 16px 14px; }
 
@@ -198,7 +215,8 @@
 
   .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
   .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
-  .compare-table th { color: var(--accent2); font-size: 11.5px; font-weight: 700; }
+  .compare-table th { color: var(--accent2); font-size: 10.5px; font-weight: 700; }
+  .compare-table th .fighter-avatar { margin: 0 auto 4px; }
   .compare-table td:first-child { text-align: left; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.3px; }
   .compare-table tr:last-child td { border-bottom: none; }
 
@@ -236,6 +254,7 @@
 </style>
 </head>
 <body>
+  <div class="made-with-love">Made with love, by yours truly, SBP 🤍</div>
   <h1>🥋 UFC Edge Finder</h1>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
   <div class="meta-row">
@@ -299,11 +318,18 @@
     {%- endif %}
   {%- endmacro %}
 
+  {% macro fighter_avatar(name, size=44) %}
+    {%- set parts = name.split() -%}
+    {%- set initials = (parts[0][0] + parts[-1][0])|upper if parts|length > 1 else name[:2]|upper -%}
+    {%- set hue = (name|length * 47 + parts[0]|length * 23) % 360 -%}
+    <div class="fighter-avatar" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size*0.38)|round|int }}px;background:linear-gradient(135deg, hsl({{ hue }},55%,32%), hsl({{ hue }},45%,18%));">{{ initials }}</div>
+  {%- endmacro %}
+
   {% macro fighter_compare_table(comparison) %}
   {% if comparison %}
   <div class="market-group-label">⚖️ Fighter Comparison</div>
   <div class="table-scroll"><table class="compare-table">
-    <tr><th></th><th>{{ comparison.a.name }}</th><th>{{ comparison.b.name }}</th></tr>
+    <tr><th></th><th>{{ fighter_avatar(comparison.a.name, 28) }}{{ comparison.a.name }}</th><th>{{ fighter_avatar(comparison.b.name, 28) }}{{ comparison.b.name }}</th></tr>
     <tr><td>Record</td><td>{{ comparison.a.record }}</td><td>{{ comparison.b.record }}</td></tr>
     <tr><td>KO/TKO Record</td><td>{{ comparison.a.ko_wins }}-{{ comparison.a.ko_losses if comparison.a.ko_losses is not none else "—" }}</td><td>{{ comparison.b.ko_wins }}-{{ comparison.b.ko_losses if comparison.b.ko_losses is not none else "—" }}</td></tr>
     <tr><td>Sub Record</td><td>{{ comparison.a.sub_wins }}-{{ comparison.a.sub_losses if comparison.a.sub_losses is not none else "—" }}</td><td>{{ comparison.b.sub_wins }}-{{ comparison.b.sub_losses if comparison.b.sub_losses is not none else "—" }}</td></tr>
@@ -324,10 +350,20 @@
   {% macro render_fight_card(fight) %}
   <details class="fight-card">
     <summary>
-      <div>
-        <div class="card-position">{{ fight.card_position }}</div>
-        <div class="matchup">{{ fight.fighter_a }} vs {{ fight.fighter_b }}</div>
-        <div class="weight-class">{{ fight.weight_class }}</div>
+      <div class="matchup-header">
+        <div class="matchup-fighter">
+          {{ fighter_avatar(fight.fighter_a) }}
+          <span class="matchup-name">{{ fight.fighter_a }}</span>
+        </div>
+        <div class="matchup-vs">
+          <div class="card-position">{{ fight.card_position }}</div>
+          <span class="vs-text">VS</span>
+          <div class="weight-class">{{ fight.weight_class }}</div>
+        </div>
+        <div class="matchup-fighter right">
+          <span class="matchup-name">{{ fight.fighter_b }}</span>
+          {{ fighter_avatar(fight.fighter_b) }}
+        </div>
       </div>
       <span class="chevron">▶</span>
     </summary>

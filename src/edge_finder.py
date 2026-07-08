@@ -45,9 +45,9 @@ def compute_moneyline_edges(
         imp_b = american_to_implied_prob(b["odds_american"])
         fair_a, fair_b = remove_vig_two_way(imp_a, imp_b)
 
-        for fighter, opponent, model_p, fair_p, odds in [
-            (a["selection"], b["selection"], model_prob_a, fair_a, a["odds_american"]),
-            (b["selection"], a["selection"], model_prob_b, fair_b, b["odds_american"]),
+        for fighter, opponent, model_p, fair_p, odds, token_id in [
+            (a["selection"], b["selection"], model_prob_a, fair_a, a["odds_american"], a.get("clob_token_id")),
+            (b["selection"], a["selection"], model_prob_b, fair_b, b["odds_american"], b.get("clob_token_id")),
         ]:
             rows.append({
                 "fight_id": fight_id,
@@ -59,6 +59,7 @@ def compute_moneyline_edges(
                 "book_fair_prob": round(fair_p, 3),
                 "edge_pct": round(edge_percent(model_p, fair_p), 2),
                 "half_kelly_stake_pct": round(kelly_fraction(model_p, odds) * 100, 2),
+                "clob_token_id": token_id,
             })
 
     if not rows:
@@ -126,6 +127,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
             "book_fair_prob": round(imp, 3),  # not devigged (single-sided prop)
             "edge_pct": round(edge_percent(model_p, imp), 2),
             "half_kelly_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+            "clob_token_id": row.get("clob_token_id"),
         })
 
     if not rows:
@@ -204,6 +206,7 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 "book_fair_prob": round(imp, 3),
                 "edge_pct": round(edge_percent(model_p, imp), 2),
                 "half_kelly_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+                "clob_token_id": row.get("clob_token_id"),
             })
 
     if not rows:
@@ -242,6 +245,7 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
             "book_fair_prob": round(imp, 3),
             "edge_pct": round(edge_percent(model_p, imp), 2),
             "half_kelly_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+            "clob_token_id": row.get("clob_token_id"),
         })
 
     if not rows:
