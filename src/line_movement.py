@@ -22,13 +22,45 @@ from datetime import datetime, timezone
 
 from src.odds_utils import american_to_decimal
 from src.polymarket_source import fetch_price_history
+from src.card_matcher import _normalize_name
 
 SNAPSHOT_PATH = "data/odds_snapshot.json"
+TOKEN_CACHE_PATH = "data/clob_token_cache.json"
 NOTABLE_MOVEMENT_THRESHOLD_PCT = 15.0
 MAX_HISTORY_POINTS = 30
 
 LINE_COLOR_A = "#d4af37"
 LINE_COLOR_B = "#8a8f9a"
+
+
+def load_token_cache() -> dict:
+    """{normalized_fighter_name: clob_token_id}, persisted across runs so a
+    fight's chart doesn't lose its token just because THIS run's Polymarket
+    discovery didn't happen to surface that market again."""
+    if not os.path.exists(TOKEN_CACHE_PATH):
+        return {}
+    try:
+        with open(TOKEN_CACHE_PATH) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_token_cache(cache: dict) -> None:
+    os.makedirs(os.path.dirname(TOKEN_CACHE_PATH), exist_ok=True)
+    with open(TOKEN_CACHE_PATH, "w") as f:
+        json.dump(cache, f, indent=2)
+
+
+def update_token_cache(edges: list[dict], cache: dict) -> dict:
+    """Merges any freshly-discovered tokens from this run's edges into the persisted cache."""
+    updated = dict(cache)
+    for row in edges:
+        token_id = row.get("clob_token_id")
+        fighter = row.get("fighter")
+        if token_id and fighter and row.get("market") == "Moneyline":
+            updated[_normalize_name(fighter)] = token_id
+    return updated
 
 
 def _bet_key_str(row: dict) -> str:
@@ -225,26 +257,41 @@ def build_dual_line_chart_svg(
     )
 
 
-def attach_charts_to_fight(fight: dict, full_snapshot: dict) -> None:
+def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict | None = None) -> None:
     """
     Attaches a dual-line moneyline chart (always shown, using REAL CLOB
-    history when a token ID is available on the edge itself, falling back
-    to our own accumulated snapshot otherwise) and a list of other-market
-    charts (method/rounds/distance, shown behind a toggle) -- same
-    real-data-first approach applies uniformly to every market type now,
-    since every edge carries its own clob_token_id when Polymarket provided one.
+    history when a token ID is available, falling back to our own
+    accumulated snapshot otherwise) and a list of other-market charts
+    (method/rounds/distance, shown behind a toggle).
+
+    token_cache: a persisted {normalized_fighter_name: clob_token_id} map
+    from PAST runs, used when this run's live discovery didn't happen to
+    surface a fight -- Polymarket's volume-based discovery doesn't find
+    every fight every run (confirmed live: even a card's main event can
+    miss the cut against the whole platform's volume ranking), so without
+    this, a fight's chart would silently regress to sparse data any time
+    discovery has an off run, even after previously having full history.
     """
     fighter_a, fighter_b = fight["fighter_a"], fight["fighter_b"]
+    token_cache = token_cache if token_cache is not None else {}
 
     ml_edges = [e for e in fight.get("edges", []) if e.get("market") == "Moneyline"]
-    token_a = next((e.get("clob_token_id") for e in ml_edges if e.get("fighter") == fighter_a), None)
-    token_b = next((e.get("clob_token_id") for e in ml_edges if e.get("fighter") == fighter_b), None)
+    # Normalized matching, not exact string equality -- Polymarket's raw
+    # fighter name can differ from our canonical name in accents/hyphenation
+    # (confirmed live: "Benoît Saint Denis" vs our "Benoit Saint-Denis"),
+    # which silently broke token lookup even though the token was right there.
+    norm_a, norm_b = _normalize_name(fighter_a), _normalize_name(fighter_b)
+    token_a = next((e.get("clob_token_id") for e in ml_edges if _normalize_name(e.get("fighter", "")) == norm_a), None)
+    token_b = next((e.get("clob_token_id") for e in ml_edges if _normalize_name(e.get("fighter", "")) == norm_b), None)
+
+    # Fall back to the persisted cache if this run's live discovery didn't
+    # find a token for one or both sides.
+    if not token_a:
+        token_a = token_cache.get(norm_a)
+    if not token_b:
+        token_b = token_cache.get(norm_b)
 
     if ml_edges and not (token_a and token_b):
-        # Pinpoint diagnostic: shows exactly what's in ml_edges (fighter name
-        # as it actually appears, and whether a token is present on each row)
-        # so a name-matching mismatch is distinguishable from a genuinely
-        # missing token, instead of guessing again.
         debug_rows = [(e.get("fighter"), bool(e.get("clob_token_id"))) for e in ml_edges]
         print(f"[charts] token lookup failed for {fighter_a!r} vs {fighter_b!r} -- "
               f"ml_edges fighter/has_token pairs: {debug_rows}")

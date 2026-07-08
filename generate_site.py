@@ -24,7 +24,10 @@ from src.card_matcher import (
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays, build_moonshot_parlays
-from src.line_movement import load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight
+from src.line_movement import (
+    load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
+    load_token_cache, save_token_cache, update_token_cache,
+)
 from src.track_record import log_predictions, compute_track_record
 
 DATA_DIR = "data"
@@ -102,9 +105,15 @@ def main():
     else:
         updated_snapshot = previous_snapshot
 
+    token_cache = load_token_cache()
+
     for event in events + future_events:
         for fight in event["fights"]:
-            attach_charts_to_fight(fight, updated_snapshot)
+            attach_charts_to_fight(fight, updated_snapshot, token_cache)
+
+    if not edges_df.empty:
+        token_cache = update_token_cache(edges_df.to_dict("records"), token_cache)
+        save_token_cache(token_cache)
 
     generated_at_str = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET")
     log_predictions(events, generated_at_str)
