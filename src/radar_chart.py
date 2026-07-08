@@ -17,7 +17,7 @@ source here provides; faking that axis would be worse than leaving it out.
 
 import math
 
-AXIS_LABELS = ["Strike Acc.", "Grapple Off.", "Grapple Def.", "Finishing", "Exp./Durability"]
+AXIS_LABELS = ["Str. Acc.", "Gr. Off.", "Gr. Def.", "Finish", "Exp/Dur"]
 
 
 def _experience_durability_score(row: dict) -> float:
@@ -58,13 +58,13 @@ def compute_radar_metrics(row: dict) -> list[float]:
 
 def build_radar_chart_svg(
     metrics_a: list[float], metrics_b: list[float], name_a: str, name_b: str,
-    size: int = 220,
+    size: int = 280,
 ) -> str:
-    """Renders a 4-axis radar chart overlaying both fighters' metrics as translucent polygons."""
+    """Renders a 5-axis radar chart overlaying both fighters' metrics as translucent polygons."""
     n = len(AXIS_LABELS)
     cx = cy = size / 2
-    max_r = size * 0.32
-    label_r = size * 0.44
+    max_r = size * 0.24
+    label_r = size * 0.32
 
     def angle(i):
         return -math.pi / 2 + i * (2 * math.pi / n)
@@ -101,7 +101,7 @@ def build_radar_chart_svg(
             anchor = "start"
         elif math.cos(a) < -0.3:
             anchor = "end"
-        labels_svg += f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="9.5" fill="#8a8f9a" text-anchor="{anchor}" dominant-baseline="middle">{label}</text>'
+        labels_svg += f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="8.5" fill="#8a8f9a" text-anchor="{anchor}" dominant-baseline="middle">{label}</text>'
 
     poly_a = polygon_points(metrics_a)
     poly_b = polygon_points(metrics_b)
@@ -110,6 +110,7 @@ def build_radar_chart_svg(
 
     return (
         f'<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" class="radar-chart" role="img" '
+        f'style="overflow: visible;" '
         f'aria-label="Style matchup radar comparing {name_a} and {name_b}">'
         + grid_svg + spokes_svg +
         f'<polygon points="{poly_b}" fill="{color_b}" fill-opacity="0.18" stroke="{color_b}" stroke-width="2"/>'
