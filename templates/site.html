@@ -430,7 +430,7 @@
       movement and render an actual chart. Honest limitation: this tracks PRICE only, not bet volume or
       who's behind a move — true "sharp money" detection needs handle/ticket-count data no free source
       provides, so this is labeled "notable movement," not a sharp-money claim.</p>
-      <p><strong>Suggested stake:</strong> quarter-Kelly, hard-capped at 5% of bankroll regardless of the
+      <p><strong>Suggested stake:</strong> tenth-Kelly, hard-capped at 5% of bankroll regardless of the
       math. In genuinely efficient sports betting markets, an edge large enough to produce a raw half-Kelly
       stake above ~10% is itself a warning sign — it usually means the model is overconfident somewhere
       (a method-of-victory prop resting on a small career sample, a stat that hasn't caught up to recent
@@ -684,7 +684,7 @@
         </div>
       </div>
       <div class="odds-compare-delta">Δ {{ ((p.model_prob - p.book_fair_prob)*100)|round(1) }} percentage points</div>
-      <div class="standout-sub">Suggested stake (¼-Kelly, capped at 5%): {{ p.suggested_stake_pct }}% of bankroll</div>
+      <div class="standout-sub">Suggested stake: {{ p.suggested_stake_pct }}% of bankroll</div>
       {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
     </div>
     {% endfor %}

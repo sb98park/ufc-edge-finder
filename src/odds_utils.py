@@ -75,18 +75,22 @@ def edge_percent(model_prob: float, book_fair_prob: float) -> float:
     return (model_prob - book_fair_prob) * 100.0
 
 
-def kelly_fraction(model_prob: float, american_odds: float, fraction: float = 0.25, max_stake_pct: float = 0.05) -> float:
+def kelly_fraction(model_prob: float, american_odds: float, fraction: float = 0.10, max_stake_pct: float = 0.05) -> float:
     """
     Fractional Kelly stake sizing (as a fraction of bankroll).
 
-    Uses quarter-Kelly, not half-Kelly -- and hard-caps the result at 5% of
-    bankroll regardless. This isn't just conservatism for its own sake: in
-    genuinely efficient sports betting markets, a probability gap large
-    enough to produce a raw half-Kelly stake above ~10% is itself a red flag
-    that the model is overconfident somewhere (a method-of-victory prop
-    resting on a small career sample, a stat that hasn't caught up to recent
-    injury/camp news, etc.) rather than a real edge that big. The cap
-    protects against staking real money on the model's own miscalibration.
+    Uses tenth-Kelly, not half-Kelly -- and hard-caps the result at 5% of
+    bankroll regardless. Quarter-Kelly was tried first but turned out too
+    aggressive in practice: standout props are specifically the biggest
+    edges on the board, and quarter-Kelly already exceeds 5% above roughly
+    a 20-point edge -- meaning nearly every standout prop collapsed to the
+    same 5% ceiling with no variation between a 6% edge and a 40% edge.
+    Tenth-Kelly keeps that differentiation intact across the normal range,
+    reserving the cap for genuinely extreme cases (~45+ point edges), which
+    are themselves a signal of likely model overconfidence rather than a
+    real edge that big -- a method-of-victory prop resting on a small
+    career sample, a stat that hasn't caught up to recent injury or camp
+    news, etc.
     """
     american_odds = float(american_odds)
     b = (american_odds / 100.0) if american_odds > 0 else (100.0 / -american_odds)
