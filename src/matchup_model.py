@@ -156,6 +156,63 @@ def blend_method_probability(
     return 0.7 * fighter_adjusted + 0.3 * opponent_vulnerability
 
 
+BADGE_THRESHOLD = 15.0  # rating points -- below this, a factor isn't worth calling out as a driver
+
+
+def build_factor_badges(matchup: dict) -> dict:
+    """
+    Translates the raw adjustment numbers already computed in predict_matchup
+    into small labeled badges per fighter, e.g. "+ Durability" or "- Layoff",
+    so the model's reasoning is scannable at a glance instead of only living
+    in the prose narrative.
+
+    Advantage-style factors (wrestling/striking/durability) are POSITIVE
+    when they favor fighter A -- badge goes on whichever fighter has the
+    edge, framed as a plus for them.
+
+    Penalty-style factors (layoff/quick-return/age-cliff/missed-weight) are
+    computed as (a's own penalty - b's own penalty) -- badge goes on
+    whichever fighter is actually carrying that specific risk, framed as a
+    minus for them, since the badge should describe what's true about the
+    fighter it's attached to.
+    """
+    badges_a, badges_b = [], []
+
+    def add_advantage(value: float, label: str):
+        if value > BADGE_THRESHOLD:
+            badges_a.append({"label": label, "direction": "+"})
+        elif value < -BADGE_THRESHOLD:
+            badges_b.append({"label": label, "direction": "+"})
+
+    add_advantage(matchup.get("wrestling_adjustment", 0), "Wrestling")
+    add_advantage(matchup.get("striking_adjustment", 0), "Striking")
+    add_advantage(matchup.get("durability_adjustment", 0), "Durability")
+
+    layoff_adj = matchup.get("layoff_adjustment", 0)
+    if layoff_adj < -BADGE_THRESHOLD:
+        badges_a.append({"label": "Layoff", "direction": "-"})
+    elif layoff_adj > BADGE_THRESHOLD:
+        badges_b.append({"label": "Layoff", "direction": "-"})
+
+    if matchup.get("quick_return_flag_a"):
+        badges_a.append({"label": "Quick Return", "direction": "-"})
+    if matchup.get("quick_return_flag_b"):
+        badges_b.append({"label": "Quick Return", "direction": "-"})
+
+    if matchup.get("age_cliff_flag_a"):
+        badges_a.append({"label": "Age Cliff", "direction": "-"})
+    if matchup.get("age_cliff_flag_b"):
+        badges_b.append({"label": "Age Cliff", "direction": "-"})
+
+    missed_weight_adj = matchup.get("missed_weight_adjustment", 0)
+    if missed_weight_adj < -BADGE_THRESHOLD / 3:  # smaller threshold - even one instance should show
+        badges_a.append({"label": "Missed Weight", "direction": "-"})
+    elif missed_weight_adj > BADGE_THRESHOLD / 3:
+        badges_b.append({"label": "Missed Weight", "direction": "-"})
+
+    return {"a": badges_a, "b": badges_b}
+
+
 def classify_style(row: pd.Series) -> str:
     td_acc = _get(row, "td_accuracy_pct", 20)
     strike_acc = _get(row, "strike_accuracy_pct", 45)

@@ -91,6 +91,8 @@
   .odds-compare-value { font-size: 19px; font-weight: 800; margin-top: 2px; }
   .odds-compare-value.book { color: var(--muted); }
   .odds-compare-value.model { color: var(--accent2); }
+  .odds-compare-pct { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .odds-compare-delta { text-align: center; font-size: 10.5px; color: var(--accent2); margin: -4px 0 10px; font-weight: 600; }
   .odds-compare-arrow { color: var(--muted); font-size: 16px; flex-shrink: 0; }
   .standout-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
   .rationale {
@@ -127,16 +129,29 @@
   .parlay-prob { font-size: 11px; color: var(--muted); }
   .parlay-legs { list-style: none; margin: 0; padding: 0; }
   .parlay-leg {
-    font-size: 12.5px; padding: 7px 0; border-bottom: 1px dashed var(--border);
-    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12.5px; padding: 7px 8px; border-bottom: 1px dashed var(--border);
+    display: flex; align-items: center; gap: 8px; border-radius: 6px;
   }
+  .parlay-leg.model-leg { background: rgba(107, 179, 242, 0.08); border-bottom-color: rgba(107, 179, 242, 0.2); }
   .parlay-leg:last-child { border-bottom: none; }
   .parlay-leg-num {
     width: 18px; height: 18px; border-radius: 50%; background: var(--panel2);
     display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); flex-shrink: 0;
   }
+  .model-tag {
+    margin-left: auto; font-size: 8.5px; font-weight: 800; color: #6db3f2; background: #16283a;
+    border-radius: 5px; padding: 2px 5px; letter-spacing: 0.3px; white-space: nowrap; flex-shrink: 0;
+  }
   .parlay-note { font-size: 10.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
   .no-parlays { font-size: 12px; color: var(--muted); padding: 4px 0 8px; }
+
+  /* Edge heatmapping - visual intensity scales with how big the model/book disagreement is */
+  .standout-card.heat-1 { box-shadow: 0 0 0 1px rgba(61, 220, 132, 0.15); }
+  .standout-card.heat-2 { box-shadow: 0 0 0 1px rgba(61, 220, 132, 0.35), 0 0 16px rgba(61, 220, 132, 0.08); }
+  .standout-card.heat-3 { box-shadow: 0 0 0 1.5px rgba(61, 220, 132, 0.6), 0 0 24px rgba(61, 220, 132, 0.15); border-color: rgba(61, 220, 132, 0.4); }
+  tr.edge-heat-1 { background: rgba(61, 220, 132, 0.03); }
+  tr.edge-heat-2 { background: rgba(61, 220, 132, 0.07); border-left: 2px solid rgba(61, 220, 132, 0.4); }
+  tr.edge-heat-3 { background: rgba(61, 220, 132, 0.13); border-left: 2px solid rgba(61, 220, 132, 0.8); }
 
   .event-header { margin: 26px 0 10px; }
   .event-name { font-size: 18px; font-weight: 700; }
@@ -155,7 +170,15 @@
   .matchup-header { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
   .matchup-fighter { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
   .matchup-fighter.right { flex-direction: row-reverse; text-align: right; }
-  .matchup-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; }
+  .matchup-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; display: block; }
+  .factor-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+  .factor-badges.right { justify-content: flex-end; }
+  .factor-badge {
+    font-size: 8.5px; font-weight: 700; border-radius: 6px; padding: 1.5px 5px;
+    white-space: nowrap; letter-spacing: 0.2px;
+  }
+  .factor-badge.pos { background: #10251a; color: var(--green); }
+  .factor-badge.neg { background: #2a1414; color: var(--red); }
   .matchup-vs { text-align: center; flex-shrink: 0; padding: 0 4px; }
   .vs-text { display: block; font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: 0.5px; }
 
@@ -212,11 +235,22 @@
   .model-pick-badge.high .pick-confidence { background: #1a3a26; color: var(--green); }
   .model-pick-badge.medium .pick-confidence { background: #3a331a; color: var(--accent2); }
   .model-pick-badge.low .pick-confidence { background: #3a1a1a; color: var(--red); }
+  .confidence-ring { flex-shrink: 0; }
 
   .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
   .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
   .compare-table th { color: var(--accent2); font-size: 10.5px; font-weight: 700; }
   .compare-table th .fighter-avatar { margin: 0 auto 4px; }
+
+  .tape-block { margin-bottom: 14px; }
+  .tape-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 3px; }
+  .tape-value { font-size: 12px; font-weight: 700; width: 50px; }
+  .tape-value.left { text-align: left; color: var(--accent2); }
+  .tape-value.right { text-align: right; color: var(--muted); }
+  .tape-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; flex: 1; text-align: center; }
+  .tape-bar-track { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--panel2); }
+  .tape-bar-a { background: linear-gradient(90deg, transparent, var(--accent2)); border-radius: 3px 0 0 3px; }
+  .tape-bar-b { background: linear-gradient(90deg, var(--muted), transparent); border-radius: 0 3px 3px 0; }
   .compare-table td:first-child { text-align: left; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.3px; }
   .compare-table tr:last-child td { border-bottom: none; }
 
@@ -325,6 +359,35 @@
     <div class="fighter-avatar" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size*0.38)|round|int }}px;background:linear-gradient(135deg, hsl({{ hue }},55%,32%), hsl({{ hue }},45%,18%));">{{ initials }}</div>
   {%- endmacro %}
 
+  {% macro tape_bar(label, val_a, val_b, unit) %}
+    {% if val_a is not none and val_b is not none %}
+    {% set total = (val_a + val_b) or 1 %}
+    {% set pct_a = (val_a / total * 100) %}
+    <div class="tape-row">
+      <div class="tape-value left">{{ val_a }}{{ unit }}</div>
+      <div class="tape-label">{{ label }}</div>
+      <div class="tape-value right">{{ val_b }}{{ unit }}</div>
+    </div>
+    <div class="tape-bar-track">
+      <div class="tape-bar-a" style="width:{{ pct_a }}%"></div>
+      <div class="tape-bar-b" style="width:{{ 100 - pct_a }}%"></div>
+    </div>
+    {% endif %}
+  {% endmacro %}
+
+  {% macro tale_of_the_tape(comparison) %}
+  {% if comparison %}
+  <div class="market-group-label">📏 Tale of the Tape</div>
+  <div class="tape-block">
+    {{ tape_bar("Age", comparison.a.age, comparison.b.age, "") }}
+    {{ tape_bar("Reach", comparison.a.reach_in, comparison.b.reach_in, "\"") }}
+    {{ tape_bar("Strike Acc.", comparison.a.strike_accuracy_pct, comparison.b.strike_accuracy_pct, "%") }}
+    {{ tape_bar("TD Defense", comparison.a.td_defense_pct, comparison.b.td_defense_pct, "%") }}
+    {{ tape_bar("TD Accuracy", comparison.a.td_accuracy_pct, comparison.b.td_accuracy_pct, "%") }}
+  </div>
+  {% endif %}
+  {% endmacro %}
+
   {% macro fighter_compare_table(comparison) %}
   {% if comparison %}
   <div class="market-group-label">⚖️ Fighter Comparison</div>
@@ -347,13 +410,34 @@
   {% endif %}
   {% endmacro %}
 
+  {% macro confidence_ring(prob, confidence_label, size=34) %}
+    {%- set color = '#3ddc84' if confidence_label == 'High Confidence' else ('#e8c766' if confidence_label == 'Medium Confidence' else '#ff5c5c') -%}
+    {%- set radius = (size / 2) - 3 -%}
+    {%- set circumference = 2 * 3.14159265 * radius -%}
+    {%- set offset = circumference * (1 - prob) -%}
+    <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 {{ size }} {{ size }}" class="confidence-ring">
+      <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="#262b36" stroke-width="3"/>
+      <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="{{ color }}" stroke-width="3"
+        stroke-dasharray="{{ circumference }}" stroke-dashoffset="{{ offset }}" stroke-linecap="round"
+        transform="rotate(-90 {{ size/2 }} {{ size/2 }})"/>
+      <text x="{{ size/2 }}" y="{{ size/2 + 4 }}" font-size="{{ (size*0.28)|round|int }}" font-weight="800" fill="{{ color }}" text-anchor="middle">{{ (prob*100)|round|int }}</text>
+    </svg>
+  {%- endmacro %}
+
   {% macro render_fight_card(fight) %}
   <details class="fight-card">
     <summary>
       <div class="matchup-header">
         <div class="matchup-fighter">
           {{ fighter_avatar(fight.fighter_a) }}
-          <span class="matchup-name">{{ fight.fighter_a }}</span>
+          <div>
+            <span class="matchup-name">{{ fight.fighter_a }}</span>
+            {% if fight.preview and fight.preview.comparison.a.badges %}
+            <div class="factor-badges">
+              {% for b in fight.preview.comparison.a.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}
+            </div>
+            {% endif %}
+          </div>
         </div>
         <div class="matchup-vs">
           <div class="card-position">{{ fight.card_position }}</div>
@@ -361,7 +445,14 @@
           <div class="weight-class">{{ fight.weight_class }}</div>
         </div>
         <div class="matchup-fighter right">
-          <span class="matchup-name">{{ fight.fighter_b }}</span>
+          <div>
+            <span class="matchup-name">{{ fight.fighter_b }}</span>
+            {% if fight.preview and fight.preview.comparison.b.badges %}
+            <div class="factor-badges right">
+              {% for b in fight.preview.comparison.b.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}
+            </div>
+            {% endif %}
+          </div>
           {{ fighter_avatar(fight.fighter_b) }}
         </div>
       </div>
@@ -370,6 +461,7 @@
     <div class="fight-body">
       {% if fight.preview %}
       <div class="model-pick-badge {{ 'high' if fight.preview.confidence_label == 'High Confidence' else ('medium' if fight.preview.confidence_label == 'Medium Confidence' else 'low') }}">
+        {{ confidence_ring(fight.preview.favorite_prob, fight.preview.confidence_label) }}
         <span class="pick-winner">🏆 {{ fight.preview.favorite }}</span>
         <span class="pick-method">by {{ fight.preview.likely_method }}</span>
         <span class="pick-confidence">{{ fight.preview.confidence_label }}</span>
@@ -377,6 +469,7 @@
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
       </div>
+      {{ tale_of_the_tape(fight.preview.comparison) }}
       {{ fighter_compare_table(fight.preview.comparison) }}
       {% endif %}
 
@@ -410,7 +503,7 @@
       <div class="table-scroll"><table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>½-Kelly</th></tr>
         {% for row in fight.edges %}
-        <tr>
+        <tr class="edge-heat-{{ 3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0)) }}">
           <td>{{ row.fighter }}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ '⭐' if row.odds_american < 0 else '🐶' }}</span>{% endif %}</td>
           <td>{{ row.market }}</td>
           <td>{{ odds_cell(row) }}</td>
@@ -460,7 +553,7 @@
   <div class="standout-title">🔥 Standout Props for {{ event_short_name }}</div>
   <div class="standout-grid">
     {% for p in standout_props %}
-    <div class="standout-card">
+    <div class="standout-card heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}">
       <div class="standout-top">
         <div>
           <div class="standout-main">{{ p.fighter }}<span class="standout-vs">{% if p.opponent %} (vs. {{ p.opponent }}){% endif %}</span></div>
@@ -476,13 +569,16 @@
         <div class="odds-compare-col">
           <div class="odds-compare-label">Book Price</div>
           <div class="odds-compare-value book">{{ odds_cell(p) }}</div>
+          <div class="odds-compare-pct">{{ (p.book_fair_prob*100)|round(1) }}%</div>
         </div>
         <div class="odds-compare-arrow">→</div>
         <div class="odds-compare-col">
           <div class="odds-compare-label">Model Says</div>
           <div class="odds-compare-value model">{{ p.model_fair_odds }}</div>
+          <div class="odds-compare-pct">{{ (p.model_prob*100)|round(1) }}%</div>
         </div>
       </div>
+      <div class="odds-compare-delta">Δ {{ ((p.model_prob - p.book_fair_prob)*100)|round(1) }} percentage points</div>
       <div class="standout-sub">½-Kelly suggested stake: {{ p.half_kelly_stake_pct }}% of bankroll</div>
       {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
     </div>
@@ -501,7 +597,7 @@
     </div>
     <ul class="parlay-legs">
       {% for leg in p.legs %}
-      <li class="parlay-leg"><span class="parlay-leg-num">{{ loop.index }}</span>{{ leg }}</li>
+      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}"><span class="parlay-leg-num">{{ loop.index }}</span><span>{{ leg.label }}</span>{% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}</li>
       {% endfor %}
     </ul>
   </div>
@@ -523,7 +619,7 @@
     </div>
     <ul class="parlay-legs">
       {% for leg in p.legs %}
-      <li class="parlay-leg"><span class="parlay-leg-num">{{ loop.index }}</span>{{ leg }}</li>
+      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}"><span class="parlay-leg-num">{{ loop.index }}</span><span>{{ leg.label }}</span>{% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}</li>
       {% endfor %}
     </ul>
   </div>
@@ -545,7 +641,7 @@
     </div>
     <ul class="parlay-legs">
       {% for leg in p.legs %}
-      <li class="parlay-leg"><span class="parlay-leg-num">{{ loop.index }}</span>{{ leg }}</li>
+      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}"><span class="parlay-leg-num">{{ loop.index }}</span><span>{{ leg.label }}</span>{% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}</li>
       {% endfor %}
     </ul>
   </div>

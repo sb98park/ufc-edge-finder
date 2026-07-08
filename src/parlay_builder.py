@@ -118,6 +118,7 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                 "label": _leg_label(leg, format_american_odds(leg["odds_american"])),
                 "model_prob": leg["model_prob"],
                 "decimal_odds": american_to_decimal(leg["odds_american"]),
+                "is_model": False,
             })
 
         # combined winner+length pieces, skipping real contradictions
@@ -130,6 +131,7 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                     "label": f"{_leg_label(w, format_american_odds(w['odds_american']))} + {_leg_label(l, format_american_odds(l['odds_american']))}",
                     "model_prob": w["model_prob"] * l["model_prob"],
                     "decimal_odds": american_to_decimal(w["odds_american"]) * american_to_decimal(l["odds_american"]),
+                    "is_model": False,
                 })
 
     # Model-only projected pieces -- only added for fights that had NO real
@@ -150,9 +152,10 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                     continue
                 pieces.append({
                     "fight_id": fight_id,
-                    "label": _leg_label(row, f"{format_american_odds(proj_odds)} model"),
+                    "label": _leg_label(row, f"{format_american_odds(proj_odds)}"),
                     "model_prob": row["model_prob"],
                     "decimal_odds": american_to_decimal(proj_odds),
+                    "is_model": True,
                 })
 
     return pieces
@@ -161,16 +164,17 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
 def _combine(pieces: tuple[dict, ...]) -> dict:
     combined_decimal = 1.0
     combined_prob = 1.0
-    labels = []
+    legs = []
     fight_ids = []
     for piece in pieces:
         combined_decimal *= piece["decimal_odds"]
         combined_prob *= piece["model_prob"]
-        labels.append(piece["label"])
+        legs.append({"label": piece["label"], "is_model": piece.get("is_model", False)})
         fight_ids.append(piece["fight_id"])
     combined_american = decimal_to_american(combined_decimal)
     return {
-        "legs": labels,
+        "legs": legs,
+        "has_model_legs": any(l["is_model"] for l in legs),
         "fight_ids": fight_ids,
         "combined_american": round(combined_american),
         "combined_american_display": format_american_odds(combined_american),

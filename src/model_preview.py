@@ -8,7 +8,7 @@ clearly labeled as a projection rather than a live-market edge.
 
 import pandas as pd
 
-from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability
+from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges
 
 
 def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
@@ -246,9 +246,15 @@ def build_fight_preview(
             "last_fight_date": row.get("last_fight_date") if pd.notna(row.get("last_fight_date")) else None,
             "last_fight_result": row.get("last_fight_result") if pd.notna(row.get("last_fight_result")) else None,
             "last_fight_method": row.get("last_fight_method") if pd.notna(row.get("last_fight_method")) else None,
+            "strike_accuracy_pct": float(row["strike_accuracy_pct"]) if pd.notna(row.get("strike_accuracy_pct")) else None,
+            "td_defense_pct": float(row["td_defense_pct"]) if pd.notna(row.get("td_defense_pct")) else None,
+            "td_accuracy_pct": float(row["td_accuracy_pct"]) if pd.notna(row.get("td_accuracy_pct")) else None,
         }
 
     comparison = {"a": _fighter_card(fighter_a, row_a), "b": _fighter_card(fighter_b, row_b)}
+    factor_badges = build_factor_badges(matchup)
+    comparison["a"]["badges"] = factor_badges["a"]
+    comparison["b"]["badges"] = factor_badges["b"]
 
     return {
         "favorite": favorite,
