@@ -2,22 +2,22 @@
 Radar/spider chart for the Tale of the Tape: overlays both fighters' core
 model metrics on one chart so the stylistic matchup reads at a glance.
 
-Four axes, not five -- Striking Volume (SLpM-SApM) was considered but left
-out deliberately. That data isn't populated for the roster yet (documented
-in the "How the model works" section), and a radar axis built on mostly-
-missing data would be more misleading than a clean 4-axis chart built
-entirely on stats that ARE populated for every fighter.
-
-Axes:
-  - Striking Accuracy   (strike_accuracy_pct)
+Five axes, all fully populated for the whole roster:
+  - Striking Accuracy    (strike_accuracy_pct)
   - Grappling Offense    (control_time_pct if populated, else td_accuracy_pct)
   - Grappling Defense    (td_defense_pct)
+  - Finishing Ability     (career finish rate: KO+Sub wins / total wins)
   - Experience/Durability (blend of career fight count and how rarely they've been finished)
+
+Striking Defense and Striking Volume (SLpM/SApM) were both considered and
+left out deliberately -- neither is real data this roster has. Striking
+Defense specifically would need opponent-strikes-landed-against data no
+source here provides; faking that axis would be worse than leaving it out.
 """
 
 import math
 
-AXIS_LABELS = ["Strike Acc.", "Grapple Off.", "Grapple Def.", "Exp./Durability"]
+AXIS_LABELS = ["Strike Acc.", "Grapple Off.", "Grapple Def.", "Finishing", "Exp./Durability"]
 
 
 def _experience_durability_score(row: dict) -> float:
@@ -34,17 +34,26 @@ def _experience_durability_score(row: dict) -> float:
     return round((experience_score + durability_score) / 2, 1)
 
 
+def _finish_rate_score(row: dict) -> float:
+    wins = row.get("wins") or 0
+    if wins <= 0:
+        return 0.0
+    finishes = (row.get("ko_wins") or 0) + (row.get("sub_wins") or 0)
+    return round(finishes / wins * 100, 1)
+
+
 def compute_radar_metrics(row: dict) -> list[float]:
-    """Returns [striking_acc, grappling_off, grappling_def, exp_durability], each 0-100."""
+    """Returns [striking_acc, grappling_off, grappling_def, finishing, exp_durability], each 0-100."""
     striking_acc = float(row.get("strike_accuracy_pct") or 0)
 
     control_time = row.get("control_time_pct")
     grappling_off = float(control_time) if control_time not in (None, "") else float(row.get("td_accuracy_pct") or 0)
 
     grappling_def = float(row.get("td_defense_pct") or 0)
+    finishing = _finish_rate_score(row)
     exp_durability = _experience_durability_score(row)
 
-    return [striking_acc, grappling_off, grappling_def, exp_durability]
+    return [striking_acc, grappling_off, grappling_def, finishing, exp_durability]
 
 
 def build_radar_chart_svg(
