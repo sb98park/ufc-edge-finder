@@ -140,6 +140,7 @@ def group_edges_by_card(
             "event_start_time_et": row.get("event_start_time_et", "19:00"),
             "card_position": row["card_position"],
             "weight_class": row["weight_class"],
+            "is_womens_division": bool(row.get("is_womens_division", False)),
             "fighter_a": row["fighter_a"],
             "fighter_b": row["fighter_b"],
             "fighters": {row["fighter_a"], row["fighter_b"]},

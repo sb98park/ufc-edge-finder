@@ -247,6 +247,7 @@ def build_fight_preview(
             "last_fight_date": row.get("last_fight_date") if pd.notna(row.get("last_fight_date")) else None,
             "last_fight_result": row.get("last_fight_result") if pd.notna(row.get("last_fight_result")) else None,
             "last_fight_method": row.get("last_fight_method") if pd.notna(row.get("last_fight_method")) else None,
+            "last_fight_opponent": row.get("last_fight_opponent") if pd.notna(row.get("last_fight_opponent")) else None,
             "strike_accuracy_pct": float(row["strike_accuracy_pct"]) if pd.notna(row.get("strike_accuracy_pct")) else None,
             "td_defense_pct": float(row["td_defense_pct"]) if pd.notna(row.get("td_defense_pct")) else None,
             "td_accuracy_pct": float(row["td_accuracy_pct"]) if pd.notna(row.get("td_accuracy_pct")) else None,

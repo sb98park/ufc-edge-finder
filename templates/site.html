@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UFC Edge Finder</title>
+<title>Octane Alpha | Quantitative UFC Analytics & Edge Detection</title>
 <style>
   :root {
     --bg: #0a0c10; --panel: #14171f; --panel2: #1a1e28; --border: #262b36;
@@ -28,7 +28,7 @@
   table td, table th { white-space: nowrap; }
   .rationale-row td, .model-only-note { white-space: normal; overflow-wrap: break-word; }
 
-  h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: 0.3px; }
+  h1 { font-size: 19px; margin: 0 0 2px; letter-spacing: 0.3px; }
   .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
   .made-with-love {
     text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.3px;
@@ -82,6 +82,13 @@
   .track-record-conf-label { color: var(--muted); }
   .track-record-conf-value { font-weight: 700; }
   .track-record-empty { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .clv-badge {
+    margin-top: 12px; padding: 10px 12px; border-radius: 10px; text-align: center;
+    background: linear-gradient(135deg, #1a2a1a, #14171f 70%); border: 1px solid #2a4a2a;
+  }
+  .clv-badge-label { font-size: 10.5px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.4px; }
+  .clv-badge-value { font-size: 26px; font-weight: 800; margin-top: 2px; }
+  .clv-badge-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
   .badge {
     display: inline-flex; align-items: center; gap: 5px;
     background: var(--panel2); border: 1px solid var(--border); border-radius: 20px;
@@ -239,6 +246,12 @@
   }
 
   .weight-class { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; white-space: nowrap; }
+  .weight-class-badge {
+    margin-top: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+    color: var(--accent2); background: #241f10; border: 1px solid #3a2f14; border-radius: 10px;
+    padding: 2px 8px; white-space: nowrap; display: inline-block;
+  }
+  .weight-class-badge.womens { color: #e88fc7; background: #2a1522; border-color: #4a1f3a; }
   .card-position {
     color: var(--accent); font-size: 9.5px; font-weight: 700; text-transform: uppercase;
     background: #241f10; border-radius: 12px; padding: 2px 7px; display: inline-block; margin-bottom: 3px; white-space: nowrap;
@@ -347,7 +360,7 @@
 </head>
 <body>
   <div class="made-with-love">Made with love, by yours truly, SBP 🤍</div>
-  <h1>🥋 UFC Edge Finder</h1>
+  <h1>🥋 OCTANE ALPHA | UFC Analytics</h1>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
 
   {% if countdown_target_iso %}
@@ -403,6 +416,13 @@
       {% endfor %}
     </div>
     {% endif %}
+    {% if track_record.clv_stats %}
+    <div class="clv-badge">
+      <div class="clv-badge-label">🎯 Beat the Closing Line</div>
+      <div class="clv-badge-value">{{ track_record.clv_stats.beat_pct }}%</div>
+      <div class="clv-badge-sub">{{ track_record.clv_stats.beat }}/{{ track_record.clv_stats.total }} picks · avg {{ '+' if track_record.clv_stats.avg_clv_pct >= 0 else '' }}{{ track_record.clv_stats.avg_clv_pct }}pp move toward the model's side</div>
+    </div>
+    {% endif %}
     {% else %}
     <div class="track-record-empty">No results recorded yet — this fills in after cards happen. Tracking every prediction now so results are honest, not retroactive.</div>
     {% endif %}
@@ -444,6 +464,12 @@
       (a method-of-victory prop resting on a small career sample, a stat that hasn't caught up to recent
       injury or camp news) rather than a real edge that big. The cap exists to protect against staking
       real money on the model's own miscalibration, not to suggest the edge itself is wrong.</p>
+      <p><strong>Closing Line Value (CLV):</strong> the moneyline price on the model's favorite the FIRST
+      time it was logged, compared against the last known price before the fight. If the market moved
+      TOWARD the model's side by fight night (the price shortened), that's a "beat" — a real signal the
+      model saw value before the market caught up, independent of whether the pick actually won. This is
+      why CLV is tracked separately from raw accuracy: a model can lose a coinflip fight while still having
+      correctly read where the market was headed, and that skill is what CLV isolates.</p>
       <p style="color: var(--muted);"><strong>Honest data limitations:</strong> strike-volume (SLpM/SApM),
       control-time percentage, and missed-weight history are new schema fields the model is built to use,
       but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather
@@ -525,8 +551,8 @@
     <tr><td>Stance</td><td>{{ comparison.a.stance }}</td><td>{{ comparison.b.stance }}</td></tr>
     <tr><td>Style</td><td>{{ comparison.a.style }}</td><td>{{ comparison.b.style }}</td></tr>
     <tr><td>Last Fight</td>
-      <td>{% if comparison.a.last_fight_date %}{{ comparison.a.last_fight_date }}{% if comparison.a.last_fight_result %}<br>({{ comparison.a.last_fight_result }} by {{ comparison.a.last_fight_method }}){% endif %}{% else %}—{% endif %}</td>
-      <td>{% if comparison.b.last_fight_date %}{{ comparison.b.last_fight_date }}{% if comparison.b.last_fight_result %}<br>({{ comparison.b.last_fight_result }} by {{ comparison.b.last_fight_method }}){% endif %}{% else %}—{% endif %}</td>
+      <td>{% if comparison.a.last_fight_date %}{{ comparison.a.last_fight_date }}{% if comparison.a.last_fight_result %}<br>({{ comparison.a.last_fight_result }} by {{ comparison.a.last_fight_method }}{% if comparison.a.last_fight_opponent %} against {{ comparison.a.last_fight_opponent }}{% endif %}){% endif %}{% else %}—{% endif %}</td>
+      <td>{% if comparison.b.last_fight_date %}{{ comparison.b.last_fight_date }}{% if comparison.b.last_fight_result %}<br>({{ comparison.b.last_fight_result }} by {{ comparison.b.last_fight_method }}{% if comparison.b.last_fight_opponent %} against {{ comparison.b.last_fight_opponent }}{% endif %}){% endif %}{% else %}—{% endif %}</td>
     </tr>
   </table></div>
   {% endif %}
@@ -564,7 +590,7 @@
         <div class="matchup-vs">
           <div class="card-position">{{ fight.card_position }}</div>
           <span class="vs-text">VS</span>
-          <div class="weight-class">{{ fight.weight_class }}</div>
+          <div class="weight-class-badge{{ ' womens' if fight.is_womens_division else '' }}">{{ "Women's " if fight.is_womens_division else "" }}{{ fight.weight_class }}</div>
         </div>
         <div class="matchup-fighter right">
           <div>

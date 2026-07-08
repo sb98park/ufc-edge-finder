@@ -5,6 +5,13 @@ shift as new data comes in before fight night -- same way a sportsbook line
 moves right up until the bell), then compares against actual results once
 they're recorded.
 
+Also tracks Closing Line Value (CLV): the moneyline price on the model's
+favorite the FIRST time it was logged (pick_odds) vs. the last known price
+before the fight (closing_odds). If the market moved TOWARD the model's
+side by closing (shortened), the model beat the closing line -- a real,
+outcome-independent signal that the model saw value before the market
+caught up, not just "got lucky" on a coinflip result.
+
 There's no live results API for this -- results have to be added manually
 to data/fight_results.csv after a card happens (event_name, fighter_a,
 fighter_b, winner, method). Until then, the track record section stays
@@ -14,8 +21,20 @@ honestly empty rather than faking a number.
 import csv
 import os
 
+from src.odds_utils import american_to_decimal
+
 PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
-FIELDNAMES = ["event_name", "fighter_a", "fighter_b", "favorite", "favorite_prob", "confidence_label", "likely_method", "last_updated"]
+FIELDNAMES = [
+    "event_name", "fighter_a", "fighter_b", "favorite", "favorite_prob",
+    "confidence_label", "likely_method", "pick_odds", "closing_odds", "last_updated",
+]
+
+
+def _favorite_moneyline_odds(fight: dict, favorite: str) -> float | None:
+    for edge in fight.get("edges", []):
+        if edge.get("market") == "Moneyline" and edge.get("fighter") == favorite:
+            return edge.get("odds_american")
+    return None
 
 
 def log_predictions(events: list[dict], generated_at: str) -> None:
@@ -33,6 +52,22 @@ def log_predictions(events: list[dict], generated_at: str) -> None:
             if not preview:
                 continue
             key = (fight["event_name"], fight["fighter_a"], fight["fighter_b"])
+            current_odds = _favorite_moneyline_odds(fight, preview["favorite"])
+            prior = existing.get(key)
+
+            # pick_odds is set ONCE -- the first time we see a live price for
+            # this fight's favorite -- and never overwritten after that, so
+            # it genuinely represents "the price when the model first had a
+            # read on this fight," not a moving target.
+            pick_odds = prior.get("pick_odds") if prior and prior.get("pick_odds") not in (None, "") else None
+            if pick_odds is None and current_odds is not None:
+                pick_odds = current_odds
+
+            # closing_odds updates every run a live price is available,
+            # so whatever it holds when the fight actually happens is
+            # naturally the last real price seen -- the closing line.
+            closing_odds = current_odds if current_odds is not None else (prior.get("closing_odds") if prior else None)
+
             existing[key] = {
                 "event_name": fight["event_name"],
                 "fighter_a": fight["fighter_a"],
@@ -41,6 +76,8 @@ def log_predictions(events: list[dict], generated_at: str) -> None:
                 "favorite_prob": preview["favorite_prob"],
                 "confidence_label": preview["confidence_label"],
                 "likely_method": preview["likely_method"],
+                "pick_odds": pick_odds if pick_odds is not None else "",
+                "closing_odds": closing_odds if closing_odds is not None else "",
                 "last_updated": generated_at,
             }
 
@@ -54,6 +91,32 @@ def log_predictions(events: list[dict], generated_at: str) -> None:
 
 def _pair_key(fighter_a: str, fighter_b: str) -> frozenset:
     return frozenset({fighter_a.strip().lower(), fighter_b.strip().lower()})
+
+
+def _clv_result(pick_odds, closing_odds) -> dict | None:
+    """
+    Beating the closing line means the pick-time price was BETTER value than
+    the closing price for the same side -- i.e. the market moved TOWARD the
+    model's favorite by fight night (odds shortened), meaning the model saw
+    something the market hadn't fully priced in yet. This is independent of
+    whether the bet actually won: a fighter can lose straight-up while the
+    model still correctly anticipated real market movement, which is the
+    whole point of CLV as a model-quality metric distinct from raw record.
+    """
+    if not pick_odds or not closing_odds:
+        return None
+    try:
+        pick_prob = 1 / american_to_decimal(float(pick_odds))
+        closing_prob = 1 / american_to_decimal(float(closing_odds))
+    except (ValueError, ZeroDivisionError):
+        return None
+    beat_clv = closing_prob > pick_prob
+    return {
+        "pick_odds": float(pick_odds), "closing_odds": float(closing_odds),
+        "pick_prob": round(pick_prob, 4), "closing_prob": round(closing_prob, 4),
+        "beat_clv": beat_clv,
+        "clv_pct": round((closing_prob - pick_prob) * 100, 1),
+    }
 
 
 def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> dict | None:
@@ -83,6 +146,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         if not pred:
             continue
         correct = pred["favorite"].strip().lower() == result["winner"].strip().lower()
+        clv = _clv_result(pred.get("pick_odds"), pred.get("closing_odds"))
         matched.append({
             "event_name": result["event_name"],
             "fighter_a": result["fighter_a"],
@@ -91,6 +155,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "confidence_label": pred["confidence_label"],
             "actual_winner": result["winner"],
             "correct": correct,
+            "clv": clv,
         })
 
     if not matched:
@@ -109,10 +174,22 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
                 "accuracy_pct": round(sum(1 for m in subset if m["correct"]) / len(subset) * 100, 1),
             }
 
+    clv_eligible = [m for m in matched if m["clv"] is not None]
+    clv_stats = None
+    if clv_eligible:
+        clv_beats = sum(1 for m in clv_eligible if m["clv"]["beat_clv"])
+        clv_stats = {
+            "total": len(clv_eligible),
+            "beat": clv_beats,
+            "beat_pct": round(clv_beats / len(clv_eligible) * 100, 1),
+            "avg_clv_pct": round(sum(m["clv"]["clv_pct"] for m in clv_eligible) / len(clv_eligible), 1),
+        }
+
     return {
         "total": total,
         "correct": correct_count,
         "accuracy_pct": round(correct_count / total * 100, 1),
         "by_confidence": by_confidence,
+        "clv_stats": clv_stats,
         "results": matched,
     }
