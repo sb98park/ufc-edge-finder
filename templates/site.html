@@ -138,6 +138,9 @@
   .odds-compare-value { font-size: 19px; font-weight: 800; margin-top: 2px; }
   .odds-compare-value.book { color: var(--muted); }
   .odds-compare-value.model { color: var(--accent2); }
+  .move-arrow { font-size: 13px; margin-left: 3px; vertical-align: middle; }
+  .move-arrow.up { color: var(--green); }
+  .move-arrow.down { color: var(--red); }
   .odds-compare-pct { font-size: 10px; color: var(--muted); margin-top: 1px; }
   .odds-compare-delta { text-align: center; font-size: 10.5px; color: var(--accent2); margin: -4px 0 10px; font-weight: 600; }
   .odds-compare-arrow { color: var(--muted); font-size: 16px; flex-shrink: 0; }
@@ -442,6 +445,12 @@
     {%- endif %}
   {%- endmacro %}
 
+  {% macro movement_arrow(row) -%}
+    {%- if row.movement and row.movement.direction == 'shortening' %}<span class="move-arrow up" title="Shortened {{ row.movement.pct_change }}% since last check">▲</span>
+    {%- elif row.movement and row.movement.direction == 'drifting' %}<span class="move-arrow down" title="Drifted {{ row.movement.pct_change }}% since last check">▼</span>
+    {%- endif -%}
+  {%- endmacro %}
+
   {% macro fighter_avatar(name, size=44) %}
     {%- set parts = name.split() -%}
     {%- set initials = (parts[0][0] + parts[-1][0])|upper if parts|length > 1 else name[:2]|upper -%}
@@ -658,7 +667,7 @@
       <div class="odds-compare">
         <div class="odds-compare-col">
           <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book">{{ odds_cell(p) }}</div>
+          <div class="odds-compare-value book">{{ p.odds_american | american }}{{ movement_arrow(p) }}</div>
           <div class="odds-compare-pct">{{ (p.book_fair_prob*100)|round(1) }}%</div>
         </div>
         <div class="odds-compare-arrow">→</div>
