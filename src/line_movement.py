@@ -193,8 +193,28 @@ def build_dual_line_chart_svg(
     def y_at(p):
         return top_pad + (1 - (p - min_p) / range_p) * plot_h
 
+    # Pick gridlines with a MINIMUM PIXEL GAP between adjacent labels, not
+    # just "falls within the value range" -- the old approach could select
+    # candidates that were numerically valid but rendered only a few pixels
+    # apart on a short chart, causing labels to visually overlap (confirmed
+    # live on the smaller single-fighter charts: "60% 50% 40% 35%" crammed
+    # together unreadably). Working in pixel space instead of percentage
+    # space means this scales correctly regardless of chart height.
+    MIN_GRIDLINE_GAP_PX = 16
+    MAX_GRIDLINES = 4
     gridline_candidates = [0.10, 0.20, 0.25, 0.35, 0.40, 0.50, 0.60, 0.65, 0.75, 0.80, 0.90]
-    shown_gridlines = sorted({c for c in gridline_candidates if min_p <= c <= max_p})[:5]
+    in_range = sorted(c for c in gridline_candidates if min_p <= c <= max_p)
+
+    shown_gridlines = []
+    last_y = None
+    for pct in in_range:
+        y = y_at(pct)
+        if last_y is None or abs(y - last_y) >= MIN_GRIDLINE_GAP_PX:
+            shown_gridlines.append(pct)
+            last_y = y
+        if len(shown_gridlines) >= MAX_GRIDLINES:
+            break
+
     grid_svg = ""
     for pct in shown_gridlines:
         y = y_at(pct)
