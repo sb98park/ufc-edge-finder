@@ -231,8 +231,61 @@ def _find_parlays(
               f"(target: {min_american:+.0f}{'+' if max_american is None else f' to {max_american:+.0f}'})")
         return []
 
-    results.sort(key=lambda p: p["combined_prob"], reverse=True)
-    return _select_diverse(results, max_results)
+    return _select_spread(results, max_results)
+
+
+def _select_spread(results: list[dict], max_results: int) -> list[dict]:
+    """
+    Picks results with genuine PAYOUT SPREAD across the range that was
+    actually found, not just the top-N by probability. Sorting by
+    probability alone naturally clusters near the minimum threshold, since
+    the highest-probability combos that still clear the bar tend to be the
+    ones that barely clear it (confirmed live: three "lotto" picks landing
+    at +1000/+1000/+1003 instead of spanning the real range). Divides the
+    payout-sorted pool into max_results buckets and takes the best
+    (highest-probability, still-diverse) option from each, so a 3-slot
+    slate spans low/mid/high instead of clustering at the floor.
+    """
+    if not results:
+        return []
+    if len(results) <= max_results:
+        return _select_diverse(sorted(results, key=lambda p: p["combined_prob"], reverse=True), max_results)
+
+    by_payout = sorted(results, key=lambda p: p["combined_american"])
+    bucket_size = len(by_payout) / max_results
+
+    def _fits(candidate, already_selected, max_shared):
+        fight_id_set = set(candidate["fight_ids"])
+        return all(
+            len(fight_id_set & set(chosen["fight_ids"])) <= max_shared
+            for chosen in already_selected
+        )
+
+    selected = []
+    for i in range(max_results):
+        start = int(i * bucket_size)
+        end = int((i + 1) * bucket_size) if i < max_results - 1 else len(by_payout)
+        bucket = sorted(by_payout[start:end], key=lambda p: p["combined_prob"], reverse=True)
+
+        picked = None
+        for max_shared in range(0, 10):
+            picked = next((c for c in bucket if _fits(c, selected, max_shared)), None)
+            if picked:
+                break
+        if picked:
+            selected.append(picked)
+
+    # Any bucket that failed to yield a pick (e.g. too small/all-overlapping)
+    # gets backfilled from the full payout-sorted pool rather than shorting
+    # the result count.
+    if len(selected) < max_results:
+        for candidate in by_payout:
+            if len(selected) >= max_results:
+                break
+            if candidate not in selected:
+                selected.append(candidate)
+
+    return sorted(selected, key=lambda p: p["combined_american"])
 
 
 def _select_diverse(results: list[dict], max_results: int) -> list[dict]:
