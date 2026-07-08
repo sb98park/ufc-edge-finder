@@ -70,18 +70,31 @@ def get_live_props() -> tuple[pd.DataFrame, str]:
     # different prices (confirmed live) -- most likely from Polymarket
     # having two separate market listings covering the same fight. Keep
     # only the first occurrence of each exact bet.
-    seen = set()
-    deduped = []
+    seen: dict[tuple, dict] = {}
     dupes_removed = 0
+    upgrades = 0
     for row in combined_rows:
         key = _bet_key(row)
-        if key in seen:
-            dupes_removed += 1
+        if key not in seen:
+            seen[key] = row
             continue
-        seen.add(key)
-        deduped.append(row)
+        dupes_removed += 1
+        existing = seen[key]
+        # Prefer whichever duplicate actually has a usable clob_token_id --
+        # blindly keeping "whichever came first" was silently discarding
+        # rows with real chart data in favor of rows without it, for no
+        # reason other than list order (confirmed live: this is exactly
+        # why McGregor vs Holloway's chart fell back to sparse tracking
+        # data while every other fight got full CLOB history).
+        if not existing.get("clob_token_id") and row.get("clob_token_id"):
+            seen[key] = row
+            upgrades += 1
+    deduped = list(seen.values())
     if dupes_removed:
-        print(f"[live_props] removed {dupes_removed} duplicate bet(s) (same fighter/market/selection, different price)")
+        msg = f"[live_props] removed {dupes_removed} duplicate bet(s) (same fighter/market/selection, different price)"
+        if upgrades:
+            msg += f", upgraded {upgrades} to keep the copy with a working clob_token_id"
+        print(msg)
 
     source_label = " + ".join(sources_used) if len(sources_used) > 1 else sources_used[0]
     return pd.DataFrame(deduped), source_label

@@ -387,22 +387,6 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     method = _extract_method(question)
     round_line = _extract_round_line(question)
 
-    # Which of the two fighters is this specific prop about? Checking both
-    # first AND last name tokens is more robust against nicknames/short
-    # forms. Critically: if neither fighter is confidently matched, DROP the
-    # row instead of silently defaulting to fighter_a -- a wrong attribution
-    # (crediting one fighter's real price to the other) is worse than a
-    # missing data point.
-    a_matched = _fighter_name_in_text(fighter_a, question)
-    b_matched = _fighter_name_in_text(fighter_b, question)
-
-    if a_matched and not b_matched:
-        fighter = fighter_a
-    elif b_matched and not a_matched:
-        fighter = fighter_b
-    else:
-        return []  # ambiguous or unmatched -- don't guess
-
     try:
         yes_odds = implied_prob_to_american(price_a)
         no_odds = implied_prob_to_american(1 - price_a)
@@ -412,13 +396,12 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     yes_token = clob_token_ids[0] if len(clob_token_ids) >= 1 else None
     no_token = clob_token_ids[1] if len(clob_token_ids) >= 2 else None
 
-    if method:
-        rows.append({
-            "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
-            "market": "Method", "selection": fighter, "selection_method": method,
-            "odds_american": yes_odds, "clob_token_id": yes_token,
-        })
-    elif "distance" in question.lower():
+    # Fight-level questions ("Fight to Go the Distance?") never name either
+    # fighter and never needed attribution -- handle these BEFORE the
+    # fighter-matching check below, which is only relevant to fighter-
+    # specific method claims. Confirmed live: this ordering bug was
+    # silently dropping every "Goes the Distance" market on the board.
+    if "distance" in question.lower():
         rows.append({
             "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
             "market": "GoesTheDistance", "selection": "Goes The Distance", "selection_method": "",
@@ -429,7 +412,9 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
             "market": "GoesTheDistance", "selection": "Ends In Finish", "selection_method": "",
             "odds_american": no_odds, "clob_token_id": no_token,
         })
-    elif round_line:
+        return rows
+
+    if round_line:
         rows.append({
             "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
             "market": "TotalRounds", "selection": f"Under {round_line}", "selection_method": round_line,
@@ -440,7 +425,36 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
             "market": "TotalRounds", "selection": f"Over {round_line}", "selection_method": round_line,
             "odds_american": no_odds, "clob_token_id": no_token,
         })
+        return rows
 
+    if not method:
+        # not a method claim, not a distance claim, not a rounds claim --
+        # nothing we know how to classify (e.g. a fight-level "won by
+        # KO/TKO regardless of winner" question doesn't map to our
+        # per-fighter Method market structure; safer to skip than force-fit it)
+        return []
+
+    # Method-of-victory claims genuinely DO need to know which fighter --
+    # "Will X win by KO/TKO" is fighter-specific, unlike distance/rounds.
+    # Checking both first AND last name tokens is more robust against
+    # nicknames/short forms. If neither fighter is confidently matched,
+    # DROP the row instead of guessing -- a wrong attribution (crediting
+    # one fighter's real price to the other) is worse than a missing point.
+    a_matched = _fighter_name_in_text(fighter_a, question)
+    b_matched = _fighter_name_in_text(fighter_b, question)
+
+    if a_matched and not b_matched:
+        fighter = fighter_a
+    elif b_matched and not a_matched:
+        fighter = fighter_b
+    else:
+        return []  # ambiguous or unmatched -- don't guess
+
+    rows.append({
+        "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
+        "market": "Method", "selection": fighter, "selection_method": method,
+        "odds_american": yes_odds, "clob_token_id": yes_token,
+    })
     return rows
 
 
