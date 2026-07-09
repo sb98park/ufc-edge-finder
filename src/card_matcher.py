@@ -16,6 +16,18 @@ from src.odds_utils import implied_prob_to_american, format_american_odds
 
 # A consistent accent color per division, purely for faster visual scanning
 # down a long card -- not tied to any model logic.
+# Groups card_position into the actual broadcast segments for divider
+# purposes -- Main Event and Co-Main Event are individually the most
+# important fights, but they're still PART of the "Main Card" broadcast
+# segment, not their own separate segments.
+SEGMENT_LABELS = {
+    "Main Event": "MAIN CARD",
+    "Co-Main Event": "MAIN CARD",
+    "Main Card": "MAIN CARD",
+    "Prelims": "PRELIMINARY CARD",
+    "Early Prelims": "EARLY PRELIMS",
+}
+
 WEIGHT_CLASS_COLORS = {
     "Strawweight": "#e88fc7",
     "Flyweight": "#5ec9d6",
@@ -154,6 +166,7 @@ def group_edges_by_card(
             "event_date": row["event_date"],
             "event_start_time_et": row.get("event_start_time_et", "19:00"),
             "card_position": row["card_position"],
+            "segment_label": SEGMENT_LABELS.get(row["card_position"], row["card_position"]),
             "weight_class": row["weight_class"],
             "weight_class_color": WEIGHT_CLASS_COLORS.get(row["weight_class"], "#8a8f9a"),
             "is_womens_division": bool(row.get("is_womens_division", False)),

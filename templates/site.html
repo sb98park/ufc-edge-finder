@@ -129,15 +129,24 @@
   .hub-card-stat { font-size: 21px; font-weight: 800; color: var(--text); line-height: 1.15; }
   .hub-card-sub { font-size: 10px; color: var(--muted); margin-top: -3px; }
   .hub-card-arrow { position: absolute; top: 12px; right: 12px; color: var(--muted); font-size: 12px; }
-  .hub-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; min-height: auto; padding: 15px; }
-  .hub-card.wide .hub-card-icon { font-size: 24px; }
-  .hub-card.wide .hub-card-text { flex: 1; }
+  .hub-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; min-height: auto; padding: 18px 16px; gap: 14px; }
+  .hub-card.wide .hub-card-icon { font-size: 30px; flex-shrink: 0; }
+  .hub-card.wide .hub-card-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .hub-card.wide .hub-card-stat { font-size: 20px; margin-top: 2px; }
+  .hub-card-matchup { font-size: 13px; color: var(--accent2); font-weight: 600; }
   .back-btn {
     display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--border);
     border-radius: 20px; padding: 7px 14px; color: var(--text); font-size: 12.5px; font-weight: 600;
     cursor: pointer; margin-bottom: 14px; width: fit-content; position: sticky; top: 8px; z-index: 50;
   }
   .back-btn:active { background: var(--accent); color: #14171f; }
+  .segment-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 12px; }
+  .segment-divider:first-child { margin-top: 4px; }
+  .segment-divider-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
+  .segment-divider-label {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 1px; color: var(--accent);
+    white-space: nowrap; padding: 3px 10px; background: #241f10; border: 1px solid #3a2f14; border-radius: 12px;
+  }
 
   .whats-new-banner {
     position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 688px; margin: 0 auto; z-index: 200;
@@ -656,6 +665,18 @@
 
   <div id="hub-view">
     <div class="hub-grid">
+      {% if events %}
+      <div class="hub-card wide" style="--card-accent:#ff5c5c" onclick="showSection('thisweekend')">
+        <div class="hub-card-icon">🥊</div>
+        <div class="hub-card-text">
+          <div class="hub-card-label">This Weekend</div>
+          <div class="hub-card-stat">{{ events[0].event_name.split(':')[0].strip() }}</div>
+          <div class="hub-card-matchup">{{ events[0].event_name.split(':', 1)[1].strip() if ':' in events[0].event_name else '' }}</div>
+          <div class="hub-card-sub">{{ events[0].fights|length }} fights · {{ events[0].event_date }}</div>
+        </div>
+        <span class="hub-card-arrow" style="position:static; font-size:16px;">→</span>
+      </div>
+      {% endif %}
       <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('track')">
         <span class="hub-card-arrow">→</span>
         <div class="hub-card-icon">📈</div>
@@ -684,17 +705,6 @@
         <div class="hub-card-stat">{{ future_events|length }}</div>
         <div class="hub-card-sub">future cards tracked</div>
       </div>
-      {% if events %}
-      <div class="hub-card wide" style="--card-accent:#ff5c5c" onclick="showSection('thisweekend')">
-        <div class="hub-card-icon">🥊</div>
-        <div class="hub-card-text">
-          <div class="hub-card-label">This Weekend</div>
-          <div class="hub-card-stat" style="font-size:18px;">{{ events[0].event_name.split(':')[0].strip() }} — {{ events[0].fights|length }} Fights</div>
-          <div class="hub-card-sub">{{ events[0].event_name.split(':', 1)[1].strip() if ':' in events[0].event_name else '' }} · {{ events[0].event_date }}</div>
-        </div>
-        <span class="hub-card-arrow" style="position:static; font-size:16px;">→</span>
-      </div>
-      {% endif %}
     </div>
   </div>
 
@@ -1146,7 +1156,16 @@
     <div class="event-name">{{ event.event_name }}</div>
     <div class="event-date">{{ event.event_date }}</div>
   </div>
-  {% for fight in event.fights %}{{ render_fight_card(fight) }}{% endfor %}
+  {% for fight in event.fights %}
+  {% if loop.first or fight.segment_label != loop.previtem.segment_label %}
+  <div class="segment-divider">
+    <span class="segment-divider-line"></span>
+    <span class="segment-divider-label">{{ fight.segment_label }}</span>
+    <span class="segment-divider-line"></span>
+  </div>
+  {% endif %}
+  {{ render_fight_card(fight) }}
+  {% endfor %}
   {% endfor %}
   </div>
 
@@ -1159,7 +1178,16 @@
     <div class="event-name">{{ event.event_name }}</div>
     <div class="event-date">{{ event.event_date }}</div>
   </div>
-  {% for fight in event.fights %}{{ render_fight_card(fight) }}{% endfor %}
+  {% for fight in event.fights %}
+  {% if loop.first or fight.segment_label != loop.previtem.segment_label %}
+  <div class="segment-divider">
+    <span class="segment-divider-line"></span>
+    <span class="segment-divider-label">{{ fight.segment_label }}</span>
+    <span class="segment-divider-line"></span>
+  </div>
+  {% endif %}
+  {{ render_fight_card(fight) }}
+  {% endfor %}
   {% endfor %}
   {% endif %}
   </div>
