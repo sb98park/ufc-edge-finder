@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Octane Alpha | Quantitative UFC Analytics & Edge Detection</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Cpolygon points='22,2 39,12 39,32 22,42 5,32 5,12' fill='%230d0f14' stroke='%23d4af37' stroke-width='2'/%3E%3Cline x1='14' y1='34' x2='22' y2='10' stroke='%23d4af37' stroke-width='5' stroke-linecap='round'/%3E%3Cline x1='30' y1='34' x2='22' y2='10' stroke='%23d4af37' stroke-width='5' stroke-linecap='round'/%3E%3Cline x1='17' y1='24.5' x2='27' y2='24.5' stroke='%23d4af37' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #0a0c10; --panel: #14171f; --panel2: #1a1e28; --border: #262b36;
@@ -28,7 +29,16 @@
   table td, table th { white-space: nowrap; }
   .rationale-row td, .model-only-note { white-space: normal; overflow-wrap: break-word; }
 
-  h1 { font-size: 19px; margin: 0 0 2px; letter-spacing: 0.3px; }
+  .brand-header { display: flex; align-items: center; gap: 11px; margin: 2px 0 8px; }
+  .brand-logo { flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(212,175,55,0.35)); }
+  .brand-text { line-height: 1.15; }
+  .brand-name {
+    font-size: 25px; font-weight: 900; letter-spacing: 1px;
+    background: linear-gradient(135deg, #f5e29a, #d4af37 55%, #a3801f);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 22px rgba(212,175,55,0.3);
+  }
+  .brand-tagline { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; margin-top: 1px; }
   .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
   .made-with-love {
     text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.3px;
@@ -430,7 +440,31 @@
 </head>
 <body>
   <div class="made-with-love">Made with love, by yours truly, SBP 🤍</div>
-  <h1>🥋 OCTANE ALPHA | UFC Analytics</h1>
+  <div class="brand-header">
+    <svg width="46" height="46" viewBox="0 0 44 44" class="brand-logo" role="img" aria-label="Octane Alpha logo">
+      <defs>
+        <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1a1508"/>
+          <stop offset="100%" stop-color="#0d0f14"/>
+        </linearGradient>
+        <linearGradient id="aGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#f0d97a"/>
+          <stop offset="100%" stop-color="#d4af37"/>
+        </linearGradient>
+      </defs>
+      <polygon points="22,2 39,12 39,32 22,42 5,32 5,12" fill="url(#hexGrad)" stroke="#d4af37" stroke-width="1.5"/>
+      <line x1="14" y1="34" x2="22" y2="10" stroke="url(#aGrad)" stroke-width="4.5" stroke-linecap="round"/>
+      <line x1="30" y1="34" x2="22" y2="10" stroke="url(#aGrad)" stroke-width="4.5" stroke-linecap="round"/>
+      <line x1="17.3" y1="24.5" x2="26.7" y2="24.5" stroke="url(#aGrad)" stroke-width="3.5" stroke-linecap="round"/>
+      <line x1="32" y1="15" x2="37" y2="10" stroke="#e8c766" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+      <line x1="34" y1="19.5" x2="40" y2="15" stroke="#e8c766" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+      <line x1="36" y1="24" x2="41.5" y2="20.5" stroke="#e8c766" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+    </svg>
+    <div class="brand-text">
+      <div class="brand-name">OCTANE ALPHA</div>
+      <div class="brand-tagline">🥋 UFC Analytics</div>
+    </div>
+  </div>
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
 
   {% if countdown_target_iso %}
