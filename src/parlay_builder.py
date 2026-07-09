@@ -34,21 +34,21 @@ WINNER_FAMILY = {"Moneyline"}  # "Method: X" markets are matched by prefix below
 LENGTH_FAMILY_PREFIXES = ("Total Rounds", "Fight Outcome")
 
 
-def _leg_label(row: dict, odds_display: str) -> str:
-    """Human-readable description of exactly what this leg is."""
+def _leg_label(row: dict) -> str:
+    """Human-readable description of exactly what this leg is (odds shown separately, not embedded here)."""
     market = row["market"]
     if market == "Moneyline":
-        return f"{row['fighter']} ML ({odds_display})"
+        return f"{row['fighter']} ML"
     elif market.startswith("Method"):
         method = market.replace("Method: ", "")
-        return f"{row['fighter']} by {method} ({odds_display})"
+        return f"{row['fighter']} by {method}"
     elif market.startswith("Total Rounds"):
         line_desc = market.replace("Total Rounds ", "")
-        return f"{row['fighter']} {line_desc} rounds ({odds_display})"
+        return f"{row['fighter']} {line_desc} rounds"
     elif market.startswith("Fight Outcome"):
         outcome = market.replace("Fight Outcome: ", "")
-        return f"{row['fighter']} — {outcome} ({odds_display})"
-    return f"{row['fighter']} — {market} ({odds_display})"
+        return f"{row['fighter']} — {outcome}"
+    return f"{row['fighter']} — {market}"
 
 
 def _leg_family(market: str) -> str:
@@ -115,7 +115,8 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
         for leg in winner_legs + length_legs:
             pieces.append({
                 "fight_id": fight_id,
-                "label": _leg_label(leg, format_american_odds(leg["odds_american"])),
+                "label": _leg_label(leg),
+                "odds_display": format_american_odds(leg["odds_american"]),
                 "model_prob": leg["model_prob"],
                 "decimal_odds": american_to_decimal(leg["odds_american"]),
                 "is_model": False,
@@ -126,11 +127,13 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
             for l in length_legs:
                 if _is_contradiction(w, l):
                     continue
+                combined_decimal = american_to_decimal(w["odds_american"]) * american_to_decimal(l["odds_american"])
                 pieces.append({
                     "fight_id": fight_id,
-                    "label": f"{_leg_label(w, format_american_odds(w['odds_american']))} + {_leg_label(l, format_american_odds(l['odds_american']))}",
+                    "label": f"{_leg_label(w)} + {_leg_label(l)}",
+                    "odds_display": format_american_odds(decimal_to_american(combined_decimal)),
                     "model_prob": w["model_prob"] * l["model_prob"],
-                    "decimal_odds": american_to_decimal(w["odds_american"]) * american_to_decimal(l["odds_american"]),
+                    "decimal_odds": combined_decimal,
                     "is_model": False,
                 })
 
@@ -152,7 +155,8 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                     continue
                 pieces.append({
                     "fight_id": fight_id,
-                    "label": _leg_label(row, f"{format_american_odds(proj_odds)}"),
+                    "label": _leg_label(row),
+                    "odds_display": format_american_odds(proj_odds),
                     "model_prob": row["model_prob"],
                     "decimal_odds": american_to_decimal(proj_odds),
                     "is_model": True,
@@ -169,7 +173,7 @@ def _combine(pieces: tuple[dict, ...]) -> dict:
     for piece in pieces:
         combined_decimal *= piece["decimal_odds"]
         combined_prob *= piece["model_prob"]
-        legs.append({"label": piece["label"], "is_model": piece.get("is_model", False)})
+        legs.append({"label": piece["label"], "odds_display": piece["odds_display"], "is_model": piece.get("is_model", False)})
         fight_ids.append(piece["fight_id"])
     combined_american = decimal_to_american(combined_decimal)
     return {

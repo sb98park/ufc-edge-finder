@@ -346,9 +346,12 @@
     width: 18px; height: 18px; border-radius: 50%; background: var(--panel2);
     display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); flex-shrink: 0;
   }
+  .parlay-leg-label { flex: 1; min-width: 0; }
+  .parlay-leg-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; margin-left: auto; }
+  .parlay-leg-odds { font-size: 13px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
   .model-tag {
-    margin-left: auto; font-size: 8.5px; font-weight: 800; color: #6db3f2; background: #16283a;
-    border-radius: 5px; padding: 2px 5px; letter-spacing: 0.3px; white-space: nowrap; flex-shrink: 0;
+    font-size: 8px; font-weight: 800; color: #6db3f2; background: #16283a;
+    border-radius: 5px; padding: 1.5px 5px; letter-spacing: 0.3px; white-space: nowrap;
   }
   .parlay-note { font-size: 10.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
   .no-parlays { font-size: 12px; color: var(--muted); padding: 4px 0 8px; }
@@ -916,7 +919,9 @@
           </div>
         </div>
         <div class="matchup-vs">
+          {% if fight.card_position in ('Main Event', 'Co-Main Event') %}
           <div class="card-position">{{ fight.card_position }}</div>
+          {% endif %}
           {% if fight.result_label %}
           <span class="vs-text result-text">{{ fight.result_label }}</span>
           {% else %}
@@ -1089,7 +1094,14 @@
     </div>
     <ul class="parlay-legs">
       {% for leg in p.legs %}
-      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}"><span class="parlay-leg-num">{{ loop.index }}</span><span>{{ leg.label }}</span>{% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}</li>
+      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}">
+        <span class="parlay-leg-num">{{ loop.index }}</span>
+        <span class="parlay-leg-label">{{ leg.label }}</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">{{ leg.odds_display }}</span>
+          {% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}
+        </span>
+      </li>
       {% endfor %}
     </ul>
   </div>
@@ -1111,7 +1123,14 @@
     </div>
     <ul class="parlay-legs">
       {% for leg in p.legs %}
-      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}"><span class="parlay-leg-num">{{ loop.index }}</span><span>{{ leg.label }}</span>{% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}</li>
+      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}">
+        <span class="parlay-leg-num">{{ loop.index }}</span>
+        <span class="parlay-leg-label">{{ leg.label }}</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">{{ leg.odds_display }}</span>
+          {% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}
+        </span>
+      </li>
       {% endfor %}
     </ul>
   </div>
@@ -1133,7 +1152,14 @@
     </div>
     <ul class="parlay-legs">
       {% for leg in p.legs %}
-      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}"><span class="parlay-leg-num">{{ loop.index }}</span><span>{{ leg.label }}</span>{% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}</li>
+      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}">
+        <span class="parlay-leg-num">{{ loop.index }}</span>
+        <span class="parlay-leg-label">{{ leg.label }}</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">{{ leg.odds_display }}</span>
+          {% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}
+        </span>
+      </li>
       {% endfor %}
     </ul>
   </div>
