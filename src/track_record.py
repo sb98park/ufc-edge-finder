@@ -89,6 +89,44 @@ def log_predictions(events: list[dict], generated_at: str) -> None:
             writer.writerow(row)
 
 
+MIN_RESULTS_FOR_CALIBRATION = 8  # below this, buckets are too noisy to be meaningful
+CALIBRATION_BINS = [(0.50, 0.60), (0.60, 0.70), (0.70, 0.80), (0.80, 0.90), (0.90, 1.01)]
+
+
+def _compute_calibration(matched: list[dict]) -> dict | None:
+    """
+    Buckets predictions by predicted probability and compares the average
+    PREDICTED probability in each bucket against the ACTUAL fraction that
+    came in correct -- a real calibration check, not just an accuracy
+    number. A model that says "70% confident" should win about 70% of
+    those picks over time; this is what actually tests that, rather than
+    just reporting a single blended accuracy figure that could hide
+    systematic over- or under-confidence.
+
+    Returns a "not ready" marker below a minimum sample size -- a
+    calibration curve from 3 results is noise dressed up as insight, not a
+    real signal yet.
+    """
+    eligible = [m for m in matched if m.get("favorite_prob") is not None]
+    if len(eligible) < MIN_RESULTS_FOR_CALIBRATION:
+        return {"ready": False, "total": len(eligible), "needed": MIN_RESULTS_FOR_CALIBRATION}
+
+    points = []
+    for lo, hi in CALIBRATION_BINS:
+        bucket = [m for m in eligible if lo <= m["favorite_prob"] < hi]
+        if not bucket:
+            continue
+        predicted_avg = sum(m["favorite_prob"] for m in bucket) / len(bucket)
+        actual_rate = sum(1 for m in bucket if m["correct"]) / len(bucket)
+        points.append({
+            "predicted": round(predicted_avg, 3),
+            "actual": round(actual_rate, 3),
+            "n": len(bucket),
+        })
+
+    return {"ready": True, "total": len(eligible), "points": points}
+
+
 def _pair_key(fighter_a: str, fighter_b: str) -> frozenset:
     return frozenset({fighter_a.strip().lower(), fighter_b.strip().lower()})
 
@@ -152,6 +190,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "fighter_a": result["fighter_a"],
             "fighter_b": result["fighter_b"],
             "predicted_favorite": pred["favorite"],
+            "favorite_prob": float(pred["favorite_prob"]) if pred.get("favorite_prob") not in (None, "") else None,
             "confidence_label": pred["confidence_label"],
             "actual_winner": result["winner"],
             "correct": correct,
@@ -185,11 +224,14 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "avg_clv_pct": round(sum(m["clv"]["clv_pct"] for m in clv_eligible) / len(clv_eligible), 1),
         }
 
+    calibration = _compute_calibration(matched)
+
     return {
         "total": total,
         "correct": correct_count,
         "accuracy_pct": round(correct_count / total * 100, 1),
         "by_confidence": by_confidence,
         "clv_stats": clv_stats,
+        "calibration": calibration,
         "results": matched,
     }

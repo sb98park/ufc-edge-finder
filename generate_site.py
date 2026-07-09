@@ -30,6 +30,7 @@ from src.line_movement import (
 )
 from src.track_record import log_predictions, compute_track_record
 from src.schedule import build_fight_schedule
+from src.calibration_chart import build_calibration_svg
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -119,6 +120,9 @@ def main():
     generated_at_str = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET")
     log_predictions(events, generated_at_str)
     track_record = compute_track_record()
+    calibration_svg = None
+    if track_record and track_record.get("calibration", {}).get("ready"):
+        calibration_svg = build_calibration_svg(track_record["calibration"]["points"])
 
     event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
 
@@ -196,6 +200,7 @@ def main():
         countdown_label=countdown_label,
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,
+        calibration_svg=calibration_svg,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
         moonshot_parlays=moonshot_parlays,
