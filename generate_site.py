@@ -29,6 +29,7 @@ from src.line_movement import (
     load_token_cache, save_token_cache, update_token_cache,
 )
 from src.track_record import log_predictions, compute_track_record
+from src.schedule import build_fight_schedule
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -131,6 +132,39 @@ def main():
         countdown_target_iso = f"{next_event['event_date']}T{next_event.get('event_start_time_et', '19:00')}:00-04:00"
         countdown_label = next_event["event_name"]
 
+    # Fight-by-fight schedule for live-state tracking -- only for THIS
+    # WEEKEND's tracked card, since future cards are weeks out and this
+    # estimate only matters once a card is imminent/underway. Consumed
+    # entirely client-side (compared against the visitor's own clock), so
+    # this doesn't need a faster server refresh cadence to stay useful.
+    fight_schedule = []
+    if events:
+        raw_card_rows = cards_df.to_dict("records")
+        fight_schedule = build_fight_schedule(
+            raw_card_rows, events[0]["event_date"], events[0].get("event_start_time_et", "17:00")
+        )
+
+    # Results already recorded (if any) -- used to mark fights as FINISHED
+    # server-side, which is more reliable than a time-based estimate once
+    # the user has actually told us the outcome.
+    finished_results = {}
+    if os.path.exists("data/fight_results.csv"):
+        results_df = pd.read_csv("data/fight_results.csv")
+        for _, r in results_df.iterrows():
+            if pd.notna(r.get("winner")):
+                key = frozenset({str(r["fighter_a"]).strip().lower(), str(r["fighter_b"]).strip().lower()})
+                finished_results[key] = {"winner": r["winner"], "method": r.get("method", "")}
+
+    for event in events:
+        for fight in event["fights"]:
+            key = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
+            result = finished_results.get(key)
+            if result:
+                winner_last = result["winner"].strip().split()[-1].upper()
+                fight["result_label"] = f"{winner_last} BY {result['method']}".strip()
+            else:
+                fight["result_label"] = None
+
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
     env.filters["tojson"] = lambda obj: json.dumps(obj, default=str)
@@ -158,6 +192,7 @@ def main():
         standout_props=standout_props,
         event_short_name=event_short_name,
         countdown_target_iso=countdown_target_iso,
+        fight_schedule_json=json.dumps(fight_schedule),
         countdown_label=countdown_label,
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,
