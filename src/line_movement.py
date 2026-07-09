@@ -246,8 +246,8 @@ def build_dual_line_chart_svg(
         end_x, end_y = x_at(last_t), y_at(last_p)
         svg = (
             f'<polyline points="{coords}" fill="none" stroke="{color}" stroke-width="2.5" '
-            f'stroke-linejoin="round" stroke-linecap="round"/>'
-            f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}"/>'
+            f'stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/>'
+            f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" class="chart-draw-endpoint"/>'
         )
         return svg, round(last_p * 100)
 

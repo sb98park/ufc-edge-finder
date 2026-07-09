@@ -113,8 +113,10 @@ def build_radar_chart_svg(
         f'style="overflow: visible;" '
         f'aria-label="Style matchup radar comparing {name_a} and {name_b}">'
         + grid_svg + spokes_svg +
-        f'<polygon points="{poly_b}" fill="{color_b}" fill-opacity="0.18" stroke="{color_b}" stroke-width="2"/>'
-        f'<polygon points="{poly_a}" fill="{color_a}" fill-opacity="0.22" stroke="{color_a}" stroke-width="2"/>'
+        f'<polygon points="{poly_b}" fill="{color_b}" fill-opacity="0.18" stroke="{color_b}" stroke-width="2" '
+        f'class="radar-polygon" style="transform-origin: {cx}px {cy}px;"/>'
+        f'<polygon points="{poly_a}" fill="{color_a}" fill-opacity="0.22" stroke="{color_a}" stroke-width="2" '
+        f'class="radar-polygon" style="transform-origin: {cx}px {cy}px; transition-delay: 0.12s;"/>'
         + labels_svg +
         '</svg>'
     )
