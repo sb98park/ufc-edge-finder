@@ -283,6 +283,14 @@ def top_favorite_picks(
             break
 
     for r in picks:
+        # Fight-level rows (GoesTheDistance, "Fight Outcome") never set an
+        # "opponent" field, since their "fighter" is already the full
+        # matchup string. When mixed into a DataFrame with rows that DO
+        # have one, pandas fills the gap with NaN -- which is truthy in
+        # Python, so a template check like {% if p.opponent %} doesn't
+        # actually filter it out, it just prints the literal word "nan".
+        if pd.isna(r.get("opponent")):
+            r["opponent"] = None
         try:
             r["model_fair_odds"] = format_american_odds(implied_prob_to_american(r["model_prob"]))
         except (ValueError, ZeroDivisionError):
@@ -308,6 +316,8 @@ def top_standout_props(
     standout = standout.sort_values("edge_pct", ascending=False).head(n)
     records = standout.to_dict("records")
     for r in records:
+        if pd.isna(r.get("opponent")):
+            r["opponent"] = None
         try:
             r["model_fair_odds"] = format_american_odds(implied_prob_to_american(r["model_prob"]))
         except (ValueError, ZeroDivisionError):

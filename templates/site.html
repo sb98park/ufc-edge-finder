@@ -1117,7 +1117,7 @@
       <div class="favorite-top">
         <div>
           <div class="favorite-main">{{ p.fighter }}</div>
-          <div class="favorite-vs">vs {{ p.opponent }} · {{ p.market }}</div>
+          <div class="favorite-vs">{% if p.opponent %}vs {{ p.opponent }} · {% endif %}{{ p.market }}</div>
         </div>
         <div class="favorite-odds">{{ p.odds_american | american }}</div>
       </div>

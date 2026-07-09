@@ -376,6 +376,11 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
         points_a, points_b, fighter_a, fighter_b, implied_a=implied_a, implied_b=implied_b
     )
     fight["moneyline_chart_has_implied"] = implied_a or implied_b
+    if points_a and points_b:
+        final_a = sorted(points_a, key=lambda p: p[0])[-1][1]
+        final_b = sorted(points_b, key=lambda p: p[0])[-1][1]
+        print(f"[charts] {fighter_a} vs {fighter_b}: final displayed values -- "
+              f"{fighter_a}={final_a*100:.1f}% {fighter_b}={final_b*100:.1f}% (sum={round((final_a+final_b)*100)}%)")
 
     has_live_ml = bool(ml_edges)
     fight["chart_building"] = has_live_ml and not fight["moneyline_chart"]
