@@ -18,7 +18,7 @@ from src.elo import EloRatingSystem
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
 from src.card_matcher import (
-    load_fight_cards, group_edges_by_card, top_standout_props,
+    load_fight_cards, group_edges_by_card, top_standout_props, top_favorite_picks,
     assign_canonical_fight_ids, group_unmatched_by_fight,
 )
 from src.power_rating import build_effective_ratings
@@ -77,6 +77,7 @@ def main():
         [edge for event in events for fight in event["fights"] for edge in fight["edges"]]
     )
     standout_props = top_standout_props(tracked_edges, fighters_df, n=5, min_edge=5.0)
+    favorite_picks = top_favorite_picks(tracked_edges, fighters_df, n=5)
 
     tracked_edges_list = tracked_edges.to_dict("records") if not tracked_edges.empty else []
 
@@ -199,6 +200,7 @@ def main():
         future_events=future_events,
         unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
         standout_props=standout_props,
+        favorite_picks=favorite_picks,
         event_short_name=event_short_name,
         countdown_target_iso=countdown_target_iso,
         fight_schedule_json=json.dumps(fight_schedule),

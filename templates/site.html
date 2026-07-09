@@ -128,6 +128,24 @@
   .hub-card-label { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
   .hub-card-stat { font-size: 21px; font-weight: 800; color: var(--text); line-height: 1.15; }
   .hub-card-sub { font-size: 10px; color: var(--muted); margin-top: -3px; }
+
+  .favorite-card {
+    background: linear-gradient(145deg, #10251a, #14171f 60%);
+    border: 1px solid #1e4a2f; border-radius: 14px; padding: 14px 16px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .favorite-card:active { transform: scale(0.98); }
+  @media (hover: hover) {
+    .favorite-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(61,220,132,0.15); }
+  }
+  .favorite-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .favorite-main { font-size: 14.5px; font-weight: 800; }
+  .favorite-vs { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .favorite-odds { font-size: 19px; font-weight: 800; color: var(--green); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .favorite-prob-row { margin-bottom: 8px; }
+  .favorite-prob-bar-track { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+  .favorite-prob-bar { height: 100%; background: linear-gradient(90deg, #1e4a2f, var(--green)); border-radius: 3px; transition: width 0.9s ease-out; }
+  .favorite-prob-label { font-size: 10.5px; color: var(--muted); font-weight: 600; }
   .hub-card-arrow { position: absolute; top: 12px; right: 12px; color: var(--muted); font-size: 12px; }
   .hub-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; min-height: auto; padding: 18px 16px; gap: 14px; }
   .hub-card.wide .hub-card-icon { font-size: 30px; flex-shrink: 0; }
@@ -694,6 +712,13 @@
         <div class="hub-card-stat">{{ standout_props|length }}</div>
         <div class="hub-card-sub">flagged right now</div>
       </div>
+      <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('favorites')">
+        <span class="hub-card-arrow">→</span>
+        <div class="hub-card-icon">💎</div>
+        <div class="hub-card-label">Favorite Picks</div>
+        <div class="hub-card-stat">{{ favorite_picks|length }}</div>
+        <div class="hub-card-sub">straight bets worth real size</div>
+      </div>
       <div class="hub-card" style="--card-accent:#6db3f2" onclick="showSection('parlays')">
         <span class="hub-card-arrow">→</span>
         <div class="hub-card-icon">💰</div>
@@ -1082,6 +1107,35 @@
   {% endif %}
   </div>
 
+  <div class="detail-section" data-section="favorites">
+  {% if favorite_picks %}
+  <div class="standout-title">💎 Favorite Picks</div>
+  <div class="parlay-subtitle">Straight, single-leg bets in a realistic odds range ({{ '-220' }} to {{ '+160' }}) — built for real size, not a coinflip longshot or a -4000 favorite with no payout. Sorted by model probability, so the safest genuine plays lead.</div>
+  <div class="standout-grid">
+    {% for p in favorite_picks %}
+    <div class="favorite-card reveal-target" data-key="{{ p.fighter }}|{{ p.market }}">
+      <div class="favorite-top">
+        <div>
+          <div class="favorite-main">{{ p.fighter }}</div>
+          <div class="favorite-vs">vs {{ p.opponent }} · {{ p.market }}</div>
+        </div>
+        <div class="favorite-odds">{{ p.odds_american | american }}</div>
+      </div>
+      <div class="favorite-prob-row">
+        <div class="favorite-prob-bar-track">
+          <div class="favorite-prob-bar" data-target-width="{{ (p.model_prob*100)|round(1) }}%" style="width:0%"></div>
+        </div>
+        <div class="favorite-prob-label countup">{{ (p.model_prob*100)|round(1) }}% model confidence</div>
+      </div>
+      {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="no-parlays">Nothing in the realistic straight-bet range right now — check back as odds update, or the model just doesn't see a clean high-probability edge on this card yet.</div>
+  {% endif %}
+  </div>
+
   <div class="detail-section" data-section="parlays">
   {% if bankroll_parlays %}
   <div class="parlay-section-title bankroll" id="section-bankroll">💰 Bankroll Builder</div>
@@ -1234,6 +1288,16 @@
       // moment this section opens (observer normally handles this on its
       // own, but a synchronous nudge avoids any single-frame lag).
       requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+      // Explicitly re-trigger the "new item" glow for anything marked new
+      // within the section just opened -- CSS animations don't reliably
+      // advance while an ancestor is display:none, so this guarantees the
+      // glow actually plays the moment you navigate in, rather than
+      // depending on browser-specific timing.
+      document.querySelectorAll(`.detail-section[data-section="${id}"] .new-item-glow`).forEach(el => {
+        el.classList.remove('new-item-glow');
+        void el.offsetWidth;
+        el.classList.add('new-item-glow');
+      });
     }
     function showHub() {
       document.getElementById('detail-view').style.display = 'none';
@@ -1489,26 +1553,16 @@
       if (!('IntersectionObserver' in window)) {
         // Older browser fallback -- just show everything immediately, no animation
         document.querySelectorAll('.reveal-target').forEach(el => el.classList.add('revealed'));
-        document.querySelectorAll('.tape-bar-a, .tape-bar-b').forEach(el => { el.style.width = el.dataset.targetWidth; });
+        document.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar').forEach(el => { el.style.width = el.dataset.targetWidth; });
         document.querySelectorAll('.ring-progress').forEach(el => { el.style.strokeDashoffset = el.dataset.targetOffset; });
         document.querySelectorAll('.radar-chart').forEach(el => el.classList.add('revealed'));
         return;
       }
 
-      // Prep each moneyline chart's line(s) for the "draw in" effect --
-      // measuring the real path length up front so the dash pattern
-      // exactly matches each line's actual length (varies per chart).
-      document.querySelectorAll('.chart-draw-line').forEach(line => {
-        try {
-          const length = line.getTotalLength();
-          line.style.strokeDasharray = length;
-          line.style.strokeDashoffset = length;
-        } catch (e) { /* not a measurable path element -- leave as-is */ }
-      });
-
       const cardObserver = new IntersectionObserver((entries, obs) => {
-        entries.forEach(entry => {
+        entries.forEach((entry, i) => {
           if (!entry.isIntersecting) return;
+          entry.target.style.transitionDelay = `${Math.min(i * 0.06, 0.4)}s`;
           entry.target.classList.add('revealed');
           obs.unobserve(entry.target);
         });
@@ -1519,19 +1573,39 @@
         entries.forEach(entry => {
           if (!entry.isIntersecting) return;
           const el = entry.target;
-          el.querySelectorAll('.tape-bar-a, .tape-bar-b').forEach(bar => {
+          el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar').forEach(bar => {
             bar.style.width = bar.dataset.targetWidth;
           });
           el.querySelectorAll('.ring-progress').forEach(ring => {
             ring.style.strokeDashoffset = ring.dataset.targetOffset;
           });
           el.querySelectorAll('.radar-chart').forEach(chart => chart.classList.add('revealed'));
-          el.querySelectorAll('.chart-draw-line').forEach(line => { line.style.strokeDashoffset = 0; });
+          // Measure line length HERE, not upfront on page load -- this
+          // element is only just now confirmed genuinely visible (that's
+          // what isIntersecting means), which matters because iOS Safari
+          // can silently return 0 from getTotalLength() on an SVG that
+          // was still inside a display:none ancestor, while Chrome
+          // doesn't have that restriction. Measuring only once truly
+          // visible avoids the platform difference entirely.
+          el.querySelectorAll('.chart-draw-line').forEach(line => {
+            try {
+              const length = line.getTotalLength();
+              if (!length) return;
+              line.style.strokeDasharray = length;
+              line.style.strokeDashoffset = length;
+              // Force the browser to register the "hidden" (full offset)
+              // state in a paint before flipping to 0, otherwise both
+              // changes can land in the same frame and the transition
+              // snaps instead of animating.
+              void line.getBoundingClientRect();
+              requestAnimationFrame(() => { line.style.strokeDashoffset = 0; });
+            } catch (e) { /* not a measurable path element -- leave as-is */ }
+          });
           el.classList.add('revealed');
           obs.unobserve(el);
         });
       }, { threshold: 0.15 });
-      document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block').forEach(el => fillObserver.observe(el));
+      document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card').forEach(el => fillObserver.observe(el));
     })();
     // Ripple tap effect on all accordion toggles
     (function() {

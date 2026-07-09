@@ -347,6 +347,30 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
         points_a = [(t, 1 - p) for t, p in points_b]
         implied_a = True
         print(f"[charts] {fighter_a}: derived as inverse of {fighter_b}'s real line (no independent data)")
+    elif len(points_a) >= 2 and len(points_b) >= 2:
+        # Both sides have independently-sourced real data -- sanity check
+        # that they're actually consistent with each other. A genuine
+        # two-way market's two prices should sum close to 100% (minor vig
+        # aside); if they don't, the two independent sources disagree
+        # (different fetch timing, a stale point, etc.), and displaying
+        # both raw numbers would show percentages that don't add up.
+        # Confirmed live: McGregor 43% + Holloway 70% = 113%, a real bug.
+        latest_a = sorted(points_a, key=lambda p: p[0])[-1][1]
+        latest_b = sorted(points_b, key=lambda p: p[0])[-1][1]
+        if abs((latest_a + latest_b) - 1.0) > 0.08:
+            orig_len_a, orig_len_b = len(points_a), len(points_b)
+            if orig_len_a >= orig_len_b:
+                points_b = [(t, 1 - p) for t, p in points_a]
+                implied_b = True
+                print(f"[charts] {fighter_a} vs {fighter_b}: independent sides didn't sum to 100% "
+                      f"({latest_a*100:.0f}% + {latest_b*100:.0f}%) -- trusting {fighter_a}'s longer "
+                      f"history ({orig_len_a} pts vs {orig_len_b}), deriving {fighter_b} as its complement")
+            else:
+                points_a = [(t, 1 - p) for t, p in points_b]
+                implied_a = True
+                print(f"[charts] {fighter_a} vs {fighter_b}: independent sides didn't sum to 100% "
+                      f"({latest_a*100:.0f}% + {latest_b*100:.0f}%) -- trusting {fighter_b}'s longer "
+                      f"history ({orig_len_b} pts vs {orig_len_a}), deriving {fighter_a} as its complement")
 
     fight["moneyline_chart"] = build_dual_line_chart_svg(
         points_a, points_b, fighter_a, fighter_b, implied_a=implied_a, implied_b=implied_b

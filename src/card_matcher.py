@@ -244,6 +244,54 @@ def group_edges_by_card(
     return events, unmatched_df
 
 
+def top_favorite_picks(
+    edges_df: pd.DataFrame, fighters_df: pd.DataFrame | None = None, n: int = 5,
+    min_odds: float = -220, max_odds: float = 160, min_edge: float = 3.0,
+) -> list[dict]:
+    """
+    Straight, single-leg picks meant to actually be bet with real size --
+    the opposite instinct from the parlay tiers. A -4000 "safe" favorite
+    isn't a real pick (no real payout for the risk), and a +900 longshot
+    isn't something to put 5-10 units on even if the model likes it, so
+    both ends get filtered out by the odds range. Within that range, only
+    picks the model has genuine conviction on qualify (min_edge), then
+    sorted by model probability -- the highest-probability picks are what
+    you'd actually want to size up on, not just the biggest edge number.
+    Capped to one per fight so this doesn't turn into five props on the
+    same two fighters.
+    """
+    if edges_df.empty:
+        return []
+    candidates = edges_df[
+        (edges_df["edge_pct"] >= min_edge)
+        & (edges_df["odds_american"] >= min_odds)
+        & (edges_df["odds_american"] <= max_odds)
+    ].copy()
+    if candidates.empty:
+        return []
+
+    candidates = candidates.sort_values("model_prob", ascending=False)
+    seen_fights = set()
+    picks = []
+    for _, row in candidates.iterrows():
+        fight_id = row.get("fight_id")
+        if fight_id in seen_fights:
+            continue
+        seen_fights.add(fight_id)
+        picks.append(row.to_dict())
+        if len(picks) >= n:
+            break
+
+    for r in picks:
+        try:
+            r["model_fair_odds"] = format_american_odds(implied_prob_to_american(r["model_prob"]))
+        except (ValueError, ZeroDivisionError):
+            r["model_fair_odds"] = "N/A"
+        if fighters_df is not None:
+            r["rationale"] = explain_edge(r, fighters_df)
+    return picks
+
+
 def top_standout_props(
     edges_df: pd.DataFrame, fighters_df: pd.DataFrame | None = None, n: int = 5, min_edge: float = 5.0
 ) -> list[dict]:
