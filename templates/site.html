@@ -119,6 +119,14 @@
   @keyframes new-badge-pop {
     0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); }
   }
+  .new-item-glow {
+    animation: new-item-pulse 2s ease-in-out 4;
+    border-radius: 12px;
+  }
+  @keyframes new-item-pulse {
+    0%, 100% { outline: 2px solid rgba(61,220,132,0.15); outline-offset: 2px; }
+    50% { outline: 2px solid rgba(61,220,132,0.75); outline-offset: 3px; }
+  }
   .whats-new-text { color: var(--green); font-weight: 600; line-height: 1.4; }
   .whats-new-dismiss {
     background: none; border: none; color: var(--muted); font-size: 14px; cursor: pointer;
@@ -175,10 +183,20 @@
   .info-body p { margin: 10px 0; }
 
   .standout-title { font-size: 15px; color: var(--accent); margin-bottom: 10px; font-weight: 700; }
+  .scatter-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
+  .scatter-chart { display: block; max-width: 100%; height: auto; }
+  .scatter-legend { display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
+  .scatter-legend-item { font-size: 9.5px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .scatter-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
   .standout-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 26px; }
   .standout-card {
     background: linear-gradient(145deg, #1d1810, #14171f 65%);
     border: 1px solid #3a2f14; border-radius: 14px; padding: 14px 16px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .standout-card:active { transform: scale(0.98); }
+  @media (hover: hover) {
+    .standout-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
   }
   .standout-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .standout-main { font-size: 14.5px; font-weight: 700; }
@@ -274,7 +292,11 @@
 
   details.fight-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-    margin-bottom: 12px; overflow: hidden;
+    margin-bottom: 12px; overflow: hidden; transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  details.fight-card summary:active { transform: scale(0.995); }
+  @media (hover: hover) {
+    details.fight-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
   }
   details.fight-card summary {
     padding: 14px 12px; cursor: pointer; list-style: none;
@@ -833,6 +855,16 @@
 
   {% if standout_props %}
   <div class="standout-title" id="section-standout">🔥 Standout Props for {{ event_short_name }}</div>
+  {% if standout_scatter_svg %}
+  <div class="scatter-block">
+    {{ standout_scatter_svg | safe }}
+    <div class="scatter-legend">
+      <span class="scatter-legend-item"><span class="scatter-dot" style="background:#3ddc84;"></span>20%+ edge</span>
+      <span class="scatter-legend-item"><span class="scatter-dot" style="background:#e8c766;"></span>10-20%</span>
+      <span class="scatter-legend-item"><span class="scatter-dot" style="background:#8a8f9a;"></span>5-10%</span>
+    </div>
+  </div>
+  {% endif %}
   <div class="standout-grid">
     {% for p in standout_props %}
     <div class="standout-card heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}" data-key="{{ p.fighter }}|{{ p.market }}">
@@ -1099,6 +1131,7 @@
               badge.textContent = 'NEW';
               el.style.position = 'relative';
               el.appendChild(badge);
+              el.classList.add('new-item-glow');
             }
           });
         }
