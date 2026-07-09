@@ -157,6 +157,8 @@
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  .reveal-target { opacity: 0; transform: translateY(10px); transition: opacity 0.45s ease-out, transform 0.45s ease-out; }
+  .reveal-target.revealed { opacity: 1; transform: translateY(0); }
   .pin-btn {
     background: none; border: none; font-size: 15px; cursor: pointer; opacity: 0.35;
     padding: 4px 6px; flex-shrink: 0; filter: grayscale(1);
@@ -441,6 +443,9 @@
   .model-pick-badge.medium { background: linear-gradient(135deg, #241f10, #14171f); border: 1px solid #4a3f1e; }
   .model-pick-badge.low { background: linear-gradient(135deg, #241010, #14171f); border: 1px solid #4a1e1e; }
   .pick-winner { font-weight: 800; font-size: 13.5px; }
+  .momentum-arrow { font-size: 9.5px; font-weight: 700; border-radius: 6px; padding: 1.5px 5px; margin-left: 2px; }
+  .momentum-arrow.up { background: #10251a; color: var(--green); }
+  .momentum-arrow.down { background: #2a1414; color: var(--red); }
   .pick-method { color: var(--muted); }
   .pick-confidence {
     margin-left: auto; font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -450,6 +455,30 @@
   .model-pick-badge.medium .pick-confidence { background: #3a331a; color: var(--accent2); }
   .model-pick-badge.low .pick-confidence { background: #3a1a1a; color: var(--red); }
   .confidence-ring { flex-shrink: 0; }
+  .ring-progress { transition: stroke-dashoffset 1s ease-out; }
+  summary { position: relative; overflow: hidden; }
+  .tour-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 300; }
+  .tour-highlight {
+    position: relative; z-index: 301;
+    box-shadow: 0 0 0 3px var(--accent), 0 0 24px rgba(212,175,55,0.5) !important;
+    border-radius: 12px;
+  }
+  .tour-tooltip {
+    position: fixed; z-index: 302; max-width: 260px; background: var(--panel);
+    border: 1px solid var(--accent); border-radius: 10px; padding: 12px 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5); font-size: 12px; line-height: 1.5;
+  }
+  .tour-tooltip-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .tour-skip { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; padding: 4px; }
+  .tour-next { background: var(--accent); color: #14171f; border: none; border-radius: 6px; font-size: 11.5px; font-weight: 700; padding: 6px 12px; cursor: pointer; }
+  .tour-step-count { font-size: 10px; color: var(--muted); }
+  .ripple-effect {
+    position: absolute; border-radius: 50%; background: rgba(212,175,55,0.35);
+    transform: scale(0); animation: ripple-expand 0.55s ease-out; pointer-events: none;
+  }
+  @keyframes ripple-expand {
+    to { transform: scale(1); opacity: 0; }
+  }
 
   .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
   .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
@@ -463,11 +492,12 @@
   .tape-value.right { text-align: right; color: var(--muted); }
   .tape-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; flex: 1; text-align: center; }
   .tape-bar-track { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--panel2); }
-  .tape-bar-a { background: linear-gradient(90deg, transparent, var(--accent2)); border-radius: 3px 0 0 3px; }
-  .tape-bar-b { background: linear-gradient(90deg, var(--muted), transparent); border-radius: 0 3px 3px 0; }
+  .tape-bar-a { background: linear-gradient(90deg, transparent, var(--accent2)); border-radius: 3px 0 0 3px; transition: width 0.9s ease-out; }
+  .tape-bar-b { background: linear-gradient(90deg, var(--muted), transparent); border-radius: 0 3px 3px 0; transition: width 0.9s ease-out; }
 
   .radar-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
-  .radar-chart { display: block; max-width: 100%; height: auto; }
+  .radar-chart { display: block; max-width: 100%; height: auto; transform: scale(0.3); transform-origin: center; opacity: 0; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease-out; }
+  .radar-chart.revealed { transform: scale(1); opacity: 1; }
   .radar-legend { display: flex; gap: 16px; margin-top: 4px; }
   .radar-legend-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
   .radar-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -743,8 +773,8 @@
       <div class="tape-value right">{{ val_b }}{{ unit }}</div>
     </div>
     <div class="tape-bar-track">
-      <div class="tape-bar-a" style="width:{{ pct_a }}%"></div>
-      <div class="tape-bar-b" style="width:{{ 100 - pct_a }}%"></div>
+      <div class="tape-bar-a" data-target-width="{{ pct_a }}%" style="width:0%"></div>
+      <div class="tape-bar-b" data-target-width="{{ 100 - pct_a }}%" style="width:0%"></div>
     </div>
     {% endif %}
   {% endmacro %}
@@ -801,14 +831,14 @@
     <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 {{ size }} {{ size }}" class="confidence-ring">
       <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="#262b36" stroke-width="3"/>
       <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="{{ color }}" stroke-width="3"
-        stroke-dasharray="{{ circumference }}" stroke-dashoffset="{{ offset }}" stroke-linecap="round"
-        transform="rotate(-90 {{ size/2 }} {{ size/2 }})"/>
+        stroke-dasharray="{{ circumference }}" stroke-dashoffset="{{ circumference }}" data-target-offset="{{ offset }}" stroke-linecap="round"
+        class="ring-progress" transform="rotate(-90 {{ size/2 }} {{ size/2 }})"/>
       <text x="{{ size/2 }}" y="{{ size/2 + 4 }}" font-size="{{ (size*0.28)|round|int }}" font-weight="800" fill="{{ color }}" text-anchor="middle">{{ (prob*100)|round|int }}</text>
     </svg>
   {%- endmacro %}
 
   {% macro render_fight_card(fight) %}
-  <details class="fight-card{{ ' finished-row' if fight.result_label else '' }}" data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}">
+  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
     <summary>
       <div class="matchup-header">
         <div class="matchup-fighter">
@@ -851,6 +881,11 @@
       <div class="model-pick-badge {{ 'high' if fight.preview.confidence_label == 'High Confidence' else ('medium' if fight.preview.confidence_label == 'Medium Confidence' else 'low') }}">
         {{ confidence_ring(fight.preview.favorite_prob, fight.preview.confidence_label) }}
         <span class="pick-winner">🏆 {{ fight.preview.favorite }}</span>
+        {% if fight.momentum %}
+        <span class="momentum-arrow {{ fight.momentum.direction }}" title="Model's read on {{ fight.preview.favorite }} has moved {{ fight.momentum.delta_pct }}pp {{ 'up' if fight.momentum.direction == 'up' else 'down' }} recently">
+          {{ '▲' if fight.momentum.direction == 'up' else '▼' }} {{ fight.momentum.delta_pct|abs }}pp
+        </span>
+        {% endif %}
         <span class="pick-method">by {{ fight.preview.likely_method }}</span>
         <span class="pick-confidence">{{ fight.preview.confidence_label }}</span>
       </div>
@@ -944,7 +979,7 @@
   <div class="standout-title" id="section-standout">🔥 Standout Props for {{ event_short_name }}</div>
   <div class="standout-grid">
     {% for p in standout_props %}
-    <div class="standout-card heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}" data-key="{{ p.fighter }}|{{ p.market }}">
+    <div class="standout-card reveal-target heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}" data-key="{{ p.fighter }}|{{ p.market }}">
       <div class="standout-top">
         <div>
           <div class="standout-main">{{ p.fighter }}<span class="standout-vs">{% if p.opponent %} (vs. {{ p.opponent }}){% endif %}</span></div>
@@ -981,7 +1016,7 @@
   <div class="parlay-section-title bankroll" id="section-bankroll">💰 Bankroll Builder</div>
   <div class="parlay-subtitle">2-3 leg combos in the +100 to +300 range, built from picks the model favors — including same-fight combos and model-projected legs (labeled "model") for fights with no live prop line yet.</div>
   {% for p in bankroll_parlays %}
-  <div class="parlay-card bankroll">
+  <div class="parlay-card reveal-target bankroll">
     <div class="parlay-top">
       <div class="parlay-odds">{{ p.combined_american_display }}</div>
       <div class="parlay-prob">Model-estimated hit rate: {{ (p.combined_prob*100)|round(1) }}%</div>
@@ -1003,7 +1038,7 @@
   <div class="parlay-section-title lotto" id="section-lotto">🎰 Lotto Parlays</div>
   <div class="parlay-subtitle">Long-shot combos at +1000 or better, any leg count — ranked by the model's best combined odds of hitting, drawing from across the whole card for real variety.</div>
   {% for p in lotto_parlays %}
-  <div class="parlay-card lotto">
+  <div class="parlay-card reveal-target lotto">
     <div class="parlay-top">
       <div class="parlay-odds">{{ p.combined_american_display }}</div>
       <div class="parlay-prob">Model-estimated hit rate: {{ (p.combined_prob*100)|round(2) }}%</div>
@@ -1025,7 +1060,7 @@
   <div class="parlay-section-title moonshot" id="section-moonshot">🚀 Moonshot</div>
   <div class="parlay-subtitle">+5000 or better. This has essentially no business hitting — any leg count, purely for fun, ranked by the model's best combined odds among everything that clears the bar.</div>
   {% for p in moonshot_parlays %}
-  <div class="parlay-card moonshot">
+  <div class="parlay-card reveal-target moonshot">
     <div class="parlay-top">
       <div class="parlay-odds">{{ p.combined_american_display }}</div>
       <div class="parlay-prob">Model-estimated hit rate: {{ (p.combined_prob*100)|round(3) }}%</div>
@@ -1303,12 +1338,132 @@
       });
     })();
 
-    // Staggered fade-in for cards on load
+    // Scroll-triggered reveal: cards fade in as they enter view (not just
+    // on load, so the effect covers the whole page, not just the first
+    // screenful), and data visualizations (tale-of-tape bars, confidence
+    // rings, radar charts) animate their fill in at the same moment rather
+    // than rendering instantly.
     (function() {
-      const cards = document.querySelectorAll('.fight-card, .standout-card, .parlay-card');
-      cards.forEach((card, i) => {
-        card.style.animation = `fade-in-up 0.4s ease-out ${Math.min(i * 0.04, 0.6)}s both`;
+      if (!('IntersectionObserver' in window)) {
+        // Older browser fallback -- just show everything immediately, no animation
+        document.querySelectorAll('.reveal-target').forEach(el => el.classList.add('revealed'));
+        document.querySelectorAll('.tape-bar-a, .tape-bar-b').forEach(el => { el.style.width = el.dataset.targetWidth; });
+        document.querySelectorAll('.ring-progress').forEach(el => { el.style.strokeDashoffset = el.dataset.targetOffset; });
+        document.querySelectorAll('.radar-chart').forEach(el => el.classList.add('revealed'));
+        return;
+      }
+
+      const cardObserver = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('revealed');
+          obs.unobserve(entry.target);
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+      document.querySelectorAll('.reveal-target').forEach(el => cardObserver.observe(el));
+
+      const fillObserver = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const el = entry.target;
+          el.querySelectorAll('.tape-bar-a, .tape-bar-b').forEach(bar => {
+            bar.style.width = bar.dataset.targetWidth;
+          });
+          el.querySelectorAll('.ring-progress').forEach(ring => {
+            ring.style.strokeDashoffset = ring.dataset.targetOffset;
+          });
+          el.querySelectorAll('.radar-chart').forEach(chart => chart.classList.add('revealed'));
+          obs.unobserve(el);
+        });
+      }, { threshold: 0.15 });
+      document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block').forEach(el => fillObserver.observe(el));
+    })();
+    // Ripple tap effect on all accordion toggles
+    (function() {
+      document.querySelectorAll('summary').forEach(el => {
+        el.addEventListener('click', function(e) {
+          const rect = el.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height);
+          const ripple = document.createElement('span');
+          ripple.className = 'ripple-effect';
+          ripple.style.width = ripple.style.height = size + 'px';
+          ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+          ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+          el.appendChild(ripple);
+          setTimeout(() => ripple.remove(), 550);
+        });
       });
+    })();
+    // First-visit feature tour
+    (function() {
+      const TOUR_KEY = 'ufc-edge-finder-tour-seen';
+      try { if (localStorage.getItem(TOUR_KEY)) return; } catch (e) { return; }
+
+      const steps = [
+        { selector: '.countdown-card', text: '⏱ Live countdown to fight night — automatically switches to live tracking once the card actually starts.' },
+        { selector: '#section-trackrecord', text: '📈 Every model prediction is logged BEFORE results are known, so this track record is honest, not looked-up after the fact.' },
+        { selector: '.fight-card', text: '🏆 Each fight has a full model breakdown underneath — probability, a style-matchup radar, and the reasoning behind the pick.' },
+        { selector: '#section-standout', text: '🔥 The biggest gaps between the model and the market, sorted by edge size — start here if you\'re short on time.' },
+      ];
+
+      let overlay = null, tooltip = null, currentTarget = null, stepIndex = 0;
+
+      function cleanup() {
+        if (currentTarget) currentTarget.classList.remove('tour-highlight');
+        if (overlay) overlay.remove();
+        if (tooltip) tooltip.remove();
+      }
+
+      function endTour() {
+        cleanup();
+        try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {}
+      }
+
+      function showStep(i) {
+        if (i >= steps.length) { endTour(); return; }
+        const target = document.querySelector(steps[i].selector);
+        if (!target) { showStep(i + 1); return; }
+
+        if (currentTarget) currentTarget.classList.remove('tour-highlight');
+        currentTarget = target;
+        stepIndex = i;
+        target.classList.add('tour-highlight');
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.className = 'tour-overlay';
+          document.body.appendChild(overlay);
+        }
+        if (!tooltip) {
+          tooltip = document.createElement('div');
+          tooltip.className = 'tour-tooltip';
+          document.body.appendChild(tooltip);
+        }
+
+        tooltip.innerHTML = `
+          <div>${steps[i].text}</div>
+          <div class="tour-tooltip-actions">
+            <span class="tour-step-count">${i + 1}/${steps.length}</span>
+            <div>
+              <button class="tour-skip" id="tour-skip-btn">Skip</button>
+              <button class="tour-next" id="tour-next-btn">${i === steps.length - 1 ? 'Done' : 'Next'}</button>
+            </div>
+          </div>
+        `;
+
+        setTimeout(() => {
+          const rect = target.getBoundingClientRect();
+          const tooltipTop = Math.min(rect.bottom + 12, window.innerHeight - 160);
+          tooltip.style.top = Math.max(tooltipTop, 12) + 'px';
+          tooltip.style.left = Math.max(Math.min(rect.left, window.innerWidth - 280), 12) + 'px';
+        }, 350);
+
+        document.getElementById('tour-next-btn').onclick = () => showStep(i + 1);
+        document.getElementById('tour-skip-btn').onclick = endTour;
+      }
+
+      setTimeout(() => showStep(0), 1200);
     })();
   </script>
 </body>

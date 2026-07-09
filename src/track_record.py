@@ -19,6 +19,7 @@ honestly empty rather than faking a number.
 """
 
 import csv
+import json
 import os
 
 from src.odds_utils import american_to_decimal
@@ -26,8 +27,11 @@ from src.odds_utils import american_to_decimal
 PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
 FIELDNAMES = [
     "event_name", "fighter_a", "fighter_b", "favorite", "favorite_prob",
-    "confidence_label", "likely_method", "pick_odds", "closing_odds", "last_updated",
+    "confidence_label", "likely_method", "pick_odds", "closing_odds",
+    "favorite_prob_history", "last_updated",
 ]
+MOMENTUM_HISTORY_CAP = 10
+MOMENTUM_THRESHOLD = 0.03  # 3 percentage points -- below this, treat as noise/stable
 
 
 def _favorite_moneyline_odds(fight: dict, favorite: str) -> float | None:
@@ -68,6 +72,21 @@ def log_predictions(events: list[dict], generated_at: str) -> None:
             # naturally the last real price seen -- the closing line.
             closing_odds = current_odds if current_odds is not None else (prior.get("closing_odds") if prior else None)
 
+            # Rolling favorite_prob history, for the momentum indicator --
+            # if the model's favorite FLIPS between runs, start a fresh
+            # history rather than comparing probabilities across two
+            # different fighters, which wouldn't mean anything.
+            prior_favorite = prior.get("favorite") if prior else None
+            try:
+                prior_history = json.loads(prior.get("favorite_prob_history") or "[]") if prior else []
+            except (json.JSONDecodeError, TypeError):
+                prior_history = []
+
+            if prior_favorite != preview["favorite"]:
+                new_history = [{"prob": preview["favorite_prob"], "date": generated_at}]
+            else:
+                new_history = (prior_history + [{"prob": preview["favorite_prob"], "date": generated_at}])[-MOMENTUM_HISTORY_CAP:]
+
             existing[key] = {
                 "event_name": fight["event_name"],
                 "fighter_a": fight["fighter_a"],
@@ -78,6 +97,7 @@ def log_predictions(events: list[dict], generated_at: str) -> None:
                 "likely_method": preview["likely_method"],
                 "pick_odds": pick_odds if pick_odds is not None else "",
                 "closing_odds": closing_odds if closing_odds is not None else "",
+                "favorite_prob_history": json.dumps(new_history),
                 "last_updated": generated_at,
             }
 
@@ -87,6 +107,41 @@ def log_predictions(events: list[dict], generated_at: str) -> None:
         writer.writeheader()
         for row in existing.values():
             writer.writerow(row)
+
+
+def compute_momentum(favorite_prob_history_json: str) -> dict | None:
+    """
+    Compares the oldest vs newest retained probability for the model's
+    current favorite. Returns None if there's not enough history yet, or
+    if the model's read has genuinely been stable (below the noise
+    threshold) -- this should stay quiet most of the time, since the
+    model's inputs don't change often; when it DOES show a real move,
+    that's usually because something concrete changed (an injury/missed-
+    weight update, a data correction), which is worth surfacing.
+    """
+    try:
+        history = json.loads(favorite_prob_history_json or "[]")
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if len(history) < 2:
+        return None
+    oldest, newest = history[0]["prob"], history[-1]["prob"]
+    delta = newest - oldest
+    if abs(delta) < MOMENTUM_THRESHOLD:
+        return None
+    return {"direction": "up" if delta > 0 else "down", "delta_pct": round(delta * 100, 1)}
+
+
+def load_momentum_by_key() -> dict:
+    """{(fighter_a, fighter_b): momentum_dict_or_None} for every logged fight."""
+    if not os.path.exists(PREDICTIONS_LOG_PATH):
+        return {}
+    result = {}
+    with open(PREDICTIONS_LOG_PATH, newline="") as f:
+        for row in csv.DictReader(f):
+            key = _pair_key(row["fighter_a"], row["fighter_b"])
+            result[key] = compute_momentum(row.get("favorite_prob_history", ""))
+    return result
 
 
 MIN_RESULTS_FOR_CALIBRATION = 8  # below this, buckets are too noisy to be meaningful

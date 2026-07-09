@@ -14,6 +14,21 @@ from src.model_preview import build_fight_preview, build_full_market_projection
 from src.odds_utils import implied_prob_to_american, format_american_odds
 
 
+# A consistent accent color per division, purely for faster visual scanning
+# down a long card -- not tied to any model logic.
+WEIGHT_CLASS_COLORS = {
+    "Strawweight": "#e88fc7",
+    "Flyweight": "#5ec9d6",
+    "Bantamweight": "#f2a65a",
+    "Featherweight": "#b18af2",
+    "Lightweight": "#6db3f2",
+    "Welterweight": "#6ddc9a",
+    "Middleweight": "#f26d6d",
+    "Light Heavyweight": "#e8955e",
+    "Heavyweight": "#d64545",
+}
+
+
 def _normalize_name(name: str) -> str:
     """
     Strips accents and standardizes punctuation so minor spelling differences
@@ -140,6 +155,7 @@ def group_edges_by_card(
             "event_start_time_et": row.get("event_start_time_et", "19:00"),
             "card_position": row["card_position"],
             "weight_class": row["weight_class"],
+            "weight_class_color": WEIGHT_CLASS_COLORS.get(row["weight_class"], "#8a8f9a"),
             "is_womens_division": bool(row.get("is_womens_division", False)),
             "fighter_a": row["fighter_a"],
             "fighter_b": row["fighter_b"],

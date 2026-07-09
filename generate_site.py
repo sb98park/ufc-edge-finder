@@ -28,7 +28,7 @@ from src.line_movement import (
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
     load_token_cache, save_token_cache, update_token_cache,
 )
-from src.track_record import log_predictions, compute_track_record
+from src.track_record import log_predictions, compute_track_record, load_momentum_by_key
 from src.schedule import build_fight_schedule
 from src.calibration_chart import build_calibration_svg
 
@@ -119,6 +119,11 @@ def main():
 
     generated_at_str = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET")
     log_predictions(events, generated_at_str)
+    momentum_by_key = load_momentum_by_key()
+    for event in events:
+        for fight in event["fights"]:
+            key = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
+            fight["momentum"] = momentum_by_key.get(key)
     track_record = compute_track_record()
     calibration_svg = None
     if track_record and track_record.get("calibration", {}).get("ready"):
