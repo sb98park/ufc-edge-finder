@@ -162,6 +162,7 @@ def _snapshot_points(history: list[dict]) -> list[tuple[float, float]]:
 def build_dual_line_chart_svg(
     points_a: list[tuple[float, float]], points_b: list[tuple[float, float]],
     name_a: str, name_b: str, width: int = 300, height: int = 170,
+    implied_a: bool = False, implied_b: bool = False,
 ) -> str | None:
     """
     Renders both fighters' probability history on one chart with a real
@@ -256,14 +257,14 @@ def build_dual_line_chart_svg(
     legend_svg = ""
     ly = 10
     if pct_a is not None:
-        short_name_a = name_a.split()[-1]
+        short_name_a = name_a.split()[-1] + (" ~" if implied_a else "")
         legend_svg += (
             f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{LINE_COLOR_A}"/>'
             f'<text x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_A}" text-anchor="end">{short_name_a} {pct_a}%</text>'
         )
         ly += 13
     if pct_b is not None:
-        short_name_b = name_b.split()[-1]
+        short_name_b = name_b.split()[-1] + (" ~" if implied_b else "")
         legend_svg += (
             f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{LINE_COLOR_B}"/>'
             f'<text x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {pct_b}%</text>'
@@ -271,7 +272,7 @@ def build_dual_line_chart_svg(
 
     return (
         f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" class="dual-chart" role="img" '
-        f'aria-label="{name_a} vs {name_b} probability over time">'
+        f'aria-label="{name_a} vs {name_b} probability over time{" (one side implied)" if (implied_a or implied_b) else ""}">'
         + grid_svg + axis_svg + line_a_svg + line_b_svg + legend_svg + x_labels_svg +
         '</svg>'
     )
@@ -331,7 +332,26 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
         print(f"[charts] {fighter_a} vs {fighter_b}: using REAL CLOB data "
               f"({len(points_a)} + {len(points_b)} points)")
 
-    fight["moneyline_chart"] = build_dual_line_chart_svg(points_a, points_b, fighter_a, fighter_b)
+    # If exactly one side has real history, derive the other as its
+    # complement (1 - p at each timestamp) instead of leaving it blank --
+    # a two-way moneyline's two probabilities are genuinely complementary
+    # (ignoring vig), so this is a legitimate derived line, not a guess.
+    # Confirmed live: fights like Cortez/Wang were only showing one side's
+    # movement even though the other side's line is fully implied by it.
+    implied_a, implied_b = False, False
+    if len(points_a) >= 2 and len(points_b) < 2:
+        points_b = [(t, 1 - p) for t, p in points_a]
+        implied_b = True
+        print(f"[charts] {fighter_b}: derived as inverse of {fighter_a}'s real line (no independent data)")
+    elif len(points_b) >= 2 and len(points_a) < 2:
+        points_a = [(t, 1 - p) for t, p in points_b]
+        implied_a = True
+        print(f"[charts] {fighter_a}: derived as inverse of {fighter_b}'s real line (no independent data)")
+
+    fight["moneyline_chart"] = build_dual_line_chart_svg(
+        points_a, points_b, fighter_a, fighter_b, implied_a=implied_a, implied_b=implied_b
+    )
+    fight["moneyline_chart_has_implied"] = implied_a or implied_b
 
     has_live_ml = bool(ml_edges)
     fight["chart_building"] = has_live_ml and not fight["moneyline_chart"]

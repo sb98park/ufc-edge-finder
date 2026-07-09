@@ -183,11 +183,6 @@
   .info-body p { margin: 10px 0; }
 
   .standout-title { font-size: 15px; color: var(--accent); margin-bottom: 10px; font-weight: 700; }
-  .scatter-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
-  .scatter-chart { display: block; max-width: 100%; height: auto; }
-  .scatter-legend { display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
-  .scatter-legend-item { font-size: 9.5px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
-  .scatter-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
   .standout-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 26px; }
   .standout-card {
     background: linear-gradient(145deg, #1d1810, #14171f 65%);
@@ -372,6 +367,7 @@
     padding: 10px 12px; margin: 8px 0; text-align: center;
   }
   .chart-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-align: left; }
+  .chart-caption { font-size: 9.5px; color: #5a5f6a; margin-top: 5px; line-height: 1.4; }
   .chart-placeholder-text { font-size: 11.5px; color: var(--muted); text-align: left; padding: 8px 0; }
   .sparkline, .dual-chart { display: block; max-width: 100%; height: auto; }
   details.chart-toggle {
@@ -781,6 +777,9 @@
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
         {{ fight.moneyline_chart | safe }}
+        {% if fight.moneyline_chart_has_implied %}
+        <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
+        {% endif %}
       </div>
       {% elif fight.chart_building %}
       <div class="chart-block chart-placeholder">
@@ -855,16 +854,6 @@
 
   {% if standout_props %}
   <div class="standout-title" id="section-standout">🔥 Standout Props for {{ event_short_name }}</div>
-  {% if standout_scatter_svg %}
-  <div class="scatter-block">
-    {{ standout_scatter_svg | safe }}
-    <div class="scatter-legend">
-      <span class="scatter-legend-item"><span class="scatter-dot" style="background:#3ddc84;"></span>20%+ edge</span>
-      <span class="scatter-legend-item"><span class="scatter-dot" style="background:#e8c766;"></span>10-20%</span>
-      <span class="scatter-legend-item"><span class="scatter-dot" style="background:#8a8f9a;"></span>5-10%</span>
-    </div>
-  </div>
-  {% endif %}
   <div class="standout-grid">
     {% for p in standout_props %}
     <div class="standout-card heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}" data-key="{{ p.fighter }}|{{ p.market }}">
