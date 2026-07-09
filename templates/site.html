@@ -109,19 +109,35 @@
   .live-header-micro strong { color: var(--text); font-weight: 700; }
   .live-header-micro .next-lock { color: var(--accent2); font-weight: 700; }
 
-  .quick-nav {
-    position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto;
-    padding: 8px 0; margin: 0 -16px 14px; padding-left: 16px; padding-right: 16px;
-    background: rgba(10,12,16,0.92); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--border); scrollbar-width: none;
+  .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .hub-card {
+    background: linear-gradient(145deg, #1a1e28, #14171f 65%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 14px;
+    cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;
+    display: flex; flex-direction: column; gap: 6px; min-height: 108px; position: relative; overflow: hidden;
   }
-  .quick-nav::-webkit-scrollbar { display: none; }
-  .quick-nav a {
-    flex-shrink: 0; font-size: 11.5px; font-weight: 600; color: var(--text); text-decoration: none;
-    background: var(--panel2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;
-    white-space: nowrap;
+  .hub-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--card-accent, var(--accent));
   }
-  .quick-nav a:active { background: var(--accent); color: #14171f; }
+  .hub-card:active { transform: scale(0.97); }
+  @media (hover: hover) {
+    .hub-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+  }
+  .hub-card-icon { font-size: 19px; }
+  .hub-card-label { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .hub-card-stat { font-size: 21px; font-weight: 800; color: var(--text); line-height: 1.15; }
+  .hub-card-sub { font-size: 10px; color: var(--muted); margin-top: -3px; }
+  .hub-card-arrow { position: absolute; top: 12px; right: 12px; color: var(--muted); font-size: 12px; }
+  .hub-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; min-height: auto; padding: 15px; }
+  .hub-card.wide .hub-card-icon { font-size: 24px; }
+  .hub-card.wide .hub-card-text { flex: 1; }
+  .back-btn {
+    display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 7px 14px; color: var(--text); font-size: 12.5px; font-weight: 600;
+    cursor: pointer; margin-bottom: 14px; width: fit-content; position: sticky; top: 8px; z-index: 50;
+  }
+  .back-btn:active { background: var(--accent); color: #14171f; }
 
   .whats-new-banner {
     position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 688px; margin: 0 auto; z-index: 200;
@@ -617,25 +633,9 @@
   </div>
   {% endif %}
 
-  <nav class="quick-nav">
-    <a href="#section-trackrecord">📈 Track Record</a>
-    {% if standout_props %}<a href="#section-standout">🔥 Standout</a>{% endif %}
-    {% if notable_movements %}<a href="#section-movement">📊 Movement</a>{% endif %}
-    {% if bankroll_parlays %}<a href="#section-bankroll">💰 Bankroll</a>{% endif %}
-    {% if lotto_parlays %}<a href="#section-lotto">🎰 Lotto</a>{% endif %}
-    {% if moonshot_parlays %}<a href="#section-moonshot">🚀 Moonshot</a>{% endif %}
-    {% if events %}<a href="#section-thisweekend">🥊 This Card</a>{% endif %}
-    {% if future_events %}<a href="#section-future">🔮 Next Up</a>{% endif %}
-  </nav>
-
   <div id="whats-new-banner" class="whats-new-banner" style="display:none;">
     <div class="whats-new-text" id="whats-new-text"></div>
     <button class="whats-new-dismiss" onclick="window.__dismissToast();">✕</button>
-  </div>
-
-  <div id="pinned-section" style="display:none;">
-    <div class="section-title">📌 Your Pinned Fights</div>
-    <div id="pinned-container"></div>
   </div>
 
   <div class="meta-row">
@@ -654,6 +654,54 @@
   <div class="notice">{{ live_error }}</div>
   {% endif %}
 
+  <div id="hub-view">
+    <div class="hub-grid">
+      <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('track')">
+        <span class="hub-card-arrow">→</span>
+        <div class="hub-card-icon">📈</div>
+        <div class="hub-card-label">Track Record</div>
+        <div class="hub-card-stat">{{ track_record.accuracy_pct ~ '%' if track_record else '—' }}</div>
+        <div class="hub-card-sub">{{ track_record.total ~ ' picks tracked' if track_record else 'No results yet' }}</div>
+      </div>
+      <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('standout')">
+        <span class="hub-card-arrow">→</span>
+        <div class="hub-card-icon">🔥</div>
+        <div class="hub-card-label">Standout Props</div>
+        <div class="hub-card-stat">{{ standout_props|length }}</div>
+        <div class="hub-card-sub">flagged right now</div>
+      </div>
+      <div class="hub-card" style="--card-accent:#6db3f2" onclick="showSection('parlays')">
+        <span class="hub-card-arrow">→</span>
+        <div class="hub-card-icon">💰</div>
+        <div class="hub-card-label">Parlays</div>
+        <div class="hub-card-stat">{{ (bankroll_parlays|length) + (lotto_parlays|length) + (moonshot_parlays|length) }}</div>
+        <div class="hub-card-sub">slates across 3 tiers</div>
+      </div>
+      <div class="hub-card" style="--card-accent:#e88fc7" onclick="showSection('coming')">
+        <span class="hub-card-arrow">→</span>
+        <div class="hub-card-icon">🔮</div>
+        <div class="hub-card-label">Coming Up</div>
+        <div class="hub-card-stat">{{ future_events|length }}</div>
+        <div class="hub-card-sub">future cards tracked</div>
+      </div>
+      {% if events %}
+      <div class="hub-card wide" style="--card-accent:#ff5c5c" onclick="showSection('thisweekend')">
+        <div class="hub-card-icon">🥊</div>
+        <div class="hub-card-text">
+          <div class="hub-card-label">This Weekend</div>
+          <div class="hub-card-stat" style="font-size:18px;">{{ events[0].event_name.split(':')[0].strip() }} — {{ events[0].fights|length }} Fights</div>
+          <div class="hub-card-sub">{{ events[0].event_name.split(':', 1)[1].strip() if ':' in events[0].event_name else '' }} · {{ events[0].event_date }}</div>
+        </div>
+        <span class="hub-card-arrow" style="position:static; font-size:16px;">→</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="detail-view" style="display:none;">
+    <div class="back-btn" onclick="showHub()">← Back to Overview</div>
+
+  <div class="detail-section" data-section="track">
   <div class="track-record-card" id="section-trackrecord">
     <div class="track-record-title">📈 Model Track Record</div>
     {% if track_record %}
@@ -745,6 +793,7 @@
       than guess) until real data backs them. Everything else above is live and active.</p>
     </div>
   </details>
+  </div>
 
   {% macro odds_cell(row) -%}
     {{ row.odds_american | american }}
@@ -965,6 +1014,7 @@
   </details>
   {% endmacro %}
 
+  <div class="detail-section" data-section="standout">
   {% if notable_movements %}
   <div class="parlay-section-title movement" id="section-movement">📊 Notable Line Movement</div>
   <div class="parlay-subtitle">Lines that have moved meaningfully (15%+) since the last refresh. This tracks real PRICE movement only — not bet volume or who's behind it, so treat this as "worth a second look," not confirmed sharp action.</div>
@@ -1015,7 +1065,9 @@
     {% endfor %}
   </div>
   {% endif %}
+  </div>
 
+  <div class="detail-section" data-section="parlays">
   {% if bankroll_parlays %}
   <div class="parlay-section-title bankroll" id="section-bankroll">💰 Bankroll Builder</div>
   <div class="parlay-subtitle">2-3 leg combos in the +100 to +300 range, built from picks the model favors — including same-fight combos and model-projected legs (labeled "model") for fights with no live prop line yet.</div>
@@ -1081,6 +1133,13 @@
   <div class="parlay-section-title moonshot" id="section-moonshot">🚀 Moonshot</div>
   <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
   {% endif %}
+  </div>
+
+  <div class="detail-section" data-section="thisweekend">
+  <div id="pinned-section" style="display:none;">
+    <div class="section-title">📌 Your Pinned Fights</div>
+    <div id="pinned-container"></div>
+  </div>
 
   {% for event in events %}
   <div class="event-header" {% if loop.first %}id="section-thisweekend"{% endif %}>
@@ -1089,7 +1148,9 @@
   </div>
   {% for fight in event.fights %}{{ render_fight_card(fight) }}{% endfor %}
   {% endfor %}
+  </div>
 
+  <div class="detail-section" data-section="coming">
   {% if future_events %}
   <div class="section-title" id="section-future">🔮 Coming Up Next</div>
   <div class="parlay-subtitle">Verified upcoming UFC cards beyond this weekend, sourced from official event announcements. Live odds included where available; model projections always shown otherwise.</div>
@@ -1101,8 +1162,31 @@
   {% for fight in event.fights %}{{ render_fight_card(fight) }}{% endfor %}
   {% endfor %}
   {% endif %}
+  </div>
+  </div>
 
   <script>
+    // Hub / detail section navigation
+    function showSection(id) {
+      document.getElementById('hub-view').style.display = 'none';
+      const detailView = document.getElementById('detail-view');
+      detailView.style.display = 'block';
+      document.querySelectorAll('.detail-section').forEach(el => {
+        el.style.display = (el.dataset.section === id) ? 'block' : 'none';
+      });
+      window.scrollTo(0, 0);
+      // Give hidden-until-now elements a chance to be re-measured for the
+      // scroll-reveal observers, in case they're already in view the
+      // moment this section opens (observer normally handles this on its
+      // own, but a synchronous nudge avoids any single-frame lag).
+      requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    }
+    function showHub() {
+      document.getElementById('detail-view').style.display = 'none';
+      document.getElementById('hub-view').style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
     // Countdown timer + live-state tracking
     (function() {
       const card = document.querySelector('.countdown-card');
@@ -1418,9 +1502,8 @@
 
       const steps = [
         { selector: '.countdown-card', text: '⏱ Live countdown to fight night — automatically switches to live tracking once the card actually starts.' },
-        { selector: '#section-trackrecord', text: '📈 Every model prediction is logged BEFORE results are known, so this track record is honest, not looked-up after the fact.' },
-        { selector: '.fight-card', text: '🏆 Each fight has a full model breakdown underneath — probability, a style-matchup radar, and the reasoning behind the pick.' },
-        { selector: '#section-standout', text: '🔥 The biggest gaps between the model and the market, sorted by edge size — start here if you\'re short on time.' },
+        { selector: '.hub-grid', text: '👋 Everything is organized into sections now — tap any card below to dive in, and use Back to return here.' },
+        { selector: '.hub-card.wide', text: '🥊 This Weekend has the full fight-by-fight breakdown — each fight includes a model probability, style-matchup radar, and the reasoning behind the pick.' },
       ];
 
       let overlay = null, tooltip = null, currentTarget = null, stepIndex = 0;
@@ -1481,6 +1564,23 @@
       }
 
       setTimeout(() => showStep(0), 1200);
+    })();
+
+    // Ripple tap effect on all accordion toggles
+    (function() {
+      document.querySelectorAll('summary').forEach(el => {
+        el.addEventListener('click', function(e) {
+          const rect = el.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height);
+          const ripple = document.createElement('span');
+          ripple.className = 'ripple-effect';
+          ripple.style.width = ripple.style.height = size + 'px';
+          ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+          ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+          el.appendChild(ripple);
+          setTimeout(() => ripple.remove(), 550);
+        });
+      });
     })();
   </script>
 </body>
