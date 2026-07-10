@@ -1304,20 +1304,17 @@
       // own, but a synchronous nudge avoids any single-frame lag).
       requestAnimationFrame(() => {
         window.dispatchEvent(new Event('resize'));
-        // Reset fill targets back to their pre-reveal state and RE-REGISTER
-        // them for scroll observation, so each one plays fresh exactly when
-        // actually scrolled into view again -- not immediately when the
-        // section opens. Firing everything eagerly here was the wrong fix:
-        // it meant charts several fights down the page had already finished
-        // animating before anyone scrolled far enough to see them, which
-        // just looked like the animation wasn't happening at all. Anything
-        // still inside a COLLAPSED fight-card is skipped (no real layout to
-        // measure yet) and gets handled by the toggle listener instead.
-        if (window.__resetFillTarget && window.__fillObserver) {
+        // Reset fill targets and either reveal immediately (already
+        // on-screen the moment this section opens) or hand off to the
+        // scroll observer (still below the fold) -- same verified logic
+        // used for fight-card expansion. Anything still inside a
+        // COLLAPSED fight-card is skipped here (no real layout to
+        // measure yet) and gets handled by that card's own toggle
+        // listener once actually expanded.
+        if (window.__resetAndRewatch) {
           document.querySelectorAll(`.detail-section[data-section="${id}"] .tape-block, .detail-section[data-section="${id}"] .model-pick-badge, .detail-section[data-section="${id}"] .radar-block, .detail-section[data-section="${id}"] .chart-block, .detail-section[data-section="${id}"] .favorite-card`).forEach(el => {
             if (el.offsetParent === null) return;
-            window.__resetFillTarget(el);
-            window.__fillObserver.observe(el);
+            window.__resetAndRewatch(el);
           });
         }
       });
@@ -1632,7 +1629,6 @@
         void el.offsetWidth;
         affected.forEach(node => { node.style.transition = ''; });
       }
-      window.__resetFillTarget = resetFillTarget;
 
       const fillObserver = new IntersectionObserver((entries, obs) => {
         entries.forEach(entry => {
@@ -1644,19 +1640,45 @@
       document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card').forEach(el => fillObserver.observe(el));
       window.__fillObserver = fillObserver;
 
-      // Explicit trigger on fight-card expansion -- a collapsed <details>
+      // Whether an element currently has any part on-screen. Used instead
+      // of trusting the observer to automatically re-fire after a native
+      // <details> toggle or a display:none -> block change -- those are
+      // real, DOM-verifiable state changes, not something worth leaving
+      // to chance across browsers.
+      function isInViewport(el) {
+        const rect = el.getBoundingClientRect();
+        return rect.bottom > 0 && rect.top < window.innerHeight && rect.width > 0 && rect.height > 0;
+      }
+      window.__isInViewport = isInViewport;
+
+      // Reset, then either reveal right away (already on-screen) or hand
+      // off to the observer for later (still below the fold) -- this is
+      // the shared logic for both fight-card expansion and section
+      // navigation, so both go through the exact same, verified path.
+      function resetAndRewatch(el) {
+        resetFillTarget(el);
+        requestAnimationFrame(() => {
+          if (isInViewport(el)) {
+            revealFillTarget(el);
+            fillObserver.unobserve(el);
+          } else {
+            fillObserver.observe(el);
+          }
+        });
+      }
+      window.__resetAndRewatch = resetAndRewatch;
+
+      // Explicit handling on fight-card expansion -- a collapsed <details>
       // fight-card doesn't render its contents at all (same effect as
       // display:none), so simply scrolling a COLLAPSED card into view
       // never gives the observer above a real chance to fire for its
-      // internal charts. Opening the card is the actual moment its
-      // content becomes real, so that's the moment to reveal it.
+      // internal charts, and relying on the observer to notice the toggle
+      // itself has proven unreliable. Explicitly checking position after
+      // the toggle removes that uncertainty entirely.
       document.querySelectorAll('details.fight-card').forEach(card => {
         card.addEventListener('toggle', () => {
           if (!card.open) return;
-          card.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block').forEach(el => {
-            resetFillTarget(el);
-            fillObserver.observe(el);
-          });
+          card.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block').forEach(resetAndRewatch);
         });
       });
     })();
