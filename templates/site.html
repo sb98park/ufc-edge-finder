@@ -1582,22 +1582,15 @@
           ring.style.strokeDashoffset = ring.dataset.targetOffset;
         });
         el.querySelectorAll('.radar-chart').forEach(chart => chart.classList.add('revealed'));
-        // Measure line length HERE, not upfront on page load -- this
-        // element is only just now confirmed genuinely visible, which
-        // matters because iOS Safari can silently return 0 from
-        // getTotalLength() on an SVG that's still hidden (either by an
-        // ancestor's display:none, OR because it's inside a COLLAPSED
-        // <details> fight-card, which behaves the same way -- content
-        // isn't rendered at all until the card is expanded).
+        // The line starts hidden via a server-rendered inline
+        // stroke-dasharray/dashoffset (see line_movement.py) using a
+        // length computed in Python ahead of time, so this is just a
+        // direct style change -- no runtime measurement needed at all.
+        // getTotalLength() was the actual root cause of the animation
+        // not playing: calling it live in the browser proved unreliable
+        // across multiple rounds of testing, on both platforms.
         el.querySelectorAll('.chart-draw-line').forEach(line => {
-          try {
-            const length = line.getTotalLength();
-            if (!length) return;
-            line.style.strokeDasharray = length;
-            line.style.strokeDashoffset = length;
-            void line.getBoundingClientRect();
-            requestAnimationFrame(() => { line.style.strokeDashoffset = 0; });
-          } catch (e) { /* not a measurable path element -- leave as-is */ }
+          line.style.strokeDashoffset = '0';
         });
         el.classList.add('revealed');
       }
@@ -1618,7 +1611,7 @@
           if (full) ring.style.strokeDashoffset = full;
         });
         el.querySelectorAll('.chart-draw-line').forEach(line => {
-          const full = line.style.strokeDasharray;
+          const full = line.dataset.length;
           if (full) line.style.strokeDashoffset = full;
         });
         el.querySelectorAll('.radar-chart').forEach(chart => chart.classList.remove('revealed'));

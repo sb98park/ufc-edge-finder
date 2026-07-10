@@ -17,6 +17,7 @@ dollars are on each side) that no free source provides.
 """
 
 import json
+import math
 import os
 from datetime import datetime, timezone
 
@@ -241,12 +242,26 @@ def build_dual_line_chart_svg(
         if len(points) < 2:
             return "", None
         pts_sorted = sorted(points, key=lambda p: p[0])
-        coords = " ".join(f"{x_at(t):.1f},{y_at(p):.1f}" for t, p in pts_sorted)
+        xy_coords = [(x_at(t), y_at(p)) for t, p in pts_sorted]
+        coords = " ".join(f"{x:.1f},{y:.1f}" for x, y in xy_coords)
+        # Precompute the exact path length here (same Euclidean-distance
+        # math the browser's own getTotalLength() would do) so the reveal
+        # animation doesn't depend on that API at all -- calling it live
+        # in the browser proved unreliable across multiple rounds of
+        # debugging (return-0 on elements measured at the wrong moment,
+        # inconsistent behavior between browsers). A number computed once
+        # here and read as a plain data attribute can't have that problem.
+        total_length = sum(
+            math.hypot(xy_coords[i][0] - xy_coords[i - 1][0], xy_coords[i][1] - xy_coords[i - 1][1])
+            for i in range(1, len(xy_coords))
+        )
         last_t, last_p = pts_sorted[-1]
         end_x, end_y = x_at(last_t), y_at(last_p)
         svg = (
             f'<polyline points="{coords}" fill="none" stroke="{color}" stroke-width="2.5" '
-            f'stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/>'
+            f'stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line" '
+            f'data-length="{total_length:.2f}" '
+            f'style="stroke-dasharray:{total_length:.2f}; stroke-dashoffset:{total_length:.2f};"/>'
             f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" '
             f'class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>'
             f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" class="chart-draw-endpoint"/>'
