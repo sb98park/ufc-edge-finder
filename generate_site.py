@@ -45,19 +45,6 @@ def build_ratings(fighters_df: pd.DataFrame) -> dict[str, float]:
 
 def main():
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
-    # NOT using the file's mtime here -- GitHub Actions does a fresh git
-    # checkout on every run, which resets file modification times to the
-    # checkout moment regardless of when the content was actually last
-    # edited, making an mtime-based freshness indicator meaningless in CI.
-    # Using the most recent last_fight_date already in the roster instead:
-    # fully automatic (no separate date to remember updating), and more
-    # meaningful anyway since it reflects actual data recency, not just
-    # "somebody touched this file."
-    try:
-        valid_dates = pd.to_datetime(fighters_df["last_fight_date"], errors="coerce").dropna()
-        roster_updated_str = valid_dates.max().strftime("%Y-%m-%d") if not valid_dates.empty else None
-    except (KeyError, ValueError):
-        roster_updated_str = None
     elo_ratings = build_ratings(fighters_df)
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
     future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")
@@ -71,7 +58,7 @@ def main():
         upcoming_df, source = get_live_props()
         all_known_cards = pd.concat([cards_df, future_cards_df], ignore_index=True)
         upcoming_df = assign_canonical_fight_ids(upcoming_df, all_known_cards)
-        edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings)
+        edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings, history_df)
 
         if not edges_df.empty:
             edge_records = edges_df.to_dict("records")
@@ -258,7 +245,6 @@ def main():
         live_error=live_error,
         source=source,
         generated_at=generated_at_str,
-        roster_updated_str=roster_updated_str,
     )
 
     os.makedirs("docs", exist_ok=True)

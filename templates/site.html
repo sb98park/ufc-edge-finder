@@ -126,6 +126,7 @@
   }
   .hub-card-icon { font-size: 24px; flex-shrink: 0; width: 26px; display: flex; align-items: center; justify-content: center; }
   .hub-card-icon svg { width: 24px; height: 24px; }
+  .inline-icon { width: 15px; height: 15px; vertical-align: -3px; margin-right: 2px; flex-shrink: 0; }
   .hub-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .hub-card-label { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
   .hub-card-stat { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.25; }
@@ -640,6 +641,38 @@
 </style>
 </head>
 <body>
+{% macro icon_track() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart"><defs><linearGradient id="hi-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><polyline points="3,19 9,12 14,16 22,5" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><polyline points="16,5 22,5 22,11" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_flame() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame"><defs><linearGradient id="hi-flame" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 2 C13 2 8 8 8 13 C8 16.5 10 19 13 19 C16 19 18 16.5 18 13 C18 13 16 15 15 13 C15 13 17 9 13 2 Z" fill="url(#hi-flame)" opacity="0.9"/><path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#14171f"/></svg>
+{%- endmacro %}
+
+{% macro icon_diamond() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond"><defs><linearGradient id="hi-diamond" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M6 9 L20 9 L24 13 L13 23 L2 13 Z" fill="url(#hi-diamond)" opacity="0.18" stroke="url(#hi-diamond)" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9 L9 13 L13 9 M20 9 L17 13 L13 9 M2 13 L24 13 M13 9 L13 23 M9 13 L13 23 L17 13" stroke="url(#hi-diamond)" stroke-width="1.1" opacity="0.85" stroke-linejoin="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_coins() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins"><defs><linearGradient id="hi-coins" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><ellipse cx="13" cy="19" rx="9" ry="3.2" fill="none" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#14171f" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#14171f" stroke="url(#hi-coins)" stroke-width="2"/><line x1="4" y1="9" x2="4" y2="19" stroke="url(#hi-coins)" stroke-width="2"/><line x1="22" y1="9" x2="22" y2="19" stroke="url(#hi-coins)" stroke-width="2"/></svg>
+{%- endmacro %}
+
+{% macro icon_calendar() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar"><defs><linearGradient id="hi-calendar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><rect x="3" y="5" width="20" height="18" rx="3" stroke="url(#hi-calendar)" stroke-width="2"/><line x1="3" y1="10" x2="23" y2="10" stroke="url(#hi-calendar)" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="7" stroke="url(#hi-calendar)" stroke-width="2" stroke-linecap="round"/><line x1="18" y1="2" x2="18" y2="7" stroke="url(#hi-calendar)" stroke-width="2" stroke-linecap="round"/><circle cx="17.5" cy="16.5" r="2.6" fill="#e8c766"/></svg>
+{%- endmacro %}
+
+{% macro icon_barchart() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Bar chart"><defs><linearGradient id="hi-bars" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><rect x="5" y="14" width="4" height="8" rx="1" fill="url(#hi-bars)"/><rect x="11" y="8" width="4" height="14" rx="1" fill="url(#hi-bars)"/><rect x="17" y="11" width="4" height="11" rx="1" fill="url(#hi-bars)"/></svg>
+{%- endmacro %}
+
+{% macro icon_dice() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Dice"><defs><linearGradient id="hi-dice" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><rect x="3" y="5" width="10" height="10" rx="2.5" fill="url(#hi-dice)" opacity="0.16" stroke="url(#hi-dice)" stroke-width="1.5"/><circle cx="6" cy="8" r="1" fill="url(#hi-dice)"/><circle cx="8" cy="10" r="1" fill="url(#hi-dice)"/><circle cx="10" cy="12" r="1" fill="url(#hi-dice)"/><rect x="13" y="11" width="10" height="10" rx="2.5" fill="url(#hi-dice)" opacity="0.16" stroke="url(#hi-dice)" stroke-width="1.5"/><circle cx="16" cy="14" r="1" fill="url(#hi-dice)"/><circle cx="20" cy="14" r="1" fill="url(#hi-dice)"/><circle cx="18" cy="16" r="1" fill="url(#hi-dice)"/><circle cx="16" cy="18" r="1" fill="url(#hi-dice)"/><circle cx="20" cy="18" r="1" fill="url(#hi-dice)"/></svg>
+{%- endmacro %}
+
+{% macro icon_rocket() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Rocket"><defs><linearGradient id="hi-rocket" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13,3 Q16,6 16,9 L16,16 L19,20 L16,18 Q13,19.5 10,18 L7,20 L10,16 L10,9 Q10,6 13,3 Z" fill="url(#hi-rocket)" opacity="0.5" stroke="url(#hi-rocket)" stroke-width="1.4" stroke-linejoin="round"/><circle cx="13" cy="10" r="1.6" fill="#14171f" stroke="url(#hi-rocket)" stroke-width="1"/><path d="M11,19 Q13,23 15,19 Q13,21 11,19 Z" fill="url(#hi-rocket)" opacity="0.85"/></svg>
+{%- endmacro %}
+
 <div class="ambient-embers">
   <div class="ember" style="left:5%; animation-duration:14s; animation-delay:0s; --drift:15px;"></div>
   <div class="ember" style="left:15%; animation-duration:18s; animation-delay:2s; --drift:-20px;"></div>
@@ -722,7 +755,6 @@
     <span class="badge">🕒 {{ generated_at }}</span>
     <span class="badge book">📊 Odds via {{ source or "unavailable" }}</span>
     <span class="badge">🔄 refreshes every few hours</span>
-    {% if roster_updated_str %}<span class="badge" title="Most recent fight result reflected in the fighter roster data">🥋 fight data through {{ roster_updated_str }}</span>{% endif %}
   </div>
 
   <div class="disclaimer">
@@ -839,7 +871,7 @@
 
   <div class="detail-section" data-section="track">
   <div class="track-record-card" id="section-trackrecord">
-    <div class="track-record-title">📈 Model Track Record</div>
+    <div class="track-record-title">{{ icon_track() }} Model Track Record</div>
     {% if track_record %}
     <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span class="countup">({{ track_record.accuracy_pct }}%)</span></div>
     {% if track_record.by_confidence %}
@@ -1157,7 +1189,7 @@
 
   <div class="detail-section" data-section="standout">
   {% if notable_movements %}
-  <div class="parlay-section-title movement" id="section-movement">📊 Notable Line Movement</div>
+  <div class="parlay-section-title movement" id="section-movement">{{ icon_barchart() }} Notable Line Movement</div>
   <div class="parlay-subtitle">Lines that have moved meaningfully (15%+) since the last refresh. This tracks real PRICE movement only — not bet volume or who's behind it, so treat this as "worth a second look," not confirmed sharp action.</div>
   {% for row in notable_movements %}
   <div class="line-card" data-key="{{ row.fighter }}|{{ row.market }}">
@@ -1171,7 +1203,7 @@
   {% endif %}
 
   {% if standout_props %}
-  <div class="standout-title" id="section-standout">🔥 Standout Props for {{ event_short_name }}</div>
+  <div class="standout-title" id="section-standout">{{ icon_flame() }} Standout Props for {{ event_short_name }}</div>
   <div class="standout-grid">
     {% for p in standout_props %}
     <div class="standout-card reveal-target heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}" data-key="{{ p.fighter }}|{{ p.market }}">
@@ -1213,7 +1245,7 @@
 
   <div class="detail-section" data-section="favorites">
   {% if favorite_picks %}
-  <div class="standout-title">💎 Favorite Picks</div>
+  <div class="standout-title">{{ icon_diamond() }} Favorite Picks</div>
   <div class="parlay-subtitle">Straight, single-leg bets in a realistic odds range ({{ '-220' }} to {{ '+160' }}) — built for real size, not a coinflip longshot or a -4000 favorite with no payout. Sorted by model probability, so the safest genuine plays lead.</div>
   <div class="standout-grid">
     {% for p in favorite_picks %}
@@ -1245,7 +1277,7 @@
 
   <div class="detail-section" data-section="parlays">
   {% if bankroll_parlays %}
-  <div class="parlay-section-title bankroll" id="section-bankroll">💰 Bankroll Builder</div>
+  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
   <div class="parlay-subtitle">2-3 leg combos in the +100 to +300 range, built from picks the model favors — including same-fight combos and model-projected legs (labeled "model") for fights with no live prop line yet.</div>
   {% for p in bankroll_parlays %}
   <div class="parlay-card reveal-target bankroll">
@@ -1269,12 +1301,12 @@
   {% endfor %}
   <div class="parlay-note">Assumes each leg is independent — same-card fights aren't perfectly independent in reality, so treat the hit-rate estimate as optimistic. Legs marked "model" have no live book price to compare against.</div>
   {% elif events %}
-  <div class="parlay-section-title bankroll" id="section-bankroll">💰 Bankroll Builder</div>
+  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
   <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
   {% endif %}
 
   {% if lotto_parlays %}
-  <div class="parlay-section-title lotto" id="section-lotto">🎰 Lotto Parlays</div>
+  <div class="parlay-section-title lotto" id="section-lotto">{{ icon_dice() }} Lotto Parlays</div>
   <div class="parlay-subtitle">Long-shot combos at +1000 or better, any leg count — ranked by the model's best combined odds of hitting, drawing from across the whole card for real variety.</div>
   {% for p in lotto_parlays %}
   <div class="parlay-card reveal-target lotto">
@@ -1298,12 +1330,12 @@
   {% endfor %}
   <div class="parlay-note">These are long shots by design — meant as a "worth a small stab" section, not a plan.</div>
   {% elif events %}
-  <div class="parlay-section-title lotto" id="section-lotto">🎰 Lotto Parlays</div>
+  <div class="parlay-section-title lotto" id="section-lotto">{{ icon_dice() }} Lotto Parlays</div>
   <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
   {% endif %}
 
   {% if moonshot_parlays %}
-  <div class="parlay-section-title moonshot" id="section-moonshot">🚀 Moonshot</div>
+  <div class="parlay-section-title moonshot" id="section-moonshot">{{ icon_rocket() }} Moonshot</div>
   <div class="parlay-subtitle">+5000 or better — the kind of number that turns a $5 slip into a story. This has essentially no business hitting, and that's the whole point: pure lottery-ticket energy, ranked by the model's best combined odds among everything that clears the bar.</div>
   {% for p in moonshot_parlays %}
   <div class="parlay-card reveal-target moonshot">
@@ -1327,7 +1359,7 @@
   {% endfor %}
   <div class="parlay-note">🎟️ This is a lottery ticket, not a strategy — buy it for the dream, not the plan. If it hits, tell everyone. If it doesn't, you knew the deal going in.</div>
   {% elif events %}
-  <div class="parlay-section-title moonshot" id="section-moonshot">🚀 Moonshot</div>
+  <div class="parlay-section-title moonshot" id="section-moonshot">{{ icon_rocket() }} Moonshot</div>
   <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
   {% endif %}
   </div>
@@ -1353,7 +1385,7 @@
 
   <div class="detail-section" data-section="coming">
   {% if future_events %}
-  <div class="section-title" id="section-future">🔮 Coming Up Next</div>
+  <div class="section-title" id="section-future">{{ icon_calendar() }} Coming Up Next</div>
   <div class="parlay-subtitle">Verified upcoming UFC cards beyond this weekend, sourced from official event announcements. Live odds included where available; model projections always shown otherwise.</div>
   {% for event in future_events %}
   <div class="event-header">

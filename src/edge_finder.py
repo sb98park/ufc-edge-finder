@@ -17,7 +17,8 @@ from .matchup_model import predict_matchup, compute_divisional_method_priors, bl
 
 
 def compute_moneyline_edges(
-    upcoming_df: pd.DataFrame, elo_ratings: dict[str, float], fighters_df: pd.DataFrame | None = None
+    upcoming_df: pd.DataFrame, elo_ratings: dict[str, float], fighters_df: pd.DataFrame | None = None,
+    fight_history_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     rows = []
     ml = upcoming_df[upcoming_df["market"] == "Moneyline"]
@@ -32,7 +33,7 @@ def compute_moneyline_edges(
 
         matchup = None
         if fighters_df is not None:
-            matchup = predict_matchup(a["selection"], b["selection"], fighters_df, elo_ratings)
+            matchup = predict_matchup(a["selection"], b["selection"], fighters_df, elo_ratings, fight_history_df)
 
         if matchup:
             model_prob_a = matchup["prob_a"]
@@ -297,9 +298,12 @@ def attach_fight_meta(edges_df: pd.DataFrame, fight_list_df: pd.DataFrame) -> pd
     return edges_df.merge(fight_list_df[meta_cols], on="fight_id", how="left")
 
 
-def find_all_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame, elo_ratings: dict[str, float]) -> pd.DataFrame:
+def find_all_edges(
+    upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame, elo_ratings: dict[str, float],
+    fight_history_df: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     frames = [
-        compute_moneyline_edges(upcoming_df, elo_ratings, fighters_df),
+        compute_moneyline_edges(upcoming_df, elo_ratings, fighters_df, fight_history_df),
         compute_method_edges(upcoming_df, fighters_df),
         compute_total_rounds_edges(upcoming_df, fighters_df),
         compute_goes_the_distance_edges(upcoming_df, fighters_df),

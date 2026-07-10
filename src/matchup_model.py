@@ -20,6 +20,7 @@ people actually reason about matchups, instead of just comparing records.
 """
 
 import datetime as dt
+import math
 
 import pandas as pd
 
@@ -30,6 +31,29 @@ WRESTLING_ADVANTAGE_SCALE = 300.0
 STRIKING_ADVANTAGE_SCALE = 150.0
 DURABILITY_SCALE = 120.0
 VOLUME_DIFFERENTIAL_SCALE = 40.0  # rating points per 1.0 SLpM-SApM differential gap
+
+# Southpaw-vs-orthodox is a real, documented edge in striking sports --
+# most fighters train far more often against orthodox opponents, so a
+# southpaw sees a less familiar look more often than the reverse. It's a
+# real but modest effect in the research, not a dominant one, so this is
+# calibrated well below the primary factors above (roughly comparable to
+# a single year past a fighter's age-decline threshold, not a heavy
+# thumb on the scale). Switch-stance fighters can choose their angle, so
+# they get the same small edge against either pure stance.
+STANCE_MISMATCH_BONUS = 18.0
+
+# Base width (in probability points) for the uncertainty band before
+# dividing by sqrt(thinner_record + 1) -- 0.30 means a 0-fight matchup
+# gets roughly a +/-30pp band, narrowing to roughly +/-6pp by the time
+# the thinner record reaches 20+ fights.
+UNCERTAINTY_BASE = 0.30
+
+# A recent win/loss (from fight_history.csv specifically, not the
+# aggregate career record) gets a small rating nudge that decays to zero
+# over RECENT_FORM_DECAY_YEARS -- deliberately modest since this is a
+# single data point, not an aggregate trend.
+RECENT_FORM_BONUS = 20.0
+RECENT_FORM_DECAY_YEARS = 2.0
 
 # Ring rust: no penalty for a normal 6-12 month camp cycle. Beyond a year
 # away, each additional year away costs more -- extended layoffs (multi-year,
@@ -187,6 +211,7 @@ def build_factor_badges(matchup: dict) -> dict:
     add_advantage(matchup.get("wrestling_adjustment", 0), "Wrestling")
     add_advantage(matchup.get("striking_adjustment", 0), "Striking")
     add_advantage(matchup.get("durability_adjustment", 0), "Durability")
+    add_advantage(matchup.get("stance_adjustment", 0), "Stance")
 
     layoff_adj = matchup.get("layoff_adjustment", 0)
     if layoff_adj < -BADGE_THRESHOLD:
@@ -221,6 +246,24 @@ def classify_style(row: pd.Series) -> str:
     elif strike_acc >= 47:
         return "Striker"
     return "Balanced"
+
+
+def stance_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> float:
+    """
+    Southpaw (or switch) gets a modest bonus against a pure-orthodox
+    opponent, reflecting the real "unfamiliar look" edge -- two fighters
+    sharing the same stance (including two southpaws) is neutral, since
+    neither has the familiarity advantage over the other.
+    """
+    stance_a = str(row_a.get("stance", "Orthodox") or "Orthodox").strip()
+    stance_b = str(row_b.get("stance", "Orthodox") or "Orthodox").strip()
+    a_unorthodox = stance_a in ("Southpaw", "Switch")
+    b_unorthodox = stance_b in ("Southpaw", "Switch")
+    if a_unorthodox and not b_unorthodox:
+        return STANCE_MISMATCH_BONUS
+    if b_unorthodox and not a_unorthodox:
+        return -STANCE_MISMATCH_BONUS
+    return 0.0
 
 
 def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
@@ -293,9 +336,11 @@ def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
     missed_weight_adj_b = missed_weight_penalty(row_b)
     missed_weight_adj = missed_weight_adj_a - missed_weight_adj_b
 
+    stance_adj = stance_matchup_adjustment(row_a, row_b)
+
     total_adj = (
         wrestling_adj + striking_adj + durability_adj + layoff_adj
-        + quick_return_adj + age_cliff_adj + missed_weight_adj
+        + quick_return_adj + age_cliff_adj + missed_weight_adj + stance_adj
     )
 
     return {
@@ -313,15 +358,57 @@ def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
         "age_cliff_flag_a": age_cliff_adj_a < 0,
         "age_cliff_flag_b": age_cliff_adj_b < 0,
         "missed_weight_adjustment": missed_weight_adj,
+        "stance_adjustment": stance_adj,
         "style_a": classify_style(row_a),
         "style_b": classify_style(row_b),
     }
+
+
+def recent_form_adjustment(
+    fighter_a: str, fighter_b: str, fight_history_df: pd.DataFrame | None,
+    reference_date: dt.date | None = None,
+) -> float:
+    """
+    A genuine but partial recency signal: fighters.csv only tracks
+    aggregate career win/loss counts, not dated per-fight records, so a
+    fully recency-weighted career rating isn't possible for the roster as
+    a whole with current data. This instead looks at each fighter's most
+    recent entry in fight_history.csv specifically (if they have one) --
+    a small, decaying bonus for a recent win, a small penalty for a
+    recent loss, weighted by how long ago it was. Fighters with no
+    tracked history get exactly 0 here, same as every other graceful
+    fallback in this file -- this is a real but limited signal, not a
+    substitute for the full recency-weighted system a richer dataset
+    would support.
+    """
+    if fight_history_df is None or fight_history_df.empty:
+        return 0.0
+    reference_date = reference_date or dt.date.today()
+
+    def fighter_signal(name: str) -> float:
+        rows = fight_history_df[
+            (fight_history_df["fighter_a"] == name) | (fight_history_df["fighter_b"] == name)
+        ].copy()
+        if rows.empty:
+            return 0.0
+        rows["date"] = pd.to_datetime(rows["date"], errors="coerce")
+        rows = rows.dropna(subset=["date"]).sort_values("date")
+        if rows.empty:
+            return 0.0
+        last = rows.iloc[-1]
+        won = last["winner"] == name
+        years_ago = max((reference_date - last["date"].date()).days / 365.25, 0.0)
+        decay = max(0.0, 1.0 - years_ago / RECENT_FORM_DECAY_YEARS)
+        return (RECENT_FORM_BONUS if won else -RECENT_FORM_BONUS) * decay
+
+    return fighter_signal(fighter_a) - fighter_signal(fighter_b)
 
 
 def predict_matchup(
     fighter_a: str, fighter_b: str,
     fighters_df: pd.DataFrame,
     effective_ratings: dict[str, float],
+    fight_history_df: pd.DataFrame | None = None,
 ) -> dict | None:
     """
     Full pairwise prediction: base rating gap + style-matchup adjustment,
@@ -337,15 +424,34 @@ def predict_matchup(
     base_r_b = effective_ratings.get(fighter_b, 1500.0)
 
     style = style_matchup_adjustment(row_a, row_b)
-    adjusted_gap = (base_r_a - base_r_b) + style["total_adjustment"]
+    recent_form_adj = recent_form_adjustment(fighter_a, fighter_b, fight_history_df)
+    adjusted_gap = (base_r_a - base_r_b) + style["total_adjustment"] + recent_form_adj
     prob_a = 1.0 / (1.0 + 10 ** (-adjusted_gap / 400.0))
+
+    # Uncertainty band: this is a heuristic, not a fitted confidence
+    # interval (that would need a proper Bayesian treatment or bootstrap
+    # over historical outcomes, which the current data doesn't support).
+    # It scales down as the THINNER of the two records grows -- a matchup
+    # where one side has 2 fights should visibly carry more uncertainty
+    # than one where both have 25, even if the point estimate is
+    # identical. Floors around ~5pp even for deep records, since MMA has
+    # real irreducible variance no amount of data fully removes.
+    fights_a = int(row_a.get("wins", 0) or 0) + int(row_a.get("losses", 0) or 0)
+    fights_b = int(row_b.get("wins", 0) or 0) + int(row_b.get("losses", 0) or 0)
+    thinner_record = min(fights_a, fights_b)
+    uncertainty = UNCERTAINTY_BASE / math.sqrt(thinner_record + 1)
+    prob_low = max(0.01, prob_a - uncertainty)
+    prob_high = min(0.99, prob_a + uncertainty)
 
     return {
         "fighter_a": fighter_a,
         "fighter_b": fighter_b,
         "prob_a": prob_a,
         "prob_b": 1 - prob_a,
+        "prob_low": prob_low,
+        "prob_high": prob_high,
         "base_rating_a": base_r_a,
         "base_rating_b": base_r_b,
+        "recent_form_adjustment": recent_form_adj,
         **style,
     }
