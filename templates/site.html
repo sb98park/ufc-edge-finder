@@ -129,6 +129,12 @@
   .hub-card-label { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
   .hub-card-stat { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.25; }
   .hub-card-sub { font-size: 10.5px; color: var(--muted); }
+  .hub-card-title { font-size: 15.5px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 7px; }
+  .count-badge {
+    font-size: 11px; font-weight: 700; color: var(--muted); background: var(--panel2);
+    border: 1px solid var(--border); border-radius: 9px; padding: 1px 7px; min-width: 20px;
+    text-align: center; line-height: 1.5;
+  }
   .hub-card-matchup { font-size: 12.5px; color: var(--accent2); font-weight: 600; }
   .hub-card-arrow { flex-shrink: 0; color: var(--muted); font-size: 16px; }
 
@@ -137,9 +143,13 @@
      not just the thin top stripe every other card gets. */
   .hub-card.featured {
     border: 1.5px solid rgba(255,92,92,0.45);
-    box-shadow: 0 0 0 1px rgba(255,92,92,0.08), 0 0 28px rgba(255,92,92,0.15);
     background: linear-gradient(145deg, #2a1414, #14171f 60%);
     padding: 18px 16px;
+    animation: featured-pulse 2.6s ease-in-out infinite;
+  }
+  @keyframes featured-pulse {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(255,92,92,0.08), 0 0 20px rgba(255,92,92,0.12); }
+    50% { box-shadow: 0 0 0 1px rgba(255,92,92,0.18), 0 0 34px rgba(255,92,92,0.28); }
   }
   .hub-card.featured::before { height: 3px; }
   .hub-card.featured .hub-card-icon { font-size: 32px; }
@@ -549,7 +559,7 @@
   .radar-polygon { transform: scale(0); transition: transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
   .radar-chart.revealed .radar-polygon { transform: scale(1); }
   .radar-legend { display: flex; gap: 16px; margin-top: 4px; }
-  .chart-draw-line { transition: stroke-dashoffset 1.6s ease-out; }
+  .chart-draw-line { /* animated via JS rAF stepping, not a CSS transition -- see animateLineReveal() */ }
   .chart-draw-endpoint { opacity: 0; transition: opacity 0.3s ease-out; transition-delay: 1.4s; }
   .chart-block.revealed .chart-draw-endpoint { opacity: 1; }
   .chart-endpoint-halo { opacity: 0; }
@@ -712,17 +722,15 @@
       <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('track')">
         <div class="hub-card-icon">📈</div>
         <div class="hub-card-text">
-          <div class="hub-card-label">Track Record</div>
-          <div class="hub-card-stat">{{ track_record.accuracy_pct ~ '%' if track_record else '—' }}</div>
-          <div class="hub-card-sub">{{ track_record.total ~ ' picks tracked' if track_record else 'No results yet' }}</div>
+          <div class="hub-card-title">Track Record</div>
+          <div class="hub-card-sub">{{ (track_record.accuracy_pct ~ '% accuracy · ' ~ track_record.total ~ ' picks tracked') if track_record else 'No results yet' }}</div>
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('standout')">
         <div class="hub-card-icon">🔥</div>
         <div class="hub-card-text">
-          <div class="hub-card-label">Standout Props</div>
-          <div class="hub-card-stat">{{ standout_props|length }}</div>
+          <div class="hub-card-title">Standout Props <span class="count-badge">{{ standout_props|length }}</span></div>
           <div class="hub-card-sub">flagged right now</div>
         </div>
         <span class="hub-card-arrow">→</span>
@@ -730,8 +738,7 @@
       <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('favorites')">
         <div class="hub-card-icon">💎</div>
         <div class="hub-card-text">
-          <div class="hub-card-label">Favorite Picks</div>
-          <div class="hub-card-stat">{{ favorite_picks|length }}</div>
+          <div class="hub-card-title">Favorite Picks <span class="count-badge">{{ favorite_picks|length }}</span></div>
           <div class="hub-card-sub">straight bets worth real size</div>
         </div>
         <span class="hub-card-arrow">→</span>
@@ -739,8 +746,7 @@
       <div class="hub-card" style="--card-accent:#6db3f2" onclick="showSection('parlays')">
         <div class="hub-card-icon">💰</div>
         <div class="hub-card-text">
-          <div class="hub-card-label">Parlays</div>
-          <div class="hub-card-stat">{{ (bankroll_parlays|length) + (lotto_parlays|length) + (moonshot_parlays|length) }}</div>
+          <div class="hub-card-title">Parlays <span class="count-badge">{{ (bankroll_parlays|length) + (lotto_parlays|length) + (moonshot_parlays|length) }}</span></div>
           <div class="hub-card-sub">slates across 3 tiers</div>
         </div>
         <span class="hub-card-arrow">→</span>
@@ -748,8 +754,7 @@
       <div class="hub-card" style="--card-accent:#e88fc7" onclick="showSection('coming')">
         <div class="hub-card-icon">🔮</div>
         <div class="hub-card-text">
-          <div class="hub-card-label">Coming Up</div>
-          <div class="hub-card-stat">{{ future_events|length }}</div>
+          <div class="hub-card-title">Coming Up <span class="count-badge">{{ future_events|length }}</span></div>
           <div class="hub-card-sub">future cards tracked</div>
         </div>
         <span class="hub-card-arrow">→</span>
@@ -1574,6 +1579,27 @@
       }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
       document.querySelectorAll('.reveal-target').forEach(el => cardObserver.observe(el));
 
+      // Manually steps stroke-dashoffset via requestAnimationFrame instead
+      // of a CSS transition. CSS transitions on SVG stroke-dashoffset have
+      // a known history of unreliable completion in WebKit/iOS Safari --
+      // confirmed live: the animation would start but stop partway rather
+      // than completing. Driving it by hand in JS sidesteps the browser's
+      // transition engine for this property entirely, on every platform.
+      function animateLineReveal(line, durationMs) {
+        const full = parseFloat(line.dataset.length);
+        if (!full) return;
+        const myGen = (line._revealGen = (line._revealGen || 0) + 1);
+        const start = performance.now();
+        function step(now) {
+          if (line._revealGen !== myGen) return; // superseded by a newer reveal/reset
+          const progress = Math.min((now - start) / durationMs, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          line.style.strokeDashoffset = String(full * (1 - eased));
+          if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      }
+
       function revealFillTarget(el) {
         el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar').forEach(bar => {
           bar.style.width = bar.dataset.targetWidth;
@@ -1582,15 +1608,8 @@
           ring.style.strokeDashoffset = ring.dataset.targetOffset;
         });
         el.querySelectorAll('.radar-chart').forEach(chart => chart.classList.add('revealed'));
-        // The line starts hidden via a server-rendered inline
-        // stroke-dasharray/dashoffset (see line_movement.py) using a
-        // length computed in Python ahead of time, so this is just a
-        // direct style change -- no runtime measurement needed at all.
-        // getTotalLength() was the actual root cause of the animation
-        // not playing: calling it live in the browser proved unreliable
-        // across multiple rounds of testing, on both platforms.
         el.querySelectorAll('.chart-draw-line').forEach(line => {
-          line.style.strokeDashoffset = '0';
+          animateLineReveal(line, 1600);
         });
         el.classList.add('revealed');
       }
@@ -1611,6 +1630,7 @@
           if (full) ring.style.strokeDashoffset = full;
         });
         el.querySelectorAll('.chart-draw-line').forEach(line => {
+          line._revealGen = (line._revealGen || 0) + 1; // cancel any in-flight rAF loop
           const full = line.dataset.length;
           if (full) line.style.strokeDashoffset = full;
         });
