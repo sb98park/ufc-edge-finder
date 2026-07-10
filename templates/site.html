@@ -1304,18 +1304,20 @@
       // own, but a synchronous nudge avoids any single-frame lag).
       requestAnimationFrame(() => {
         window.dispatchEvent(new Event('resize'));
-        // Replay fill animations fresh every time this section is opened,
-        // not just the first time ever -- reset then re-reveal each
-        // currently-visible target. Anything still inside a COLLAPSED
-        // fight-card is skipped here (no real layout to measure yet) and
-        // gets its own fresh reveal from the toggle handler once actually
-        // expanded, rather than risking a getTotalLength() read on hidden
-        // content.
-        if (window.__resetFillTarget && window.__revealFillTarget) {
+        // Reset fill targets back to their pre-reveal state and RE-REGISTER
+        // them for scroll observation, so each one plays fresh exactly when
+        // actually scrolled into view again -- not immediately when the
+        // section opens. Firing everything eagerly here was the wrong fix:
+        // it meant charts several fights down the page had already finished
+        // animating before anyone scrolled far enough to see them, which
+        // just looked like the animation wasn't happening at all. Anything
+        // still inside a COLLAPSED fight-card is skipped (no real layout to
+        // measure yet) and gets handled by the toggle listener instead.
+        if (window.__resetFillTarget && window.__fillObserver) {
           document.querySelectorAll(`.detail-section[data-section="${id}"] .tape-block, .detail-section[data-section="${id}"] .model-pick-badge, .detail-section[data-section="${id}"] .radar-block, .detail-section[data-section="${id}"] .chart-block, .detail-section[data-section="${id}"] .favorite-card`).forEach(el => {
             if (el.offsetParent === null) return;
             window.__resetFillTarget(el);
-            requestAnimationFrame(() => window.__revealFillTarget(el));
+            window.__fillObserver.observe(el);
           });
         }
       });
@@ -1602,7 +1604,6 @@
         });
         el.classList.add('revealed');
       }
-      window.__revealFillTarget = revealFillTarget;
 
       // Instantly undoes a fill target back to its "not yet revealed"
       // state -- no transition, so this doesn't itself animate backward.
@@ -1641,6 +1642,7 @@
         });
       }, { threshold: 0.15 });
       document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card').forEach(el => fillObserver.observe(el));
+      window.__fillObserver = fillObserver;
 
       // Explicit trigger on fight-card expansion -- a collapsed <details>
       // fight-card doesn't render its contents at all (same effect as
@@ -1652,9 +1654,8 @@
         card.addEventListener('toggle', () => {
           if (!card.open) return;
           card.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block').forEach(el => {
-            fillObserver.unobserve(el);
             resetFillTarget(el);
-            requestAnimationFrame(() => revealFillTarget(el));
+            fillObserver.observe(el);
           });
         });
       });
