@@ -244,9 +244,35 @@ def group_edges_by_card(
     return events, unmatched_df
 
 
+LOW_SAMPLE_THRESHOLD = 6  # career fights below this = flagged as limited data
+
+
+def _sample_size_flag(fighter_field: str, fighters_df: pd.DataFrame | None) -> dict | None:
+    """
+    Returns {"fighter": name, "fights": n} for whichever named fighter has
+    the thinnest record, if any of them are below LOW_SAMPLE_THRESHOLD --
+    None if everyone involved has a reasonable sample. fighter_field may be
+    a single name or a "A vs B" fight-level string (GoesTheDistance-style
+    rows), so this checks all names present, not just the first.
+    """
+    if fighters_df is None or not fighter_field:
+        return None
+    names = [n.strip() for n in fighter_field.split(" vs ")]
+    thinnest = None
+    for name in names:
+        row = fighters_df[fighters_df["name"] == name]
+        if row.empty:
+            continue
+        r = row.iloc[0]
+        total = int(r.get("wins", 0) or 0) + int(r.get("losses", 0) or 0)
+        if total < LOW_SAMPLE_THRESHOLD and (thinnest is None or total < thinnest["fights"]):
+            thinnest = {"fighter": name, "fights": total}
+    return thinnest
+
+
 def top_favorite_picks(
     edges_df: pd.DataFrame, fighters_df: pd.DataFrame | None = None, n: int = 5,
-    min_odds: float = -220, max_odds: float = 160, min_edge: float = 3.0,
+    min_odds: float = -220, max_odds: float = 160, min_edge: float = 3.0, min_model_prob: float = 0.55,
 ) -> list[dict]:
     """
     Straight, single-leg picks meant to actually be bet with real size --
@@ -259,6 +285,15 @@ def top_favorite_picks(
     you'd actually want to size up on, not just the biggest edge number.
     Capped to one per fight so this doesn't turn into five props on the
     same two fighters.
+
+    min_model_prob is a genuine correctness guard, not just a style
+    choice: edge_pct alone measures model-vs-market disagreement, which
+    says nothing about whether the model actually favors this side. A
+    pick at 49.6% model probability can still clear a healthy edge
+    threshold (the market may have it even lower) while the model itself
+    is calling it a slight underdog -- which has no business being
+    labeled a "favorite pick." Confirmed live: this was a real bug, not
+    hypothetical.
     """
     if edges_df.empty:
         return []
@@ -266,6 +301,7 @@ def top_favorite_picks(
         (edges_df["edge_pct"] >= min_edge)
         & (edges_df["odds_american"] >= min_odds)
         & (edges_df["odds_american"] <= max_odds)
+        & (edges_df["model_prob"] >= min_model_prob)
     ].copy()
     if candidates.empty:
         return []
@@ -291,6 +327,7 @@ def top_favorite_picks(
         # actually filter it out, it just prints the literal word "nan".
         if pd.isna(r.get("opponent")):
             r["opponent"] = None
+        r["low_sample"] = _sample_size_flag(r["fighter"], fighters_df)
         try:
             r["model_fair_odds"] = format_american_odds(implied_prob_to_american(r["model_prob"]))
         except (ValueError, ZeroDivisionError):
@@ -321,6 +358,7 @@ def top_standout_props(
     for r in records:
         if pd.isna(r.get("opponent")):
             r["opponent"] = None
+        r["low_sample"] = _sample_size_flag(r["fighter"], fighters_df)
         try:
             r["model_fair_odds"] = format_american_odds(implied_prob_to_american(r["model_prob"]))
         except (ValueError, ZeroDivisionError):

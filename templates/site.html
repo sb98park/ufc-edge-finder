@@ -320,6 +320,11 @@
   .dog-badge.fav { background: #1a2a3a; color: #6db3f2; }
   .dog-badge.dog { background: #2a1a3a; color: #c77dff; }
   .dog-badge-sm { font-size: 11px; margin-left: 4px; }
+  .sample-badge {
+    display: inline-block; font-size: 9.5px; font-weight: 700; border-radius: 9px;
+    padding: 2px 7px; margin-left: 6px; margin-top: 3px; vertical-align: middle;
+    background: #2a2410; color: #d4af37; border: 1px solid #4a3f1a;
+  }
   .standout-market { color: var(--accent2); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
   .standout-edge-badge {
     font-size: 16px; font-weight: 800; white-space: nowrap; border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
@@ -365,12 +370,31 @@
   }
   .parlay-card.bankroll { background: linear-gradient(145deg, #10251a, #14171f 65%); border-color: #1e4a2f; }
   .parlay-card.lotto { background: linear-gradient(145deg, #21102b, #14171f 65%); border-color: #4a1e5a; }
-  .parlay-card.moonshot { background: linear-gradient(145deg, #2b1c05, #14171f 65%); border-color: #5a3e14; }
+  .parlay-card.moonshot {
+    background: linear-gradient(145deg, #2b1c05, #14171f 65%);
+    border: 1.5px solid #5a3e14; position: relative; overflow: hidden;
+    animation: moonshot-glow 3s ease-in-out infinite;
+  }
+  .parlay-card.moonshot::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(115deg, transparent 40%, rgba(255,179,71,0.18) 50%, transparent 60%);
+    background-size: 250% 250%; animation: moonshot-shimmer 3.5s ease-in-out infinite;
+  }
+  @keyframes moonshot-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,179,71,0); }
+    50% { box-shadow: 0 0 20px 1px rgba(255,179,71,0.18); }
+  }
+  @keyframes moonshot-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -50% 0; }
+  }
   .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .parlay-odds { font-size: 22px; font-weight: 800; }
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
   .parlay-card.lotto .parlay-odds { color: #c77dff; }
-  .parlay-card.moonshot .parlay-odds { color: #ffb347; }
+  .parlay-card.moonshot .parlay-odds {
+    color: #ffb347; font-size: 27px; text-shadow: 0 0 16px rgba(255,179,71,0.5);
+  }
   .parlay-prob { font-size: 11px; color: var(--muted); }
   .parlay-legs { list-style: none; margin: 0; padding: 0; }
   .parlay-leg {
@@ -701,6 +725,7 @@
     <span class="badge">🕒 {{ generated_at }}</span>
     <span class="badge book">📊 Odds via {{ source or "unavailable" }}</span>
     <span class="badge">🔄 refreshes every few hours</span>
+    {% if roster_updated_str %}<span class="badge" title="Most recent fight result reflected in the fighter roster data">🥋 fight data through {{ roster_updated_str }}</span>{% endif %}
   </div>
 
   <div class="disclaimer">
@@ -1114,6 +1139,9 @@
             {% if p.market == 'Moneyline' %}
               <span class="dog-badge {{ 'fav' if p.odds_american < 0 else 'dog' }}">{{ '⭐ Favorite' if p.odds_american < 0 else '🐶 Underdog' }}</span>
             {% endif %}
+            {% if p.low_sample %}
+              <span class="sample-badge" title="{{ p.low_sample.fighter }} has {{ p.low_sample.fights }} career fights logged -- fewer data points behind this number than usual">📊 {{ p.low_sample.fights }}-fight sample</span>
+            {% endif %}
           </div>
         </div>
         <div class="standout-edge-badge {{ 'edge-pos' if p.edge_pct > 0 else 'edge-neg' }}">{{ p.edge_pct }}%</div>
@@ -1151,6 +1179,9 @@
         <div>
           <div class="favorite-main">{{ p.fighter }}</div>
           <div class="favorite-vs">{% if p.opponent is real_value %}vs {{ p.opponent }} · {% endif %}{{ p.market | clear_market(p.fighter) }}</div>
+          {% if p.low_sample %}
+          <span class="sample-badge" title="{{ p.low_sample.fighter }} has {{ p.low_sample.fights }} career fights logged -- fewer data points behind this number than usual">📊 {{ p.low_sample.fights }}-fight sample</span>
+          {% endif %}
         </div>
         <div class="favorite-odds">{{ p.odds_american | american }}</div>
       </div>
@@ -1230,7 +1261,7 @@
 
   {% if moonshot_parlays %}
   <div class="parlay-section-title moonshot" id="section-moonshot">🚀 Moonshot</div>
-  <div class="parlay-subtitle">+5000 or better. This has essentially no business hitting — any leg count, purely for fun, ranked by the model's best combined odds among everything that clears the bar.</div>
+  <div class="parlay-subtitle">+5000 or better — the kind of number that turns a $5 slip into a story. This has essentially no business hitting, and that's the whole point: pure lottery-ticket energy, ranked by the model's best combined odds among everything that clears the bar.</div>
   {% for p in moonshot_parlays %}
   <div class="parlay-card reveal-target moonshot">
     <div class="parlay-top">
@@ -1251,7 +1282,7 @@
     </ul>
   </div>
   {% endfor %}
-  <div class="parlay-note">Treat this exactly like buying a lottery ticket — fun to dream on, not a strategy.</div>
+  <div class="parlay-note">🎟️ This is a lottery ticket, not a strategy — buy it for the dream, not the plan. If it hits, tell everyone. If it doesn't, you knew the deal going in.</div>
   {% elif events %}
   <div class="parlay-section-title moonshot" id="section-moonshot">🚀 Moonshot</div>
   <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>

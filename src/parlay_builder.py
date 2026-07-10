@@ -143,7 +143,16 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
     # per fight (not all ~9 possible projections) -- with 11 fights on a
     # card, including every projection exploded the combinatorial search
     # space enough to hang the process (confirmed: caused an OOM kill).
+    #
+    # MAX_MODEL_LEG_JUICE excludes projected legs beyond -400 -- the same
+    # category of problem the Favorite Picks -220 floor exists to prevent
+    # (a leg that heavily juiced contributes almost nothing to a parlay's
+    # payout while adding real risk, and it's worse here since there's no
+    # real market price backing the number at all, just a model estimate).
+    # Confirmed live: legs at -599 and -567 were slipping into real parlay
+    # slates with nothing catching them.
     if model_only_by_fight:
+        MAX_MODEL_LEG_JUICE = -400
         for fight_id, rows in model_only_by_fight.items():
             if fight_id in by_fight:
                 continue
@@ -152,6 +161,8 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                 try:
                     proj_odds = implied_prob_to_american(row["model_prob"])
                 except (ValueError, ZeroDivisionError):
+                    continue
+                if proj_odds < 0 and proj_odds < MAX_MODEL_LEG_JUICE:
                     continue
                 pieces.append({
                     "fight_id": fight_id,
