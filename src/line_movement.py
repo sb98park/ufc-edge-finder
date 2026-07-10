@@ -17,7 +17,6 @@ dollars are on each side) that no free source provides.
 """
 
 import json
-import math
 import os
 from datetime import datetime, timezone
 
@@ -242,26 +241,12 @@ def build_dual_line_chart_svg(
         if len(points) < 2:
             return "", None
         pts_sorted = sorted(points, key=lambda p: p[0])
-        xy_coords = [(x_at(t), y_at(p)) for t, p in pts_sorted]
-        coords = " ".join(f"{x:.1f},{y:.1f}" for x, y in xy_coords)
-        # Precompute the exact path length here (same Euclidean-distance
-        # math the browser's own getTotalLength() would do) so the reveal
-        # animation doesn't depend on that API at all -- calling it live
-        # in the browser proved unreliable across multiple rounds of
-        # debugging (return-0 on elements measured at the wrong moment,
-        # inconsistent behavior between browsers). A number computed once
-        # here and read as a plain data attribute can't have that problem.
-        total_length = sum(
-            math.hypot(xy_coords[i][0] - xy_coords[i - 1][0], xy_coords[i][1] - xy_coords[i - 1][1])
-            for i in range(1, len(xy_coords))
-        )
+        coords = " ".join(f"{x_at(t):.1f},{y_at(p):.1f}" for t, p in pts_sorted)
         last_t, last_p = pts_sorted[-1]
         end_x, end_y = x_at(last_t), y_at(last_p)
         svg = (
             f'<polyline points="{coords}" fill="none" stroke="{color}" stroke-width="2.5" '
-            f'stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line" '
-            f'data-length="{total_length:.2f}" '
-            f'style="stroke-dasharray:{total_length:.2f}; stroke-dashoffset:{total_length:.2f};"/>'
+            f'stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/>'
             f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" '
             f'class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>'
             f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" class="chart-draw-endpoint"/>'
@@ -287,10 +272,25 @@ def build_dual_line_chart_svg(
             f'<text x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {pct_b}%</text>'
         )
 
+    # Reveal mask: a rect covering the plot area that shrinks away via
+    # transform:scaleX (anchored to the right edge, so it uncovers left to
+    # right) instead of animating the lines' own stroke properties
+    # directly. This deliberately reuses the same transform-based
+    # technique already proven reliable for the radar chart's reveal --
+    # stroke-dasharray/dashoffset animation (both CSS-transitioned and
+    # later JS-rAF-driven) proved unreliable specifically on iOS Safari
+    # across multiple rounds of testing, which lines up with a known,
+    # documented gap in WebKit: transform animations get real hardware
+    # compositing, direct SVG stroke-property animation often doesn't.
+    mask_svg = (
+        f'<rect x="{left_pad}" y="{top_pad}" width="{plot_w}" height="{plot_h}" fill="#1a1e28" '
+        f'class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/>'
+    )
+
     return (
         f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" class="dual-chart" role="img" '
         f'aria-label="{name_a} vs {name_b} probability over time{" (one side implied)" if (implied_a or implied_b) else ""}">'
-        + grid_svg + axis_svg + line_a_svg + line_b_svg + legend_svg + x_labels_svg +
+        + grid_svg + axis_svg + line_a_svg + line_b_svg + legend_svg + x_labels_svg + mask_svg +
         '</svg>'
     )
 
