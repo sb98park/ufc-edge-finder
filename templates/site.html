@@ -50,7 +50,7 @@
   .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 8px; border-radius: 10px; }
   .table-scroll table { margin-bottom: 0; }
   table td, table th { white-space: nowrap; }
-  .rationale-row td, .model-only-note { white-space: normal; overflow-wrap: break-word; }
+  .model-only-note { white-space: normal; overflow-wrap: break-word; }
 
   .brand-header { display: flex; align-items: center; gap: 11px; margin: 2px 0 8px; }
   .brand-logo { flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(212,175,55,0.35)); }
@@ -124,7 +124,8 @@
   @media (hover: hover) {
     .hub-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
   }
-  .hub-card-icon { font-size: 24px; flex-shrink: 0; }
+  .hub-card-icon { font-size: 24px; flex-shrink: 0; width: 26px; display: flex; align-items: center; justify-content: center; }
+  .hub-card-icon svg { width: 24px; height: 24px; }
   .hub-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .hub-card-label { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
   .hub-card-stat { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.25; }
@@ -158,7 +159,8 @@
     }
   }
   .hub-card.featured::before { height: 3px; }
-  .hub-card.featured .hub-card-icon { font-size: 32px; }
+  .hub-card.featured .hub-card-icon { font-size: 32px; width: 34px; }
+  .hub-card.featured .hub-card-icon svg { width: 32px; height: 32px; }
   .hub-card.featured .hub-card-stat { font-size: 21px; }
 
   .favorite-card {
@@ -619,11 +621,6 @@
   tr:last-child td { border-bottom: none; }
   .edge-pos { color: var(--green); font-weight: 700; }
   .edge-neg { color: var(--red); }
-  .rationale-row td {
-    font-size: 11.5px; color: var(--muted); line-height: 1.5;
-    padding-top: 0; padding-bottom: 12px; border-bottom: 1px solid var(--border);
-    white-space: normal;
-  }
   .model-only-table td { color: var(--muted); font-style: italic; }
   .model-only-note { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
@@ -742,7 +739,19 @@
     <div class="hub-grid">
       {% if events %}
       <div class="hub-card featured" style="--card-accent:#ff5c5c" onclick="showSection('thisweekend')">
-        <div class="hub-card-icon">🥊</div>
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="MMA gloves">
+            <defs><linearGradient id="icon-weekend" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <rect x="5" y="19.5" width="16" height="5" rx="2" stroke="url(#icon-weekend)" stroke-width="1.6" fill="none"/>
+            <line x1="6" y1="22" x2="20" y2="22" stroke="url(#icon-weekend)" stroke-width="0.8" opacity="0.6"/>
+            <rect x="6" y="11.5" width="14" height="8.5" rx="3" stroke="url(#icon-weekend)" stroke-width="1.6" fill="none"/>
+            <rect x="7" y="6.5" width="2.4" height="5.8" rx="1.2" fill="url(#icon-weekend)"/>
+            <rect x="10.1" y="5" width="2.4" height="7.3" rx="1.2" fill="url(#icon-weekend)"/>
+            <rect x="13.2" y="5" width="2.4" height="7.3" rx="1.2" fill="url(#icon-weekend)"/>
+            <rect x="16.3" y="6.5" width="2.4" height="5.8" rx="1.2" fill="url(#icon-weekend)"/>
+            <rect x="2" y="13.5" width="2.1" height="5.8" rx="1.05" fill="url(#icon-weekend)" transform="rotate(-25 3.05 16.4)"/>
+          </svg>
+        </div>
         <div class="hub-card-text">
           <div class="hub-card-label">This Weekend</div>
           <div class="hub-card-stat">{{ events[0].event_name.split(':')[0].strip() }}</div>
@@ -753,7 +762,13 @@
       </div>
       {% endif %}
       <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('track')">
-        <div class="hub-card-icon">📈</div>
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart">
+            <defs><linearGradient id="icon-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <polyline points="3,19 9,12 14,16 22,5" stroke="url(#icon-track)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="16,5 22,5 22,11" stroke="url(#icon-track)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+        </div>
         <div class="hub-card-text">
           <div class="hub-card-title">Track Record</div>
           <div class="hub-card-sub">{{ (track_record.accuracy_pct ~ '% accuracy · ' ~ track_record.total ~ ' picks tracked') if track_record else 'No results yet' }}</div>
@@ -761,7 +776,13 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('standout')">
-        <div class="hub-card-icon">🔥</div>
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame">
+            <defs><linearGradient id="icon-standout" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <path d="M13 2 C13 2 8 8 8 13 C8 16.5 10 19 13 19 C16 19 18 16.5 18 13 C18 13 16 15 15 13 C15 13 17 9 13 2 Z" fill="url(#icon-standout)" opacity="0.9"/>
+            <path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#1a1e28"/>
+          </svg>
+        </div>
         <div class="hub-card-text">
           <div class="hub-card-title">Standout Props <span class="count-badge">{{ standout_props|length }}</span></div>
           <div class="hub-card-sub">flagged right now</div>
@@ -769,7 +790,13 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('favorites')">
-        <div class="hub-card-icon">💎</div>
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond">
+            <defs><linearGradient id="icon-favorites" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <path d="M6 9 L20 9 L24 13 L13 23 L2 13 Z" fill="url(#icon-favorites)" opacity="0.15" stroke="url(#icon-favorites)" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M6 9 L9 13 L13 9 M20 9 L17 13 L13 9 M2 13 L24 13 M13 9 L13 23 M9 13 L13 23 L17 13" stroke="url(#icon-favorites)" stroke-width="1" opacity="0.8" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <div class="hub-card-text">
           <div class="hub-card-title">Favorite Picks <span class="count-badge">{{ favorite_picks|length }}</span></div>
           <div class="hub-card-sub">straight bets worth real size</div>
@@ -777,7 +804,16 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-card" style="--card-accent:#6db3f2" onclick="showSection('parlays')">
-        <div class="hub-card-icon">💰</div>
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins">
+            <defs><linearGradient id="icon-parlays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <ellipse cx="13" cy="19" rx="9" ry="3.2" fill="none" stroke="url(#icon-parlays)" stroke-width="1.8"/>
+            <ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#1a1e28" stroke="url(#icon-parlays)" stroke-width="1.8"/>
+            <ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#1a1e28" stroke="url(#icon-parlays)" stroke-width="1.8"/>
+            <line x1="4" y1="9" x2="4" y2="19" stroke="url(#icon-parlays)" stroke-width="1.8"/>
+            <line x1="22" y1="9" x2="22" y2="19" stroke="url(#icon-parlays)" stroke-width="1.8"/>
+          </svg>
+        </div>
         <div class="hub-card-text">
           <div class="hub-card-title">Parlays <span class="count-badge">{{ (bankroll_parlays|length) + (lotto_parlays|length) + (moonshot_parlays|length) }}</span></div>
           <div class="hub-card-sub">slates across 3 tiers</div>
@@ -785,7 +821,16 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-card" style="--card-accent:#e88fc7" onclick="showSection('coming')">
-        <div class="hub-card-icon">🔮</div>
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar">
+            <defs><linearGradient id="icon-coming" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <rect x="3" y="5" width="20" height="18" rx="3" stroke="url(#icon-coming)" stroke-width="1.8"/>
+            <line x1="3" y1="10" x2="23" y2="10" stroke="url(#icon-coming)" stroke-width="1.8"/>
+            <line x1="8" y1="2" x2="8" y2="7" stroke="url(#icon-coming)" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="18" y1="2" x2="18" y2="7" stroke="url(#icon-coming)" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="17.5" cy="16.5" r="2.3" fill="#e8c766"/>
+          </svg>
+        </div>
         <div class="hub-card-text">
           <div class="hub-card-title">Coming Up <span class="count-badge">{{ future_events|length }}</span></div>
           <div class="hub-card-sub">future cards tracked</div>
@@ -1089,11 +1134,15 @@
           <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
           <td>{{ row.suggested_stake_pct }}%</td>
         </tr>
-        {% if row.rationale %}
-        <tr class="rationale-row"><td colspan="7">{{ row.rationale }}</td></tr>
-        {% endif %}
         {% endfor %}
       </table></div>
+      {% for row in fight.edges %}
+      {% if row.rationale %}
+      <div class="model-preview edge-rationale">
+        <span class="preview-label">{% if not row.market.startswith('Method: ') %}{{ row.fighter }} — {% endif %}{{ row.market | clear_market(row.fighter) }}:</span> {{ row.rationale }}
+      </div>
+      {% endif %}
+      {% endfor %}
       {% else %}
       <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
       {% endif %}
