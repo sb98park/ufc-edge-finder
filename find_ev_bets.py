@@ -29,12 +29,10 @@ from src.card_matcher import load_fight_cards, assign_canonical_fight_ids
 DATA_DIR = "data"
 
 
-def build_ratings(fighters_df: pd.DataFrame) -> dict[str, float]:
-    history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
+def build_ratings(fighters_df: pd.DataFrame, history_df: pd.DataFrame) -> dict[str, float]:
     elo = EloRatingSystem()
     elo.build_from_history(history_df)
     return build_effective_ratings(fighters_df, elo.ratings, history_df)
-
 
 
 def main():
@@ -43,8 +41,9 @@ def main():
     args = parser.parse_args()
 
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
+    history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
-    elo_ratings = build_ratings(fighters_df)
+    elo_ratings = build_ratings(fighters_df, history_df)
 
     upcoming_df, source = get_live_props()
     if upcoming_df.empty:
@@ -52,7 +51,7 @@ def main():
         return
     upcoming_df = assign_canonical_fight_ids(upcoming_df, cards_df)
 
-    edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings)
+    edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings, history_df)
     edges_df["odds_american"] = edges_df["odds_american"].apply(format_american_odds)
 
     print(f"\nData source: {source}")

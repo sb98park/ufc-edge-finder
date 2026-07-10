@@ -36,8 +36,7 @@ DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
 
 
-def build_ratings(fighters_df: pd.DataFrame) -> dict[str, float]:
-    history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
+def build_ratings(fighters_df: pd.DataFrame, history_df: pd.DataFrame) -> dict[str, float]:
     elo = EloRatingSystem()
     elo.build_from_history(history_df)
     return build_effective_ratings(fighters_df, elo.ratings, history_df)
@@ -45,7 +44,8 @@ def build_ratings(fighters_df: pd.DataFrame) -> dict[str, float]:
 
 def main():
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
-    elo_ratings = build_ratings(fighters_df)
+    history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
+    elo_ratings = build_ratings(fighters_df, history_df)
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
     future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")
 

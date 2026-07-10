@@ -37,7 +37,7 @@ def index():
     elo.build_from_history(history_df)
     effective_ratings = build_effective_ratings(fighters_df, elo.ratings, history_df)
 
-    edges_df = find_all_edges(upcoming_df, fighters_df, effective_ratings)
+    edges_df = find_all_edges(upcoming_df, fighters_df, effective_ratings, history_df)
     if not edges_df.empty:
         edges_df["odds_american"] = edges_df["odds_american"].apply(format_american_odds)
 
