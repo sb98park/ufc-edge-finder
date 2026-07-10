@@ -80,6 +80,14 @@ def main():
     favorite_picks = top_favorite_picks(tracked_edges, fighters_df, n=5)
 
     tracked_edges_list = tracked_edges.to_dict("records") if not tracked_edges.empty else []
+    for e in tracked_edges_list:
+        # Fight-level rows (GoesTheDistance, "Fight Outcome") never set an
+        # "opponent" field. Building a DataFrame from a mix of rows that
+        # do and don't have that key fills the gap with NaN, which is
+        # truthy in Python -- so a template check like {% if row.opponent %}
+        # doesn't filter it out, it just prints the literal word "nan".
+        if pd.isna(e.get("opponent")):
+            e["opponent"] = None
 
     model_only_by_fight = {}
     for event in events:
@@ -178,6 +186,28 @@ def main():
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
     env.filters["tojson"] = lambda obj: json.dumps(obj, default=str)
+    # NaN is truthy in Python, so a plain {% if x %} check doesn't catch a
+    # pandas-filled missing value -- it just prints the literal word
+    # "nan". This test explicitly excludes both None and NaN (the classic
+    # "x != x" is only ever true for NaN) so templates can check
+    # "is real_value" instead of relying on Jinja's default truthiness.
+    env.tests["real_value"] = lambda x: x is not None and x == x
+
+    def clear_market_label(market, fighter):
+        """
+        "Method: KO/TKO" alone doesn't say WHICH fighter -- shown next to
+        a "Fighter A vs Fighter B" line, a reader has no way to tell if
+        it's A or B winning by KO/TKO. Rewriting it to explicitly name
+        the fighter removes the ambiguity instead of relying on the
+        reader to correctly guess which name it's attached to.
+        """
+        if not market or not fighter:
+            return market
+        if market.startswith("Method: "):
+            return f"{fighter} by {market[len('Method: '):]}"
+        return market
+
+    env.filters["clear_market"] = clear_market_label
     template = env.get_template("site.html")
 
     # Lightweight snapshot for the "what's new since your last visit" strip --

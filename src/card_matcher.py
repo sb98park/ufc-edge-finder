@@ -9,7 +9,7 @@ import unicodedata
 
 import pandas as pd
 
-from src.rationale import explain_edge
+from src.rationale import explain_edge, explain_favorite_pick
 from src.model_preview import build_fight_preview, build_full_market_projection
 from src.odds_utils import implied_prob_to_american, format_american_odds
 
@@ -296,7 +296,10 @@ def top_favorite_picks(
         except (ValueError, ZeroDivisionError):
             r["model_fair_odds"] = "N/A"
         if fighters_df is not None:
-            r["rationale"] = explain_edge(r, fighters_df)
+            if r["market"] == "Moneyline":
+                r["rationale"] = explain_favorite_pick(r, fighters_df)
+            else:
+                r["rationale"] = explain_edge(r, fighters_df)
     return picks
 
 

@@ -228,6 +228,97 @@ def explain_goes_the_distance(row: dict, fighters_df: pd.DataFrame) -> str:
     return base
 
 
+def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
+    """
+    A different voice than explain_edge on purpose. That function answers
+    "what stat is driving the model's number" -- useful for auditing a
+    prop, but it reads like a data citation, not a reason to actually put
+    real money on something. This answers a different question: "why is
+    THIS specific pick something worth sizing up on," which means
+    weighing the opponent's exploitable weaknesses as much as the
+    fighter's own strengths, and explicitly addressing why the current
+    price still represents value rather than just restating the edge.
+    Only fires for Moneyline, since that's what favorite picks are.
+    """
+    fighter = row["fighter"]
+    opponent = row.get("opponent")
+    stats = _fighter_stats(fighters_df, fighter)
+    opp_stats = _fighter_stats(fighters_df, opponent) if opponent else None
+
+    signals = []  # (magnitude, sentence)
+
+    if opponent and stats and opp_stats:
+        matchup = predict_matchup(fighter, opponent, fighters_df, {})
+        if matchup:
+            wrestling = matchup.get("wrestling_adjustment", 0)
+            if abs(wrestling) > 8:
+                if wrestling > 0:
+                    signals.append((abs(wrestling), f"{fighter} has a real path to control the fight positionally -- {opponent}'s takedown defense doesn't match up well against it, and fights that go where {fighter} wants them tend to stay safe and one-sided"))
+                else:
+                    signals.append((abs(wrestling), f"{opponent} is genuinely live on the mat against {fighter}, which tempers the confidence here even with the number where it is"))
+
+            striking = matchup.get("striking_adjustment", 0)
+            if abs(striking) > 6:
+                if striking > 0:
+                    signals.append((abs(striking), f"on the feet, {fighter} lands at a clip {opponent} hasn't shown much answer for -- that's the kind of advantage that tends to compound over a full fight rather than fade"))
+                else:
+                    signals.append((abs(striking), f"{opponent} actually has the sharper striking profile here, which is a real headwind worth weighing against the pick"))
+
+            durability = matchup.get("durability_adjustment", 0)
+            # Finish-loss rate from a thin loss record is noise, not a
+            # pattern -- an elite fighter with just 1-2 career losses can
+            # have that rate swing to 0% or 100% purely from small-sample
+            # variance, which would misleadingly read as a real signal.
+            durability_sample_ok = stats["losses"] >= 3 and opp_stats["losses"] >= 3
+            if abs(durability) > 8 and durability_sample_ok:
+                if durability > 0:
+                    signals.append((abs(durability), f"{opponent} has been finished at a notably higher rate than {fighter}, and durability gaps like that are exactly what tends to hold up bet after bet -- it's not a one-fight fluke, it's a pattern"))
+                else:
+                    signals.append((abs(durability), f"{fighter}'s own durability history is a genuine soft spot, which is worth knowing even if the model still leans this way"))
+
+            layoff_a, layoff_b = matchup.get("layoff_years_a") or 0, matchup.get("layoff_years_b") or 0
+            layoff_gap = layoff_b - layoff_a
+            # Compare relatively, not independently -- citing "opponent's
+            # layoff hurts them" AND "fighter's own layoff hurts them" in
+            # the same breath is contradictory when both are similar, and
+            # only means something when there's a real gap between the two.
+            if layoff_gap > 0.75 and layoff_b > 1.0:
+                signals.append((layoff_gap * 8, f"{opponent} is coming off a {layoff_b:.1f}-year layoff, and ring rust after time away is one of the more reliable soft edges in this sport -- sharpness doesn't always come back on schedule"))
+            elif layoff_gap < -0.75 and layoff_a > 1.0:
+                signals.append((abs(layoff_gap) * 6, f"{fighter}'s own {layoff_a:.1f}-year layoff is a real variable working against this pick, not for it"))
+
+            if matchup.get("age_cliff_flag_b"):
+                signals.append((12, f"{opponent} is at the stage of their career where physical decline shows up fast in this sport -- age isn't just a number here, it's a fight-specific liability"))
+            if matchup.get("age_cliff_flag_a"):
+                signals.append((12, f"{fighter}'s own age curve is working against this pick, which tempers how much size makes sense even at a good price"))
+
+    # Fallback / supplementary signal: raw finish-resistance if nothing
+    # matchup-specific stood out, or to add a second data point alongside
+    # a matchup-specific one.
+    if stats and stats["losses"] >= 3:
+        finish_resistance = 1 - (stats["ko_loss_rate"] + stats["sub_loss_rate"])
+        if finish_resistance >= 0.75:
+            signals.append((finish_resistance * 15, f"{fighter} simply doesn't get finished -- {int(finish_resistance*100)}% of their career losses have gone the distance, which caps the downside even on an off night"))
+
+    signals.sort(key=lambda s: s[0], reverse=True)
+    top = [s[1] for s in signals[:2]]
+
+    odds_display = format_american_odds(row["odds_american"])
+    prob_pct = round(row["model_prob"] * 100)
+
+    if top:
+        body = ". ".join(s[0].upper() + s[1:] for s in top) + "."
+    else:
+        # No sharp matchup-specific signal -- be honest that this is a
+        # cleaner, less dramatic case rather than forcing a narrative.
+        body = f"Nothing dramatic separates this matchup on paper -- it's a cleaner, lower-variance read on {fighter} rather than one built on a single standout factor."
+
+    return (
+        f"{body} At {odds_display}, that's real, bettable value on a pick the model has at {prob_pct}% -- "
+        f"the kind of number worth sizing up on rather than treating as a coinflip."
+    )
+
+
 def explain_edge(row: dict, fighters_df: pd.DataFrame) -> str:
     if row["market"] == "Moneyline":
         return explain_moneyline(row, fighters_df)

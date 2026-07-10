@@ -109,25 +109,41 @@
   .live-header-micro strong { color: var(--text); font-weight: 700; }
   .live-header-micro .next-lock { color: var(--accent2); font-weight: 700; }
 
-  .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .hub-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .hub-card {
     background: linear-gradient(145deg, #1a1e28, #14171f 65%);
-    border: 1px solid var(--border); border-radius: 14px; padding: 14px;
+    border: 1px solid var(--border); border-radius: 14px; padding: 16px;
     cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;
-    display: flex; flex-direction: column; gap: 6px; min-height: 108px; position: relative; overflow: hidden;
+    display: flex; flex-direction: row; align-items: center; gap: 14px; position: relative; overflow: hidden;
   }
   .hub-card::before {
     content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
     background: var(--card-accent, var(--accent));
   }
-  .hub-card:active { transform: scale(0.97); }
+  .hub-card:active { transform: scale(0.98); }
   @media (hover: hover) {
     .hub-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
   }
-  .hub-card-icon { font-size: 19px; }
+  .hub-card-icon { font-size: 24px; flex-shrink: 0; }
+  .hub-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .hub-card-label { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-  .hub-card-stat { font-size: 21px; font-weight: 800; color: var(--text); line-height: 1.15; }
-  .hub-card-sub { font-size: 10px; color: var(--muted); margin-top: -3px; }
+  .hub-card-stat { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.25; }
+  .hub-card-sub { font-size: 10.5px; color: var(--muted); }
+  .hub-card-matchup { font-size: 12.5px; color: var(--accent2); font-weight: 600; }
+  .hub-card-arrow { flex-shrink: 0; color: var(--muted); font-size: 16px; }
+
+  /* This Weekend gets a real featured treatment now that every card is
+     full-width -- a glowing accent border and richer background tint,
+     not just the thin top stripe every other card gets. */
+  .hub-card.featured {
+    border: 1.5px solid rgba(255,92,92,0.45);
+    box-shadow: 0 0 0 1px rgba(255,92,92,0.08), 0 0 28px rgba(255,92,92,0.15);
+    background: linear-gradient(145deg, #2a1414, #14171f 60%);
+    padding: 18px 16px;
+  }
+  .hub-card.featured::before { height: 3px; }
+  .hub-card.featured .hub-card-icon { font-size: 32px; }
+  .hub-card.featured .hub-card-stat { font-size: 21px; }
 
   .favorite-card {
     background: linear-gradient(145deg, #10251a, #14171f 60%);
@@ -147,11 +163,6 @@
   .favorite-prob-bar { height: 100%; background: linear-gradient(90deg, #1e4a2f, var(--green)); border-radius: 3px; transition: width 0.9s ease-out; }
   .favorite-prob-label { font-size: 10.5px; color: var(--muted); font-weight: 600; }
   .hub-card-arrow { position: absolute; top: 12px; right: 12px; color: var(--muted); font-size: 12px; }
-  .hub-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; min-height: auto; padding: 18px 16px; gap: 14px; }
-  .hub-card.wide .hub-card-icon { font-size: 30px; flex-shrink: 0; }
-  .hub-card.wide .hub-card-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-  .hub-card.wide .hub-card-stat { font-size: 20px; margin-top: 2px; }
-  .hub-card-matchup { font-size: 13px; color: var(--accent2); font-weight: 600; }
   .back-btn {
     display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--border);
     border-radius: 20px; padding: 7px 14px; color: var(--text); font-size: 12.5px; font-weight: 600;
@@ -202,14 +213,6 @@
   }
   .reveal-target { opacity: 0; transform: translateY(10px); transition: opacity 0.45s ease-out, transform 0.45s ease-out; }
   .reveal-target.revealed { opacity: 1; transform: translateY(0); }
-  .pin-btn {
-    background: none; border: none; font-size: 15px; cursor: pointer; opacity: 0.35;
-    padding: 4px 6px; flex-shrink: 0; filter: grayscale(1);
-    transition: opacity 0.15s ease, filter 0.15s ease;
-  }
-  .pin-btn.pinned { opacity: 1; filter: grayscale(0); }
-  #pinned-section { margin-bottom: 14px; }
-  #pinned-container details.fight-card { border-color: rgba(212,175,55,0.4); }
   .new-item-glow {
     animation: new-item-pulse 2s ease-in-out 4;
     border-radius: 12px;
@@ -549,6 +552,14 @@
   .chart-draw-line { transition: stroke-dashoffset 1.1s ease-out; }
   .chart-draw-endpoint { opacity: 0; transition: opacity 0.3s ease-out; transition-delay: 0.9s; }
   .chart-block.revealed .chart-draw-endpoint { opacity: 1; }
+  .chart-endpoint-halo { opacity: 0; }
+  .chart-block.revealed .chart-endpoint-halo {
+    opacity: 1; animation: endpoint-pulse 1.8s ease-out 0.9s infinite;
+  }
+  @keyframes endpoint-pulse {
+    0% { transform: scale(1); opacity: 0.55; }
+    75%, 100% { transform: scale(3); opacity: 0; }
+  }
   .radar-legend-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
   .radar-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .radar-dot.a { background: #d4af37; }
@@ -663,9 +674,9 @@
   </div>
   {% endif %}
 
-  <div id="whats-new-banner" class="whats-new-banner" style="display:none;">
+  <div id="whats-new-banner" class="whats-new-banner" style="display:none; cursor:pointer;" onclick="window.__goToWhatsNew();">
     <div class="whats-new-text" id="whats-new-text"></div>
-    <button class="whats-new-dismiss" onclick="window.__dismissToast();">✕</button>
+    <button class="whats-new-dismiss" onclick="event.stopPropagation(); window.__dismissToast();">✕</button>
   </div>
 
   <div class="meta-row">
@@ -687,7 +698,7 @@
   <div id="hub-view">
     <div class="hub-grid">
       {% if events %}
-      <div class="hub-card wide" style="--card-accent:#ff5c5c" onclick="showSection('thisweekend')">
+      <div class="hub-card featured" style="--card-accent:#ff5c5c" onclick="showSection('thisweekend')">
         <div class="hub-card-icon">🥊</div>
         <div class="hub-card-text">
           <div class="hub-card-label">This Weekend</div>
@@ -695,43 +706,53 @@
           <div class="hub-card-matchup">{{ events[0].event_name.split(':', 1)[1].strip() if ':' in events[0].event_name else '' }}</div>
           <div class="hub-card-sub">{{ events[0].fights|length }} fights · {{ events[0].event_date }}</div>
         </div>
-        <span class="hub-card-arrow" style="position:static; font-size:16px;">→</span>
+        <span class="hub-card-arrow">→</span>
       </div>
       {% endif %}
       <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('track')">
-        <span class="hub-card-arrow">→</span>
         <div class="hub-card-icon">📈</div>
-        <div class="hub-card-label">Track Record</div>
-        <div class="hub-card-stat">{{ track_record.accuracy_pct ~ '%' if track_record else '—' }}</div>
-        <div class="hub-card-sub">{{ track_record.total ~ ' picks tracked' if track_record else 'No results yet' }}</div>
+        <div class="hub-card-text">
+          <div class="hub-card-label">Track Record</div>
+          <div class="hub-card-stat">{{ track_record.accuracy_pct ~ '%' if track_record else '—' }}</div>
+          <div class="hub-card-sub">{{ track_record.total ~ ' picks tracked' if track_record else 'No results yet' }}</div>
+        </div>
+        <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('standout')">
-        <span class="hub-card-arrow">→</span>
         <div class="hub-card-icon">🔥</div>
-        <div class="hub-card-label">Standout Props</div>
-        <div class="hub-card-stat">{{ standout_props|length }}</div>
-        <div class="hub-card-sub">flagged right now</div>
+        <div class="hub-card-text">
+          <div class="hub-card-label">Standout Props</div>
+          <div class="hub-card-stat">{{ standout_props|length }}</div>
+          <div class="hub-card-sub">flagged right now</div>
+        </div>
+        <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('favorites')">
-        <span class="hub-card-arrow">→</span>
         <div class="hub-card-icon">💎</div>
-        <div class="hub-card-label">Favorite Picks</div>
-        <div class="hub-card-stat">{{ favorite_picks|length }}</div>
-        <div class="hub-card-sub">straight bets worth real size</div>
+        <div class="hub-card-text">
+          <div class="hub-card-label">Favorite Picks</div>
+          <div class="hub-card-stat">{{ favorite_picks|length }}</div>
+          <div class="hub-card-sub">straight bets worth real size</div>
+        </div>
+        <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-card" style="--card-accent:#6db3f2" onclick="showSection('parlays')">
-        <span class="hub-card-arrow">→</span>
         <div class="hub-card-icon">💰</div>
-        <div class="hub-card-label">Parlays</div>
-        <div class="hub-card-stat">{{ (bankroll_parlays|length) + (lotto_parlays|length) + (moonshot_parlays|length) }}</div>
-        <div class="hub-card-sub">slates across 3 tiers</div>
+        <div class="hub-card-text">
+          <div class="hub-card-label">Parlays</div>
+          <div class="hub-card-stat">{{ (bankroll_parlays|length) + (lotto_parlays|length) + (moonshot_parlays|length) }}</div>
+          <div class="hub-card-sub">slates across 3 tiers</div>
+        </div>
+        <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-card" style="--card-accent:#e88fc7" onclick="showSection('coming')">
-        <span class="hub-card-arrow">→</span>
         <div class="hub-card-icon">🔮</div>
-        <div class="hub-card-label">Coming Up</div>
-        <div class="hub-card-stat">{{ future_events|length }}</div>
-        <div class="hub-card-sub">future cards tracked</div>
+        <div class="hub-card-text">
+          <div class="hub-card-label">Coming Up</div>
+          <div class="hub-card-stat">{{ future_events|length }}</div>
+          <div class="hub-card-sub">future cards tracked</div>
+        </div>
+        <span class="hub-card-arrow">→</span>
       </div>
     </div>
   </div>
@@ -966,7 +987,6 @@
           {{ fighter_avatar(fight.fighter_b) }}
         </div>
       </div>
-      <button class="pin-btn" data-pin-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" onclick="event.preventDefault(); event.stopPropagation(); window.__togglePin(this);" aria-label="Pin this fight" type="button">📌</button>
       <span class="chevron">▶</span>
     </summary>
     <div class="fight-body">
@@ -1061,8 +1081,8 @@
   {% for row in notable_movements %}
   <div class="line-card" data-key="{{ row.fighter }}|{{ row.market }}">
     <div>
-      <div class="line-matchup">{{ row.fighter }}{% if row.opponent %} vs {{ row.opponent }}{% endif %}</div>
-      <div class="line-market">{{ row.market }} · {{ row.movement.from | american }} → {{ row.movement.to | american }}</div>
+      <div class="line-matchup">{{ row.fighter }}{% if row.opponent is real_value %} vs {{ row.opponent }}{% endif %}</div>
+      <div class="line-market">{{ row.market | clear_market(row.fighter) }} · {{ row.movement.from | american }} → {{ row.movement.to | american }}</div>
     </div>
     <div class="movement-tag {{ row.movement.direction }} notable">{{ '📈' if row.movement.direction == 'shortening' else '📉' }} {{ row.movement.pct_change }}%</div>
   </div>
@@ -1076,8 +1096,8 @@
     <div class="standout-card reveal-target heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}" data-key="{{ p.fighter }}|{{ p.market }}">
       <div class="standout-top">
         <div>
-          <div class="standout-main">{{ p.fighter }}<span class="standout-vs">{% if p.opponent %} (vs. {{ p.opponent }}){% endif %}</span></div>
-          <div class="standout-market">{{ p.market }}
+          <div class="standout-main">{{ p.fighter }}<span class="standout-vs">{% if p.opponent is real_value %} (vs. {{ p.opponent }}){% endif %}</span></div>
+          <div class="standout-market">{{ p.market | clear_market(p.fighter) }}
             {% if p.market == 'Moneyline' %}
               <span class="dog-badge {{ 'fav' if p.odds_american < 0 else 'dog' }}">{{ '⭐ Favorite' if p.odds_american < 0 else '🐶 Underdog' }}</span>
             {% endif %}
@@ -1117,7 +1137,7 @@
       <div class="favorite-top">
         <div>
           <div class="favorite-main">{{ p.fighter }}</div>
-          <div class="favorite-vs">{% if p.opponent %}vs {{ p.opponent }} · {% endif %}{{ p.market }}</div>
+          <div class="favorite-vs">{% if p.opponent is real_value %}vs {{ p.opponent }} · {% endif %}{{ p.market | clear_market(p.fighter) }}</div>
         </div>
         <div class="favorite-odds">{{ p.odds_american | american }}</div>
       </div>
@@ -1226,11 +1246,6 @@
   </div>
 
   <div class="detail-section" data-section="thisweekend">
-  <div id="pinned-section" style="display:none;">
-    <div class="section-title">📌 Your Pinned Fights</div>
-    <div id="pinned-container"></div>
-  </div>
-
   {% for event in events %}
   <div class="event-header" {% if loop.first %}id="section-thisweekend"{% endif %}>
     <div class="event-name">{{ event.event_name }}</div>
@@ -1432,6 +1447,14 @@
         setTimeout(() => { banner.style.display = 'none'; }, 300);
       };
 
+      // Standout Props and Notable Line Movement share the same detail
+      // section, so wherever the "new" count came from, this is always
+      // the right place to send someone tapping the banner.
+      window.__goToWhatsNew = function() {
+        window.__dismissToast();
+        if (typeof showSection === 'function') showSection('standout');
+      };
+
       if (previous) {
         const prevStandoutKeys = new Set((previous.standout || []).map(p => p.key));
         const prevMovementKeys = new Set((previous.movements || []).map(m => m.key));
@@ -1494,43 +1517,10 @@
       });
     })();
 
-    // Pin fights + remember collapsed/expanded section state (localStorage)
+    // Remember collapsed/expanded section state (localStorage)
     (function() {
-      const PIN_KEY = 'ufc-edge-finder-pinned';
       const DETAILS_KEY_PREFIX = 'ufc-edge-finder-details-';
 
-      let pinned = [];
-      try { pinned = JSON.parse(localStorage.getItem(PIN_KEY) || '[]'); } catch (e) { pinned = []; }
-
-      window.__togglePin = function(btn) {
-        const key = btn.dataset.pinKey;
-        const idx = pinned.indexOf(key);
-        if (idx >= 0) { pinned.splice(idx, 1); btn.classList.remove('pinned'); }
-        else { pinned.push(key); btn.classList.add('pinned'); }
-        try { localStorage.setItem(PIN_KEY, JSON.stringify(pinned)); } catch (e) {}
-        renderPinnedSection();
-      };
-
-      function renderPinnedSection() {
-        const section = document.getElementById('pinned-section');
-        const container = document.getElementById('pinned-container');
-        if (!section || !container) return;
-        container.innerHTML = '';
-        let any = false;
-        pinned.forEach(key => {
-          const original = document.querySelector(`[data-fight-key="${CSS.escape(key)}"]`);
-          if (original) { container.appendChild(original); any = true; }
-        });
-        section.style.display = any ? 'block' : 'none';
-      }
-
-      // Mark already-pinned buttons and move their cards up front on load
-      document.querySelectorAll('.pin-btn').forEach(btn => {
-        if (pinned.includes(btn.dataset.pinKey)) btn.classList.add('pinned');
-      });
-      renderPinnedSection();
-
-      // Remember open/closed state for tagged <details> elements
       document.querySelectorAll('[data-remember-id]').forEach(el => {
         const storageKey = DETAILS_KEY_PREFIX + el.dataset.rememberId;
         try {
@@ -1569,43 +1559,58 @@
       }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
       document.querySelectorAll('.reveal-target').forEach(el => cardObserver.observe(el));
 
+      function revealFillTarget(el) {
+        el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar').forEach(bar => {
+          bar.style.width = bar.dataset.targetWidth;
+        });
+        el.querySelectorAll('.ring-progress').forEach(ring => {
+          ring.style.strokeDashoffset = ring.dataset.targetOffset;
+        });
+        el.querySelectorAll('.radar-chart').forEach(chart => chart.classList.add('revealed'));
+        // Measure line length HERE, not upfront on page load -- this
+        // element is only just now confirmed genuinely visible, which
+        // matters because iOS Safari can silently return 0 from
+        // getTotalLength() on an SVG that's still hidden (either by an
+        // ancestor's display:none, OR because it's inside a COLLAPSED
+        // <details> fight-card, which behaves the same way -- content
+        // isn't rendered at all until the card is expanded).
+        el.querySelectorAll('.chart-draw-line').forEach(line => {
+          try {
+            const length = line.getTotalLength();
+            if (!length) return;
+            line.style.strokeDasharray = length;
+            line.style.strokeDashoffset = length;
+            void line.getBoundingClientRect();
+            requestAnimationFrame(() => { line.style.strokeDashoffset = 0; });
+          } catch (e) { /* not a measurable path element -- leave as-is */ }
+        });
+        el.classList.add('revealed');
+      }
+
       const fillObserver = new IntersectionObserver((entries, obs) => {
         entries.forEach(entry => {
           if (!entry.isIntersecting) return;
-          const el = entry.target;
-          el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar').forEach(bar => {
-            bar.style.width = bar.dataset.targetWidth;
-          });
-          el.querySelectorAll('.ring-progress').forEach(ring => {
-            ring.style.strokeDashoffset = ring.dataset.targetOffset;
-          });
-          el.querySelectorAll('.radar-chart').forEach(chart => chart.classList.add('revealed'));
-          // Measure line length HERE, not upfront on page load -- this
-          // element is only just now confirmed genuinely visible (that's
-          // what isIntersecting means), which matters because iOS Safari
-          // can silently return 0 from getTotalLength() on an SVG that
-          // was still inside a display:none ancestor, while Chrome
-          // doesn't have that restriction. Measuring only once truly
-          // visible avoids the platform difference entirely.
-          el.querySelectorAll('.chart-draw-line').forEach(line => {
-            try {
-              const length = line.getTotalLength();
-              if (!length) return;
-              line.style.strokeDasharray = length;
-              line.style.strokeDashoffset = length;
-              // Force the browser to register the "hidden" (full offset)
-              // state in a paint before flipping to 0, otherwise both
-              // changes can land in the same frame and the transition
-              // snaps instead of animating.
-              void line.getBoundingClientRect();
-              requestAnimationFrame(() => { line.style.strokeDashoffset = 0; });
-            } catch (e) { /* not a measurable path element -- leave as-is */ }
-          });
-          el.classList.add('revealed');
-          obs.unobserve(el);
+          revealFillTarget(entry.target);
+          obs.unobserve(entry.target);
         });
       }, { threshold: 0.15 });
       document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card').forEach(el => fillObserver.observe(el));
+
+      // Explicit trigger on fight-card expansion -- a collapsed <details>
+      // fight-card doesn't render its contents at all (same effect as
+      // display:none), so simply scrolling a COLLAPSED card into view
+      // never gives the observer above a real chance to fire for its
+      // internal charts. Opening the card is the actual moment its
+      // content becomes real, so that's the moment to reveal it.
+      document.querySelectorAll('details.fight-card').forEach(card => {
+        card.addEventListener('toggle', () => {
+          if (!card.open) return;
+          card.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block').forEach(el => {
+            fillObserver.unobserve(el);
+            revealFillTarget(el);
+          });
+        });
+      });
     })();
     // Ripple tap effect on all accordion toggles
     (function() {
@@ -1631,7 +1636,7 @@
       const steps = [
         { selector: '.countdown-card', text: '⏱ Live countdown to fight night — automatically switches to live tracking once the card actually starts.' },
         { selector: '.hub-grid', text: '👋 Everything is organized into sections now — tap any card below to dive in, and use Back to return here.' },
-        { selector: '.hub-card.wide', text: '🥊 This Weekend has the full fight-by-fight breakdown — each fight includes a model probability, style-matchup radar, and the reasoning behind the pick.' },
+        { selector: '.hub-card.featured', text: '🥊 This Weekend has the full fight-by-fight breakdown — each fight includes a model probability, style-matchup radar, and the reasoning behind the pick.' },
       ];
 
       let overlay = null, tooltip = null, currentTarget = null, stepIndex = 0;

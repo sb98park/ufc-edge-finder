@@ -247,6 +247,8 @@ def build_dual_line_chart_svg(
         svg = (
             f'<polyline points="{coords}" fill="none" stroke="{color}" stroke-width="2.5" '
             f'stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/>'
+            f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" '
+            f'class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>'
             f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" class="chart-draw-endpoint"/>'
         )
         return svg, round(last_p * 100)
@@ -351,26 +353,38 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
         # Both sides have independently-sourced real data -- sanity check
         # that they're actually consistent with each other. A genuine
         # two-way market's two prices should sum close to 100% (minor vig
-        # aside); if they don't, the two independent sources disagree
-        # (different fetch timing, a stale point, etc.), and displaying
-        # both raw numbers would show percentages that don't add up.
+        # aside); if they don't, the two independent sources disagree.
         # Confirmed live: McGregor 43% + Holloway 70% = 113%, a real bug.
-        latest_a = sorted(points_a, key=lambda p: p[0])[-1][1]
-        latest_b = sorted(points_b, key=lambda p: p[0])[-1][1]
+        sorted_a = sorted(points_a, key=lambda p: p[0])
+        sorted_b = sorted(points_b, key=lambda p: p[0])
+        latest_ts_a, latest_a = sorted_a[-1]
+        latest_ts_b, latest_b = sorted_b[-1]
         if abs((latest_a + latest_b) - 1.0) > 0.08:
-            orig_len_a, orig_len_b = len(points_a), len(points_b)
-            if orig_len_a >= orig_len_b:
+            # Trust whichever side's MOST RECENT point is actually more
+            # recent, not whichever has more total accumulated points --
+            # snapshot data is captured opportunistically per-run (unlike
+            # CLOB history, which covers both sides over the identical
+            # window), so a side with more total points can still have a
+            # staler latest reading than a side with fewer but fresher
+            # ones. Confirmed live: this was the actual root cause, not
+            # just normal vig -- McGregor had 15 points but a stale
+            # latest one; Holloway had fewer but more current data.
+            if latest_ts_a >= latest_ts_b:
                 points_b = [(t, 1 - p) for t, p in points_a]
                 implied_b = True
                 print(f"[charts] {fighter_a} vs {fighter_b}: independent sides didn't sum to 100% "
-                      f"({latest_a*100:.0f}% + {latest_b*100:.0f}%) -- trusting {fighter_a}'s longer "
-                      f"history ({orig_len_a} pts vs {orig_len_b}), deriving {fighter_b} as its complement")
+                      f"({latest_a*100:.0f}% + {latest_b*100:.0f}%) -- trusting {fighter_a}'s more "
+                      f"recent point ({len(points_a)} pts, latest at {latest_ts_a:.0f}) over "
+                      f"{fighter_b}'s ({len(points_b)} pts, latest at {latest_ts_b:.0f}), "
+                      f"deriving {fighter_b} as its complement")
             else:
                 points_a = [(t, 1 - p) for t, p in points_b]
                 implied_a = True
                 print(f"[charts] {fighter_a} vs {fighter_b}: independent sides didn't sum to 100% "
-                      f"({latest_a*100:.0f}% + {latest_b*100:.0f}%) -- trusting {fighter_b}'s longer "
-                      f"history ({orig_len_b} pts vs {orig_len_a}), deriving {fighter_a} as its complement")
+                      f"({latest_a*100:.0f}% + {latest_b*100:.0f}%) -- trusting {fighter_b}'s more "
+                      f"recent point ({len(points_b)} pts, latest at {latest_ts_b:.0f}) over "
+                      f"{fighter_a}'s ({len(points_a)} pts, latest at {latest_ts_a:.0f}), "
+                      f"deriving {fighter_a} as its complement")
 
     fight["moneyline_chart"] = build_dual_line_chart_svg(
         points_a, points_b, fighter_a, fighter_b, implied_a=implied_a, implied_b=implied_b
