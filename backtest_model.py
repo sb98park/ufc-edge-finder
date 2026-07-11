@@ -44,17 +44,18 @@ def main():
     effective_ratings = build_effective_ratings(fighters_df, elo_ratings, history_df)
 
     results = []
-    skipped = []
+    skipped = 0
     for _, fight in history_df.iterrows():
         fighter_a, fighter_b, winner = fight["fighter_a"], fight["fighter_b"], fight["winner"]
         matchup = predict_matchup(fighter_a, fighter_b, fighters_df, effective_ratings, history_df)
         if matchup is None:
-            skipped.append(f"{fighter_a} vs {fighter_b} (not in fighters.csv)")
+            skipped += 1  # one or both fighters not in fighters.csv -- expected for most of the full graph
             continue
 
         predicted_prob_winner = matchup["prob_a"] if winner == fighter_a else matchup["prob_b"]
         correct = predicted_prob_winner > 0.5
         results.append({
+            "date": fight.get("date", ""),
             "fighter_a": fighter_a, "fighter_b": fighter_b, "winner": winner,
             "predicted_prob_a": round(matchup["prob_a"], 3),
             "predicted_prob_winner": round(predicted_prob_winner, 3),
@@ -82,13 +83,25 @@ def main():
     print(f"{'='*70}")
     print("BACKTEST RESULTS -- read the data-leakage caveat at the top of this file first")
     print(f"{'='*70}")
-    print(f"Fights evaluated: {n} (skipped {len(skipped)}: {skipped})")
+    print(f"Fights evaluated (both fighters in fighters.csv): {n} | skipped: {skipped}")
     print(f"Accuracy (model favored the actual winner): {accuracy*100:.1f}%")
     print(f"Brier score (lower is better, 0.25 = coinflip): {brier:.3f}")
     print(f"Log-loss (lower is better): {log_loss:.3f}")
+
+    # Era breakdown: the data-leakage problem is worst for old fights
+    # (predicting a 2015 fight with 2026 career stats), so recent-era
+    # accuracy is the least-dishonest number here.
+    df["year"] = pd.to_datetime(df["date"], errors="coerce").dt.year
+    for label, lo in (("2024+", 2024), ("2020-2023", 2020), ("pre-2020", 0)):
+        era = df[(df["year"] >= lo)] if lo else df[df["year"] < 2020]
+        if lo == 2020:
+            era = df[(df["year"] >= 2020) & (df["year"] < 2024)]
+        if len(era):
+            print(f"  {label}: {era['correct'].mean()*100:.1f}% over {len(era)} fights")
+
     print()
-    print("Per-fight detail:")
-    print(df.to_string(index=False))
+    print("Most recent 20 evaluated fights:")
+    print(df.sort_values("date").tail(20).drop(columns=["year"]).to_string(index=False))
 
 
 if __name__ == "__main__":

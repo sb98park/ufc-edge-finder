@@ -56,16 +56,31 @@ class EloRatingSystem:
         """
         Replays fight_history.csv in chronological order to build current ratings.
         Expected columns: date, fighter_a, fighter_b, winner, method
+
+        Rows where the winner matches neither listed fighter (draws, no
+        contests, malformed data) are skipped defensively -- the old
+        loser-inference logic would otherwise treat the winner string
+        itself (e.g. "Draw/NC") as a phantom fighter who beats fighter_a,
+        which silently poisons ratings at scale.
         """
         df = fight_history_df.copy()
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values("date")
 
+        skipped = 0
         for _, fight in df.iterrows():
             winner = fight["winner"]
-            loser = fight["fighter_b"] if winner == fight["fighter_a"] else fight["fighter_a"]
+            if winner == fight["fighter_a"]:
+                loser = fight["fighter_b"]
+            elif winner == fight["fighter_b"]:
+                loser = fight["fighter_a"]
+            else:
+                skipped += 1
+                continue
             self.update_ratings(winner, loser, method=fight.get("method", "DEC"))
 
+        if skipped:
+            print(f"[elo] skipped {skipped} rows with a winner matching neither fighter (draws/NC/malformed)")
         return self.ratings
 
     def rankings(self) -> pd.DataFrame:
