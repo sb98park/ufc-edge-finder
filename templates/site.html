@@ -5,14 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Octane Alpha | Quantitative UFC Analytics & Edge Detection</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Cpolygon points='22,2 39,12 39,32 22,42 5,32 5,12' fill='%230d0f14' stroke='%23d4af37' stroke-width='2'/%3E%3Cline x1='14' y1='34' x2='22' y2='10' stroke='%23d4af37' stroke-width='5' stroke-linecap='round'/%3E%3Cline x1='30' y1='34' x2='22' y2='10' stroke='%23d4af37' stroke-width='5' stroke-linecap='round'/%3E%3Cline x1='17' y1='24.5' x2='27' y2='24.5' stroke='%23d4af37' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0c10; --panel: #14171f; --panel2: #1a1e28; --border: #262b36;
     --text: #eef0f2; --muted: #8a8f9a; --green: #3ddc84;
     --red: #ff5c5c; --accent: #d4af37; --accent2: #e8c766;
+    --accent-cool: #5fb8c9;
+    --font-display: 'Space Grotesk', -apple-system, Segoe UI, Roboto, sans-serif;
   }
   * { box-sizing: border-box; }
-  html { scrollbar-color: var(--accent) #14171f; scrollbar-width: thin; }
+  html { scrollbar-color: var(--accent) #14171f; scrollbar-width: thin; scroll-behavior: smooth; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: #14171f; }
   ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #e8c766, #a3801f); border-radius: 8px; }
@@ -86,7 +91,7 @@
     background: #0d0f14; border: 1px solid #2a2410; border-radius: 8px;
     padding: 7px 11px; min-width: 44px;
   }
-  .countdown-box-value { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.3px; }
+  .countdown-box-value { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.3px; font-family: var(--font-display); }
   .countdown-box-label { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
   .countdown-sep { font-size: 17px; font-weight: 800; color: #3a2f14; }
 
@@ -129,7 +134,7 @@
   .inline-icon { width: 15px; height: 15px; vertical-align: -3px; margin-right: 2px; flex-shrink: 0; }
   .hub-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .hub-card-label { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-  .hub-card-stat { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.25; }
+  .hub-card-stat { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.25; font-family: var(--font-display); }
   .hub-card-sub { font-size: 10.5px; color: var(--muted); }
   .hub-card-title { font-size: 15.5px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 7px; }
   .count-badge {
@@ -176,7 +181,7 @@
   .favorite-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .favorite-main { font-size: 14.5px; font-weight: 800; }
   .favorite-vs { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .favorite-odds { font-size: 19px; font-weight: 800; color: var(--green); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .favorite-odds { font-size: 19px; font-weight: 800; color: var(--green); flex-shrink: 0; font-variant-numeric: tabular-nums; font-family: var(--font-display); }
   .favorite-prob-row { margin-bottom: 8px; }
   .favorite-prob-bar-track { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
   .favorite-prob-bar { height: 100%; background: linear-gradient(90deg, #1e4a2f, var(--green)); border-radius: 3px; transition: width 0.9s ease-out; }
@@ -187,7 +192,7 @@
     border-radius: 20px; padding: 7px 14px; color: var(--text); font-size: 12.5px; font-weight: 600;
     cursor: pointer; margin-bottom: 14px; width: fit-content; position: sticky; top: 8px; z-index: 50;
   }
-  .back-btn:active { background: var(--accent); color: #14171f; }
+  .back-btn:active { background: var(--accent-cool); color: #14171f; }
   .segment-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 12px; }
   .segment-divider:first-child { margin-top: 4px; }
   .segment-divider-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
@@ -251,8 +256,11 @@
     padding: 12px 16px; margin-bottom: 16px;
   }
   .track-record-title { font-size: 12.5px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
-  .track-record-headline { font-size: 24px; font-weight: 800; }
+  .track-record-headline { font-size: 24px; font-weight: 800; font-family: var(--font-display); }
   .track-record-headline span { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .sparkline-wrap { margin: 8px 0 4px; }
+  .sparkline-svg { display: block; }
+  .sparkline-caption { font-size: 10px; color: var(--muted); margin-top: 2px; }
   .track-record-breakdown { margin-top: 8px; }
   .track-record-conf-row {
     display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0;
@@ -261,12 +269,46 @@
   .track-record-conf-label { color: var(--muted); }
   .track-record-conf-value { font-weight: 700; }
   .track-record-empty { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    padding: 28px 16px 22px; gap: 6px;
+  }
+  .empty-state-icon { width: 42px; height: 42px; margin-bottom: 8px; animation: empty-state-pulse 3s ease-in-out infinite; }
+  .empty-state-icon svg { width: 100%; height: 100%; }
+  .empty-state-headline { font-size: 14px; font-weight: 700; color: var(--text); }
+  .empty-state-desc { font-size: 12px; color: var(--muted); line-height: 1.55; max-width: 320px; }
+  @keyframes empty-state-pulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.06); }
+  }
+  .jump-nav {
+    display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding: 8px 2px 12px; margin-bottom: 4px; scrollbar-width: none;
+  }
+  .jump-nav::-webkit-scrollbar { display: none; }
+  .jump-nav-chip {
+    flex-shrink: 0; font-size: 10.5px; font-weight: 600; color: var(--muted);
+    background: var(--panel2); border: 1px solid rgba(95,184,201,0.25); border-radius: 8px;
+    padding: 5px 9px; white-space: nowrap; text-decoration: none; scroll-snap-align: start;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .jump-nav-chip:active { color: var(--accent-cool); border-color: var(--accent-cool); }
+  .jump-nav-vs { color: var(--border); margin: 0 3px; }
+
+  #hub-view, #detail-view { transition: opacity 0.22s ease, transform 0.22s ease; opacity: 1; transform: translateX(0); }
+  .view-slide-out-left { opacity: 0; transform: translateX(-14px); }
+  .view-slide-out-right { opacity: 0; transform: translateX(14px); }
+  .view-slide-in-right-start { opacity: 0; transform: translateX(14px); transition: none; }
+  .view-slide-in-left-start { opacity: 0; transform: translateX(-14px); transition: none; }
+  @media (prefers-reduced-motion: reduce) {
+    #hub-view, #detail-view { transition: none; }
+  }
   .clv-badge {
     margin-top: 12px; padding: 10px 12px; border-radius: 10px; text-align: center;
     background: linear-gradient(135deg, #1a2a1a, #14171f 70%); border: 1px solid #2a4a2a;
   }
   .clv-badge-label { font-size: 10.5px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.4px; }
-  .clv-badge-value { font-size: 26px; font-weight: 800; margin-top: 2px; }
+  .clv-badge-value { font-size: 26px; font-weight: 800; margin-top: 2px; font-family: var(--font-display); }
   .clv-badge-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
   .calibration-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); text-align: center; }
   .calibration-block.calibration-pending { padding: 10px; background: var(--panel2); border-radius: 8px; border-top: none; }
@@ -331,6 +373,7 @@
   .standout-market { color: var(--accent2); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
   .standout-edge-badge {
     font-size: 16px; font-weight: 800; white-space: nowrap; border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+    font-family: var(--font-display);
   }
   .odds-compare {
     display: flex; align-items: center; gap: 10px; margin: 10px 0;
@@ -392,7 +435,7 @@
     100% { background-position: -50% 0; }
   }
   .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .parlay-odds { font-size: 22px; font-weight: 800; }
+  .parlay-odds { font-size: 22px; font-weight: 800; font-family: var(--font-display); }
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
   .parlay-card.lotto .parlay-odds { color: #c77dff; }
   .parlay-card.moonshot .parlay-odds {
@@ -673,6 +716,14 @@
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Rocket"><defs><linearGradient id="hi-rocket" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13,3 Q16,6 16,9 L16,16 L19,20 L16,18 Q13,19.5 10,18 L7,20 L10,16 L10,9 Q10,6 13,3 Z" fill="url(#hi-rocket)" opacity="0.5" stroke="url(#hi-rocket)" stroke-width="1.4" stroke-linejoin="round"/><circle cx="13" cy="10" r="1.6" fill="#14171f" stroke="url(#hi-rocket)" stroke-width="1"/><path d="M11,19 Q13,23 15,19 Q13,21 11,19 Z" fill="url(#hi-rocket)" opacity="0.85"/></svg>
 {%- endmacro %}
 
+{% macro empty_state(icon_svg, headline, description) %}
+<div class="empty-state">
+  <div class="empty-state-icon">{{ icon_svg }}</div>
+  <div class="empty-state-headline">{{ headline }}</div>
+  <div class="empty-state-desc">{{ description }}</div>
+</div>
+{% endmacro %}
+
 <div class="ambient-embers">
   <div class="ember" style="left:5%; animation-duration:14s; animation-delay:0s; --drift:15px;"></div>
   <div class="ember" style="left:15%; animation-duration:18s; animation-delay:2s; --drift:-20px;"></div>
@@ -874,6 +925,12 @@
     <div class="track-record-title">{{ icon_track() }} Model Track Record</div>
     {% if track_record %}
     <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span class="countup">({{ track_record.accuracy_pct }}%)</span></div>
+    {% if sparkline_svg %}
+    <div class="sparkline-wrap">
+      {{ sparkline_svg | safe }}
+      <div class="sparkline-caption">Accuracy trend across tracked runs — forward-tracking only, same as everything else here.</div>
+    </div>
+    {% endif %}
     {% if track_record.by_confidence %}
     <div class="track-record-breakdown">
       {% for label, stats in track_record.by_confidence.items() %}
@@ -909,7 +966,7 @@
     </div>
     {% endif %}
     {% else %}
-    <div class="track-record-empty">No results recorded yet — this fills in after cards happen. Tracking every prediction now so results are honest, not retroactive.</div>
+    {{ empty_state(icon_track(), "No results yet", "This fills in after cards happen — tracking every prediction now so results are honest, not retroactive.") }}
     {% endif %}
   </div>
 
@@ -1058,8 +1115,8 @@
     </svg>
   {%- endmacro %}
 
-  {% macro render_fight_card(fight) %}
-  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
+  {% macro render_fight_card(fight, card_index=none) %}
+  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
     <summary>
       <div class="matchup-header">
         <div class="matchup-fighter">
@@ -1240,6 +1297,8 @@
     </div>
     {% endfor %}
   </div>
+  {% else %}
+  {{ empty_state(icon_flame(), "No standout props right now", "The model isn't seeing a meaningful disagreement with the market on this card yet — check back as odds update.") }}
   {% endif %}
   </div>
 
@@ -1271,7 +1330,7 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="no-parlays">Nothing in the realistic straight-bet range right now — check back as odds update, or the model just doesn't see a clean high-probability edge on this card yet.</div>
+  {{ empty_state(icon_diamond(), "No favorite picks right now", "Nothing in the realistic straight-bet range at the moment — check back as odds update, or the model just doesn't see a clean high-probability edge on this card yet.") }}
   {% endif %}
   </div>
 
@@ -1302,7 +1361,7 @@
   <div class="parlay-note">Assumes each leg is independent — same-card fights aren't perfectly independent in reality, so treat the hit-rate estimate as optimistic. Legs marked "model" have no live book price to compare against.</div>
   {% elif events %}
   <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
-  <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
+  {{ empty_state(icon_coins(), "No bankroll parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
   {% endif %}
 
   {% if lotto_parlays %}
@@ -1331,7 +1390,7 @@
   <div class="parlay-note">These are long shots by design — meant as a "worth a small stab" section, not a plan.</div>
   {% elif events %}
   <div class="parlay-section-title lotto" id="section-lotto">{{ icon_dice() }} Lotto Parlays</div>
-  <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
+  {{ empty_state(icon_dice(), "No lotto parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
   {% endif %}
 
   {% if moonshot_parlays %}
@@ -1360,16 +1419,24 @@
   <div class="parlay-note">🎟️ This is a lottery ticket, not a strategy — buy it for the dream, not the plan. If it hits, tell everyone. If it doesn't, you knew the deal going in.</div>
   {% elif events %}
   <div class="parlay-section-title moonshot" id="section-moonshot">{{ icon_rocket() }} Moonshot</div>
-  <div class="no-parlays">Not enough live-priced or model-projected legs on this card yet.</div>
+  {{ empty_state(icon_rocket(), "No moonshot parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
   {% endif %}
   </div>
 
   <div class="detail-section" data-section="thisweekend">
   {% for event in events %}
-  <div class="event-header" {% if loop.first %}id="section-thisweekend"{% endif %}>
+  {% set is_first_event = loop.first %}
+  <div class="event-header" {% if is_first_event %}id="section-thisweekend"{% endif %}>
     <div class="event-name">{{ event.event_name }}</div>
     <div class="event-date">{{ event.event_date }}</div>
   </div>
+  {% if is_first_event and event.fights|length > 4 %}
+  <div class="jump-nav">
+    {% for fight in event.fights %}
+    <a href="#fight-{{ loop.index }}" class="jump-nav-chip">{{ fight.fighter_a.split(' ')[-1] }}<span class="jump-nav-vs">/</span>{{ fight.fighter_b.split(' ')[-1] }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% for fight in event.fights %}
   {% if loop.first or fight.segment_label != loop.previtem.segment_label %}
   <div class="segment-divider">
@@ -1378,7 +1445,7 @@
     <span class="segment-divider-line"></span>
   </div>
   {% endif %}
-  {{ render_fight_card(fight) }}
+  {{ render_fight_card(fight, loop.index if is_first_event else none) }}
   {% endfor %}
   {% endfor %}
   </div>
@@ -1409,50 +1476,117 @@
 
   <script>
     // Hub / detail section navigation
+    // Shared slide+fade transition for swapping one top-level view for
+    // another. Used for hub<->detail specifically (the common case) --
+    // NOT used for switching between two already-visible detail sections
+    // (e.g. the "what's new" toast can fire while a different section is
+    // already open), since that's a narrower edge case better left on its
+    // existing, already-tested instant-swap behavior than risking it on
+    // a second, less-exercised code path.
+    function transitionViews(oldEl, newEl, direction, onShown) {
+      const outClass = direction === 'forward' ? 'view-slide-out-left' : 'view-slide-out-right';
+      const inStartClass = direction === 'forward' ? 'view-slide-in-right-start' : 'view-slide-in-left-start';
+      oldEl.classList.add(outClass);
+      setTimeout(() => {
+        oldEl.style.display = 'none';
+        oldEl.classList.remove(outClass);
+        window.scrollTo(0, 0);
+        newEl.style.display = 'block';
+        newEl.classList.add(inStartClass);
+        void newEl.offsetWidth; // force reflow so the start state is registered before it's removed
+        newEl.classList.remove(inStartClass);
+        if (onShown) onShown();
+      }, 220);
+    }
+
     function showSection(id) {
-      document.getElementById('hub-view').style.display = 'none';
+      const hubView = document.getElementById('hub-view');
       const detailView = document.getElementById('detail-view');
-      detailView.style.display = 'block';
-      document.querySelectorAll('.detail-section').forEach(el => {
-        el.style.display = (el.dataset.section === id) ? 'block' : 'none';
-      });
-      window.scrollTo(0, 0);
-      // Give hidden-until-now elements a chance to be re-measured for the
-      // scroll-reveal observers, in case they're already in view the
-      // moment this section opens (observer normally handles this on its
-      // own, but a synchronous nudge avoids any single-frame lag).
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new Event('resize'));
-        // Reset fill targets and either reveal immediately (already
-        // on-screen the moment this section opens) or hand off to the
-        // scroll observer (still below the fold) -- same verified logic
-        // used for fight-card expansion. Anything still inside a
-        // COLLAPSED fight-card is skipped here (no real layout to
-        // measure yet) and gets handled by that card's own toggle
-        // listener once actually expanded.
-        if (window.__resetAndRewatch) {
-          document.querySelectorAll(`.detail-section[data-section="${id}"] .tape-block, .detail-section[data-section="${id}"] .model-pick-badge, .detail-section[data-section="${id}"] .radar-block, .detail-section[data-section="${id}"] .chart-block, .detail-section[data-section="${id}"] .favorite-card`).forEach(el => {
-            if (el.offsetParent === null) return;
-            window.__resetAndRewatch(el);
-          });
-        }
-      });
-      // Explicitly re-trigger the "new item" glow for anything marked new
-      // within the section just opened -- CSS animations don't reliably
-      // advance while an ancestor is display:none, so this guarantees the
-      // glow actually plays the moment you navigate in, rather than
-      // depending on browser-specific timing.
-      document.querySelectorAll(`.detail-section[data-section="${id}"] .new-item-glow`).forEach(el => {
-        el.classList.remove('new-item-glow');
-        void el.offsetWidth;
-        el.classList.add('new-item-glow');
-      });
+      const alreadyInDetail = detailView.style.display === 'block';
+
+      function activateAndReveal() {
+        document.querySelectorAll('.detail-section').forEach(el => {
+          el.style.display = (el.dataset.section === id) ? 'block' : 'none';
+        });
+        // Give hidden-until-now elements a chance to be re-measured for the
+        // scroll-reveal observers, in case they're already in view the
+        // moment this section opens (observer normally handles this on its
+        // own, but a synchronous nudge avoids any single-frame lag).
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new Event('resize'));
+          // Reset fill targets and either reveal immediately (already
+          // on-screen the moment this section opens) or hand off to the
+          // scroll observer (still below the fold) -- same verified logic
+          // used for fight-card expansion. Anything still inside a
+          // COLLAPSED fight-card is skipped here (no real layout to
+          // measure yet) and gets handled by that card's own toggle
+          // listener once actually expanded.
+          if (window.__resetAndRewatch) {
+            document.querySelectorAll(`.detail-section[data-section="${id}"] .tape-block, .detail-section[data-section="${id}"] .model-pick-badge, .detail-section[data-section="${id}"] .radar-block, .detail-section[data-section="${id}"] .chart-block, .detail-section[data-section="${id}"] .favorite-card`).forEach(el => {
+              if (el.offsetParent === null) return;
+              window.__resetAndRewatch(el);
+            });
+          }
+        });
+        // Explicitly re-trigger the "new item" glow for anything marked new
+        // within the section just opened -- CSS animations don't reliably
+        // advance while an ancestor is display:none, so this guarantees the
+        // glow actually plays the moment you navigate in, rather than
+        // depending on browser-specific timing.
+        document.querySelectorAll(`.detail-section[data-section="${id}"] .new-item-glow`).forEach(el => {
+          el.classList.remove('new-item-glow');
+          void el.offsetWidth;
+          el.classList.add('new-item-glow');
+        });
+      }
+
+      if (alreadyInDetail) {
+        activateAndReveal();
+        window.scrollTo(0, 0);
+      } else {
+        transitionViews(hubView, detailView, 'forward', activateAndReveal);
+      }
     }
     function showHub() {
-      document.getElementById('detail-view').style.display = 'none';
-      document.getElementById('hub-view').style.display = 'block';
-      window.scrollTo(0, 0);
+      const hubView = document.getElementById('hub-view');
+      const detailView = document.getElementById('detail-view');
+      transitionViews(detailView, hubView, 'backward');
     }
+
+    // Swipe-right-to-go-back, while viewing any detail section. Skips
+    // starting inside the two containers that already own horizontal
+    // scroll themselves (.table-scroll, .jump-nav) so this doesn't fight
+    // their native gesture. Requires a fast, mostly-horizontal motion
+    // past a real distance threshold, so an ordinary vertical scroll or
+    // a slow deliberate drag never triggers it by accident.
+    (function() {
+      let touchStartX = 0, touchStartY = 0, touchStartTime = 0, tracking = false;
+      const MIN_DISTANCE = 80;
+      const MAX_VERTICAL_DRIFT = 60;
+      const MAX_DURATION_MS = 600;
+
+      document.addEventListener('touchstart', (e) => {
+        const detailView = document.getElementById('detail-view');
+        if (detailView.style.display !== 'block') { tracking = false; return; }
+        if (e.target.closest('.table-scroll, .jump-nav')) { tracking = false; return; }
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+        tracking = true;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (e) => {
+        if (!tracking) return;
+        tracking = false;
+        const touch = e.changedTouches[0];
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = Math.abs(touch.clientY - touchStartY);
+        const duration = Date.now() - touchStartTime;
+        if (deltaX > MIN_DISTANCE && deltaY < MAX_VERTICAL_DRIFT && duration < MAX_DURATION_MS) {
+          showHub();
+        }
+      }, { passive: true });
+    })();
 
     // Countdown timer + live-state tracking
     (function() {

@@ -19,6 +19,7 @@ honestly empty rather than faking a number.
 """
 
 import csv
+import datetime as dt
 import json
 import os
 
@@ -281,12 +282,47 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
 
     calibration = _compute_calibration(matched)
 
+    accuracy_pct = round(correct_count / total * 100, 1)
+    sparkline = _log_and_load_accuracy_sparkline(correct_count, total, accuracy_pct)
+
     return {
         "total": total,
         "correct": correct_count,
-        "accuracy_pct": round(correct_count / total * 100, 1),
+        "accuracy_pct": accuracy_pct,
         "by_confidence": by_confidence,
         "clv_stats": clv_stats,
         "calibration": calibration,
         "results": matched,
+        "accuracy_sparkline": sparkline,
     }
+
+
+ACCURACY_HISTORY_PATH = "data/accuracy_history.csv"
+
+
+def _log_and_load_accuracy_sparkline(correct: int, total: int, accuracy_pct: float) -> list[float] | None:
+    """
+    Appends today's accuracy snapshot to a small running history file, then
+    returns the accuracy_pct series for a sparkline -- genuinely forward-
+    tracking only, same honesty standard as the rest of Track Record. A
+    snapshot is only appended if it differs from the last logged one, so
+    routine reruns with no new results don't pad the file with duplicate
+    points. Returns None until there are at least 2 distinct points, since
+    a single dot isn't a trend.
+    """
+    today = dt.date.today().isoformat()
+    rows = []
+    if os.path.exists(ACCURACY_HISTORY_PATH):
+        with open(ACCURACY_HISTORY_PATH, newline="") as f:
+            rows = list(csv.DictReader(f))
+
+    if not rows or int(rows[-1]["correct"]) != correct or int(rows[-1]["total"]) != total:
+        rows.append({"date": today, "correct": str(correct), "total": str(total), "accuracy_pct": str(accuracy_pct)})
+        with open(ACCURACY_HISTORY_PATH, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["date", "correct", "total", "accuracy_pct"])
+            writer.writeheader()
+            writer.writerows(rows)
+
+    if len(rows) < 2:
+        return None
+    return [float(r["accuracy_pct"]) for r in rows]

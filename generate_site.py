@@ -31,6 +31,7 @@ from src.line_movement import (
 from src.track_record import log_predictions, compute_track_record, load_momentum_by_key
 from src.schedule import build_fight_schedule
 from src.calibration_chart import build_calibration_svg
+from src.sparkline_chart import build_sparkline_svg
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -135,8 +136,11 @@ def main():
             fight["momentum"] = momentum_by_key.get(key)
     track_record = compute_track_record()
     calibration_svg = None
+    sparkline_svg = None
     if track_record and track_record.get("calibration", {}).get("ready"):
         calibration_svg = build_calibration_svg(track_record["calibration"]["points"])
+    if track_record and track_record.get("accuracy_sparkline"):
+        sparkline_svg = build_sparkline_svg(track_record["accuracy_sparkline"])
 
     event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
 
@@ -238,6 +242,7 @@ def main():
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,
         calibration_svg=calibration_svg,
+        sparkline_svg=sparkline_svg,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
         moonshot_parlays=moonshot_parlays,
