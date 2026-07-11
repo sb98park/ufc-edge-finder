@@ -229,6 +229,13 @@ def build_fight_preview(
         f"{style_note}{reach_note}{layoff_note}{quick_return_note}{age_cliff_note}{missed_weight_note}{five_round_note}{fast_finisher_note}"
     )
 
+    if matchup.get("adjustment_capped"):
+        narrative += (
+            " Note: the situational factors here stack unusually high, hitting the model's "
+            "sanity cap -- the final number is deliberately more conservative than the raw "
+            "factor pile would suggest."
+        )
+
     def _fighter_card(name: str, row: pd.Series) -> dict:
         return {
             "name": name,

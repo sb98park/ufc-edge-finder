@@ -294,6 +294,8 @@
   }
   .jump-nav-chip:active { color: var(--accent-cool); border-color: var(--accent-cool); }
   .jump-nav-vs { color: var(--border); margin: 0 3px; }
+  .live-prices-chip { border-color: rgba(255,92,92,0.4) !important; }
+  .live-prices-chip .chip-sub { color: var(--muted); font-weight: 500; }
 
   #hub-view, #detail-view { transition: opacity 0.22s ease, transform 0.22s ease; opacity: 1; transform: translateX(0); }
   .view-slide-out-left { opacity: 0; transform: translateX(-14px); }
@@ -1021,7 +1023,7 @@
   </div>
 
   {% macro odds_cell(row) -%}
-    {{ row.odds_american | american }}
+    <span class="live-odds"{% if row.clob_token_id %} data-live-token="{{ row.clob_token_id }}"{% endif %}>{{ row.odds_american | american }}</span>
     {%- if row.movement %}
       {%- if row.movement.direction == 'shortening' %}<span class="movement-tag shortening{{ ' notable' if row.movement.notable else '' }}">📈{{ row.movement.pct_change }}%</span>{% endif %}
       {%- if row.movement.direction == 'drifting' %}<span class="movement-tag drifting{{ ' notable' if row.movement.notable else '' }}">📉{{ row.movement.pct_change }}%</span>{% endif %}
@@ -1281,7 +1283,7 @@
       <div class="odds-compare">
         <div class="odds-compare-col">
           <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book">{{ p.odds_american | american }}{{ movement_arrow(p) }}</div>
+          <div class="odds-compare-value book"><span class="live-odds"{% if p.clob_token_id %} data-live-token="{{ p.clob_token_id }}"{% endif %}>{{ p.odds_american | american }}</span>{{ movement_arrow(p) }}</div>
           <div class="odds-compare-pct countup">{{ (p.book_fair_prob*100)|round(1) }}%</div>
         </div>
         <div class="odds-compare-arrow">→</div>
@@ -1317,7 +1319,7 @@
           <span class="sample-badge" title="{{ p.low_sample.fighter }} has {{ p.low_sample.fights }} career fights logged -- fewer data points behind this number than usual">📊 {{ p.low_sample.fights }}-fight sample</span>
           {% endif %}
         </div>
-        <div class="favorite-odds">{{ p.odds_american | american }}</div>
+        <div class="favorite-odds"><span class="live-odds"{% if p.clob_token_id %} data-live-token="{{ p.clob_token_id }}"{% endif %}>{{ p.odds_american | american }}</span></div>
       </div>
       <div class="favorite-prob-row">
         <div class="favorite-prob-bar-track">
@@ -1586,6 +1588,62 @@
           showHub();
         }
       }, { passive: true });
+    })();
+
+    // Live price refresher: re-fetches current Polymarket midpoints for
+    // every odds element that carries a data-live-token (embedded at build
+    // time), on page load and every 90s while the tab is visible. Designed
+    // fail-safe: ANY failure (CORS, endpoint change, network, weird data)
+    // aborts silently and the page keeps showing baked odds exactly as
+    // before -- and the "LIVE" chip only ever appears after a confirmed
+    // successful fetch, so it can't claim freshness it doesn't have.
+    // Deliberately updates the price text ONLY: fair-prob/edge/parlay math
+    // stays as-of-build (the chip label says so).
+    (function() {
+      const els = document.querySelectorAll('[data-live-token]');
+      if (!els.length || !window.fetch) return;
+      const tokens = [...new Set([...els].map(el => el.dataset.liveToken))].slice(0, 40);
+      let chip = null;
+
+      function toAmerican(p) {
+        if (!(p > 0.01 && p < 0.99)) return null;
+        return p >= 0.5 ? '-' + Math.round(100 * p / (1 - p)) : '+' + Math.round(100 * (1 - p) / p);
+      }
+
+      function showChip() {
+        const t = new Date().toTimeString().slice(0, 8);
+        if (!chip) {
+          const meta = document.querySelector('.meta-row');
+          if (!meta) return;
+          chip = document.createElement('span');
+          chip.className = 'badge live-prices-chip';
+          meta.appendChild(chip);
+        }
+        chip.innerHTML = '🔴 prices live · ' + t + ' <span class="chip-sub">(analysis as of build)</span>';
+      }
+
+      async function refresh() {
+        try {
+          const results = await Promise.all(tokens.map(tok =>
+            fetch('https://clob.polymarket.com/midpoint?token_id=' + encodeURIComponent(tok), { signal: AbortSignal.timeout(6000) })
+              .then(r => r.ok ? r.json() : null)
+              .then(j => [tok, j && parseFloat(j.mid)])
+              .catch(() => [tok, null])
+          ));
+          let updated = 0;
+          for (const [tok, mid] of results) {
+            const american = (mid || mid === 0) ? toAmerican(mid) : null;
+            if (!american) continue;
+            document.querySelectorAll('[data-live-token="' + tok + '"]').forEach(el => { el.textContent = american; });
+            updated++;
+          }
+          if (updated > 0) showChip();
+        } catch (e) { /* fail silent -- baked odds remain */ }
+      }
+
+      refresh();
+      setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 90000);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
     })();
 
     // Countdown timer + live-state tracking

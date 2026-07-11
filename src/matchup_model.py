@@ -55,6 +55,20 @@ UNCERTAINTY_BASE = 0.30
 RECENT_FORM_BONUS = 20.0
 RECENT_FORM_DECAY_YEARS = 2.0
 
+# Safety rail on the ADJUSTMENT LAYER (style factors + recent form), NOT
+# on the Elo/base rating gap. Evidence basis: the walk-forward backtest
+# (3,713 point-in-time fights) showed the Elo core is well-calibrated
+# but rarely confident -- it said 70%+ only 16 times and never said
+# 80%+. Extreme final numbers therefore come almost entirely from the
+# adjustment stack, which is exactly the part that CANNOT be backtested
+# yet (needs historical stat snapshots). Until those magnitudes are
+# fitted to evidence rather than hand-tuned, the stack's total influence
+# is clipped: +/-150 rating points can move a coin flip to at most
+# ~70/30, so no pile of unvalidated modifiers can manufacture extreme
+# confidence on its own. Revisit after the extended walk-forward fits
+# the layoff/age magnitudes (the two factors this bites most).
+ADJUSTMENT_TOTAL_CAP = 150.0
+
 # Ring rust: no penalty for a normal 6-12 month camp cycle. Beyond a year
 # away, each additional year away costs more -- extended layoffs (multi-year,
 # often tied to serious injury) are a real, well-documented risk factor in
@@ -425,7 +439,9 @@ def predict_matchup(
 
     style = style_matchup_adjustment(row_a, row_b)
     recent_form_adj = recent_form_adjustment(fighter_a, fighter_b, fight_history_df)
-    adjusted_gap = (base_r_a - base_r_b) + style["total_adjustment"] + recent_form_adj
+    raw_layer = style["total_adjustment"] + recent_form_adj
+    applied_layer = max(-ADJUSTMENT_TOTAL_CAP, min(ADJUSTMENT_TOTAL_CAP, raw_layer))
+    adjusted_gap = (base_r_a - base_r_b) + applied_layer
     prob_a = 1.0 / (1.0 + 10 ** (-adjusted_gap / 400.0))
 
     # Uncertainty band: this is a heuristic, not a fitted confidence
@@ -453,5 +469,8 @@ def predict_matchup(
         "base_rating_a": base_r_a,
         "base_rating_b": base_r_b,
         "recent_form_adjustment": recent_form_adj,
+        "adjustment_layer_raw": raw_layer,
+        "adjustment_layer_applied": applied_layer,
+        "adjustment_capped": applied_layer != raw_layer,
         **style,
     }
