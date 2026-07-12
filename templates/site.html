@@ -545,6 +545,20 @@
     color: #fff; font-weight: 800; flex-shrink: 0; letter-spacing: -0.5px;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 0 0 2px var(--panel), 0 0 0 3px rgba(212,175,55,0.25), 0 2px 6px rgba(0,0,0,0.3);
   }
+  .fighter-avatar-wrap { position: relative; flex-shrink: 0; display: inline-block; }
+  .fighter-avatar.winner-glow {
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 0 0 2px var(--panel), 0 0 0 3px var(--green), 0 2px 6px rgba(0,0,0,0.3);
+    animation: winner-pulse 2s ease-in-out infinite;
+  }
+  @keyframes winner-pulse {
+    0%, 100% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 0 0 2px var(--panel), 0 0 0 3px var(--green), 0 2px 6px rgba(0,0,0,0.3), 0 0 0 3px rgba(61,220,132,0.35); }
+    50% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 0 0 2px var(--panel), 0 0 0 3px var(--green), 0 2px 6px rgba(0,0,0,0.3), 0 0 10px 7px rgba(61,220,132,0.35); }
+  }
+  .winner-check {
+    position: absolute; bottom: -2px; right: -2px; background: var(--green); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; border: 2px solid var(--panel);
+  }
+  .winner-check svg { width: 65%; height: 65%; }
 
   .weight-class { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; white-space: nowrap; }
   .weight-class-badge {
@@ -654,7 +668,7 @@
   .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
   .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
   .compare-table th { color: var(--accent2); font-size: 10.5px; font-weight: 700; }
-  .compare-table th .fighter-avatar { margin: 0 auto 4px; }
+  .compare-table th .fighter-avatar-wrap { margin: 0 auto 4px; }
 
   .tape-block { margin-bottom: 14px; }
   .tape-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 3px; }
@@ -1064,11 +1078,14 @@
     {%- endif -%}
   {%- endmacro %}
 
-  {% macro fighter_avatar(name, size=44) %}
+  {% macro fighter_avatar(name, size=44, is_winner=false) %}
     {%- set parts = name.split() -%}
     {%- set initials = (parts[0][0] + parts[-1][0])|upper if parts|length > 1 else name[:2]|upper -%}
     {%- set hue = (name|length * 47 + parts[0]|length * 23) % 360 -%}
-    <div class="fighter-avatar" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size*0.38)|round|int }}px;background:linear-gradient(135deg, hsl({{ hue }},55%,32%), hsl({{ hue }},45%,18%));">{{ initials }}</div>
+    <div class="fighter-avatar-wrap{{ ' winner' if is_winner }}" style="width:{{ size }}px;height:{{ size }}px;">
+      <div class="fighter-avatar{{ ' winner-glow' if is_winner }}" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size*0.38)|round|int }}px;background:linear-gradient(135deg, hsl({{ hue }},55%,32%), hsl({{ hue }},45%,18%));">{{ initials }}</div>
+      {% if is_winner %}<div class="winner-check" style="width:{{ (size*0.4)|round|int }}px;height:{{ (size*0.4)|round|int }}px;"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>{% endif %}
+    </div>
   {%- endmacro %}
 
   {% macro tape_bar(label, val_a, val_b, unit) %}
@@ -1150,7 +1167,7 @@
     <summary>
       <div class="matchup-header">
         <div class="matchup-fighter">
-          {{ fighter_avatar(fight.fighter_a) }}
+          {{ fighter_avatar(fight.fighter_a, is_winner=(fight.winner == fight.fighter_a)) }}
           <div>
             <span class="matchup-name">{{ fight.fighter_a }}</span>
             {% if fight.preview and fight.preview.comparison.a.badges %}
@@ -1180,7 +1197,7 @@
             </div>
             {% endif %}
           </div>
-          {{ fighter_avatar(fight.fighter_b) }}
+          {{ fighter_avatar(fight.fighter_b, is_winner=(fight.winner == fight.fighter_b)) }}
         </div>
       </div>
       <span class="chevron">▶</span>

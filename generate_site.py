@@ -200,6 +200,7 @@ def main():
             result = finished_results.get(key)
             if result:
                 winner_last = result["winner"].strip().split()[-1].upper()
+                fight["winner"] = result["winner"]
                 fight["result_label"] = f"{winner_last} BY {result['method']}".strip()
                 fight["result_round_time"] = (
                     f"R{result['end_round']} {result['end_time']}"
@@ -220,6 +221,7 @@ def main():
                         "b": {k[3:]: s[k] for k in s if k.startswith("fb_" if same_order else "fa_")},
                     }
             else:
+                fight["winner"] = None
                 fight["result_label"] = None
                 fight["result_round_time"] = None
                 fight["result_stats"] = None
