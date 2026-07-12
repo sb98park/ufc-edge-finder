@@ -69,9 +69,9 @@
   .brand-name::after {
     content: 'OCTANE ALPHA'; position: absolute; top: 0; left: 0; pointer-events: none;
     background: linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.85) 50%, transparent 58%);
-    background-size: 250% 100%; background-position: 200% 0;
+    background-size: 250% 100%; background-position: 200% 0; background-repeat: no-repeat;
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    animation: brand-shimmer 2.2s ease-out 0.3s 1 forwards;
+    animation: brand-shimmer 1.6s linear 0.3s 1 forwards;
   }
   @keyframes brand-shimmer {
     0% { background-position: 200% 0; }
@@ -594,6 +594,12 @@
   .parlay-section-title.moonshot { color: #ffb347; }
   .parlay-section-title.movement { color: #6db3f2; }
   .parlay-subtitle { font-size: 11.5px; color: var(--muted); margin: -6px 0 12px; line-height: 1.5; }
+  .analytics-fallback-notice {
+    font-size: 11.5px; color: var(--text); background: rgba(95,184,201,0.1);
+    border: 1px solid rgba(95,184,201,0.3); border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 14px; line-height: 1.5;
+  }
+  .analytics-fallback-notice strong { color: var(--accent-cool); }
   .parlay-card {
     border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; border: 1px solid var(--border);
   }
@@ -1608,6 +1614,9 @@
   {% endmacro %}
 
   <div class="detail-section" data-section="standout">
+  {% if analytics_source_event %}
+  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  {% endif %}
   {% if notable_movements %}
   <div class="parlay-section-title movement" id="section-movement">{{ icon_barchart() }} Notable Line Movement</div>
   <div class="parlay-subtitle">Lines that have moved meaningfully (15%+) since the last refresh. This tracks real PRICE movement only — not bet volume or who's behind it, so treat this as "worth a second look," not confirmed sharp action.</div>
@@ -1666,6 +1675,9 @@
   </div>
 
   <div class="detail-section" data-section="favorites">
+  {% if analytics_source_event %}
+  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  {% endif %}
   {% if favorite_picks %}
   <div class="standout-title">{{ icon_diamond() }} Favorite Picks</div>
   <div class="parlay-subtitle">Straight, single-leg bets in a realistic odds range ({{ '-220' }} to {{ '+160' }}) — built for real size, not a coinflip longshot or a -4000 favorite with no payout. Sorted by model probability, so the safest genuine plays lead.</div>
@@ -1698,6 +1710,9 @@
   </div>
 
   <div class="detail-section" data-section="parlays">
+  {% if analytics_source_event %}
+  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  {% endif %}
   {% if bankroll_parlays %}
   <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
   <div class="parlay-subtitle">2-3 leg combos in the +100 to +300 range, built from picks the model favors — including same-fight combos and model-projected legs (labeled "model") for fights with no live prop line yet.</div>

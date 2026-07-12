@@ -82,6 +82,34 @@ def main():
     tracked_edges = pd.DataFrame(
         [edge for event in events for fight in event["fights"] for edge in fight["edges"]]
     )
+
+    # Standout Props / Favorite Picks / Parlays are meant to answer "where
+    # does the model see value RIGHT NOW" -- once the current card's own
+    # markets have closed (fight's over, nothing left to price), that
+    # question has no honest answer for THIS card anymore, even though
+    # "This Weekend" correctly keeps showing its result for a day per the
+    # days-since-event display logic elsewhere. Rather than showing these
+    # sections empty for a full day, fall back to the next tracked event's
+    # edges once the current card's own pool is genuinely thin -- with an
+    # explicit flag so the template can label which event is actually
+    # being shown, since silently swapping the underlying event without
+    # saying so would be confusing, not helpful.
+    analytics_source_event = None
+    MIN_EDGES_FOR_CURRENT_CARD = 3  # below this, the current card's pool is too thin to be a real signal
+    if len(tracked_edges) < MIN_EDGES_FOR_CURRENT_CARD and future_events:
+        next_event = future_events[0]
+        next_tracked_edges = pd.DataFrame(
+            [edge for fight in next_event["fights"] for edge in fight["edges"]]
+        )
+        if len(next_tracked_edges) > len(tracked_edges):
+            tracked_edges = next_tracked_edges
+            analytics_source_event = next_event["event_name"]
+            events_for_model_only = [next_event]
+        else:
+            events_for_model_only = events
+    else:
+        events_for_model_only = events
+
     standout_props = top_standout_props(tracked_edges, fighters_df, n=5, min_edge=5.0)
     favorite_picks = top_favorite_picks(tracked_edges, fighters_df, n=5)
 
@@ -96,7 +124,7 @@ def main():
             e["opponent"] = None
 
     model_only_by_fight = {}
-    for event in events:
+    for event in events_for_model_only:
         for fight in event["fights"]:
             fid = fight["edges"][0]["fight_id"] if fight["edges"] else None
             if fid is None and fight.get("model_only_rows"):
@@ -151,7 +179,11 @@ def main():
         units_sparkline_svg = build_sparkline_svg(track_record["units_stats"]["running_total"])
         units_timeseries_svg = build_units_timeseries_svg(track_record["units_stats"]["running_total"])
 
-    event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
+    event_short_name = (
+        analytics_source_event.split(":")[0].strip() if analytics_source_event
+        else events[0]["event_name"].split(":")[0].strip() if events
+        else "This Weekend"
+    )
 
     # Countdown target: this weekend's tracked event if we have one, otherwise
     # the nearest future card. ET is UTC-4 (EDT) for all currently tracked
@@ -385,6 +417,7 @@ def main():
         just_concluded_json=json.dumps(just_concluded),
         days_since_event=days_since_event,
         results_coverage=results_coverage,
+        analytics_source_event=analytics_source_event,
         countdown_label=countdown_label,
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,
