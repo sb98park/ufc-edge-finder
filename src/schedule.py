@@ -45,6 +45,32 @@ DEFAULT_SEGMENT_START = {
 DEFAULT_MAIN_EVENT_START = "23:15"
 _MAIN_EVENT_FALLBACK_DURATION_MIN = 30
 
+# Fight_cards.csv's row order is DISPLAY order (billing order -- Main
+# Event first, most notable fights first within a segment), matching
+# every fight-card site's convention (Google, ESPN, etc.) and what the
+# template renders directly. That's DELIBERATELY separate from true
+# chronological fight order, which this scheduling logic needs
+# internally to estimate "what's live right now" -- confusing the two
+# once already changed the VISIBLE card order to match chronological
+# time, which broke the display (confirmed via screenshot comparison
+# against Google's own UFC card listing).
+#
+# This maps (fighter_a, fighter_b) -> its real position in fight order,
+# used ONLY to re-sort within a segment for scheduling purposes; the
+# fights list returned to the template for display is untouched. Only
+# populated where actually verified (news recaps, Tapology's "fight N of
+# 14" billing data), not guessed -- segments without an entry here keep
+# using file order as the chronology assumption, same as before.
+VERIFIED_CHRONOLOGICAL_ORDER = {
+    ("King Green", "Terrance McKinney"): 1,
+    ("Brandon Royval", "Lone'er Kavanagh"): 2,
+    ("Cory Sandhagen", "Mario Bautista"): 3,
+}
+
+
+def _fight_key(f: dict) -> tuple:
+    return (f["fighter_a"], f["fighter_b"])
+
 
 def _parse(event_date: str, time_str: str) -> dt.datetime:
     hour, minute = map(int, time_str.split(":"))
@@ -76,6 +102,15 @@ def build_fight_schedule(
     main_block = [f for f in chronological if f.get("card_position") in ("Main Card", "Co-Main Event", "Main Event")]
     main_event_fights = [f for f in main_block if f.get("card_position") == "Main Event"]
     main_block_undercard = [f for f in main_block if f.get("card_position") != "Main Event"]
+    # Re-sort by verified real chronology where we have it (Main Card
+    # tier); anything unlisted (Co-Main) keeps its relative file-order
+    # position via a large fallback key, which naturally keeps it last,
+    # immediately before the Main Event -- correct without needing an
+    # explicit entry for it.
+    main_block_undercard = sorted(
+        main_block_undercard,
+        key=lambda f: VERIFIED_CHRONOLOGICAL_ORDER.get(_fight_key(f), 999),
+    )
 
     schedule = []
 

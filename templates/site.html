@@ -329,6 +329,28 @@
   .clv-badge-label { font-size: 10.5px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.4px; }
   .clv-badge-value { font-size: 26px; font-weight: 800; margin-top: 2px; font-family: var(--font-display); }
   .clv-badge-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .track-result-title { font-size: 13px; font-weight: 700; color: var(--accent); margin: 18px 0 8px; }
+  .track-result-list { display: flex; flex-direction: column; gap: 1px; }
+  .track-result-row {
+    display: flex; align-items: center; gap: 11px; padding: 9px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .track-result-row:last-child { border-bottom: none; }
+  .track-result-icon {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800;
+  }
+  .track-result-icon.correct { background: rgba(61,220,132,0.15); color: var(--green); }
+  .track-result-icon.incorrect { background: rgba(255,92,92,0.15); color: var(--red); }
+  .track-result-info { flex: 1; min-width: 0; }
+  .track-result-fight { font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .track-result-picks { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .track-result-label { color: var(--muted); }
+  .track-result-name { font-weight: 700; }
+  .track-result-name.pick { color: var(--accent2); }
+  .track-result-name.actual { color: var(--text); }
+  .track-result-sep { margin: 0 4px; color: var(--border); }
   .calibration-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); text-align: center; }
   .calibration-block.calibration-pending { padding: 10px; background: var(--panel2); border-radius: 8px; border-top: none; }
   .calibration-title { font-size: 11.5px; font-weight: 700; color: var(--accent2); margin-bottom: 8px; }
@@ -975,6 +997,24 @@
       <div class="clv-badge-label">🎯 Beat the Closing Line</div>
       <div class="clv-badge-value countup">{{ track_record.clv_stats.beat_pct }}%</div>
       <div class="clv-badge-sub">{{ track_record.clv_stats.beat }}/{{ track_record.clv_stats.total }} picks · avg {{ '+' if track_record.clv_stats.avg_clv_pct >= 0 else '' }}{{ track_record.clv_stats.avg_clv_pct }}pp move toward the model's side</div>
+    </div>
+    {% endif %}
+    {% if track_record.results %}
+    <div class="track-result-title">📋 Every Tracked Pick</div>
+    <div class="track-result-list">
+      {% for r in track_record.results %}
+      <div class="track-result-row">
+        <div class="track-result-icon {{ 'correct' if r.correct else 'incorrect' }}">{{ '✓' if r.correct else '✗' }}</div>
+        <div class="track-result-info">
+          <div class="track-result-fight">{{ r.fighter_a.split(' ')[-1] }} vs. {{ r.fighter_b.split(' ')[-1] }}</div>
+          <div class="track-result-picks">
+            <span class="track-result-label">Model picked</span> <span class="track-result-name pick">{{ r.predicted_favorite.split(' ')[-1] }}</span>
+            <span class="track-result-sep">·</span>
+            <span class="track-result-label">Winner</span> <span class="track-result-name actual">{{ r.actual_winner.split(' ')[-1] }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
     </div>
     {% endif %}
     {% if calibration_svg %}
