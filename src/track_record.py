@@ -251,7 +251,20 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "actual_winner": result["winner"],
             "correct": correct,
             "clv": clv,
+            "date_added": result.get("date_added", ""),
         })
+
+    # Most recent first -- what someone checking in on the site actually
+    # cares about, not raw file-insertion order (which isn't guaranteed
+    # to be chronological, especially once the automated fetcher and
+    # manual entries are both writing to the same file). Unparseable/
+    # missing dates sort last rather than crashing or landing at random.
+    def _sort_key(m):
+        try:
+            return dt.datetime.strptime(m["date_added"], "%Y-%m-%d")
+        except (ValueError, TypeError):
+            return dt.datetime.min
+    matched.sort(key=_sort_key, reverse=True)
 
     if not matched:
         return None
@@ -285,6 +298,8 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
     accuracy_pct = round(correct_count / total * 100, 1)
     sparkline = _log_and_load_accuracy_sparkline(correct_count, total, accuracy_pct)
 
+    results_by_event = _group_results_by_event(matched)
+
     return {
         "total": total,
         "correct": correct_count,
@@ -293,8 +308,31 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         "clv_stats": clv_stats,
         "calibration": calibration,
         "results": matched,
+        "results_by_event": results_by_event,
         "accuracy_sparkline": sparkline,
     }
+
+
+def _group_results_by_event(matched: list[dict]) -> list[dict]:
+    """
+    Groups already-sorted (most-recent-first) results under their event
+    name. Groups explicitly by event_name rather than relying on the
+    date sort putting same-event entries adjacent to each other --
+    entries logged at different times of the same night could plausibly
+    carry slightly different date_added values, which would silently
+    break a groupby that assumes adjacency. Both the event groups
+    themselves and the entries within each group are ordered
+    most-recent-first, matching the flat list's own ordering.
+    """
+    groups: dict[str, list[dict]] = {}
+    for m in matched:
+        groups.setdefault(m["event_name"], []).append(m)
+
+    def _latest_date(entries: list[dict]) -> str:
+        return max((e["date_added"] for e in entries), default="")
+
+    ordered_event_names = sorted(groups.keys(), key=lambda name: _latest_date(groups[name]), reverse=True)
+    return [{"event_name": name, "results": groups[name]} for name in ordered_event_names]
 
 
 ACCURACY_HISTORY_PATH = "data/accuracy_history.csv"
