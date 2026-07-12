@@ -30,6 +30,7 @@ from src.line_movement import (
 )
 from src.track_record import log_predictions, compute_track_record, load_momentum_by_key
 from src.schedule import build_fight_schedule, apply_live_corrections
+from src.results_fetcher import fetch_and_log_new_results
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
 from src.donut_chart import build_donut_svg
@@ -155,6 +156,20 @@ def main():
     if next_event:
         countdown_target_iso = f"{next_event['event_date']}T{next_event.get('event_start_time_et', '19:00')}:00-04:00"
         countdown_label = next_event["event_name"]
+
+    # Attempt to auto-fetch any results not yet in fight_results.csv,
+    # before matching results to fights below. Best-effort and silent on
+    # failure by design (see results_fetcher.py's own docstring for the
+    # honest caveat on how confident to be in this) -- manual entry via
+    # fight_results.csv remains the reliable fallback regardless of
+    # whether this succeeds.
+    if events:
+        try:
+            added = fetch_and_log_new_results(events[0]["event_name"], cards_df)
+            if added:
+                print(f"[generate_site] results_fetcher added {added} new result(s)")
+        except Exception as e:
+            print(f"[generate_site] results_fetcher failed unexpectedly, continuing without it: {e}")
 
     # Results already recorded (if any) -- used to mark fights as FINISHED
     # server-side, which is more reliable than a time-based estimate once
