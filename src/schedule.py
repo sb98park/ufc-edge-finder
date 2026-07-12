@@ -28,6 +28,8 @@ import datetime as dt
 import json
 import os
 
+import pandas as pd
+
 _SEGMENT_ORDER = {"Early Prelims": 0, "Prelims": 1, "Main Card": 2, "Co-Main Event": 3, "Main Event": 4}
 
 # Known/typical segment start anchors (ET). Main Card's own anchor is used
@@ -149,6 +151,41 @@ def build_fight_schedule(
         cursor = slot_end
 
     return schedule
+
+
+def promote_card_if_stale(
+    cards_df: pd.DataFrame, future_cards_df: pd.DataFrame, today: dt.date | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, int]:
+    """
+    "This Weekend" should keep showing the card that just happened through
+    the following day (so Sunday still shows Saturday's results, not an
+    empty or stale-feeling page) -- then automatically hand off to the
+    next tracked future event starting the day after that, rather than
+    someone needing to manually move a card from future_cards.csv to
+    fight_cards.csv every week.
+
+    Returns (current_cards_df, future_cards_df, days_since_event).
+    days_since_event is 0 both for a same-day card and immediately after
+    a promotion (the newly-current event hasn't happened yet either way,
+    so the same "not stale" handling applies to both).
+    """
+    if cards_df.empty:
+        return cards_df, future_cards_df, 0
+
+    today = today or dt.datetime.now(dt.timezone(dt.timedelta(hours=-4))).date()
+    event_date = dt.date.fromisoformat(str(cards_df["event_date"].iloc[0]))
+    days_since = (today - event_date).days
+
+    # 0 = event day itself, 1 = the day after (still show it, wrap-up
+    # framing) -- 2+ means it's been sitting stale for a full extra day,
+    # time to hand off to what's next.
+    if days_since >= 2 and not future_cards_df.empty:
+        next_event_name = future_cards_df["event_name"].iloc[0]
+        new_current = future_cards_df[future_cards_df["event_name"] == next_event_name].reset_index(drop=True)
+        new_future = future_cards_df[future_cards_df["event_name"] != next_event_name].reset_index(drop=True)
+        return new_current, new_future, 0
+
+    return cards_df, future_cards_df, max(days_since, 0)
 
 
 SCHEDULE_STATE_PATH = "data/schedule_state.json"

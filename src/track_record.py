@@ -213,6 +213,31 @@ def _clv_result(pick_odds, closing_odds) -> dict | None:
     }
 
 
+def _favorite_won(pick_odds, correct: bool) -> bool | None:
+    """
+    Derives whether the MARKET's favorite won this fight, independent of
+    whether the model's pick agreed with the market. Negative pick_odds
+    means the model picked the market favorite; positive means it picked
+    the underdog. Combined with whether that pick was correct, this
+    covers all four cases without needing the other side's odds stored
+    anywhere -- exactly one fighter is the favorite and exactly one wins,
+    so the sign + correctness fully determines the answer:
+      favorite picked & won      -> favorite won
+      favorite picked & lost     -> favorite lost (underdog won)
+      underdog picked & won      -> favorite lost (this pick WAS the upset)
+      underdog picked & lost     -> favorite won
+    Returns None when pick_odds is missing/zero/unparseable (can't tell).
+    """
+    try:
+        odds = float(pick_odds)
+    except (TypeError, ValueError):
+        return None
+    if odds == 0:
+        return None
+    picked_favorite = odds < 0
+    return correct if picked_favorite else not correct
+
+
 def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> dict | None:
     """
     Joins logged predictions against recorded results. Returns None if there
@@ -251,6 +276,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "actual_winner": result["winner"],
             "correct": correct,
             "clv": clv,
+            "favorite_won": _favorite_won(pred.get("pick_odds"), correct),
             "date_added": result.get("date_added", ""),
         })
 
@@ -300,6 +326,21 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
 
     results_by_event = _group_results_by_event(matched)
 
+    # Model vs. market baseline: is the model's accuracy actually beating
+    # the "just pick every favorite" strategy, or is it riding a card full
+    # of obvious favorites winning? Only computed over the subset with
+    # usable odds -- a partial-coverage stat honestly labeled beats a
+    # complete-looking one that's silently wrong for missing rows.
+    fav_known = [m for m in matched if m["favorite_won"] is not None]
+    market_baseline = None
+    if fav_known:
+        fav_wins = sum(1 for m in fav_known if m["favorite_won"])
+        market_baseline = {
+            "total": len(fav_known),
+            "favorite_win_pct": round(fav_wins / len(fav_known) * 100, 1),
+            "model_accuracy_pct": round(sum(1 for m in fav_known if m["correct"]) / len(fav_known) * 100, 1),
+        }
+
     return {
         "total": total,
         "correct": correct_count,
@@ -309,6 +350,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         "calibration": calibration,
         "results": matched,
         "results_by_event": results_by_event,
+        "market_baseline": market_baseline,
         "accuracy_sparkline": sparkline,
     }
 

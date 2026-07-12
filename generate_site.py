@@ -29,7 +29,7 @@ from src.line_movement import (
     load_token_cache, save_token_cache, update_token_cache,
 )
 from src.track_record import log_predictions, compute_track_record, load_momentum_by_key
-from src.schedule import build_fight_schedule, apply_live_corrections
+from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
@@ -52,6 +52,7 @@ def main():
     elo_ratings = build_ratings(fighters_df, history_df)
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
     future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")
+    cards_df, future_cards_df, days_since_event = promote_card_if_stale(cards_df, future_cards_df)
 
     live_error = None
     edges_df = pd.DataFrame()
@@ -337,6 +338,7 @@ def main():
         countdown_target_iso=countdown_target_iso,
         fight_schedule_json=json.dumps(fight_schedule),
         just_concluded_json=json.dumps(just_concluded),
+        days_since_event=days_since_event,
         countdown_label=countdown_label,
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,

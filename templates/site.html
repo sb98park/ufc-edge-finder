@@ -336,6 +336,29 @@
   }
   .track-result-list:first-of-type { margin-top: 0; }
   .track-result-conf { font-size: 10px; color: var(--muted); font-weight: 500; }
+  .fight-strip { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 10px; }
+  .fight-strip-block {
+    width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0;
+  }
+  .fight-strip-block.hit {
+    background: #39ff14;
+    box-shadow: 0 0 6px 1px rgba(57,255,20,0.65), 0 0 1px rgba(57,255,20,0.9);
+  }
+  .fight-strip-block.miss {
+    background: #4a1f1f;
+    border: 1px solid #6b2a2a;
+  }
+  .baseline-block { margin: 16px 0; padding: 12px 14px; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; }
+  .baseline-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .baseline-caption { font-size: 10px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  .baseline-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .baseline-row:last-child { margin-bottom: 0; }
+  .baseline-label { font-size: 10.5px; color: var(--muted); width: 82px; flex-shrink: 0; }
+  .baseline-bar-track { flex: 1; height: 8px; background: #0d0f14; border-radius: 4px; overflow: hidden; }
+  .baseline-bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease-out; }
+  .baseline-bar-fill.model { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .baseline-bar-fill.market { background: var(--muted); }
+  .baseline-value { font-size: 12px; font-weight: 800; font-family: var(--font-display); width: 40px; text-align: right; flex-shrink: 0; }
   .track-result-list { display: flex; flex-direction: column; gap: 1px; }
   .track-result-row {
     display: flex; align-items: center; gap: 11px; padding: 9px 4px;
@@ -830,7 +853,7 @@
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
 
   {% if countdown_target_iso %}
-  <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}">
+  <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}">
     <div class="countdown-label" id="countdown-label">⏱ {{ countdown_label }}</div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
@@ -1007,10 +1030,31 @@
       <div class="clv-badge-sub">{{ track_record.clv_stats.beat }}/{{ track_record.clv_stats.total }} picks · avg {{ '+' if track_record.clv_stats.avg_clv_pct >= 0 else '' }}{{ track_record.clv_stats.avg_clv_pct }}pp move toward the model's side</div>
     </div>
     {% endif %}
+    {% if track_record.market_baseline %}
+    <div class="baseline-block">
+      <div class="baseline-title">⚖️ Model vs. Market Baseline</div>
+      <div class="baseline-caption">Both figures computed over the same {{ track_record.market_baseline.total }} picks with known odds — is the model actually beating "just bet every favorite," or riding a card of obvious winners?</div>
+      <div class="baseline-row">
+        <div class="baseline-label">Model</div>
+        <div class="baseline-bar-track"><div class="baseline-bar-fill model" style="width:{{ track_record.market_baseline.model_accuracy_pct }}%;"></div></div>
+        <div class="baseline-value">{{ track_record.market_baseline.model_accuracy_pct }}%</div>
+      </div>
+      <div class="baseline-row">
+        <div class="baseline-label">Market favorites</div>
+        <div class="baseline-bar-track"><div class="baseline-bar-fill market" style="width:{{ track_record.market_baseline.favorite_win_pct }}%;"></div></div>
+        <div class="baseline-value">{{ track_record.market_baseline.favorite_win_pct }}%</div>
+      </div>
+    </div>
+    {% endif %}
     {% if track_record.results_by_event %}
     <div class="track-result-title">📋 Every Tracked Pick</div>
     {% for group in track_record.results_by_event %}
     <div class="track-result-event-header">{{ group.event_name }}</div>
+    <div class="fight-strip">
+      {% for r in group.results|reverse %}
+      <div class="fight-strip-block {{ 'hit' if r.correct else 'miss' }}" title="{{ r.fighter_a }} vs. {{ r.fighter_b }} — {{ 'model got it right' if r.correct else 'model missed' }}"></div>
+      {% endfor %}
+    </div>
     <div class="track-result-list">
       {% for r in group.results %}
       <div class="track-result-row">
@@ -1038,7 +1082,8 @@
       <div class="calibration-legend">
         <span class="calibration-legend-item"><span class="calibration-dot" style="background:#3ddc84;"></span>well-calibrated</span>
         <span class="calibration-legend-item"><span class="calibration-dot" style="background:#e8c766;"></span>mild drift</span>
-        <span class="calibration-legend-item"><span class="calibration-dot" style="background:#ff5c5c;"></span>overconfident/under</span>
+        <span class="calibration-legend-item"><span class="calibration-dot" style="background:#ff5c5c;"></span>overconfident</span>
+        <span class="calibration-legend-item"><span class="calibration-dot" style="background:#5fb8c9;"></span>under-predicted</span>
       </div>
       <div class="chart-caption">Dashed line = perfect calibration. Above it = model underconfident in that range; below = overconfident. Dot size = sample size.</div>
     </div>
@@ -1842,6 +1887,7 @@
       try { schedule = JSON.parse(card.dataset.schedule || '[]'); } catch (e) { schedule = []; }
       let justConcluded = null;
       try { justConcluded = JSON.parse(card.dataset.justConcluded || 'null'); } catch (e) { justConcluded = null; }
+      const daysSinceEvent = parseInt(card.dataset.daysSinceEvent || '0', 10);
 
       let currentLiveKey = null;
 
@@ -1884,6 +1930,25 @@
 
       function update() {
         const now = Date.now();
+
+        // The day after an event (or later, though promotion should have
+        // already handed off to the next card by then) is definitive,
+        // server-known information -- no need to run any live-window
+        // estimation to figure out whether the card is over. Checked
+        // first and returns immediately, since none of the schedule
+        // logic below is meaningful once the event's own date has passed.
+        if (daysSinceEvent >= 1) {
+          boxes.style.display = 'none';
+          liveHeader.style.display = 'flex';
+          liveMacroText.textContent = "THAT'S A WRAP";
+          clearLiveRow();
+          if (justConcluded) {
+            liveMicro.innerHTML = resultLine(justConcluded) + '<br>Full card results below — see you next time.';
+          } else {
+            liveMicro.textContent = 'Card complete — see you next time.';
+          }
+          return;
+        }
 
         // Find a fight (among the ones NOT yet confirmed) whose estimated
         // window contains "now" -- confirmed fights are already excluded

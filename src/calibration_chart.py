@@ -43,7 +43,22 @@ def build_calibration_svg(points: list[dict], width: int = 280, height: int = 20
     for p in points:
         cx, cy = x_at(p["predicted"]), y_at(p["actual"])
         radius = min(4 + p["n"] * 0.8, 9)  # bigger dot = more picks in that bucket
-        color = "#3ddc84" if abs(p["predicted"] - p["actual"]) < 0.10 else "#e8c766" if abs(p["predicted"] - p["actual"]) < 0.20 else "#ff5c5c"
+        # Direction matters, not just magnitude: actual BELOW predicted
+        # means the model claimed more confidence than its picks earned
+        # (genuinely overconfident, worth flagging). Actual ABOVE
+        # predicted means the picks won more than the model even claimed
+        # -- underconfidence, and a good problem to have, not the same
+        # thing as overconfidence even though a naive abs() diff would
+        # color them identically.
+        diff = p["predicted"] - p["actual"]
+        if abs(diff) < 0.10:
+            color = "#3ddc84"  # well-calibrated
+        elif diff >= 0.20:
+            color = "#ff5c5c"  # overconfident: predicted well above what it earned
+        elif diff <= -0.20:
+            color = "#5fb8c9"  # underconfident: earned more than it claimed -- high value zone
+        else:
+            color = "#e8c766"  # mild drift, either direction
         dots_svg += (
             f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{radius}" fill="{color}" fill-opacity="0.8" stroke="#0a0c10" stroke-width="1">'
             f'<title>Predicted {round(p["predicted"]*100)}% / Actual {round(p["actual"]*100)}% (n={p["n"]})</title></circle>'
