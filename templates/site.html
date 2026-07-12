@@ -294,8 +294,38 @@
   }
   .jump-nav-chip:active { color: var(--accent-cool); border-color: var(--accent-cool); }
   .jump-nav-vs { color: var(--border); margin: 0 3px; }
+  .seg-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 4px 0 14px; position: sticky; top: 0; background: var(--bg); z-index: 40; }
+  .seg-tab {
+    flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-size: 12px; font-weight: 700; padding: 11px 4px;
+    cursor: pointer; font-family: inherit; letter-spacing: 0.2px; transition: color 0.15s, border-color 0.15s;
+  }
+  .seg-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .seg-pane { display: none; }
+  .seg-pane.active { display: block; }
+  #live-header { cursor: pointer; }
+  .live-cta { font-size: 11px; color: var(--accent2); font-weight: 700; margin-left: 8px; }
   .live-prices-chip { border-color: rgba(255,92,92,0.4) !important; }
   .live-prices-chip .chip-sub { color: var(--muted); font-weight: 500; }
+
+  .result-stats-block { margin: 4px 0 16px; padding: 14px; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; }
+  .result-stats-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 10px; }
+  .donut-row { display: flex; justify-content: space-around; margin-bottom: 14px; }
+  .donut-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .donut-name { font-size: 11px; font-weight: 700; color: var(--text); }
+  .donut-caption { font-size: 10px; color: var(--muted); }
+  .donut-center-value { font-size: 15px; font-weight: 800; fill: var(--text); font-family: var(--font-display); }
+  .donut-center-pct { font-size: 10px; fill: var(--muted); }
+  .stat-compare-row { display: flex; align-items: baseline; justify-content: space-between; margin-top: 10px; margin-bottom: 3px; font-size: 12px; }
+  .stat-compare-val { font-weight: 800; font-family: var(--font-display); min-width: 30px; }
+  .stat-compare-val.right { text-align: right; }
+  .stat-compare-label { color: var(--muted); font-size: 11px; }
+  .damage-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .damage-col { width: 84px; flex-shrink: 0; }
+  .damage-labels { display: flex; flex-direction: column; gap: 14px; text-align: center; font-size: 10.5px; }
+  .damage-legend-num { display: block; font-weight: 800; color: var(--text); font-family: var(--font-display); }
+  .damage-legend-txt { display: block; color: var(--muted); margin-top: 1px; }
+  .damage-badge-text { font-size: 13px; font-weight: 800; fill: #fff; text-anchor: middle; }
 
   #hub-view, #detail-view { transition: opacity 0.22s ease, transform 0.22s ease; opacity: 1; transform: translateX(0); }
   .view-slide-out-left { opacity: 0; transform: translateX(-14px); }
@@ -331,6 +361,10 @@
     padding: 10px 14px; border-radius: 8px; font-size: 12.5px; color: var(--muted); margin-bottom: 16px;
   }
   .notice { border-left-color: var(--red); }
+  .footer-disclaimer {
+    font-size: 10.5px; color: var(--muted); opacity: 0.7; text-align: center;
+    line-height: 1.6; padding: 20px 16px 28px; max-width: 340px; margin: 0 auto;
+  }
 
   details.info-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
@@ -767,7 +801,7 @@
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
 
   {% if countdown_target_iso %}
-  <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}">
+  <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}">
     <div class="countdown-label" id="countdown-label">⏱ {{ countdown_label }}</div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
@@ -790,9 +824,9 @@
         <div class="countdown-box-label">Sec</div>
       </div>
     </div>
-    <div class="live-header" id="live-header" style="display:none;">
+    <div class="live-header" id="live-header" style="display:none;" onclick="showSection('thisweekend')" role="button" tabindex="0" aria-label="View the live fight card">
       <div class="live-header-macro">
-        <span class="live-dot"></span> <span id="live-macro-text">LIVE NOW</span>
+        <span class="live-dot"></span> <span id="live-macro-text">LIVE NOW</span><span class="live-cta">view card →</span>
       </div>
       <div class="live-header-micro" id="live-header-micro">—</div>
     </div>
@@ -808,12 +842,6 @@
     <span class="badge">🕒 {{ generated_at }}</span>
     <span class="badge book">📊 Odds via {{ source or "unavailable" }}</span>
     <span class="badge">🔄 refreshes every few hours</span>
-  </div>
-
-  <div class="disclaimer">
-    For analysis and education only, not betting advice. A flagged edge means the model disagrees
-    with the market — it doesn't mean it's right. Sanity-check against recent form, injuries, and camp
-    news. Please gamble responsibly.
   </div>
 
   {% if live_error %}
@@ -1137,7 +1165,7 @@
           <div class="card-position">{{ fight.card_position }}</div>
           {% endif %}
           {% if fight.result_label %}
-          <span class="vs-text result-text">{{ fight.result_label }}</span>
+          <span class="vs-text result-text">{{ fight.result_label }}{% if fight.result_round_time %} · {{ fight.result_round_time }}{% endif %}</span>
           {% else %}
           <span class="vs-text" data-vs-slot>VS</span>
           {% endif %}
@@ -1170,6 +1198,55 @@
         <span class="pick-method">by {{ fight.preview.likely_method }}</span>
         <span class="pick-confidence">{{ fight.preview.confidence_label }}</span>
       </div>
+      {% if fight.result_stats %}
+      <div class="result-stats-block">
+        <div class="result-stats-title">📊 Fight Overview</div>
+        <div class="donut-row">
+          <div class="donut-col">
+            <div class="donut-name">{{ fight.fighter_a.split(' ')[-1] }}</div>
+            {{ donut_svg(fight.result_stats.a.sig_landed, fight.result_stats.a.sig_att, '#ff5c5c') | safe }}
+            <div class="donut-caption">Sig. Strikes</div>
+          </div>
+          <div class="donut-col">
+            <div class="donut-name">{{ fight.fighter_b.split(' ')[-1] }}</div>
+            {{ donut_svg(fight.result_stats.b.sig_landed, fight.result_stats.b.sig_att, '#6db3f2') | safe }}
+            <div class="donut-caption">Sig. Strikes</div>
+          </div>
+        </div>
+        {% for label, a_val, a_max, b_val, b_max in [
+          ('Total Strikes', fight.result_stats.a.total_landed, fight.result_stats.a.total_att, fight.result_stats.b.total_landed, fight.result_stats.b.total_att),
+          ('Takedowns', fight.result_stats.a.td_landed, fight.result_stats.a.td_att, fight.result_stats.b.td_landed, fight.result_stats.b.td_att),
+          ('Knockdowns', fight.result_stats.a.kd, none, fight.result_stats.b.kd, none),
+        ] %}
+        {% set total = (a_val or 0) + (b_val or 0) %}
+        {% set a_pct = ((a_val or 0) / total * 100) if total > 0 else 50 %}
+        <div class="stat-compare-row">
+          <span class="stat-compare-val">{{ a_val }}{% if a_max is not none %}/{{ a_max }}{% endif %}</span>
+          <span class="stat-compare-label">{{ label }}</span>
+          <span class="stat-compare-val right">{% if b_max is not none %}{{ b_max }}/{% endif %}{{ b_val }}</span>
+        </div>
+        <div class="tape-bar-track">
+          <div class="tape-bar-a" style="width:0%;" data-target-width="{{ a_pct }}%"></div>
+          <div class="tape-bar-b" style="width:0%;" data-target-width="{{ 100 - a_pct }}%"></div>
+        </div>
+        {% endfor %}
+
+        <div class="result-stats-title" style="margin-top:20px;">🩹 Damage Taken</div>
+        <div class="damage-row">
+          <div class="damage-col">
+            {{ damage_svg(fight.result_stats.a.head, fight.result_stats.a.body, fight.result_stats.a.leg, false) | safe }}
+          </div>
+          <div class="damage-labels">
+            <div><span class="damage-legend-num">{{ fight.result_stats.a.head }} / {{ fight.result_stats.b.head }}</span><span class="damage-legend-txt">Sig. Strikes to the Head</span></div>
+            <div><span class="damage-legend-num">{{ fight.result_stats.a.body }} / {{ fight.result_stats.b.body }}</span><span class="damage-legend-txt">Sig. Strikes to the Body</span></div>
+            <div><span class="damage-legend-num">{{ fight.result_stats.a.leg }} / {{ fight.result_stats.b.leg }}</span><span class="damage-legend-txt">Sig. Strikes to the Legs</span></div>
+          </div>
+          <div class="damage-col">
+            {{ damage_svg(fight.result_stats.b.head, fight.result_stats.b.body, fight.result_stats.b.leg, true) | safe }}
+          </div>
+        </div>
+      </div>
+      {% endif %}
       <div class="model-preview">
         <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
       </div>
@@ -1432,13 +1509,38 @@
     <div class="event-name">{{ event.event_name }}</div>
     <div class="event-date">{{ event.event_date }}</div>
   </div>
-  {% if is_first_event and event.fights|length > 4 %}
-  <div class="jump-nav">
-    {% for fight in event.fights %}
-    <a href="#fight-{{ loop.index }}" class="jump-nav-chip">{{ fight.fighter_a.split(' ')[-1] }}<span class="jump-nav-vs">/</span>{{ fight.fighter_b.split(' ')[-1] }}</a>
+  {% if is_first_event %}
+  {%- set segs = [] -%}
+  {%- for f in event.fights %}{% if f.segment_label not in segs %}{% set _ = segs.append(f.segment_label) %}{% endif %}{% endfor -%}
+  {% if segs|length > 1 %}
+  <div class="seg-tabs">
+    {% for seg in segs %}
+    <button class="seg-tab{{ ' active' if loop.first }}" data-seg-target="seg-pane-{{ loop.index }}" onclick="switchSegTab(this)">{{ seg|title }}</button>
     {% endfor %}
   </div>
+  {% set ns = namespace(i=0) %}
+  {% for seg in segs %}
+  <div class="seg-pane{{ ' active' if loop.first }}" id="seg-pane-{{ loop.index }}">
+    {% set pane_fights = event.fights|selectattr('segment_label', 'equalto', seg)|list %}
+    {% if pane_fights|length > 3 %}
+    <div class="jump-nav">
+      {% for fight in pane_fights %}
+      <a href="#fight-{{ ns.i + loop.index }}" class="jump-nav-chip">{{ fight.fighter_a.split(' ')[-1] }}<span class="jump-nav-vs">/</span>{{ fight.fighter_b.split(' ')[-1] }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% for fight in pane_fights %}
+    {% set ns.i = ns.i + 1 %}
+    {{ render_fight_card(fight, ns.i) }}
+    {% endfor %}
+  </div>
+  {% endfor %}
+  {% else %}
+  {% for fight in event.fights %}
+  {{ render_fight_card(fight, loop.index) }}
+  {% endfor %}
   {% endif %}
+  {% else %}
   {% for fight in event.fights %}
   {% if loop.first or fight.segment_label != loop.previtem.segment_label %}
   <div class="segment-divider">
@@ -1447,8 +1549,9 @@
     <span class="segment-divider-line"></span>
   </div>
   {% endif %}
-  {{ render_fight_card(fight, loop.index if is_first_event else none) }}
+  {{ render_fight_card(fight) }}
   {% endfor %}
+  {% endif %}
   {% endfor %}
   </div>
 
@@ -1474,6 +1577,12 @@
   {% endfor %}
   {% endif %}
   </div>
+  </div>
+
+  <div class="footer-disclaimer">
+    For analysis and education only, not betting advice. A flagged edge means the model disagrees
+    with the market — it doesn't mean it's right. Sanity-check against recent form, injuries, and
+    camp news. Please gamble responsibly.
   </div>
 
   <script>
@@ -1553,6 +1662,24 @@
       const hubView = document.getElementById('hub-view');
       const detailView = document.getElementById('detail-view');
       transitionViews(detailView, hubView, 'backward');
+    }
+
+    // Segment tabs (Main Card / Preliminary Card / Early Prelims). Cards
+    // inside a hidden pane are never seen by the reveal observer, so on
+    // tab switch we reveal any still-unrevealed cards ourselves with the
+    // same staggered pattern, then clear the inline delay so it can't
+    // interfere with later transitions.
+    function switchSegTab(btn) {
+      const targetId = btn.dataset.segTarget;
+      btn.parentElement.querySelectorAll('.seg-tab').forEach(t => t.classList.toggle('active', t === btn));
+      document.querySelectorAll('.seg-pane').forEach(p => p.classList.toggle('active', p.id === targetId));
+      const pane = document.getElementById(targetId);
+      if (!pane) return;
+      pane.querySelectorAll('.reveal-target:not(.revealed)').forEach((el, i) => {
+        el.style.transitionDelay = (i * 60) + 'ms';
+        el.classList.add('revealed');
+        setTimeout(() => { el.style.transitionDelay = ''; }, 900 + i * 60);
+      });
     }
 
     // Swipe-right-to-go-back, while viewing any detail section. Skips
@@ -1662,6 +1789,8 @@
 
       let schedule = [];
       try { schedule = JSON.parse(card.dataset.schedule || '[]'); } catch (e) { schedule = []; }
+      let justConcluded = null;
+      try { justConcluded = JSON.parse(card.dataset.justConcluded || 'null'); } catch (e) { justConcluded = null; }
 
       let currentLiveKey = null;
 
@@ -1698,10 +1827,18 @@
         return `${m}m ${String(s).padStart(2, '0')}s`;
       }
 
+      function resultLine(f) {
+        return `<strong>${f.fighter_a} vs. ${f.fighter_b}</strong> — ${f.result_label}${f.result_round_time ? ' · ' + f.result_round_time : ''}`;
+      }
+
       function update() {
         const now = Date.now();
 
-        // Find a fight whose estimated window contains "now"
+        // Find a fight (among the ones NOT yet confirmed) whose estimated
+        // window contains "now" -- confirmed fights are already excluded
+        // from `schedule` server-side, so this only ever estimates real
+        // unknowns, and the remaining times are self-corrected against
+        // justConcluded.last_confirmed_at rather than the stale pre-card guess.
         let live = null, upcoming = null;
         for (const f of schedule) {
           const start = new Date(f.estimated_start_iso).getTime();
@@ -1713,20 +1850,22 @@
         const lastFight = schedule.length ? schedule[schedule.length - 1] : null;
         const cardOver = lastFight && now >= new Date(lastFight.estimated_end_iso).getTime();
 
-        if (live || cardOver) {
+        // Every fight on the card has a confirmed result -- definitive,
+        // not an estimate.
+        if (justConcluded && schedule.length === 0) {
           boxes.style.display = 'none';
           liveHeader.style.display = 'flex';
+          liveMacroText.textContent = 'CARD CONCLUDED';
+          liveMicro.innerHTML = resultLine(justConcluded) + '<br>Final fight of the night.';
+          clearLiveRow();
+          return;
+        }
 
-          if (cardOver && !live) {
-            liveMacroText.textContent = 'CARD LIKELY CONCLUDED';
-            liveMicro.textContent = 'Check the Track Record section once results are posted.';
-            clearLiveRow();
-            return;
-          }
-
+        if (live) {
+          boxes.style.display = 'none';
+          liveHeader.style.display = 'flex';
           liveMacroText.textContent = 'LIVE NOW';
           setLiveRow(live);
-
           if (upcoming) {
             const locksIn = new Date(upcoming.estimated_start_iso).getTime() - now;
             liveMicro.innerHTML = `<strong>${live.fighter_a} vs. ${live.fighter_b}</strong><br>` +
@@ -1735,6 +1874,30 @@
           } else {
             liveMicro.innerHTML = `<strong>${live.fighter_a} vs. ${live.fighter_b}</strong><br>Final fight of the night.`;
           }
+          return;
+        }
+
+        // Gap between a confirmed result and the next fight's corrected
+        // start -- show what just happened (real outcome, real round/time)
+        // instead of a bare countdown with no context.
+        if (justConcluded && upcoming && !cardOver) {
+          boxes.style.display = 'none';
+          liveHeader.style.display = 'flex';
+          liveMacroText.textContent = 'FIGHT CONCLUDED';
+          clearLiveRow();
+          const locksIn = new Date(upcoming.estimated_start_iso).getTime() - now;
+          liveMicro.innerHTML = resultLine(justConcluded) + '<br>' +
+            `⏰ Next (${upcoming.fighter_a} vs. ${upcoming.fighter_b}) locks in: ` +
+            `<span class="next-lock">${fmtClock(locksIn)}</span>`;
+          return;
+        }
+
+        if (cardOver) {
+          boxes.style.display = 'none';
+          liveHeader.style.display = 'flex';
+          liveMacroText.textContent = 'CARD LIKELY CONCLUDED';
+          liveMicro.textContent = 'Check the Track Record section once results are posted.';
+          clearLiveRow();
           return;
         }
 

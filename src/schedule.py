@@ -25,6 +25,8 @@ This sorts back to true chronological order before assigning estimated times.
 """
 
 import datetime as dt
+import json
+import os
 
 _SEGMENT_ORDER = {"Early Prelims": 0, "Prelims": 1, "Main Card": 2, "Co-Main Event": 3, "Main Event": 4}
 
@@ -112,3 +114,77 @@ def build_fight_schedule(
         cursor = slot_end
 
     return schedule
+
+
+SCHEDULE_STATE_PATH = "data/schedule_state.json"
+# Typical real gap between one fight ending (scorecards read / ref waves it
+# off) and the next actually starting (cage reset, walkouts, introductions).
+INTER_FIGHT_GAP_MIN = 13
+
+
+def apply_live_corrections(
+    schedule: list[dict], finished_keys: set[frozenset], now: dt.datetime | None = None,
+) -> tuple[list[dict], str | None]:
+    """
+    Self-correction: the pre-card estimate above is necessarily static, and
+    real fights run early or late constantly -- without this, a single
+    early stoppage or a slow decision compounds across the rest of a
+    14-fight card and the "live now" guess drifts increasingly wrong as
+    the night goes on (confirmed: this was the actual complaint).
+
+    Fights with a confirmed result are removed from the schedule entirely
+    (they're not an estimate anymore, they're a fact -- rendered via the
+    real result elsewhere). The moment the count of confirmed results
+    increases, "now" becomes a trusted real anchor: the remaining fights
+    are shifted, preserving their relative spacing, so the next one is
+    expected INTER_FIGHT_GAP_MIN after that real confirmation rather than
+    wherever the original static guess placed it.
+
+    Returns (remaining_schedule_with_corrected_times, last_confirmed_at_iso).
+    The small state file persists only "how many are confirmed so far" and
+    "when that count last increased" -- just enough to know a correction
+    anchor exists, without needing to guess elapsed time.
+    """
+    now = now or dt.datetime.now(dt.timezone(dt.timedelta(hours=-4)))
+
+    remaining = [
+        f for f in schedule
+        if frozenset({f["fighter_a"].strip().lower(), f["fighter_b"].strip().lower()}) not in finished_keys
+    ]
+    confirmed_count = len(schedule) - len(remaining)
+
+    state = {"confirmed_count": 0, "last_confirmed_at": None}
+    if os.path.exists(SCHEDULE_STATE_PATH):
+        try:
+            with open(SCHEDULE_STATE_PATH) as f:
+                state = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    if confirmed_count != state.get("confirmed_count", 0):
+        # Count moved in EITHER direction -- forward (a new result just
+        # landed) or backward (a new event started and confirmed_count
+        # reset lower than a stale state file from the last card). Either
+        # way "now" is the freshest trustworthy anchor; a backward reset
+        # additionally clears last_confirmed_at since it no longer applies
+        # to this card.
+        state = {
+            "confirmed_count": confirmed_count,
+            "last_confirmed_at": now.isoformat() if confirmed_count > 0 else None,
+        }
+        try:
+            with open(SCHEDULE_STATE_PATH, "w") as f:
+                json.dump(state, f)
+        except OSError:
+            pass
+
+    if state.get("last_confirmed_at") and remaining:
+        last_confirmed_at = dt.datetime.fromisoformat(state["last_confirmed_at"])
+        corrected_next_start = last_confirmed_at + dt.timedelta(minutes=INTER_FIGHT_GAP_MIN)
+        original_next_start = dt.datetime.fromisoformat(remaining[0]["estimated_start_iso"])
+        shift = corrected_next_start - original_next_start
+        for f in remaining:
+            f["estimated_start_iso"] = _fmt(dt.datetime.fromisoformat(f["estimated_start_iso"]) + shift)
+            f["estimated_end_iso"] = _fmt(dt.datetime.fromisoformat(f["estimated_end_iso"]) + shift)
+
+    return remaining, state.get("last_confirmed_at")

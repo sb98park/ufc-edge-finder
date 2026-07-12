@@ -29,9 +29,11 @@ from src.line_movement import (
     load_token_cache, save_token_cache, update_token_cache,
 )
 from src.track_record import log_predictions, compute_track_record, load_momentum_by_key
-from src.schedule import build_fight_schedule
+from src.schedule import build_fight_schedule, apply_live_corrections
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
+from src.donut_chart import build_donut_svg
+from src.damage_silhouette import build_damage_silhouette_svg
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -154,28 +156,43 @@ def main():
         countdown_target_iso = f"{next_event['event_date']}T{next_event.get('event_start_time_et', '19:00')}:00-04:00"
         countdown_label = next_event["event_name"]
 
-    # Fight-by-fight schedule for live-state tracking -- only for THIS
-    # WEEKEND's tracked card, since future cards are weeks out and this
-    # estimate only matters once a card is imminent/underway. Consumed
-    # entirely client-side (compared against the visitor's own clock), so
-    # this doesn't need a faster server refresh cadence to stay useful.
-    fight_schedule = []
-    if events:
-        raw_card_rows = cards_df.to_dict("records")
-        fight_schedule = build_fight_schedule(
-            raw_card_rows, events[0]["event_date"], events[0].get("event_start_time_et", "17:00")
-        )
-
     # Results already recorded (if any) -- used to mark fights as FINISHED
     # server-side, which is more reliable than a time-based estimate once
     # the user has actually told us the outcome.
+    STAT_COLS = [
+        "fa_sig_landed", "fa_sig_att", "fb_sig_landed", "fb_sig_att",
+        "fa_total_landed", "fa_total_att", "fb_total_landed", "fb_total_att",
+        "fa_td_landed", "fa_td_att", "fb_td_landed", "fb_td_att",
+        "fa_kd", "fb_kd", "fa_head", "fa_body", "fa_leg", "fb_head", "fb_body", "fb_leg",
+    ]
     finished_results = {}
     if os.path.exists("data/fight_results.csv"):
         results_df = pd.read_csv("data/fight_results.csv")
         for _, r in results_df.iterrows():
             if pd.notna(r.get("winner")):
                 key = frozenset({str(r["fighter_a"]).strip().lower(), str(r["fighter_b"]).strip().lower()})
-                finished_results[key] = {"winner": r["winner"], "method": r.get("method", "")}
+                # Decisions always run the full final round (5:00 in modern
+                # UFC, every round) -- Google's own convention, and the only
+                # honest value when nobody logged a stoppage clock. Finishes
+                # use the exact round/time as entered.
+                method = str(r.get("method", "")).strip()
+                is_decision = method.upper().startswith("DEC")
+                end_round = r.get("end_round")
+                end_round = int(end_round) if pd.notna(end_round) else None
+                end_time = "5:00" if is_decision else (str(r.get("end_time")).strip() if pd.notna(r.get("end_time")) else None)
+
+                stats_present = all(pd.notna(r.get(c)) for c in STAT_COLS)
+                stats = None
+                if stats_present:
+                    stats = {c: int(r[c]) for c in STAT_COLS}
+
+                finished_results[key] = {
+                    "winner": r["winner"], "method": method,
+                    "end_round": end_round, "end_time": end_time,
+                    "stats": stats,
+                    "stats_fighter_a": r["fighter_a"] if stats_present else None,
+                    "stats_fighter_b": r["fighter_b"] if stats_present else None,
+                }
 
     for event in events:
         for fight in event["fights"]:
@@ -184,11 +201,75 @@ def main():
             if result:
                 winner_last = result["winner"].strip().split()[-1].upper()
                 fight["result_label"] = f"{winner_last} BY {result['method']}".strip()
+                fight["result_round_time"] = (
+                    f"R{result['end_round']} {result['end_time']}"
+                    if result["end_round"] and result["end_time"] else None
+                )
+                fight["result_stats"] = None
+                if result["stats"]:
+                    # fight_results.csv's fa_/fb_ columns are keyed to
+                    # whichever order THAT row was entered in, which may not
+                    # match this card's fighter_a/fighter_b order -- swap if
+                    # needed so the stats always land on the right side.
+                    same_order = (
+                        str(result["stats_fighter_a"]).strip().lower() == fight["fighter_a"].strip().lower()
+                    )
+                    s = result["stats"]
+                    fight["result_stats"] = {
+                        "a": {k[3:]: s[k] for k in s if k.startswith("fa_" if same_order else "fb_")},
+                        "b": {k[3:]: s[k] for k in s if k.startswith("fb_" if same_order else "fa_")},
+                    }
             else:
                 fight["result_label"] = None
+                fight["result_round_time"] = None
+                fight["result_stats"] = None
+
+    # Fight-by-fight schedule for live-state tracking -- only for THIS
+    # WEEKEND's tracked card, since future cards are weeks out and this
+    # estimate only matters once a card is imminent/underway. Consumed
+    # entirely client-side (compared against the visitor's own clock), so
+    # this doesn't need a faster server refresh cadence to stay useful.
+    #
+    # apply_live_corrections re-anchors the remaining schedule using real
+    # confirmed results as ground truth (see schedule.py) instead of
+    # trusting the static pre-card estimate as the night actually plays
+    # out -- the fix for the reported "feels inaccurate" drift. It also
+    # strips confirmed fights out of the schedule entirely, so the
+    # client only ever estimates fights that genuinely haven't happened.
+    fight_schedule = []
+    just_concluded = None
+    if events:
+        raw_card_rows = cards_df.to_dict("records")
+        fight_schedule = build_fight_schedule(
+            raw_card_rows, events[0]["event_date"], events[0].get("event_start_time_et", "17:00")
+        )
+        finished_keys = {
+            frozenset({str(r["fighter_a"]).strip().lower(), str(r["fighter_b"]).strip().lower()})
+            for r in raw_card_rows
+            if frozenset({str(r["fighter_a"]).strip().lower(), str(r["fighter_b"]).strip().lower()}) in finished_results
+        }
+        # The last CHRONOLOGICALLY concluded fight, for the just-concluded
+        # display -- found by walking the schedule (already true fight
+        # order) and taking the last one that's confirmed, not by
+        # date_added, which doesn't reliably reflect fight order.
+        for f in fight_schedule:
+            key = frozenset({f["fighter_a"].strip().lower(), f["fighter_b"].strip().lower()})
+            if key in finished_keys:
+                r = finished_results[key]
+                just_concluded = {
+                    "fighter_a": f["fighter_a"], "fighter_b": f["fighter_b"],
+                    "winner": r["winner"],
+                    "result_label": f"{r['winner'].strip().split()[-1].upper()} BY {r['method']}".strip(),
+                    "result_round_time": f"R{r['end_round']} {r['end_time']}" if r["end_round"] and r["end_time"] else None,
+                }
+        fight_schedule, last_confirmed_at = apply_live_corrections(fight_schedule, finished_keys)
+        if just_concluded:
+            just_concluded["last_confirmed_at"] = last_confirmed_at
 
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
+    env.globals["donut_svg"] = build_donut_svg
+    env.globals["damage_svg"] = build_damage_silhouette_svg
     env.filters["tojson"] = lambda obj: json.dumps(obj, default=str)
     # NaN is truthy in Python, so a plain {% if x %} check doesn't catch a
     # pandas-filled missing value -- it just prints the literal word
@@ -238,6 +319,7 @@ def main():
         event_short_name=event_short_name,
         countdown_target_iso=countdown_target_iso,
         fight_schedule_json=json.dumps(fight_schedule),
+        just_concluded_json=json.dumps(just_concluded),
         countdown_label=countdown_label,
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,
