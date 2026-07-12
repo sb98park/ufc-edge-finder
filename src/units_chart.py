@@ -60,12 +60,14 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     for v in grid_values:
         y = y_at(v)
         is_zero = v == 0
+        line_color = "#4a4f5a" if is_zero else "#1c2028"
+        dasharray_attr = ' stroke-dasharray="3,3"' if is_zero else ""
         grid_svg += (
             f'<line x1="{pad_left}" y1="{y:.1f}" x2="{pad_left+plot_w}" y2="{y:.1f}" '
-            f'stroke="{"#4a4f5a" if is_zero else "#1c2028"}" stroke-width="1" '
-            f'{"stroke-dasharray=\"3,3\"" if is_zero else ""}/>'
+            f'stroke="{line_color}" stroke-width="1"{dasharray_attr}/>'
         )
-        grid_svg += f'<text x="{pad_left-6}" y="{y+3:.1f}" font-size="8" fill="#5a5f6a" text-anchor="end">{"+" if v > 0 else ""}{v:g}U</text>'
+        sign = "+" if v > 0 else ""
+        grid_svg += f'<text x="{pad_left-6}" y="{y+3:.1f}" font-size="8" fill="#5a5f6a" text-anchor="end">{sign}{v:g}U</text>'
 
     x_labels_svg = (
         f'<text x="{x_at(0):.1f}" y="{height-4}" font-size="8" fill="#5a5f6a" text-anchor="start">Start</text>'
