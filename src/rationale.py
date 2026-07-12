@@ -63,6 +63,9 @@ def explain_moneyline(row: dict, fighters_df: pd.DataFrame) -> str:
             if abs(matchup["durability_adjustment"]) > 15:
                 who = row["fighter"] if matchup["durability_adjustment"] > 0 else opponent
                 drivers.append(f"{who} having been finished less often historically")
+            if abs(matchup.get("submission_threat_adjustment", 0)) > 15:
+                who = row["fighter"] if matchup["submission_threat_adjustment"] > 0 else opponent
+                drivers.append(f"{who}'s real submission-finish rate")
             layoff_a = matchup.get("layoff_years_a")
             layoff_b = matchup.get("layoff_years_b")
             if layoff_a and layoff_a > 1.0:
@@ -275,6 +278,17 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
                     signals.append((abs(durability), f"{opponent} has been finished at a notably higher rate than {fighter}, and durability gaps like that are exactly what tends to hold up bet after bet -- it's not a one-fight fluke, it's a pattern"))
                 else:
                     signals.append((abs(durability), f"{fighter}'s own durability history is a genuine soft spot, which is worth knowing even if the model still leans this way"))
+
+            submission_threat = matchup.get("submission_threat_adjustment", 0)
+            # Same small-sample risk as durability above -- a fighter with
+            # 2 career wins and 1 submission reads as a "50% sub rate"
+            # that isn't a real pattern yet.
+            sub_sample_ok = stats["wins"] >= 3 and opp_stats["wins"] >= 3
+            if abs(submission_threat) > 8 and sub_sample_ok:
+                if submission_threat > 0:
+                    signals.append((abs(submission_threat), f"{fighter} finishes a real share of wins by submission, a live threat {opponent} has to respect anywhere the fight touches the mat"))
+                else:
+                    signals.append((abs(submission_threat), f"{opponent} carries a real submission-finish rate of their own, which is a live risk for {fighter} if this fight goes to the ground"))
 
             layoff_a, layoff_b = matchup.get("layoff_years_a") or 0, matchup.get("layoff_years_b") or 0
             layoff_gap = layoff_b - layoff_a

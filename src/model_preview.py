@@ -169,6 +169,9 @@ def build_fight_preview(
     elif abs(matchup["durability_adjustment"]) > 15:
         more_durable = fighter_a if matchup["durability_adjustment"] > 0 else fighter_b
         style_note = f" {more_durable} has been finished less often historically, a durability factor working in their favor."
+    elif abs(matchup.get("submission_threat_adjustment", 0)) > 15:
+        submission_threat = fighter_a if matchup["submission_threat_adjustment"] > 0 else fighter_b
+        style_note = f" {submission_threat} finishes a real share of wins by submission, a live threat the opponent has to respect everywhere the fight goes to the mat."
 
     layoff_note = ""
     for name, yrs in [(fighter_a, matchup["layoff_years_a"]), (fighter_b, matchup["layoff_years_b"])]:

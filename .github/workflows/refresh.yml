@@ -2,16 +2,16 @@ name: Refresh UFC Edge Finder
 
 on:
   schedule:
-    # Every 4 hours (baseline)
-    - cron: "0 */4 * * *"
-    # Fight-night boost: every 15 min through the typical Saturday card
-    # window -- 5pm ET Sat through 1am ET Sun (EDT = UTC-4). GitHub cron
-    # runs on UTC, so that's Sat 21:00-23:59 UTC + Sun 00:00-05:00 UTC.
+    # Every 15 minutes, all the time -- not just during the Saturday
+    # fight-night window. Widened from a 4-hour baseline + narrow boost
+    # window so results, odds, and line movement get picked up quickly
+    # regardless of when they actually happen (early weigh-in news,
+    # a result posted late, odds moving on a weekday, etc.), not just
+    # during a specific anticipated card.
     # Note: Actions schedules can lag 5-20 min under load; the manual
     # "Run workflow" button (workflow_dispatch) is the guaranteed
     # on-demand refresh, including from the GitHub mobile app.
-    - cron: "*/15 21-23 * * 6"
-    - cron: "*/15 0-5 * * 0"
+    - cron: "*/15 * * * *"
   workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
   push:
     branches: [main]

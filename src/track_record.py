@@ -363,6 +363,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "clv": clv,
             "favorite_won": _favorite_won(pred.get("pick_odds"), correct),
             "units_result": units_result,
+            "unit_size": UNITS_BY_CONFIDENCE.get(pred["confidence_label"]),
             "date_added": result.get("date_added", ""),
         })
 
@@ -453,6 +454,28 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "running_total": running,
         }
 
+    # Event Summary: an at-a-glance digest for the most recent event
+    # specifically (not the all-time total, which happens to be the same
+    # thing right now with only one event tracked, but won't be once more
+    # accumulate) -- this is what someone actually wants two seconds after
+    # opening Track Record: "how did the card that just happened go."
+    latest_event_summary = None
+    if results_by_event:
+        latest = results_by_event[0]
+        latest_results = latest["results"]
+        latest_correct = sum(1 for m in latest_results if m["correct"])
+        latest_units_eligible = [m for m in latest_results if m["units_result"] is not None]
+        latest_event_summary = {
+            "event_name": latest["event_name"],
+            "correct": latest_correct,
+            "incorrect": len(latest_results) - latest_correct,
+            "total": len(latest_results),
+            "accuracy_pct": round(latest_correct / len(latest_results) * 100, 1) if latest_results else 0,
+            "perfect_prop_count": sum(1 for m in latest_results if m["correct"] and m["method_correct"]),
+            "units": round(sum(m["units_result"] for m in latest_units_eligible), 2) if latest_units_eligible else None,
+            "units_eligible": len(latest_units_eligible),
+        }
+
     # Model vs. market baseline: is the model's accuracy actually beating
     # the "just pick every favorite" strategy, or is it riding a card full
     # of obvious favorites winning? Only computed over the subset with
@@ -479,6 +502,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         "results_by_event": results_by_event,
         "market_baseline": market_baseline,
         "units_stats": units_stats,
+        "latest_event_summary": latest_event_summary,
         "accuracy_sparkline": sparkline,
     }
 

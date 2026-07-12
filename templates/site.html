@@ -257,6 +257,19 @@
     padding: 12px 16px; margin-bottom: 16px;
   }
   .track-record-title { font-size: 12.5px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .event-summary-card {
+    margin: 10px 0 16px; padding: 14px 12px; border-radius: 12px;
+    background: linear-gradient(160deg, rgba(212,175,55,0.08), var(--panel2) 60%);
+    border: 1px solid var(--border);
+  }
+  .event-summary-name { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .event-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .event-summary-stat { text-align: center; }
+  .event-summary-value { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.1; }
+  .event-summary-value.positive { color: var(--green); }
+  .event-summary-value.negative { color: var(--red); }
+  .event-summary-value.gold { color: #f0d97a; font-size: 17px; }
+  .event-summary-label { font-size: 8.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
   .track-record-headline { font-size: 24px; font-weight: 800; font-family: var(--font-display); }
   .track-record-headline span { font-size: 14px; color: var(--muted); font-weight: 600; }
   .sparkline-wrap { margin: 8px 0 4px; }
@@ -420,6 +433,18 @@
   .conf-badge.high { background: rgba(61,220,132,0.15); color: var(--green); }
   .conf-badge.medium { background: rgba(232,199,102,0.15); color: var(--accent2); }
   .conf-badge.low { background: rgba(138,143,154,0.2); color: var(--muted); }
+  .perfect-prop-badge {
+    font-size: 9px; font-weight: 800; letter-spacing: 0.2px;
+    padding: 2px 7px; border-radius: 8px; line-height: 1.6;
+    background: linear-gradient(135deg, rgba(240,217,122,0.22), rgba(212,175,55,0.16));
+    border: 1px solid rgba(212,175,55,0.4); color: #f0d97a;
+    text-shadow: 0 0 8px rgba(240,217,122,0.5);
+  }
+  .unit-pips { display: inline-flex; flex-direction: column-reverse; gap: 1.5px; vertical-align: middle; }
+  .unit-pip {
+    width: 10px; height: 2.5px; border-radius: 1px;
+    background: #f0d97a; box-shadow: 0 0 3px rgba(240,217,122,0.7);
+  }
   .method-match { font-size: 9.5px; font-weight: 700; margin-left: 4px; }
   .method-match.yes { color: var(--green); }
   .method-match.no { color: var(--red); }
@@ -681,9 +706,15 @@
 
   .fight-body { padding: 0 16px 16px; }
   .model-preview {
-    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+    background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
     padding: 12px 14px; margin: 4px 0 14px; font-size: 12.5px; color: var(--text); line-height: 1.6;
-    white-space: normal;
+    white-space: normal; box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+  }
+  .model-preview.masterpiece {
+    border: 1px solid rgba(61,220,132,0.45);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.18), 0 0 0 1px rgba(61,220,132,0.12), 0 0 20px rgba(61,220,132,0.1);
   }
   .preview-label { color: var(--accent); font-weight: 700; }
   .chart-block {
@@ -942,7 +973,7 @@
   <div class="meta-row">
     <span class="badge">🕒 {{ generated_at }}</span>
     <span class="badge book">📊 Odds via {{ source or "unavailable" }}</span>
-    <span class="badge">🔄 refreshes every few hours</span>
+    <span class="badge">🔄 refreshes every 15 min</span>
   </div>
 
   {% if live_error %}
@@ -1054,6 +1085,31 @@
   <div class="detail-section" data-section="track">
   <div class="track-record-card" id="section-trackrecord">
     <div class="track-record-title">{{ icon_track() }} Model Track Record</div>
+    {% if track_record.latest_event_summary %}
+    <div class="event-summary-card">
+      <div class="event-summary-name">{{ track_record.latest_event_summary.event_name }}</div>
+      <div class="event-summary-grid">
+        <div class="event-summary-stat">
+          <div class="event-summary-value">{{ track_record.latest_event_summary.correct }}-{{ track_record.latest_event_summary.incorrect }}</div>
+          <div class="event-summary-label">Record</div>
+        </div>
+        <div class="event-summary-stat">
+          <div class="event-summary-value">{{ track_record.latest_event_summary.accuracy_pct }}%</div>
+          <div class="event-summary-label">Accuracy</div>
+        </div>
+        {% if track_record.latest_event_summary.units is not none %}
+        <div class="event-summary-stat">
+          <div class="event-summary-value {{ 'positive' if track_record.latest_event_summary.units >= 0 else 'negative' }}">{{ '+' if track_record.latest_event_summary.units >= 0 else '' }}{{ track_record.latest_event_summary.units }}U</div>
+          <div class="event-summary-label">Units</div>
+        </div>
+        {% endif %}
+        <div class="event-summary-stat">
+          <div class="event-summary-value gold">🎯 {{ track_record.latest_event_summary.perfect_prop_count }}</div>
+          <div class="event-summary-label">Perfect Props</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
     {% if track_record %}
     <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span class="countup">({{ track_record.accuracy_pct }}%)</span></div>
     {% if sparkline_svg %}
@@ -1141,6 +1197,12 @@
           <div class="track-result-fight">
             {{ r.fighter_a }} vs. {{ r.fighter_b }}
             {% if r.confidence_label %}<span class="conf-badge {{ r.confidence_label|lower|replace(' confidence','')|replace(' ','-') }}">{{ r.confidence_label|replace(' Confidence','') }}</span>{% endif %}
+            {% if r.unit_size %}
+            <span class="unit-pips" title="{{ r.unit_size|int }}U stake size">
+              {% for _ in range(r.unit_size|int) %}<span class="unit-pip"></span>{% endfor %}
+            </span>
+            {% endif %}
+            {% if r.correct and r.method_correct %}<span class="perfect-prop-badge">🎯 Method + Winner</span>{% endif %}
           </div>
           <div class="track-result-picks">
             <span class="track-result-label">Model picked</span> <span class="track-result-name pick">{{ r.predicted_favorite }}</span>{% if r.favorite_prob is not none %} <span class="track-result-conf">({{ (r.favorite_prob * 100) | round | int }}% confident)</span>{% endif %}{% if r.predicted_method %} <span class="track-result-conf">by {{ r.predicted_method }}</span>{% endif %}
@@ -1165,7 +1227,7 @@
         <span class="calibration-legend-item"><span class="calibration-dot" style="background:#3ddc84;"></span>well-calibrated</span>
         <span class="calibration-legend-item"><span class="calibration-dot" style="background:#e8c766;"></span>mild drift</span>
         <span class="calibration-legend-item"><span class="calibration-dot" style="background:#ff5c5c;"></span>overconfident</span>
-        <span class="calibration-legend-item"><span class="calibration-dot" style="background:#5fb8c9;"></span>under-predicted</span>
+        <span class="calibration-legend-item"><span class="calibration-dot" style="background:#5fb8c9;"></span>underconfident (high value)</span>
       </div>
       <div class="chart-caption">Dashed line = perfect calibration. Above it = model underconfident in that range; below = overconfident. Dot size = sample size.</div>
     </div>
@@ -1430,7 +1492,7 @@
         </div>
       </div>
       {% endif %}
-      <div class="model-preview">
+      <div class="model-preview{{ ' masterpiece' if fight.result_label and fight.preview.confidence_label == 'High Confidence' and fight.winner == fight.preview.favorite else '' }}">
         <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
       </div>
       {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg) }}

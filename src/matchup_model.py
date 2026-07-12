@@ -31,6 +31,7 @@ WRESTLING_ADVANTAGE_SCALE = 300.0
 STRIKING_ADVANTAGE_SCALE = 150.0
 DURABILITY_SCALE = 120.0
 VOLUME_DIFFERENTIAL_SCALE = 40.0  # rating points per 1.0 SLpM-SApM differential gap
+SUBMISSION_THREAT_SCALE = 60.0  # rating points per 1.0 sub-win-rate differential
 
 # Southpaw-vs-orthodox is a real, documented edge in striking sports --
 # most fighters train far more often against orthodox opponents, so a
@@ -226,6 +227,7 @@ def build_factor_badges(matchup: dict) -> dict:
     add_advantage(matchup.get("striking_adjustment", 0), "Striking")
     add_advantage(matchup.get("durability_adjustment", 0), "Durability")
     add_advantage(matchup.get("stance_adjustment", 0), "Stance")
+    add_advantage(matchup.get("submission_threat_adjustment", 0), "Sub Threat")
 
     layoff_adj = matchup.get("layoff_adjustment", 0)
     if layoff_adj < -BADGE_THRESHOLD:
@@ -278,6 +280,26 @@ def stance_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> float:
     if b_unorthodox and not a_unorthodox:
         return -STANCE_MISMATCH_BONUS
     return 0.0
+
+
+def submission_threat_adjustment(row_a: pd.Series, row_b: pd.Series) -> float:
+    """
+    A fighter's rate of finishing wins by submission is a distinct skill
+    from wrestling_adjustment's takedown-accuracy/control-time focus --
+    a fighter can have modest takedown numbers but a live submission
+    threat off scrambles, guard, or clinch entries, which wrestling stats
+    alone don't capture. Motivated by two real misses on the same card
+    where the eventual winner's submission win ended the fight despite
+    wrestling_adjustment reading 0.0 for both matchups (neither fighter
+    stood out on raw takedown/control numbers, even though a submission
+    is exactly how each fight was actually decided) -- a gap this factor
+    is meant to close, not a guess without a specific motivating case.
+    """
+    wins_a = int(row_a.get("wins", 0)) or 0
+    wins_b = int(row_b.get("wins", 0)) or 0
+    sub_rate_a = (row_a.get("sub_wins", 0) / wins_a) if wins_a else 0.0
+    sub_rate_b = (row_b.get("sub_wins", 0) / wins_b) if wins_b else 0.0
+    return (sub_rate_a - sub_rate_b) * SUBMISSION_THREAT_SCALE
 
 
 def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
@@ -351,10 +373,12 @@ def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
     missed_weight_adj = missed_weight_adj_a - missed_weight_adj_b
 
     stance_adj = stance_matchup_adjustment(row_a, row_b)
+    submission_threat_adj = submission_threat_adjustment(row_a, row_b)
 
     total_adj = (
         wrestling_adj + striking_adj + durability_adj + layoff_adj
         + quick_return_adj + age_cliff_adj + missed_weight_adj + stance_adj
+        + submission_threat_adj
     )
 
     return {
@@ -362,6 +386,7 @@ def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
         "wrestling_adjustment": wrestling_adj,
         "striking_adjustment": striking_adj,
         "durability_adjustment": durability_adj,
+        "submission_threat_adjustment": submission_threat_adj,
         "layoff_adjustment": layoff_adj,
         "layoff_years_a": layoff_years(row_a),
         "layoff_years_b": layoff_years(row_b),
