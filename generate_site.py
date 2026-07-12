@@ -33,6 +33,7 @@ from src.schedule import build_fight_schedule, apply_live_corrections, promote_c
 from src.results_fetcher import fetch_and_log_new_results
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
+from src.units_chart import build_units_timeseries_svg
 from src.donut_chart import build_donut_svg
 from src.damage_silhouette import build_damage_silhouette_svg
 
@@ -132,7 +133,6 @@ def main():
         save_token_cache(token_cache)
 
     generated_at_str = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET")
-    log_predictions(events, generated_at_str)
     momentum_by_key = load_momentum_by_key()
     for event in events:
         for fight in event["fights"]:
@@ -141,10 +141,15 @@ def main():
     track_record = compute_track_record()
     calibration_svg = None
     sparkline_svg = None
+    units_sparkline_svg = None
+    units_timeseries_svg = None
     if track_record and track_record.get("calibration", {}).get("ready"):
         calibration_svg = build_calibration_svg(track_record["calibration"]["points"])
     if track_record and track_record.get("accuracy_sparkline"):
         sparkline_svg = build_sparkline_svg(track_record["accuracy_sparkline"])
+    if track_record and track_record.get("units_stats") and len(track_record["units_stats"]["running_total"]) >= 2:
+        units_sparkline_svg = build_sparkline_svg(track_record["units_stats"]["running_total"])
+        units_timeseries_svg = build_units_timeseries_svg(track_record["units_stats"]["running_total"])
 
     event_short_name = events[0]["event_name"].split(":")[0].strip() if events else "This Weekend"
 
@@ -241,6 +246,14 @@ def main():
                 fight["result_label"] = None
                 fight["result_round_time"] = None
                 fight["result_stats"] = None
+
+    # Log predictions AFTER results are matched, not before -- so
+    # finished_results.keys() (the set of fights that already have a
+    # confirmed result) can be passed through and those predictions
+    # locked in, rather than a fight's logged "prediction" silently
+    # drifting after the outcome is already known just because the site
+    # keeps regenerating while the card sits in "This Weekend."
+    log_predictions(events, generated_at_str, decided_keys=set(finished_results.keys()))
 
     # Results coverage, for This Weekend's card specifically -- surfaced
     # both as a step summary (visible directly in the GitHub Actions run
@@ -373,6 +386,8 @@ def main():
         track_record=track_record,
         calibration_svg=calibration_svg,
         sparkline_svg=sparkline_svg,
+        units_sparkline_svg=units_sparkline_svg,
+        units_timeseries_svg=units_timeseries_svg,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
         moonshot_parlays=moonshot_parlays,

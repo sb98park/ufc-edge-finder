@@ -42,8 +42,26 @@ def _favorite_moneyline_odds(fight: dict, favorite: str) -> float | None:
     return None
 
 
-def log_predictions(events: list[dict], generated_at: str) -> None:
-    """Keeps the LATEST prediction per (event, fighter_a, fighter_b), overwriting older entries for the same fight."""
+def log_predictions(events: list[dict], generated_at: str, decided_keys: set | None = None) -> None:
+    """
+    Keeps the LATEST prediction per (event, fighter_a, fighter_b),
+    overwriting older entries for the same fight -- EXCEPT for fights in
+    decided_keys, which are skipped entirely once they have a confirmed
+    result.
+
+    This matters for genuine track-record integrity, not just tidiness:
+    without this, a fight's logged "prediction" keeps getting silently
+    overwritten by a fresh predict_matchup() call on every regeneration
+    for as long as the card stays in "This Weekend" (through the day
+    after the event) -- meaning ongoing model tuning could retroactively
+    change what a fight's prediction "was," after the outcome is already
+    known. That's not a real prediction anymore, it's hindsight wearing
+    a prediction's clothes. Confirmed this was live: a real fight's
+    logged pick changed after the card concluded, purely from routine
+    site regenerations picking up unrelated model refinements made
+    afterward.
+    """
+    decided_keys = decided_keys or set()
     existing = {}
     if os.path.exists(PREDICTIONS_LOG_PATH):
         with open(PREDICTIONS_LOG_PATH, newline="") as f:
@@ -57,6 +75,9 @@ def log_predictions(events: list[dict], generated_at: str) -> None:
             if not preview:
                 continue
             key = (fight["event_name"], fight["fighter_a"], fight["fighter_b"])
+            fighter_key = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
+            if fighter_key in decided_keys:
+                continue  # locked in -- don't let post-result model changes rewrite history
             current_odds = _favorite_moneyline_odds(fight, preview["favorite"])
             prior = existing.get(key)
 
@@ -213,6 +234,61 @@ def _clv_result(pick_odds, closing_odds) -> dict | None:
     }
 
 
+UNITS_BY_CONFIDENCE = {
+    "High Confidence": 5.0,
+    "Medium Confidence": 3.0,
+    "Low Confidence": 1.0,
+}
+
+
+def _units_result(confidence_label, pick_odds, correct: bool) -> float | None:
+    """
+    Units won/lost on this pick, sized by confidence tier (5/3/1 for
+    High/Medium/Low) and priced using the REAL market odds at pick time
+    (pick_odds, from Polymarket) -- deliberately never the model's own
+    probability, which would just be grading the model against itself.
+    A win returns unit_size * (decimal_odds - 1) (profit only, stake not
+    included); a loss is the full unit_size. Returns None when pick_odds
+    isn't available -- excluded from the aggregate rather than guessed,
+    same honesty standard as CLV and the market-baseline stat.
+    """
+    unit_size = UNITS_BY_CONFIDENCE.get(confidence_label)
+    if unit_size is None:
+        return None
+    try:
+        decimal_odds = american_to_decimal(float(pick_odds))
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+    return round(unit_size * (decimal_odds - 1), 2) if correct else round(-unit_size, 2)
+
+
+def _method_matches(predicted_method, actual_method) -> bool | None:
+    """
+    Compares the model's predicted method against the real outcome's
+    method, normalized to a broad category -- the model predicts
+    "Decision" without guessing unanimous/split/majority, while
+    fight_results.csv logs the specific variant ("Decision - Unanimous"),
+    so a straight string comparison would call every correct decision
+    prediction a miss. Normalizes both sides to the same small set of
+    buckets (KO/TKO, Submission, Decision, DQ) before comparing.
+    Returns None if either side is missing/unparseable.
+    """
+    if not predicted_method or not actual_method:
+        return None
+    def _bucket(m: str) -> str:
+        m = str(m).strip().upper()
+        if m.startswith("DECISION") or m in ("DEC", "S-DEC", "U-DEC", "M-DEC"):
+            return "DECISION"
+        if "KO" in m or "TKO" in m:
+            return "KO/TKO"
+        if "SUB" in m:
+            return "SUBMISSION"
+        if "DQ" in m:
+            return "DQ"
+        return m
+    return _bucket(predicted_method) == _bucket(actual_method)
+
+
 def _favorite_won(pick_odds, correct: bool) -> bool | None:
     """
     Derives whether the MARKET's favorite won this fight, independent of
@@ -266,6 +342,12 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             continue
         correct = pred["favorite"].strip().lower() == result["winner"].strip().lower()
         clv = _clv_result(pred.get("pick_odds"), pred.get("closing_odds"))
+        # Method correctness only means something when the winner pick was
+        # ALSO right -- "predicted the wrong fighter, but nailed the
+        # method" isn't a real signal worth scoring, so this is only
+        # computed (non-None) for already-correct picks.
+        method_correct = _method_matches(pred.get("likely_method"), result.get("method")) if correct else None
+        units_result = _units_result(pred["confidence_label"], pred.get("pick_odds"), correct)
         matched.append({
             "event_name": result["event_name"],
             "fighter_a": result["fighter_a"],
@@ -273,10 +355,14 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "predicted_favorite": pred["favorite"],
             "favorite_prob": float(pred["favorite_prob"]) if pred.get("favorite_prob") not in (None, "") else None,
             "confidence_label": pred["confidence_label"],
+            "predicted_method": pred.get("likely_method"),
+            "actual_method": result.get("method"),
+            "method_correct": method_correct,
             "actual_winner": result["winner"],
             "correct": correct,
             "clv": clv,
             "favorite_won": _favorite_won(pred.get("pick_odds"), correct),
+            "units_result": units_result,
             "date_added": result.get("date_added", ""),
         })
 
@@ -326,6 +412,47 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
 
     results_by_event = _group_results_by_event(matched)
 
+    # Units/ROI tracking: sized by confidence tier, priced with the real
+    # market odds at pick time -- never the model's own probability,
+    # which would just be grading the model against itself instead of
+    # against what was actually available to bet. Only counts picks with
+    # real odds on record, same partial-coverage honesty as CLV and the
+    # market baseline above.
+    units_eligible = [m for m in matched if m["units_result"] is not None]
+    units_stats = None
+    if units_eligible:
+        total_units = round(sum(m["units_result"] for m in units_eligible), 2)
+        total_staked = sum(UNITS_BY_CONFIDENCE.get(m["confidence_label"], 0) for m in units_eligible)
+        by_tier = {}
+        for tier in ("High Confidence", "Medium Confidence", "Low Confidence"):
+            tier_picks = [m for m in units_eligible if m["confidence_label"] == tier]
+            if tier_picks:
+                by_tier[tier] = {
+                    "units": round(sum(m["units_result"] for m in tier_picks), 2),
+                    "count": len(tier_picks),
+                    "unit_size": UNITS_BY_CONFIDENCE[tier],
+                }
+        # Running total needs chronological order (oldest first) for the
+        # sparkline to read left-to-right correctly -- matched is sorted
+        # most-recent-first for the list display, so reverse it here.
+        # Starts at an explicit 0 baseline (the model's actual starting
+        # point before any tracked results existed), not just the first
+        # pick's own result -- otherwise the very first data point would
+        # misleadingly look like where the series "started."
+        running = [0.0]
+        cumulative = 0.0
+        for m in reversed(units_eligible):
+            cumulative += m["units_result"]
+            running.append(round(cumulative, 2))
+        units_stats = {
+            "total_units": total_units,
+            "total_staked": total_staked,
+            "roi_pct": round(total_units / total_staked * 100, 1) if total_staked else None,
+            "eligible_count": len(units_eligible),
+            "by_tier": by_tier,
+            "running_total": running,
+        }
+
     # Model vs. market baseline: is the model's accuracy actually beating
     # the "just pick every favorite" strategy, or is it riding a card full
     # of obvious favorites winning? Only computed over the subset with
@@ -351,6 +478,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         "results": matched,
         "results_by_event": results_by_event,
         "market_baseline": market_baseline,
+        "units_stats": units_stats,
         "accuracy_sparkline": sparkline,
     }
 

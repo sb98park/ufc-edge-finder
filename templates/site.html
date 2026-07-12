@@ -360,6 +360,44 @@
   .baseline-bar-fill.model { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
   .baseline-bar-fill.market { background: var(--muted); }
   .baseline-value { font-size: 12px; font-weight: 800; font-family: var(--font-display); width: 40px; text-align: right; flex-shrink: 0; }
+  .units-block {
+    margin: 16px 0; padding: 16px 16px 14px; border-radius: 12px; text-align: center;
+    background: radial-gradient(circle at 50% 0%, rgba(212,175,55,0.10), var(--panel2) 65%);
+    border: 1px solid var(--border);
+  }
+  .units-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .units-headline {
+    font-family: var(--font-display); font-size: 40px; font-weight: 800; line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .units-headline.positive { color: var(--green); text-shadow: 0 0 22px rgba(61,220,132,0.45); }
+  .units-headline.negative { color: var(--red); text-shadow: 0 0 22px rgba(255,92,92,0.4); }
+  .units-suffix { font-size: 22px; opacity: 0.7; margin-left: 1px; }
+  .units-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .units-roi.positive { color: var(--green); font-weight: 700; }
+  .units-roi.negative { color: var(--red); font-weight: 700; }
+  .units-sparkline-wrap { margin: 10px 0 8px; }
+  .units-tier-breakdown { text-align: left; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .units-tier-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 11.5px; }
+  .units-tier-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .units-tier-dot.high { background: var(--green); box-shadow: 0 0 5px 1px rgba(61,220,132,0.6); }
+  .units-tier-dot.medium { background: var(--accent2); box-shadow: 0 0 5px 1px rgba(232,199,102,0.5); }
+  .units-tier-dot.low { background: var(--muted); }
+  .units-tier-label { font-weight: 700; color: var(--text); flex-shrink: 0; }
+  .units-tier-size { color: var(--muted); font-size: 10px; flex-shrink: 0; }
+  .units-tier-count { color: var(--muted); font-size: 10px; margin-left: auto; }
+  .units-tier-value { font-family: var(--font-display); font-weight: 800; width: 56px; text-align: right; flex-shrink: 0; }
+  .units-tier-value.positive { color: var(--green); }
+  .units-tier-value.negative { color: var(--red); }
+  .units-caption { font-size: 9.5px; color: var(--muted); line-height: 1.5; margin-top: 10px; text-align: left; }
+  .units-timeseries-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+  .units-chart-wrap.chart-block { background: none; border: none; padding: 0; margin: 10px 0 4px; }
+  .units-pick-badge {
+    flex-shrink: 0; font-family: var(--font-display); font-size: 12px; font-weight: 800;
+    padding: 3px 7px; border-radius: 7px; align-self: center;
+  }
+  .units-pick-badge.positive { color: var(--green); background: rgba(61,220,132,0.12); }
+  .units-pick-badge.negative { color: var(--red); background: rgba(255,92,92,0.12); }
   .track-result-list { display: flex; flex-direction: column; gap: 1px; }
   .track-result-row {
     display: flex; align-items: center; gap: 11px; padding: 9px 4px;
@@ -374,7 +412,17 @@
   .track-result-icon.correct { background: rgba(61,220,132,0.15); color: var(--green); }
   .track-result-icon.incorrect { background: rgba(255,92,92,0.15); color: var(--red); }
   .track-result-info { flex: 1; min-width: 0; }
-  .track-result-fight { font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .track-result-fight { font-size: 12.5px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .conf-badge {
+    font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px;
+    padding: 1.5px 6px; border-radius: 8px; line-height: 1.5;
+  }
+  .conf-badge.high { background: rgba(61,220,132,0.15); color: var(--green); }
+  .conf-badge.medium { background: rgba(232,199,102,0.15); color: var(--accent2); }
+  .conf-badge.low { background: rgba(138,143,154,0.2); color: var(--muted); }
+  .method-match { font-size: 9.5px; font-weight: 700; margin-left: 4px; }
+  .method-match.yes { color: var(--green); }
+  .method-match.no { color: var(--red); }
   .track-result-picks { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
   .track-result-label { color: var(--muted); }
   .track-result-name { font-weight: 700; }
@@ -1024,6 +1072,35 @@
       {% endfor %}
     </div>
     {% endif %}
+    {% if track_record.units_stats %}
+    <div class="units-block">
+      <div class="units-title">💰 Units Tracker</div>
+      <div class="units-headline {{ 'positive' if track_record.units_stats.total_units >= 0 else 'negative' }}">
+        {{ '+' if track_record.units_stats.total_units >= 0 else '' }}{{ track_record.units_stats.total_units }}<span class="units-suffix">U</span>
+      </div>
+      <div class="units-sub">
+        {{ track_record.units_stats.eligible_count }} pick{{ 's' if track_record.units_stats.eligible_count != 1 }} priced
+        {% if track_record.units_stats.roi_pct is not none %}<span class="units-roi {{ 'positive' if track_record.units_stats.roi_pct >= 0 else 'negative' }}"> · ROI {{ '+' if track_record.units_stats.roi_pct >= 0 else '' }}{{ track_record.units_stats.roi_pct }}%</span>{% endif %}
+      </div>
+      {% if units_sparkline_svg %}
+      {% if units_timeseries_svg %}
+      <div class="chart-block units-chart-wrap">{{ units_timeseries_svg | safe }}</div>
+      {% endif %}
+      {% endif %}
+      <div class="units-tier-breakdown">
+        {% for tier, stats in track_record.units_stats.by_tier.items() %}
+        <div class="units-tier-row">
+          <span class="units-tier-dot {{ tier|lower|replace(' confidence','') }}"></span>
+          <span class="units-tier-label">{{ tier|replace(' Confidence','') }}</span>
+          <span class="units-tier-size">{{ stats.unit_size|int }}U/pick</span>
+          <span class="units-tier-count">{{ stats.count }}p</span>
+          <span class="units-tier-value {{ 'positive' if stats.units >= 0 else 'negative' }}">{{ '+' if stats.units >= 0 else '' }}{{ stats.units }}U</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="units-caption">Sized by confidence (5U high · 3U medium · 1U low), priced at the real market odds when picked — never the model's own probability. Only counts picks with known odds on record.</div>
+    </div>
+    {% endif %}
     {% if track_record.clv_stats %}
     <div class="clv-badge">
       <div class="clv-badge-label">🎯 Beat the Closing Line</div>
@@ -1061,16 +1138,20 @@
       <div class="track-result-row">
         <div class="track-result-icon {{ 'correct' if r.correct else 'incorrect' }}">{{ '✓' if r.correct else '✗' }}</div>
         <div class="track-result-info">
-          <div class="track-result-fight">{{ r.fighter_a }} vs. {{ r.fighter_b }}</div>
-          <div class="track-result-picks">
-            <span class="track-result-label">Model picked</span> <span class="track-result-name pick">{{ r.predicted_favorite }}</span>{% if r.favorite_prob is not none %} <span class="track-result-conf">({{ (r.favorite_prob * 100) | round | int }}% confident)</span>{% endif %}
+          <div class="track-result-fight">
+            {{ r.fighter_a }} vs. {{ r.fighter_b }}
+            {% if r.confidence_label %}<span class="conf-badge {{ r.confidence_label|lower|replace(' confidence','')|replace(' ','-') }}">{{ r.confidence_label|replace(' Confidence','') }}</span>{% endif %}
           </div>
-          {% if not r.correct %}
           <div class="track-result-picks">
-            <span class="track-result-label">Winner</span> <span class="track-result-name actual">{{ r.actual_winner }}</span>
+            <span class="track-result-label">Model picked</span> <span class="track-result-name pick">{{ r.predicted_favorite }}</span>{% if r.favorite_prob is not none %} <span class="track-result-conf">({{ (r.favorite_prob * 100) | round | int }}% confident)</span>{% endif %}{% if r.predicted_method %} <span class="track-result-conf">by {{ r.predicted_method }}</span>{% endif %}
           </div>
-          {% endif %}
+          <div class="track-result-picks">
+            <span class="track-result-label">{{ 'Actual' if r.correct else 'Winner' }}</span> <span class="track-result-name {{ 'pick' if r.correct else 'actual' }}">{{ r.actual_winner }}</span>{% if r.actual_method %} <span class="track-result-name actual">by {{ r.actual_method }}</span>{% endif %}{% if r.method_correct is not none %} <span class="method-match {{ 'yes' if r.method_correct else 'no' }}">{{ '✓ method' if r.method_correct else '✗ method' }}</span>{% endif %}
+          </div>
         </div>
+        {% if r.units_result is not none %}
+        <div class="units-pick-badge {{ 'positive' if r.units_result >= 0 else 'negative' }}">{{ '+' if r.units_result >= 0 else '' }}{{ r.units_result }}U</div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
