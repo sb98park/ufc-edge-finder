@@ -297,6 +297,76 @@ def _parse_fight_stats(fight_url: str, fighter_a: str, fighter_b: str) -> dict |
         return None
 
 
+def _fetch_from_wikipedia(event_name: str) -> list[dict]:
+    """
+    Independent fallback source, tried when ufcstats.com finds nothing.
+    Deliberately a DIFFERENT site with a different structure and a
+    different URL scheme -- Wikipedia's numbered-event URLs are
+    predictable slugs ("UFC 329" -> /wiki/UFC_329), unlike ufcstats.com's
+    opaque per-event hash that requires a listing-page lookup first, so
+    this has genuinely different failure modes. Same honest caveat as
+    everything else in this file: the exact table structure below is
+    unverified against a live page, since this sandbox has no network
+    access to check it. Parses the "Results" wikitable, expected to have
+    a Method/Round/Time column set and a winner-vs-loser fighter pairing
+    per row.
+    """
+    # "UFC 329: McGregor vs. Holloway 2" -> "UFC 329" -> "UFC_329"
+    short_name = event_name.split(":")[0].strip()
+    slug = short_name.replace(" ", "_")
+    url = f"https://en.wikipedia.org/wiki/{slug}"
+
+    try:
+        resp = requests.get(url, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        print(f"[results_fetcher] wikipedia fallback: could not fetch {url}: {e}")
+        return []
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    results_heading = soup.find(id="Results") or soup.find(id="Results_2")
+    table = None
+    if results_heading:
+        # The results table is typically the next wikitable AFTER the heading.
+        node = results_heading.find_parent(["h2", "h3"])
+        table = node.find_next("table", class_="wikitable") if node else None
+    if not table:
+        table = soup.find("table", class_="wikitable")
+    if not table:
+        print(f"[results_fetcher] wikipedia fallback: no results table found on {url}")
+        return []
+
+    results = []
+    for row in table.select("tr"):
+        cells = row.find_all("td")
+        if len(cells) < 5:
+            continue
+        cell_texts = [c.get_text(" ", strip=True) for c in cells]
+        method = _extract_method(cell_texts)
+        end_round, end_time = _extract_round_time(cell_texts)
+        # Wikipedia's convention: the winner is listed BEFORE "def." (or a
+        # similar defeat-marker cell), loser after. Look for that marker
+        # among the cells rather than assuming a fixed column index.
+        def_idx = next((i for i, t in enumerate(cell_texts) if t.lower() in ("def.", "def")), None)
+        if def_idx is None or def_idx == 0 or def_idx >= len(cell_texts) - 1:
+            continue
+        winner_name = cell_texts[def_idx - 1].strip()
+        loser_name = cell_texts[def_idx + 1].strip()
+        if not winner_name or not loser_name or not method:
+            continue
+        results.append({
+            "fighter_a": winner_name, "fighter_b": loser_name, "winner": winner_name,
+            "method": method, "end_round": end_round, "end_time": end_time,
+            "detail_url": None,  # Wikipedia's summary table doesn't have per-fight stat pages
+        })
+
+    if results:
+        print(f"[results_fetcher] wikipedia fallback: parsed {len(results)} fight(s) from {url}")
+    else:
+        print(f"[results_fetcher] wikipedia fallback: found a results table on {url} but parsed 0 fights -- structure may not match")
+    return results
+
+
 def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, results_path: str = "data/fight_results.csv") -> int:
     """
     Entry point called from generate_site.py. Returns the number of rows
@@ -326,17 +396,25 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     if not truly_missing and not needs_stats_only:
         return 0  # everything on this card is fully filled in -- nothing to do
 
+    scraped = []
     try:
         event_url = _find_event_url(event_name)
-        if not event_url:
-            return 0
-        scraped = _parse_event_results(event_url)
+        if event_url:
+            scraped = _parse_event_results(event_url)
     except Exception as e:
-        print(f"[results_fetcher] unexpected error, giving up gracefully: {e}")
-        return 0
+        print(f"[results_fetcher] ufcstats.com attempt failed unexpectedly: {e}")
+        scraped = []
 
     if not scraped:
-        print("[results_fetcher] event page found but no fights parsed -- structure may not match, or card hasn't started")
+        print("[results_fetcher] ufcstats.com found nothing usable -- trying the wikipedia fallback")
+        try:
+            scraped = _fetch_from_wikipedia(event_name)
+        except Exception as e:
+            print(f"[results_fetcher] wikipedia fallback failed unexpectedly: {e}")
+            scraped = []
+
+    if not scraped:
+        print("[results_fetcher] no source found any results this run -- will try again next scheduled run")
         return 0
 
     roster_names_lower = {n.strip().lower() for n in pd.concat([fight_cards_df["fighter_a"], fight_cards_df["fighter_b"]])}

@@ -242,6 +242,34 @@ def main():
                 fight["result_round_time"] = None
                 fight["result_stats"] = None
 
+    # Results coverage, for This Weekend's card specifically -- surfaced
+    # both as a step summary (visible directly in the GitHub Actions run
+    # UI, not buried in console logs someone has to think to check) and
+    # passed to the template so a gap is visible on the site itself,
+    # rather than something only noticed by manually cross-referencing
+    # against another source after the fact.
+    results_coverage = None
+    if events:
+        this_weekend_fights = events[0]["fights"]
+        total_fights = len(this_weekend_fights)
+        confirmed_fights = sum(1 for f in this_weekend_fights if f.get("result_label"))
+        if total_fights:
+            results_coverage = {"confirmed": confirmed_fights, "total": total_fights}
+        summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary_path and total_fights:
+            missing = [
+                f"{f['fighter_a']} vs {f['fighter_b']}"
+                for f in this_weekend_fights if not f.get("result_label")
+            ]
+            with open(summary_path, "a") as f:
+                f.write(f"### Results coverage: {confirmed_fights}/{total_fights} — {events[0]['event_name']}\n")
+                if missing:
+                    f.write(f"**Missing ({len(missing)}):**\n")
+                    for m in missing:
+                        f.write(f"- {m}\n")
+                else:
+                    f.write("All fights on this card have results. ✅\n")
+
     # Fight-by-fight schedule for live-state tracking -- only for THIS
     # WEEKEND's tracked card, since future cards are weeks out and this
     # estimate only matters once a card is imminent/underway. Consumed
@@ -339,6 +367,7 @@ def main():
         fight_schedule_json=json.dumps(fight_schedule),
         just_concluded_json=json.dumps(just_concluded),
         days_since_event=days_since_event,
+        results_coverage=results_coverage,
         countdown_label=countdown_label,
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,

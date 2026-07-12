@@ -113,6 +113,7 @@
   }
   .live-header-micro strong { color: var(--text); font-weight: 700; }
   .live-header-micro .next-lock { color: var(--accent2); font-weight: 700; }
+  .coverage-warning { color: #e8c766; font-size: 10.5px; display: inline-block; margin-top: 2px; }
 
   .hub-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .hub-card {
@@ -853,7 +854,7 @@
   <div class="subtitle">Model probability vs. live sportsbook lines</div>
 
   {% if countdown_target_iso %}
-  <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}">
+  <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}">
     <div class="countdown-label" id="countdown-label">⏱ {{ countdown_label }}</div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
@@ -1888,6 +1889,8 @@
       let justConcluded = null;
       try { justConcluded = JSON.parse(card.dataset.justConcluded || 'null'); } catch (e) { justConcluded = null; }
       const daysSinceEvent = parseInt(card.dataset.daysSinceEvent || '0', 10);
+      let resultsCoverage = null;
+      try { resultsCoverage = JSON.parse(card.dataset.resultsCoverage || 'null'); } catch (e) { resultsCoverage = null; }
 
       let currentLiveKey = null;
 
@@ -1940,13 +1943,18 @@
         if (daysSinceEvent >= 1) {
           boxes.style.display = 'none';
           liveHeader.style.display = 'flex';
-          liveMacroText.textContent = "THAT'S A WRAP";
+          liveMacroText.textContent = 'JUST HAPPENED';
           clearLiveRow();
+          let html = '';
           if (justConcluded) {
-            liveMicro.innerHTML = resultLine(justConcluded) + '<br>Full card results below — see you next time.';
+            html = resultLine(justConcluded) + '<br>Full card results below — see you next time.';
           } else {
-            liveMicro.textContent = 'Card complete — see you next time.';
+            html = 'Card complete — see you next time.';
           }
+          if (resultsCoverage && resultsCoverage.confirmed < resultsCoverage.total) {
+            html += `<br><span class="coverage-warning">⚠️ ${resultsCoverage.confirmed}/${resultsCoverage.total} results confirmed so far — some may still be pending.</span>`;
+          }
+          liveMicro.innerHTML = html;
           return;
         }
 
