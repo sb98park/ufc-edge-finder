@@ -367,6 +367,10 @@ def main():
             {"key": f"{m['fighter']}|{m['market']}", "label": f"{m['fighter']} {m['market']}", "pct_change": m["movement"]["pct_change"]}
             for m in notable_movements
         ],
+        "results": [
+            {"key": f"{r['fighter_a']}|{r['fighter_b']}", "label": f"{r['fighter_a']} vs. {r['fighter_b']}"}
+            for r in (track_record["results"] if track_record else [])
+        ],
     }
 
     html = template.render(

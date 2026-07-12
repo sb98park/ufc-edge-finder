@@ -270,6 +270,18 @@
   .event-summary-value.negative { color: var(--red); }
   .event-summary-value.gold { color: #f0d97a; font-size: 17px; }
   .event-summary-label { font-size: 8.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
+  .track-record-sticky-bar {
+    position: sticky; top: 50px; z-index: 45;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: rgba(20,23,31,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 7px 10px; margin: 0 0 14px; font-family: var(--font-display);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  }
+  .sticky-stat { font-size: 13px; font-weight: 800; color: var(--text); }
+  .sticky-stat.positive { color: var(--green); }
+  .sticky-stat.negative { color: var(--red); }
+  .sticky-sep { color: var(--border); font-size: 11px; }
   .track-record-headline { font-size: 24px; font-weight: 800; font-family: var(--font-display); }
   .track-record-headline span { font-size: 14px; color: var(--muted); font-weight: 600; }
   .sparkline-wrap { margin: 8px 0 4px; }
@@ -439,6 +451,17 @@
     background: linear-gradient(135deg, rgba(240,217,122,0.22), rgba(212,175,55,0.16));
     border: 1px solid rgba(212,175,55,0.4); color: #f0d97a;
     text-shadow: 0 0 8px rgba(240,217,122,0.5);
+    display: inline-block;
+  }
+  .perfect-prop-badge.celebrate {
+    animation: perfect-prop-celebrate 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes perfect-prop-celebrate {
+    0% { transform: scale(1); box-shadow: 0 0 0 rgba(240,217,122,0); }
+    35% { transform: scale(1.3); box-shadow: 0 0 18px 5px rgba(240,217,122,0.75); }
+    60% { transform: scale(0.94); box-shadow: 0 0 6px 1px rgba(240,217,122,0.4); }
+    80% { transform: scale(1.06); }
+    100% { transform: scale(1); box-shadow: 0 0 0 rgba(240,217,122,0); }
   }
   .unit-pips { display: inline-flex; flex-direction: column-reverse; gap: 1.5px; vertical-align: middle; }
   .unit-pip {
@@ -1109,6 +1132,15 @@
         </div>
       </div>
     </div>
+    <div class="track-record-sticky-bar">
+      <span class="sticky-stat">{{ track_record.latest_event_summary.correct }}-{{ track_record.latest_event_summary.incorrect }}</span>
+      <span class="sticky-sep">·</span>
+      <span class="sticky-stat">{{ track_record.latest_event_summary.accuracy_pct }}%</span>
+      {% if track_record.latest_event_summary.units is not none %}
+      <span class="sticky-sep">·</span>
+      <span class="sticky-stat {{ 'positive' if track_record.latest_event_summary.units >= 0 else 'negative' }}">{{ '+' if track_record.latest_event_summary.units >= 0 else '' }}{{ track_record.latest_event_summary.units }}U</span>
+      {% endif %}
+    </div>
     {% endif %}
     {% if track_record %}
     <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span class="countup">({{ track_record.accuracy_pct }}%)</span></div>
@@ -1191,7 +1223,7 @@
     </div>
     <div class="track-result-list">
       {% for r in group.results %}
-      <div class="track-result-row">
+      <div class="track-result-row" data-key="{{ r.fighter_a }}|{{ r.fighter_b }}">
         <div class="track-result-icon {{ 'correct' if r.correct else 'incorrect' }}">{{ '✓' if r.correct else '✗' }}</div>
         <div class="track-result-info">
           <div class="track-result-fight">
@@ -1922,14 +1954,21 @@
       });
     }
 
-    // Swipe-right-to-go-back, while viewing any detail section. Skips
-    // starting inside the one container that already owns horizontal
-    // scroll itself (.table-scroll) so this doesn't fight its native
-    // gesture. Requires a fast, mostly-horizontal motion past a real
-    // distance threshold, so an ordinary vertical scroll or a slow
+    // Swipe-right-to-go-back, while viewing any detail section -- AND,
+    // when the swipe starts inside an active segment-tab pane (This
+    // Weekend's Main Card/Prelims/Early Prelims), swipe-left/right moves
+    // between tabs instead. Merged into one handler rather than two
+    // separate listeners specifically to make the priority explicit and
+    // avoid both firing on the same gesture: a rightward swipe on the
+    // first tab falls through to back-navigation, but on any later tab
+    // it moves to the previous tab instead of leaving the section.
+    // Skips starting inside the one container that already owns
+    // horizontal scroll itself (.table-scroll) so this doesn't fight its
+    // native gesture. Requires a fast, mostly-horizontal motion past a
+    // real distance threshold, so an ordinary vertical scroll or a slow
     // deliberate drag never triggers it by accident.
     (function() {
-      let touchStartX = 0, touchStartY = 0, touchStartTime = 0, tracking = false;
+      let touchStartX = 0, touchStartY = 0, touchStartTime = 0, touchStartTarget = null, tracking = false;
       const MIN_DISTANCE = 80;
       const MAX_VERTICAL_DRIFT = 60;
       const MAX_DURATION_MS = 600;
@@ -1941,6 +1980,7 @@
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         touchStartTime = Date.now();
+        touchStartTarget = e.target;
         tracking = true;
       }, { passive: true });
 
@@ -1951,7 +1991,26 @@
         const deltaX = touch.clientX - touchStartX;
         const deltaY = Math.abs(touch.clientY - touchStartY);
         const duration = Date.now() - touchStartTime;
-        if (deltaX > MIN_DISTANCE && deltaY < MAX_VERTICAL_DRIFT && duration < MAX_DURATION_MS) {
+        if (Math.abs(deltaX) <= MIN_DISTANCE || deltaY >= MAX_VERTICAL_DRIFT || duration >= MAX_DURATION_MS) return;
+
+        const activePane = touchStartTarget && touchStartTarget.closest('.seg-pane.active');
+        if (activePane) {
+          const tabsContainer = document.querySelector('.seg-tabs');
+          const tabs = tabsContainer ? [...tabsContainer.querySelectorAll('.seg-tab')] : [];
+          const activeIndex = tabs.findIndex(t => t.classList.contains('active'));
+          if (activeIndex !== -1) {
+            if (deltaX < 0 && activeIndex < tabs.length - 1) {
+              switchSegTab(tabs[activeIndex + 1]);
+              return;
+            }
+            if (deltaX > 0 && activeIndex > 0) {
+              switchSegTab(tabs[activeIndex - 1]);
+              return;
+            }
+          }
+        }
+
+        if (deltaX > MIN_DISTANCE) {
           showHub();
         }
       }, { passive: true });
@@ -2203,32 +2262,40 @@
         setTimeout(() => { banner.style.display = 'none'; }, 300);
       };
 
-      // Standout Props and Notable Line Movement share the same detail
-      // section, so wherever the "new" count came from, this is always
-      // the right place to send someone tapping the banner.
+      let goToTarget = 'standout';
       window.__goToWhatsNew = function() {
         window.__dismissToast();
-        if (typeof showSection === 'function') showSection('standout');
+        if (typeof showSection === 'function') showSection(goToTarget);
       };
 
       if (previous) {
         const prevStandoutKeys = new Set((previous.standout || []).map(p => p.key));
         const prevMovementKeys = new Set((previous.movements || []).map(m => m.key));
+        const prevResultKeys = new Set((previous.results || []).map(r => r.key));
 
         const newStandout = current.standout.filter(p => !prevStandoutKeys.has(p.key));
         const newMovements = current.movements.filter(m => !prevMovementKeys.has(m.key));
+        const newResults = current.results.filter(r => !prevResultKeys.has(r.key));
 
-        if (newStandout.length > 0 || newMovements.length > 0) {
+        if (newStandout.length > 0 || newMovements.length > 0 || newResults.length > 0) {
           const parts = [];
           if (newStandout.length > 0) parts.push(`${newStandout.length} new standout prop${newStandout.length > 1 ? 's' : ''}`);
           if (newMovements.length > 0) parts.push(`${newMovements.length} new notable move${newMovements.length > 1 ? 's' : ''}`);
+          if (newResults.length > 0) parts.push(`${newResults.length} new result${newResults.length > 1 ? 's' : ''}`);
           document.getElementById('whats-new-text').textContent = `✨ Since your last visit: ${parts.join(' · ')}`;
           document.getElementById('whats-new-banner').style.display = 'flex';
           setTimeout(window.__dismissToast, 7000);
 
+          // Send to Track Record only when results are the sole new thing --
+          // otherwise keep the existing behavior of going to Standout Props,
+          // since that section already covers both standout props and line movement.
+          if (newResults.length > 0 && newStandout.length === 0 && newMovements.length === 0) {
+            goToTarget = 'track';
+          }
+
           // Mark the actual matching cards so it's obvious AT A GLANCE which
-          // specific prop/move is new, not just a count in the banner.
-          [...newStandout, ...newMovements].forEach(item => {
+          // specific prop/move/result is new, not just a count in the banner.
+          [...newStandout, ...newMovements, ...newResults].forEach(item => {
             const el = document.querySelector(`[data-key="${CSS.escape(item.key)}"]`);
             if (el && !el.querySelector('.new-badge')) {
               const badge = document.createElement('span');
@@ -2363,6 +2430,21 @@
       }, { threshold: 0.15 });
       document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card').forEach(el => fillObserver.observe(el));
       window.__fillObserver = fillObserver;
+
+      // A brief, one-time celebration flourish the first time a Perfect
+      // Prop badge scrolls into view -- not on every page load (that
+      // would get old fast), just the first time someone actually sees
+      // it. Plain CSS transform/box-shadow on a regular span, not SVG
+      // stroke animation, so this doesn't carry the same iOS reliability
+      // caveat as the chart animations elsewhere on this page.
+      const celebrateObserver = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('celebrate');
+          obs.unobserve(entry.target);
+        });
+      }, { threshold: 0.5 });
+      document.querySelectorAll('.perfect-prop-badge').forEach(el => celebrateObserver.observe(el));
 
       // Whether an element currently has any part on-screen. Used instead
       // of trusting the observer to automatically re-fire after a native

@@ -104,6 +104,6 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
   <path d="{fill_path}" fill="url(#units-ts-fill)" stroke="none"/>
   <polyline points="{poly_points}" fill="none" stroke="{trend_color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
   <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="{trend_color}" class="chart-draw-endpoint"/>
-  <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="none" stroke="{trend_color}" stroke-width="1.5" class="chart-endpoint-halo"/>
+  <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="none" stroke="{trend_color}" stroke-width="1.5" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>
   {mask_svg}
 </svg>"""
