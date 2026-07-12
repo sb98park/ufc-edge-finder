@@ -281,19 +281,6 @@
     0%, 100% { opacity: 0.55; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.06); }
   }
-  .jump-nav {
-    display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
-    padding: 8px 2px 12px; margin-bottom: 4px; scrollbar-width: none;
-  }
-  .jump-nav::-webkit-scrollbar { display: none; }
-  .jump-nav-chip {
-    flex-shrink: 0; font-size: 10.5px; font-weight: 600; color: var(--muted);
-    background: var(--panel2); border: 1px solid rgba(95,184,201,0.25); border-radius: 8px;
-    padding: 5px 9px; white-space: nowrap; text-decoration: none; scroll-snap-align: start;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .jump-nav-chip:active { color: var(--accent-cool); border-color: var(--accent-cool); }
-  .jump-nav-vs { color: var(--border); margin: 0 3px; }
   .seg-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 4px 0 14px; position: sticky; top: 0; background: var(--bg); z-index: 40; }
   .seg-tab {
     flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
@@ -1537,13 +1524,6 @@
   {% for seg in segs %}
   <div class="seg-pane{{ ' active' if loop.first }}" id="seg-pane-{{ loop.index }}">
     {% set pane_fights = event.fights|selectattr('segment_label', 'equalto', seg)|list %}
-    {% if pane_fights|length > 3 %}
-    <div class="jump-nav">
-      {% for fight in pane_fights %}
-      <a href="#fight-{{ ns.i + loop.index }}" class="jump-nav-chip">{{ fight.fighter_a.split(' ')[-1] }}<span class="jump-nav-vs">/</span>{{ fight.fighter_b.split(' ')[-1] }}</a>
-      {% endfor %}
-    </div>
-    {% endif %}
     {% for fight in pane_fights %}
     {% set ns.i = ns.i + 1 %}
     {{ render_fight_card(fight, ns.i) }}
@@ -1698,11 +1678,11 @@
     }
 
     // Swipe-right-to-go-back, while viewing any detail section. Skips
-    // starting inside the two containers that already own horizontal
-    // scroll themselves (.table-scroll, .jump-nav) so this doesn't fight
-    // their native gesture. Requires a fast, mostly-horizontal motion
-    // past a real distance threshold, so an ordinary vertical scroll or
-    // a slow deliberate drag never triggers it by accident.
+    // starting inside the one container that already owns horizontal
+    // scroll itself (.table-scroll) so this doesn't fight its native
+    // gesture. Requires a fast, mostly-horizontal motion past a real
+    // distance threshold, so an ordinary vertical scroll or a slow
+    // deliberate drag never triggers it by accident.
     (function() {
       let touchStartX = 0, touchStartY = 0, touchStartTime = 0, tracking = false;
       const MIN_DISTANCE = 80;
@@ -1712,7 +1692,7 @@
       document.addEventListener('touchstart', (e) => {
         const detailView = document.getElementById('detail-view');
         if (detailView.style.display !== 'block') { tracking = false; return; }
-        if (e.target.closest('.table-scroll, .jump-nav')) { tracking = false; return; }
+        if (e.target.closest('.table-scroll')) { tracking = false; return; }
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         touchStartTime = Date.now();
