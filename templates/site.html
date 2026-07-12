@@ -61,13 +61,27 @@
   .brand-logo { flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(212,175,55,0.35)); }
   .brand-text { line-height: 1.15; }
   .brand-name {
-    font-size: 25px; font-weight: 900; letter-spacing: 1px;
+    position: relative; font-size: 25px; font-weight: 900; letter-spacing: 1px;
     background: linear-gradient(135deg, #f5e29a, #d4af37 55%, #a3801f);
     -webkit-background-clip: text; background-clip: text; color: transparent;
     text-shadow: 0 0 22px rgba(212,175,55,0.3);
   }
-  .brand-tagline { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; margin-top: 1px; }
-  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+  .brand-name::after {
+    content: 'OCTANE ALPHA'; position: absolute; top: 0; left: 0; pointer-events: none;
+    background: linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.85) 50%, transparent 58%);
+    background-size: 250% 100%; background-position: 200% 0;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: brand-shimmer 2.2s ease-out 0.3s 1 forwards;
+  }
+  @keyframes brand-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -100% 0; }
+  }
+  .brand-tagline { font-size: 12px; font-weight: 600; color: #b5a26a; letter-spacing: 0.5px; margin-top: 1px; }
+  .subtitle { font-size: 12.5px; margin-bottom: 8px; letter-spacing: 0.15px; }
+  .subtitle-model { color: #d4af37; font-weight: 700; }
+  .subtitle-vs { color: var(--accent-cool); font-weight: 700; font-style: italic; font-size: 11px; margin: 0 5px; }
+  .subtitle-market { color: var(--muted); font-weight: 500; }
   .made-with-love {
     text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.3px;
     margin-top: 4px; padding-bottom: 24px; font-style: italic;
@@ -263,6 +277,17 @@
     border: 1px solid var(--border);
   }
   .event-summary-name { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .brag-headline {
+    text-align: center; font-size: 13px; font-weight: 800; padding: 8px 10px;
+    border-radius: 8px; margin: -2px 0 12px;
+  }
+  .brag-headline.gold {
+    color: #f0d97a; background: linear-gradient(135deg, rgba(240,217,122,0.16), rgba(212,175,55,0.08));
+    border: 1px solid rgba(212,175,55,0.35); text-shadow: 0 0 10px rgba(240,217,122,0.4);
+  }
+  .brag-headline.green {
+    color: var(--green); background: rgba(61,220,132,0.1); border: 1px solid rgba(61,220,132,0.3);
+  }
   .event-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .event-summary-stat { text-align: center; }
   .event-summary-value { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.1; }
@@ -270,18 +295,6 @@
   .event-summary-value.negative { color: var(--red); }
   .event-summary-value.gold { color: #f0d97a; font-size: 17px; }
   .event-summary-label { font-size: 8.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
-  .track-record-sticky-bar {
-    position: sticky; top: 50px; z-index: 45;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    background: rgba(20,23,31,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: 7px 10px; margin: 0 0 14px; font-family: var(--font-display);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-  }
-  .sticky-stat { font-size: 13px; font-weight: 800; color: var(--text); }
-  .sticky-stat.positive { color: var(--green); }
-  .sticky-stat.negative { color: var(--red); }
-  .sticky-sep { color: var(--border); font-size: 11px; }
   .track-record-headline { font-size: 24px; font-weight: 800; font-family: var(--font-display); }
   .track-record-headline span { font-size: 14px; color: var(--muted); font-weight: 600; }
   .sparkline-wrap { margin: 8px 0 4px; }
@@ -931,7 +944,7 @@
   <div class="brand-header">
     <svg width="46" height="46" viewBox="0 0 44 44" class="brand-logo" role="img" aria-label="Octane Alpha logo">
       <defs>
-        <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#1a1508"/>
           <stop offset="100%" stop-color="#0d0f14"/>
         </linearGradient>
@@ -940,7 +953,7 @@
           <stop offset="100%" stop-color="#d4af37"/>
         </linearGradient>
       </defs>
-      <polygon points="22,2 39,12 39,32 22,42 5,32 5,12" fill="url(#hexGrad)" stroke="#d4af37" stroke-width="1.5"/>
+      <polygon points="22,3 35.4,8.6 41,22 35.4,35.4 22,41 8.6,35.4 3,22 8.6,8.6" fill="url(#badgeGrad)" stroke="#d4af37" stroke-width="1.5"/>
       <line x1="14" y1="34" x2="22" y2="10" stroke="url(#aGrad)" stroke-width="4.5" stroke-linecap="round"/>
       <line x1="30" y1="34" x2="22" y2="10" stroke="url(#aGrad)" stroke-width="4.5" stroke-linecap="round"/>
       <line x1="17.3" y1="24.5" x2="26.7" y2="24.5" stroke="url(#aGrad)" stroke-width="3.5" stroke-linecap="round"/>
@@ -949,11 +962,11 @@
       <line x1="36" y1="24" x2="41.5" y2="20.5" stroke="#e8c766" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
     </svg>
     <div class="brand-text">
-      <div class="brand-name">OCTANE ALPHA</div>
+      <div class="brand-name" aria-label="Octane Alpha">OCTANE ALPHA</div>
       <div class="brand-tagline">{{ icon_target() | safe }} UFC Analytics</div>
     </div>
   </div>
-  <div class="subtitle">Model probability vs. live sportsbook lines</div>
+  <div class="subtitle"><span class="subtitle-model">Model probability</span><span class="subtitle-vs">vs.</span><span class="subtitle-market">live sportsbook lines</span></div>
 
   {% if countdown_target_iso %}
   <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}">
@@ -1111,6 +1124,9 @@
     {% if track_record.latest_event_summary %}
     <div class="event-summary-card">
       <div class="event-summary-name">{{ track_record.latest_event_summary.event_name }}</div>
+      {% if track_record.latest_event_summary.brag_headline %}
+      <div class="brag-headline {{ track_record.latest_event_summary.brag_headline.tier }}">{{ '🔥' if track_record.latest_event_summary.brag_headline.tier == 'gold' else '💪' }} {{ track_record.latest_event_summary.brag_headline.text }}</div>
+      {% endif %}
       <div class="event-summary-grid">
         <div class="event-summary-stat">
           <div class="event-summary-value">{{ track_record.latest_event_summary.correct }}-{{ track_record.latest_event_summary.incorrect }}</div>
@@ -1131,15 +1147,6 @@
           <div class="event-summary-label">Perfect Props</div>
         </div>
       </div>
-    </div>
-    <div class="track-record-sticky-bar">
-      <span class="sticky-stat">{{ track_record.latest_event_summary.correct }}-{{ track_record.latest_event_summary.incorrect }}</span>
-      <span class="sticky-sep">·</span>
-      <span class="sticky-stat">{{ track_record.latest_event_summary.accuracy_pct }}%</span>
-      {% if track_record.latest_event_summary.units is not none %}
-      <span class="sticky-sep">·</span>
-      <span class="sticky-stat {{ 'positive' if track_record.latest_event_summary.units >= 0 else 'negative' }}">{{ '+' if track_record.latest_event_summary.units >= 0 else '' }}{{ track_record.latest_event_summary.units }}U</span>
-      {% endif %}
     </div>
     {% endif %}
     {% if track_record %}

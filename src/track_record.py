@@ -465,6 +465,26 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         latest_results = latest["results"]
         latest_correct = sum(1 for m in latest_results if m["correct"])
         latest_units_eligible = [m for m in latest_results if m["units_result"] is not None]
+
+        # The overall record includes Low Confidence picks, which are
+        # near-coinflips by design and DILUTE how the model actually did
+        # on the calls it was actually confident about -- surfaced
+        # separately since "perfect on every real conviction pick" is a
+        # genuinely different (and more meaningful) claim than the blended
+        # record, not just a more flattering way to say the same thing.
+        high_medium = [m for m in latest_results if m["confidence_label"] in ("High Confidence", "Medium Confidence")]
+        high_medium_correct = sum(1 for m in high_medium if m["correct"])
+
+        # Tiered and conditional on purpose -- a headline this site can't
+        # back up with the actual numbers is worse than no headline at
+        # all, so this only fires when the data genuinely earns it, and
+        # says less (or nothing) when it doesn't.
+        brag_headline = None
+        if len(high_medium) >= 2 and high_medium_correct == len(high_medium):
+            brag_headline = {"text": f"Perfect on every Medium & High Confidence pick ({high_medium_correct}/{len(high_medium)})", "tier": "gold"}
+        elif latest_correct / len(latest_results) >= 0.75 if latest_results else False:
+            brag_headline = {"text": f"Strong card — {latest_correct}/{len(latest_results)} correct", "tier": "green"}
+
         latest_event_summary = {
             "event_name": latest["event_name"],
             "correct": latest_correct,
@@ -474,6 +494,9 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "perfect_prop_count": sum(1 for m in latest_results if m["correct"] and m["method_correct"]),
             "units": round(sum(m["units_result"] for m in latest_units_eligible), 2) if latest_units_eligible else None,
             "units_eligible": len(latest_units_eligible),
+            "high_medium_correct": high_medium_correct,
+            "high_medium_total": len(high_medium),
+            "brag_headline": brag_headline,
         }
 
     # Model vs. market baseline: is the model's accuracy actually beating
