@@ -53,9 +53,14 @@ def main():
             prob_winner = prob_a if winner == a else 1.0 - prob_a
             fav_prob = max(prob_a, 1.0 - prob_a)
             fav_won = (prob_a >= 0.5 and winner == a) or (prob_a < 0.5 and winner == b)
+            # When the favorite loses, "method" (the WINNER's method of
+            # victory) is also the method by which the favorite was beaten
+            # -- captured here so upsets can be broken down by how
+            # decisively they happened, not just that they happened.
             rows.append({
                 "date": fight["date"], "year": fight["date"].year,
                 "prob_winner": prob_winner, "fav_prob": fav_prob, "fav_won": fav_won,
+                "upset_method": (None if fav_won else method),
             })
 
         loser = b if winner == a else a
@@ -93,6 +98,28 @@ def main():
         if len(b):
             label = f"{lo*100:.0f}-{min(hi, 1.0)*100:.0f}%"
             print(f"  predicted {label:>8}: actual {b['fav_won'].mean()*100:5.1f}% over {len(b):4d} fights")
+    print()
+
+    print("=" * 70)
+    print("UPSET ANALYSIS -- when a favorite loses, HOW does it happen?")
+    print("=" * 70)
+    print("Diagnostic only: this surfaces patterns, it doesn't automatically")
+    print("change the model. A pattern here is a starting point for asking")
+    print("why, not an instruction to reweight something.")
+    print()
+    for lo, hi in buckets:
+        b = df[(df["fav_prob"] >= lo) & (df["fav_prob"] < hi)]
+        upsets = b[~b["fav_won"]]
+        if len(upsets) == 0:
+            continue
+        label = f"{lo*100:.0f}-{min(hi, 1.0)*100:.0f}%"
+        method_counts = upsets["upset_method"].value_counts()
+        n_upsets = len(upsets)
+        method_str = ", ".join(
+            f"{m}: {method_counts.get(m, 0)} ({100*method_counts.get(m, 0)/n_upsets:.0f}%)"
+            for m in ["KO/TKO", "SUB", "DEC"]
+        )
+        print(f"  {label:>8} favorites: {n_upsets:4d} losses -- {method_str}")
 
 
 if __name__ == "__main__":

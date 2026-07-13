@@ -1432,6 +1432,13 @@
           <div class="model-factor-text">The moneyline price on the model's favorite the FIRST time it was logged, compared against the last known price before the fight. If the market moved toward the model's side by fight night (the price shortened), that's a "beat" — a real signal the model saw value before the market caught up, independent of whether the pick actually won. This is why CLV is tracked separately from raw accuracy: a model can lose a coinflip fight while still having correctly read where the market was headed, and that skill is what CLV isolates.</div>
         </div>
       </div>
+      <div class="model-factor-card group-green">
+        <div class="model-factor-icon">🔬</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Historical Upset Analysis</div>
+          <div class="model-factor-text">Separately from live tracking, the rating engine is walked back through its full fight history in chronological order — replaying each fight using only the ratings as they stood the moment before, no future information — to see how favorites at each confidence level actually lost when they lost: close decision, or getting finished. This is diagnostic, not automatic: a pattern here is a reason to investigate a specific adjustment, not an instruction that silently reweights anything on its own.</div>
+        </div>
+      </div>
 
       <div class="model-limitations-notice">
         ⚠️ <strong>Honest data limitations:</strong> strike-volume (SLpM/SApM), control-time percentage, and missed-weight history are new schema fields the model is built to use, but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather than guess) until real data backs them. Everything else above is live and active.
