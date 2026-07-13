@@ -29,10 +29,11 @@ PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
 FIELDNAMES = [
     "event_name", "fighter_a", "fighter_b", "favorite", "favorite_prob",
     "confidence_label", "likely_method", "pick_odds", "closing_odds",
-    "favorite_prob_history", "last_updated",
+    "favorite_prob_history", "last_updated", "is_lock_of_week",
 ]
 MOMENTUM_HISTORY_CAP = 10
 MOMENTUM_THRESHOLD = 0.03  # 3 percentage points -- below this, treat as noise/stable
+LOCK_OF_WEEK_MAX = 3  # cap, not a target -- a card with only one real standout gets one lock, not three padded-out picks
 
 
 def _favorite_moneyline_odds(fight: dict, favorite: str) -> float | None:
@@ -121,7 +122,10 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
                 "closing_odds": closing_odds if closing_odds is not None else "",
                 "favorite_prob_history": json.dumps(new_history),
                 "last_updated": generated_at,
+                "is_lock_of_week": (prior.get("is_lock_of_week", "") if prior else ""),
             }
+
+    _assign_locks_of_week(existing, events, decided_keys)
 
     os.makedirs(os.path.dirname(PREDICTIONS_LOG_PATH), exist_ok=True)
     with open(PREDICTIONS_LOG_PATH, "w", newline="") as f:
@@ -129,6 +133,40 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
         writer.writeheader()
         for row in existing.values():
             writer.writerow(row)
+
+
+def _assign_locks_of_week(existing: dict, events: list[dict], decided_keys: set) -> None:
+    """
+    Lock of the Week = the top (up to LOCK_OF_WEEK_MAX) High Confidence
+    picks for a given event, ranked by exact probability -- not just
+    tier membership, since "High Confidence" itself spans a wide 75-100%
+    range and a 76% pick isn't really a "lock" next to a 94% one on the
+    same card.
+
+    Only recomputed for fights NOT in decided_keys, for the same reason
+    predictions themselves get frozen once a result exists: without that
+    guard, the lock designation could silently shift after the fact
+    (e.g. a late model tweak nudges one pick's probability past another's)
+    which would rewrite a claim that was supposed to be made in advance,
+    not in hindsight. Decided fights simply keep whatever lock status
+    they already had going into the card.
+    """
+    by_event: dict[str, list[str]] = {}
+    for event in events:
+        event_name = event["event_name"]
+        for fight in event.get("fights", []):
+            key = (event_name, fight["fighter_a"], fight["fighter_b"])
+            fighter_key = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
+            if fighter_key in decided_keys or key not in existing:
+                continue
+            by_event.setdefault(event_name, []).append(key)
+
+    for event_name, keys in by_event.items():
+        high_conf_keys = [k for k in keys if existing[k]["confidence_label"] == "High Confidence"]
+        high_conf_keys.sort(key=lambda k: float(existing[k]["favorite_prob"]), reverse=True)
+        lock_keys = set(high_conf_keys[:LOCK_OF_WEEK_MAX])
+        for k in keys:
+            existing[k]["is_lock_of_week"] = "true" if k in lock_keys else "false"
 
 
 def compute_momentum(favorite_prob_history_json: str) -> dict | None:
@@ -364,6 +402,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "favorite_won": _favorite_won(pred.get("pick_odds"), correct),
             "units_result": units_result,
             "unit_size": UNITS_BY_CONFIDENCE.get(pred["confidence_label"]),
+            "is_lock_of_week": pred.get("is_lock_of_week") == "true",
             "date_added": result.get("date_added", ""),
         })
 
@@ -412,6 +451,21 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
     sparkline = _log_and_load_accuracy_sparkline(correct_count, total, accuracy_pct)
 
     results_by_event = _group_results_by_event(matched)
+
+    # Lock of the Week: all-time record on the model's own top-conviction
+    # picks specifically -- a genuinely different (and harder to hide
+    # behind) claim than the blended accuracy number, since these are
+    # picked out IN ADVANCE as the picks the model would most stand
+    # behind, not selected with the benefit of hindsight.
+    lock_picks = [m for m in matched if m.get("is_lock_of_week")]
+    lock_record = None
+    if lock_picks:
+        lock_correct = sum(1 for m in lock_picks if m["correct"])
+        lock_record = {
+            "correct": lock_correct,
+            "total": len(lock_picks),
+            "accuracy_pct": round(lock_correct / len(lock_picks) * 100, 1),
+        }
 
     # Units/ROI tracking: sized by confidence tier, priced with the real
     # market odds at pick time -- never the model's own probability,
@@ -497,6 +551,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "high_medium_correct": high_medium_correct,
             "high_medium_total": len(high_medium),
             "brag_headline": brag_headline,
+            "lock_picks": [m for m in latest_results if m.get("is_lock_of_week")],
         }
 
     # Model vs. market baseline: is the model's accuracy actually beating
@@ -526,6 +581,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         "market_baseline": market_baseline,
         "units_stats": units_stats,
         "latest_event_summary": latest_event_summary,
+        "lock_record": lock_record,
         "accuracy_sparkline": sparkline,
     }
 

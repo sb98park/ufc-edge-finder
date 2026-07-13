@@ -287,6 +287,21 @@ def main():
     # keeps regenerating while the card sits in "This Weekend."
     log_predictions(events, generated_at_str, decided_keys=set(finished_results.keys()))
 
+    # Attach lock-of-week status back onto each fight for the This
+    # Weekend display -- log_predictions() just computed and persisted
+    # it, this just reads it back rather than recomputing the same
+    # ranking a second time.
+    lock_keys = set()
+    if os.path.exists("data/predictions_log.csv"):
+        lock_df = pd.read_csv("data/predictions_log.csv")
+        for _, r in lock_df.iterrows():
+            if str(r.get("is_lock_of_week")).strip().lower() == "true":
+                lock_keys.add(frozenset({str(r["fighter_a"]).strip().lower(), str(r["fighter_b"]).strip().lower()}))
+    for event in events:
+        for fight in event["fights"]:
+            fkey = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
+            fight["is_lock_of_week"] = fkey in lock_keys
+
     # Results coverage, for This Weekend's card specifically -- surfaced
     # both as a step summary (visible directly in the GitHub Actions run
     # UI, not buried in console logs someone has to think to check) and
