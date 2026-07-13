@@ -485,6 +485,9 @@
   .perfect-prop-badge.celebrate {
     animation: perfect-prop-celebrate 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
+  .lock-badge.celebrate {
+    animation: perfect-prop-celebrate 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
   @keyframes perfect-prop-celebrate {
     0% { transform: scale(1); box-shadow: 0 0 0 rgba(240,217,122,0); }
     35% { transform: scale(1.3); box-shadow: 0 0 18px 5px rgba(240,217,122,0.75); }
@@ -542,6 +545,30 @@
   details[open] .chevron { transform: rotate(90deg); }
   .info-body { padding: 0 14px 14px; font-size: 12.5px; line-height: 1.6; color: var(--text); }
   .info-body p { margin: 10px 0; }
+  .model-group-title {
+    font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); margin: 16px 0 8px;
+  }
+  .model-group-title:first-child { margin-top: 6px; }
+  .model-factor-card {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--panel2); border: 1px solid var(--border); border-left: 3px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 6px;
+  }
+  .model-factor-card.group-gold { border-left-color: var(--accent); }
+  .model-factor-card.group-blue { border-left-color: #6db3f2; }
+  .model-factor-card.group-purple { border-left-color: #c77dff; }
+  .model-factor-card.group-green { border-left-color: var(--green); }
+  .model-factor-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; line-height: 1.4; }
+  .model-factor-content { min-width: 0; }
+  .model-factor-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .model-factor-text { font-size: 11.5px; line-height: 1.55; color: var(--muted); }
+  .model-limitations-notice {
+    font-size: 11px; line-height: 1.55; color: var(--muted);
+    background: rgba(255,92,92,0.06); border: 1px solid rgba(255,92,92,0.25);
+    border-radius: 8px; padding: 10px 12px; margin-top: 16px;
+  }
+  .model-limitations-notice strong { color: var(--text); }
 
   .standout-title { font-size: 15px; color: var(--accent); margin-bottom: 10px; font-weight: 700; }
   .standout-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 26px; }
@@ -1262,7 +1289,7 @@
             </span>
             {% endif %}
             {% if r.correct and r.method_correct %}<span class="perfect-prop-badge">🎯 Method + Winner</span>{% endif %}
-            {% if r.is_lock_of_week %}<span class="lock-badge">🔒 Lock of the Week</span>{% endif %}
+            {% if r.is_lock_of_week %}<span class="lock-badge{{ ' celebratable' if r.correct }}">🔒 Lock of the Week</span>{% endif %}
           </div>
           <div class="track-result-picks">
             <span class="track-result-label">Model picked</span> <span class="track-result-name pick">{{ r.predicted_favorite }}</span>{% if r.favorite_prob is not none %} <span class="track-result-conf">({{ (r.favorite_prob * 100) | round | int }}% confident)</span>{% endif %}{% if r.predicted_method %} <span class="track-result-conf">by {{ r.predicted_method }}</span>{% endif %}
@@ -1305,49 +1332,88 @@
   <details class="info-card" data-remember-id="how-model-works">
     <summary><span>🔍 How the model works</span><span class="chevron">▶</span></summary>
     <div class="info-body">
-      <p><strong>Base rating:</strong> blends Elo (built from recorded fight history, when it exists)
-      with a stats-based rating from career win rate, finish rate, experience, and reach.</p>
-      <p><strong>Style matchup adjustment ("styles make fights"):</strong> takedown accuracy vs. the
-      opponent's takedown defense (or control time percentage, when populated — a fighter who goes
-      1-for-5 on takedowns but holds 4 minutes of control is more effective than raw accuracy implies),
-      striking accuracy and volume differential (SLpM minus SApM, when populated), and durability all
-      shift the base rating gap.</p>
-      <p><strong>Age cliff by weight class:</strong> the decline threshold varies a lot by division —
-      Flyweight/Bantamweight/Featherweight/Strawweight start seeing a real decline past 35, while
-      Heavyweight and Light Heavyweight often sustain into the late 30s. A flat age penalty across all
-      divisions would be wrong in both directions.</p>
-      <p><strong>Layoff / ring rust vs. quick return:</strong> fighters back after more than a year away
-      take a ring-rust penalty; fighters back too SOON after being finished (under ~6 months) take a
-      separate, opposite-direction penalty.</p>
-      <p><strong>Missed weight:</strong> a documented red flag for a rushed or broken camp — factored in
-      when known, though real weigh-in history isn't fully populated for the roster yet (see limitations).</p>
-      <p><strong>Method-of-victory props:</strong> prior-informed blend — starts at the DIVISIONAL average
-      rate for that method (heavyweight fights have an inherently higher baseline KO/TKO rate than
-      strawweight, which leans toward decisions), shifts toward the fighter's own career tendency
-      (weighted by experience), then further incorporates the specific opponent's demonstrated vulnerability.</p>
-      <p><strong>Total rounds:</strong> blends combined finish rate with first-round finish percentage.
-      Main events get 5-round-calibrated lines (3.5/4.5) instead of 3-round lines (1.5/2.5), since
-      there's simply more scheduled fight to cover.</p>
-      <p><strong>Line movement:</strong> each refresh is compared against saved history to show real price
-      movement and render an actual chart. Honest limitation: this tracks PRICE only, not bet volume or
-      who's behind a move — true "sharp money" detection needs handle/ticket-count data no free source
-      provides, so this is labeled "notable movement," not a sharp-money claim.</p>
-      <p><strong>Suggested stake:</strong> tenth-Kelly, hard-capped at 5% of bankroll regardless of the
-      math. In genuinely efficient sports betting markets, an edge large enough to produce a raw half-Kelly
-      stake above ~10% is itself a warning sign — it usually means the model is overconfident somewhere
-      (a method-of-victory prop resting on a small career sample, a stat that hasn't caught up to recent
-      injury or camp news) rather than a real edge that big. The cap exists to protect against staking
-      real money on the model's own miscalibration, not to suggest the edge itself is wrong.</p>
-      <p><strong>Closing Line Value (CLV):</strong> the moneyline price on the model's favorite the FIRST
-      time it was logged, compared against the last known price before the fight. If the market moved
-      TOWARD the model's side by fight night (the price shortened), that's a "beat" — a real signal the
-      model saw value before the market caught up, independent of whether the pick actually won. This is
-      why CLV is tracked separately from raw accuracy: a model can lose a coinflip fight while still having
-      correctly read where the market was headed, and that skill is what CLV isolates.</p>
-      <p style="color: var(--muted);"><strong>Honest data limitations:</strong> strike-volume (SLpM/SApM),
-      control-time percentage, and missed-weight history are new schema fields the model is built to use,
-      but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather
-      than guess) until real data backs them. Everything else above is live and active.</p>
+
+      <div class="model-group-title">Base Rating</div>
+      <div class="model-factor-card group-gold">
+        <div class="model-factor-icon">📊</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Elo + Stats Blend</div>
+          <div class="model-factor-text">Blends Elo (built from recorded fight history, when it exists) with a stats-based rating from career win rate, finish rate, experience, and reach.</div>
+        </div>
+      </div>
+
+      <div class="model-group-title">Fighter-Specific Adjustments</div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">🥋</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Style Matchup — "Styles Make Fights"</div>
+          <div class="model-factor-text">Takedown accuracy vs. the opponent's takedown defense (or control time percentage, when populated — a fighter who goes 1-for-5 on takedowns but holds 4 minutes of control is more effective than raw accuracy implies), striking accuracy and volume differential (SLpM minus SApM, when populated), and durability all shift the base rating gap.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">📉</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Age Cliff by Weight Class</div>
+          <div class="model-factor-text">The decline threshold varies a lot by division — Flyweight/Bantamweight/Featherweight/Strawweight start seeing a real decline past 35, while Heavyweight and Light Heavyweight often sustain into the late 30s. A flat age penalty across all divisions would be wrong in both directions.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">⏱️</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Layoff / Ring Rust vs. Quick Return</div>
+          <div class="model-factor-text">Fighters back after more than a year away take a ring-rust penalty; fighters back too soon after being finished (under ~6 months) take a separate, opposite-direction penalty.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">⚖️</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Missed Weight</div>
+          <div class="model-factor-text">A documented red flag for a rushed or broken camp — factored in when known, though real weigh-in history isn't fully populated for the roster yet (see limitations below).</div>
+        </div>
+      </div>
+
+      <div class="model-group-title">Prop Predictions</div>
+      <div class="model-factor-card group-purple">
+        <div class="model-factor-icon">🎯</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Method of Victory</div>
+          <div class="model-factor-text">Prior-informed blend — starts at the divisional average rate for that method (heavyweight fights have an inherently higher baseline KO/TKO rate than strawweight, which leans toward decisions), shifts toward the fighter's own career tendency (weighted by experience), then further incorporates the specific opponent's demonstrated vulnerability.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-purple">
+        <div class="model-factor-icon">🔔</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Total Rounds</div>
+          <div class="model-factor-text">Blends combined finish rate with first-round finish percentage. Main events get 5-round-calibrated lines (3.5/4.5) instead of 3-round lines (1.5/2.5), since there's simply more scheduled fight to cover.</div>
+        </div>
+      </div>
+
+      <div class="model-group-title">Market &amp; Betting Math</div>
+      <div class="model-factor-card group-green">
+        <div class="model-factor-icon">📈</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Line Movement</div>
+          <div class="model-factor-text">Each refresh is compared against saved history to show real price movement and render an actual chart. Honest limitation: this tracks price only, not bet volume or who's behind a move — true "sharp money" detection needs handle/ticket-count data no free source provides, so this is labeled "notable movement," not a sharp-money claim.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-green">
+        <div class="model-factor-icon">💰</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Suggested Stake</div>
+          <div class="model-factor-text">Tenth-Kelly, hard-capped at 5% of bankroll regardless of the math. In genuinely efficient sports betting markets, an edge large enough to produce a raw half-Kelly stake above ~10% is itself a warning sign — it usually means the model is overconfident somewhere (a method-of-victory prop resting on a small career sample, a stat that hasn't caught up to recent injury or camp news) rather than a real edge that big. The cap exists to protect against staking real money on the model's own miscalibration, not to suggest the edge itself is wrong.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-green">
+        <div class="model-factor-icon">🎢</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Closing Line Value (CLV)</div>
+          <div class="model-factor-text">The moneyline price on the model's favorite the FIRST time it was logged, compared against the last known price before the fight. If the market moved toward the model's side by fight night (the price shortened), that's a "beat" — a real signal the model saw value before the market caught up, independent of whether the pick actually won. This is why CLV is tracked separately from raw accuracy: a model can lose a coinflip fight while still having correctly read where the market was headed, and that skill is what CLV isolates.</div>
+        </div>
+      </div>
+
+      <div class="model-limitations-notice">
+        ⚠️ <strong>Honest data limitations:</strong> strike-volume (SLpM/SApM), control-time percentage, and missed-weight history are new schema fields the model is built to use, but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather than guess) until real data backs them. Everything else above is live and active.
+      </div>
     </div>
   </details>
   </div>
@@ -1502,7 +1568,7 @@
         {% endif %}
         <span class="pick-method">by {{ fight.preview.likely_method }}</span>
         <span class="pick-confidence">{{ fight.preview.confidence_label }}</span>
-        {% if fight.is_lock_of_week %}<span class="lock-badge">🔒 Lock of the Week</span>{% endif %}
+        {% if fight.is_lock_of_week %}<span class="lock-badge celebratable">🔒 Lock of the Week</span>{% endif %}
       </div>
       {% if fight.result_stats %}
       <div class="result-stats-block">
@@ -2470,11 +2536,17 @@
       window.__fillObserver = fillObserver;
 
       // A brief, one-time celebration flourish the first time a Perfect
-      // Prop badge scrolls into view -- not on every page load (that
-      // would get old fast), just the first time someone actually sees
-      // it. Plain CSS transform/box-shadow on a regular span, not SVG
-      // stroke animation, so this doesn't carry the same iOS reliability
-      // caveat as the chart animations elsewhere on this page.
+      // Prop badge -- or a Lock of the Week badge that actually hit --
+      // scrolls into view. Lock badges specifically only celebrate when
+      // marked "celebratable" server-side (This Weekend, where there's
+      // no outcome yet, or Track Record where the lock was correct) --
+      // never on a lock that missed, since popping a celebration next
+      // to a loss would read as celebrating the wrong thing. Not on
+      // every page load either (that would get old fast), just the
+      // first time someone actually sees it. Plain CSS transform/
+      // box-shadow on a regular span, not SVG stroke animation, so this
+      // doesn't carry the same iOS reliability caveat as the chart
+      // animations elsewhere on this page.
       const celebrateObserver = new IntersectionObserver((entries, obs) => {
         entries.forEach(entry => {
           if (!entry.isIntersecting) return;
@@ -2482,7 +2554,7 @@
           obs.unobserve(entry.target);
         });
       }, { threshold: 0.5 });
-      document.querySelectorAll('.perfect-prop-badge').forEach(el => celebrateObserver.observe(el));
+      document.querySelectorAll('.perfect-prop-badge, .lock-badge.celebratable').forEach(el => celebrateObserver.observe(el));
 
       // Whether an element currently has any part on-screen. Used instead
       // of trusting the observer to automatically re-fire after a native
