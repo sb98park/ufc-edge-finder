@@ -30,6 +30,7 @@ from src.elo import EloRatingSystem
 
 FIGHT_HISTORY_PATH = "data/fight_history.csv"
 MIN_PRIOR_FIGHTS = 3  # both fighters need this many tracked fights before the bout counts
+MIN_DURABILITY_SAMPLE = 3  # matches the >=3 prior losses guard already used in production rationale.py
 
 
 def main():
@@ -39,6 +40,15 @@ def main():
 
     elo = EloRatingSystem()
     fight_counts: dict[str, int] = {}
+    # Point-in-time durability tracking, mirroring the production
+    # finish_loss_rate formula exactly (ko_losses + sub_losses) / losses
+    # -- but computed incrementally as fights are replayed, so a fight
+    # from 2015 only ever sees that fighter's record AS OF 2015, never
+    # their full career-to-date stats. Using today's snapshot on a
+    # historical fight would leak future information into what's
+    # supposed to be a point-in-time test.
+    prior_losses: dict[str, int] = {}
+    prior_finish_losses: dict[str, int] = {}
     rows = []
 
     for _, fight in history.iterrows():
@@ -53,6 +63,13 @@ def main():
             prob_winner = prob_a if winner == a else 1.0 - prob_a
             fav_prob = max(prob_a, 1.0 - prob_a)
             fav_won = (prob_a >= 0.5 and winner == a) or (prob_a < 0.5 and winner == b)
+            fav_name = a if prob_a >= 0.5 else b
+
+            fav_prior_losses = prior_losses.get(fav_name, 0)
+            fav_durability = None
+            if fav_prior_losses >= MIN_DURABILITY_SAMPLE:
+                fav_durability = prior_finish_losses.get(fav_name, 0) / fav_prior_losses
+
             # When the favorite loses, "method" (the WINNER's method of
             # victory) is also the method by which the favorite was beaten
             # -- captured here so upsets can be broken down by how
@@ -61,10 +78,14 @@ def main():
                 "date": fight["date"], "year": fight["date"].year,
                 "prob_winner": prob_winner, "fav_prob": fav_prob, "fav_won": fav_won,
                 "upset_method": (None if fav_won else method),
+                "fav_durability": fav_durability,
             })
 
         loser = b if winner == a else a
         elo.update_ratings(winner, loser, method=method)
+        prior_losses[loser] = prior_losses.get(loser, 0) + 1
+        if method in ("KO/TKO", "SUB"):
+            prior_finish_losses[loser] = prior_finish_losses.get(loser, 0) + 1
         fight_counts[a] = prior_a + 1
         fight_counts[b] = prior_b + 1
 
@@ -120,6 +141,49 @@ def main():
             for m in ["KO/TKO", "SUB", "DEC"]
         )
         print(f"  {label:>8} favorites: {n_upsets:4d} losses -- {method_str}")
+
+    print()
+    print("=" * 70)
+    print("DURABILITY-SEGMENTED CALIBRATION -- the actual test")
+    print("=" * 70)
+    print("Question: among HIGH-CONFIDENCE favorites specifically, are the")
+    print("ones with a worse own finish-loss history actually winning less")
+    print("often than the model expects -- not just losing differently when")
+    print("they do lose, but genuinely losing MORE than predicted?")
+    print()
+    print("Durability computed point-in-time (only prior fights as of that")
+    print(f"date, same lookahead-safety as the Elo core itself). Requires")
+    print(f"{MIN_DURABILITY_SAMPLE}+ prior losses to compute a rate at all -- fighters below")
+    print("that are excluded from this specific comparison, not miscounted.")
+    print()
+
+    HIGH_CONF_THRESHOLD = 0.60
+    high_conf = df[(df["fav_prob"] >= HIGH_CONF_THRESHOLD) & df["fav_durability"].notna()]
+    n_excluded = len(df[df["fav_prob"] >= HIGH_CONF_THRESHOLD]) - len(high_conf)
+    print(f"High-confidence fights (fav_prob >= {HIGH_CONF_THRESHOLD*100:.0f}%) with a usable durability reading: {len(high_conf)}")
+    print(f"(excluded {n_excluded} where the favorite had under {MIN_DURABILITY_SAMPLE} prior losses)")
+    print()
+
+    if len(high_conf) < 20:
+        print(f"Sample too small ({len(high_conf)} fights) to split further and trust the result.")
+        print("Not drawing a conclusion from this -- reporting the limitation instead of a number.")
+    else:
+        median_durability = high_conf["fav_durability"].median()
+        low_durability = high_conf[high_conf["fav_durability"] >= median_durability]  # WORSE chin = higher finish-loss rate
+        high_durability = high_conf[high_conf["fav_durability"] < median_durability]
+
+        for label, group in [("Worse durability (top half, higher finish-loss rate)", low_durability),
+                              ("Better durability (bottom half, lower finish-loss rate)", high_durability)]:
+            predicted = group["fav_prob"].mean()
+            actual = group["fav_won"].mean()
+            gap = predicted - actual
+            print(f"  {label}:")
+            print(f"    n={len(group)}, predicted win rate {predicted*100:.1f}%, actual {actual*100:.1f}%, gap {gap*100:+.1f}pp")
+        print()
+        print("A meaningfully larger positive gap in the 'worse durability' group")
+        print("would be real evidence for a confidence-scaled durability penalty.")
+        print("A similar or smaller gap would mean the current flat adjustment")
+        print("is already doing its job and scaling it further isn't justified.")
 
 
 if __name__ == "__main__":

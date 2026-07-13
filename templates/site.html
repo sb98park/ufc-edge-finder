@@ -76,7 +76,20 @@
   table td, table th { white-space: nowrap; }
   .model-only-note { white-space: normal; overflow-wrap: break-word; }
 
-  .brand-header { display: flex; align-items: center; gap: 11px; margin: 2px 0 8px; }
+  .brand-header { display: flex; align-items: center; justify-content: space-between; gap: 11px; margin: 2px 0 8px; }
+  .brand-left { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .account-badge { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .account-role {
+    font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+    background: var(--panel2); border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+  }
+  .account-role.admin { border-color: rgba(212,175,55,0.4); color: var(--accent); }
+  .account-role.guest { border-color: rgba(95,184,201,0.35); color: var(--accent-cool); }
+  .account-logout {
+    font-size: 10.5px; font-weight: 600; color: var(--muted); background: none; border: none;
+    text-decoration: underline; cursor: pointer; padding: 4px 2px; font-family: inherit;
+  }
+  .account-logout:active { color: var(--text); }
   .brand-logo { flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(212,175,55,0.35)); }
   .brand-text { line-height: 1.15; }
   .brand-name {
@@ -998,6 +1011,7 @@
   <div class="ember" style="left:35%; animation-duration:21s; animation-delay:11s; --drift:-18px;"></div>
 </div>
   <div class="brand-header">
+    <div class="brand-left">
     <svg width="46" height="46" viewBox="0 0 44 44" class="brand-logo" role="img" aria-label="Octane Alpha logo">
       <defs>
         <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -1021,7 +1035,26 @@
       <div class="brand-name" aria-label="Octane Alpha">OCTANE ALPHA</div>
       <div class="brand-tagline">{{ icon_target() | safe }} UFC Analytics</div>
     </div>
+    </div>
+    <div class="account-badge" id="account-badge" style="display:none;">
+      <span class="account-role" id="account-role"></span>
+      <button class="account-logout" onclick="window.location.href='/logout'">Log out</button>
+    </div>
   </div>
+  <script>
+    (function() {
+      const match = document.cookie.match(/(?:^|; )octane_role=([^;]+)/);
+      if (!match) return; // display-only cookie the Worker sets on login -- carries no security weight itself
+      const role = decodeURIComponent(match[1]);
+      const badge = document.getElementById('account-badge');
+      const roleEl = document.getElementById('account-role');
+      if (role === 'admin' || role === 'guest') {
+        roleEl.textContent = role === 'admin' ? '👑 Admin' : '👤 Guest';
+        roleEl.className = 'account-role ' + role;
+        badge.style.display = 'flex';
+      }
+    })();
+  </script>
   <div class="subtitle"><span class="subtitle-model">Model probability</span><span class="subtitle-vs">vs.</span><span class="subtitle-market">live sportsbook lines</span></div>
 
   {% if countdown_target_iso %}
