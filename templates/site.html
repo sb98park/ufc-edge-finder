@@ -137,7 +137,7 @@
     display: flex; flex-direction: row; align-items: center; gap: 14px; position: relative; overflow: hidden;
   }
   .hub-card::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    content: ""; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
     background: var(--card-accent, var(--accent));
   }
   .hub-card:active { transform: scale(0.98); }
@@ -167,7 +167,7 @@
   .hub-card.featured {
     padding: 18px 16px;
   }
-  .hub-card.featured::before { height: 3px; }
+  .hub-card.featured::before { width: 4px; }
   .hub-card.featured .hub-card-icon { font-size: 32px; width: 34px; }
   .hub-card.featured .hub-card-icon svg { width: 32px; height: 32px; }
   .hub-card.featured .hub-card-stat { font-size: 21px; }
@@ -655,7 +655,7 @@
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
   .parlay-card.lotto .parlay-odds { color: #c77dff; }
   .parlay-card.moonshot .parlay-odds {
-    color: #ffb347; font-size: 27px;
+    color: #ffb347;
   }
   .parlay-prob { font-size: 11px; color: var(--muted); }
   .parlay-legs { list-style: none; margin: 0; padding: 0; }
@@ -1051,7 +1051,7 @@
   <div id="hub-view">
     <div class="hub-grid">
       {% if events %}
-      <div class="hub-card featured" style="--card-accent:#ff5c5c" onclick="showSection('thisweekend')">
+      <div class="hub-card featured" style="--card-accent:#d9726b" onclick="showSection('thisweekend')">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Octagon cage">
             <defs><linearGradient id="icon-weekend" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1068,7 +1068,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       {% endif %}
-      <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('track')">
+      <div class="hub-card" style="--card-accent:#5a9d6e" onclick="showSection('track')">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart">
             <defs><linearGradient id="icon-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1096,7 +1096,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#3ddc84" onclick="showSection('favorites')">
+      <div class="hub-card" style="--card-accent:#5a9d6e" onclick="showSection('favorites')">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond">
             <defs><linearGradient id="icon-favorites" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1110,7 +1110,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#6db3f2" onclick="showSection('parlays')">
+      <div class="hub-card" style="--card-accent:#6b8caf" onclick="showSection('parlays')">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins">
             <defs><linearGradient id="icon-parlays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1127,7 +1127,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#e88fc7" onclick="showSection('coming')">
+      <div class="hub-card" style="--card-accent:#a97a94" onclick="showSection('coming')">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar">
             <defs><linearGradient id="icon-coming" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
