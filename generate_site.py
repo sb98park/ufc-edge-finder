@@ -161,6 +161,12 @@ def main():
         save_token_cache(token_cache)
 
     generated_at_str = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M %p ET")
+    # Separate, compact format for the top-of-page display only -- the
+    # full generated_at_str above stays untouched since it's also stored
+    # in predictions_log.csv and other logic may depend on that exact
+    # format; this is purely a second, shorter rendering of the same
+    # moment for a spot where space is tight.
+    generated_at_short = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%b %-d, %I:%M %p ET")
     momentum_by_key = load_momentum_by_key()
     for event in events:
         for fight in event["fights"]:
@@ -447,6 +453,7 @@ def main():
         live_error=live_error,
         source=source,
         generated_at=generated_at_str,
+        generated_at_short=generated_at_short,
     )
 
     os.makedirs("docs", exist_ok=True)
