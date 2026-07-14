@@ -54,26 +54,26 @@ WEIGHT_CLASS_COLORS = {
 # white a flag is, so there's no need to compromise the colors
 # themselves anymore. Each list is 2-4 colors, rendered as equal
 # conic-gradient segments.
-COUNTRY_FLAG_COLORS = {
-    "USA": ["#B22234", "#FFFFFF", "#3C3B6E"],
-    "Brazil": ["#009C3B", "#FFDF00", "#002776"],
-    "UK": ["#C8102E", "#FFFFFF", "#012169"],
-    "Russia": ["#FFFFFF", "#0039A6", "#D52B1E"],
-    "Australia": ["#012169", "#FFFFFF", "#E4002B"],
-    "France": ["#0055A4", "#FFFFFF", "#EF4135"],
-    "Ireland": ["#169B62", "#FFFFFF", "#FF883E"],
-    "Canada": ["#FF0000", "#FFFFFF", "#FF0000"],
-    "Venezuela": ["#FFCC00", "#00247D", "#CF142B"],
-    "China": ["#DE2910", "#FFDE00"],
-    "Aruba": ["#4189DD", "#F8E831", "#FFFFFF"],
-    "South Africa": ["#007749", "#FCB514", "#001489", "#DE3831"],
-    "Argentina": ["#75AADB", "#FFFFFF", "#75AADB"],
-    "Georgia": ["#FFFFFF", "#FF0000"],
-    "Nigeria": ["#008751", "#FFFFFF", "#008751"],
-    "Kyrgyzstan": ["#E8112D", "#FFD700"],
-    "Ukraine": ["#0057B7", "#FFD700"],
-    "Uzbekistan": ["#0099B5", "#FFFFFF", "#1EB53A"],
-    "South Korea": ["#FFFFFF", "#C60C30", "#003478"],
+COUNTRY_FLAG_EMOJI = {
+    "USA": "🇺🇸",
+    "Brazil": "🇧🇷",
+    "UK": "🇬🇧",
+    "Russia": "🇷🇺",
+    "Australia": "🇦🇺",
+    "France": "🇫🇷",
+    "Ireland": "🇮🇪",
+    "Canada": "🇨🇦",
+    "Venezuela": "🇻🇪",
+    "China": "🇨🇳",
+    "Aruba": "🇦🇼",
+    "South Africa": "🇿🇦",
+    "Argentina": "🇦🇷",
+    "Georgia": "🇬🇪",
+    "Nigeria": "🇳🇬",
+    "Kyrgyzstan": "🇰🇬",
+    "Ukraine": "🇺🇦",
+    "Uzbekistan": "🇺🇿",
+    "South Korea": "🇰🇷",
 }
 
 

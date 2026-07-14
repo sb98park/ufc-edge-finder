@@ -747,6 +747,8 @@
   .matchup-fighter { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
   .matchup-fighter.right { justify-content: flex-end; text-align: right; }
   .matchup-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; display: block; }
+  .fighter-country { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .fighter-country.right { text-align: right; }
   .factor-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
   .factor-badges.right { justify-content: flex-end; }
   .factor-badge {
@@ -763,13 +765,8 @@
     color: #fff; font-weight: 800; flex-shrink: 0; letter-spacing: -0.5px;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 0 0 2px var(--panel), 0 0 0 3px rgba(212,175,55,0.25), 0 2px 6px rgba(0,0,0,0.3);
   }
-  .fighter-avatar-ring {
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px rgba(212,175,55,0.25), 0 2px 6px rgba(0,0,0,0.3);
-  }
-  .fighter-avatar-ring .fighter-avatar { box-shadow: none; }
   .fighter-avatar-wrap { position: relative; flex-shrink: 0; display: inline-block; }
-  .fighter-avatar.winner-glow, .fighter-avatar-ring.winner-glow {
+  .fighter-avatar.winner-glow {
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 0 0 2px var(--panel), 0 0 0 3px var(--green), 0 2px 6px rgba(0,0,0,0.3);
     animation: winner-pulse 2s ease-in-out infinite;
   }
@@ -1515,31 +1512,9 @@
   {% macro fighter_avatar(name, size=44, is_winner=false) %}
     {%- set parts = name.split() -%}
     {%- set initials = (parts[0][0] + parts[-1][0])|upper if parts|length > 1 else name[:2]|upper -%}
-    {%- set flag_colors = fighter_avatar_colors(name) -%}
+    {%- set hue = (name|length * 47 + parts[0]|length * 23) % 360 -%}
     <div class="fighter-avatar-wrap{{ ' winner' if is_winner }}" style="width:{{ size }}px;height:{{ size }}px;">
-      {%- if flag_colors -%}
-      {#- Ring design: real flag colors as a conic-gradient ring around
-          a neutral dark center, so initials stay legible regardless of
-          how bright/white a flag's colors are (a full-circle fill of
-          e.g. Nigeria's green-white-green makes white text vanish on
-          the white segment -- the ring sidesteps that entirely). -#}
-      {%- set n = flag_colors|length -%}
-      {%- set seg = 100.0 / n -%}
-      {%- set segments = [] -%}
-      {%- for c in flag_colors -%}
-        {%- set _ = segments.append(c + ' ' + (loop.index0 * seg)|round(2)|string + '% ' + (loop.index * seg)|round(2)|string + '%') -%}
-      {%- endfor -%}
-      {%- set ring_style = 'background:conic-gradient(' + segments|join(', ') + ');' -%}
-      {%- set ring_w = (size * 0.09)|round|int -%}
-      {%- set inner_size = size - 2*ring_w -%}
-      <div class="fighter-avatar-ring{{ ' winner-glow' if is_winner }}" style="width:{{ size }}px;height:{{ size }}px;{{ ring_style }}">
-        <div class="fighter-avatar" style="width:{{ inner_size }}px;height:{{ inner_size }}px;font-size:{{ (size*0.34)|round|int }}px;background:#1a1e28;">{{ initials }}</div>
-      </div>
-      {%- else -%}
-      {%- set hue = (name|length * 47 + parts[0]|length * 23) % 360 -%}
-      {%- set bg_style = 'background:linear-gradient(135deg, hsl(' + hue|string + ',55%,32%), hsl(' + hue|string + ',45%,18%));' -%}
-      <div class="fighter-avatar{{ ' winner-glow' if is_winner }}" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size*0.38)|round|int }}px;{{ bg_style }}">{{ initials }}</div>
-      {%- endif %}
+      <div class="fighter-avatar{{ ' winner-glow' if is_winner }}" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size*0.38)|round|int }}px;background:linear-gradient(135deg, hsl({{ hue }},55%,32%), hsl({{ hue }},45%,18%));">{{ initials }}</div>
       {% if is_winner %}<div class="winner-check" style="width:{{ (size*0.4)|round|int }}px;height:{{ (size*0.4)|round|int }}px;"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>{% endif %}
     </div>
   {%- endmacro %}
@@ -1626,6 +1601,8 @@
           {{ fighter_avatar(fight.fighter_a, is_winner=(fight.winner == fight.fighter_a)) }}
           <div>
             <span class="matchup-name">{{ fight.fighter_a }}</span>
+            {% set country_label = fighter_country_label(fight.fighter_a) %}
+            {% if country_label %}<div class="fighter-country">{{ country_label }}</div>{% endif %}
             {% if fight.preview and fight.preview.comparison.a.badges %}
             <div class="factor-badges">
               {% for b in fight.preview.comparison.a.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}
@@ -1648,6 +1625,8 @@
         <div class="matchup-fighter right">
           <div>
             <span class="matchup-name">{{ fight.fighter_b }}</span>
+            {% set country_label_b = fighter_country_label(fight.fighter_b) %}
+            {% if country_label_b %}<div class="fighter-country right">{{ country_label_b }}</div>{% endif %}
             {% if fight.preview and fight.preview.comparison.b.badges %}
             <div class="factor-badges right">
               {% for b in fight.preview.comparison.b.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}
