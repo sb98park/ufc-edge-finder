@@ -913,7 +913,6 @@
   .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
   .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
   .compare-table th { color: var(--accent2); font-size: 10.5px; font-weight: 700; }
-  .compare-table th .fighter-avatar-wrap { margin: 0 auto 4px; }
 
   .tape-block { margin-bottom: 14px; }
   .tape-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 3px; }
@@ -1159,7 +1158,7 @@
           <div class="hub-card-label">This Weekend</div>
           <div class="hub-card-stat">{{ events[0].event_name.split(':')[0].strip() }}</div>
           <div class="hub-card-matchup">{{ events[0].event_name.split(':', 1)[1].strip() if ':' in events[0].event_name else '' }}</div>
-          <div class="hub-card-sub">{{ events[0].fights|length }} fights · {{ events[0].event_date }}</div>
+          <div class="hub-card-sub">{{ events[0].fights|length }} fights · {{ events[0].event_date|friendly_date }}</div>
           {% if events[0].event_location %}<div class="hub-card-location">📍 {{ events[0].event_location }}</div>{% endif %}
         </div>
         <span class="hub-card-arrow">→</span>
@@ -1588,7 +1587,7 @@
   {% if comparison %}
   <div class="market-group-label">⚖️ Fighter Comparison</div>
   <div class="table-scroll"><table class="compare-table">
-    <tr><th></th><th>{{ fighter_avatar(comparison.a.name, 28) }}{{ comparison.a.name }}</th><th>{{ fighter_avatar(comparison.b.name, 28) }}{{ comparison.b.name }}</th></tr>
+    <tr><th></th><th>{{ comparison.a.name }}</th><th>{{ comparison.b.name }}</th></tr>
     <tr><td>Record</td><td>{{ comparison.a.record }}</td><td>{{ comparison.b.record }}</td></tr>
     <tr><td>KO/TKO Record</td><td>{{ comparison.a.ko_wins }}-{{ comparison.a.ko_losses if comparison.a.ko_losses is not none else "—" }}</td><td>{{ comparison.b.ko_wins }}-{{ comparison.b.ko_losses if comparison.b.ko_losses is not none else "—" }}</td></tr>
     <tr><td>Sub Record</td><td>{{ comparison.a.sub_wins }}-{{ comparison.a.sub_losses if comparison.a.sub_losses is not none else "—" }}</td><td>{{ comparison.b.sub_wins }}-{{ comparison.b.sub_losses if comparison.b.sub_losses is not none else "—" }}</td></tr>
@@ -1994,7 +1993,7 @@
   {% set is_first_event = loop.first %}
   <div class="event-header" {% if is_first_event %}id="section-thisweekend"{% endif %}>
     <div class="event-name">{{ event.event_name }}</div>
-    <div class="event-date">{{ event.event_date }}</div>
+    <div class="event-date">{{ event.event_date|friendly_date }}</div>
   </div>
   {% if is_first_event %}
   {%- set segs = [] -%}
@@ -2042,7 +2041,7 @@
   {% for event in future_events %}
   <div class="event-header">
     <div class="event-name">{{ event.event_name }}</div>
-    <div class="event-date">{{ event.event_date }}</div>
+    <div class="event-date">{{ event.event_date|friendly_date }}</div>
   </div>
   {% for fight in event.fights %}
   {% if loop.first or fight.segment_label != loop.previtem.segment_label %}

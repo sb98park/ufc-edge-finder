@@ -41,6 +41,18 @@ DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
 
 
+def _format_friendly_date(date_str: str) -> str:
+    """
+    "2026-07-18" -> "Sat, Jul 18". Falls back to the raw string on a
+    malformed value rather than crashing the whole page over one bad date.
+    """
+    try:
+        parsed = dt.datetime.strptime(date_str, "%Y-%m-%d")
+        return parsed.strftime("%a, %b %-d")
+    except (ValueError, TypeError):
+        return date_str
+
+
 def build_ratings(fighters_df: pd.DataFrame, history_df: pd.DataFrame) -> dict[str, float]:
     elo = EloRatingSystem()
     elo.build_from_history(history_df)
@@ -385,6 +397,7 @@ def main():
 
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
+    env.filters["friendly_date"] = _format_friendly_date
     env.globals["donut_svg"] = build_donut_svg
     env.globals["damage_svg"] = build_damage_silhouette_svg
 
