@@ -950,6 +950,16 @@
 
   @media (max-width: 480px) {
     th, td { padding: 6px 5px; font-size: 11.5px; }
+    /* On narrow screens the badge + logout link no longer fit next to
+       "OCTANE ALPHA" on one line -- rather than wrapping the whole group
+       below the logo (which pushes it away from the top-right corner),
+       stack the badge and logout vertically so the badge stays inline
+       with the logo text and only "Log out" drops to its own line,
+       both still right-aligned at the top. Desktop is completely
+       unaffected since this only applies below 480px. */
+    .account-badge { flex-direction: column; align-items: flex-end; gap: 3px; }
+    .account-role { font-size: 10px; padding: 3px 8px; }
+    .account-logout { font-size: 10px; }
   }
 </style>
 </head>
