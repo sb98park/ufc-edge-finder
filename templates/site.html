@@ -1510,9 +1510,15 @@
   {% macro fighter_avatar(name, size=44, is_winner=false) %}
     {%- set parts = name.split() -%}
     {%- set initials = (parts[0][0] + parts[-1][0])|upper if parts|length > 1 else name[:2]|upper -%}
-    {%- set hue = (name|length * 47 + parts[0]|length * 23) % 360 -%}
+    {%- set country_colors = fighter_avatar_colors(name) -%}
+    {%- if country_colors -%}
+      {%- set bg_style = 'background:linear-gradient(135deg, ' + country_colors[0] + ', ' + country_colors[1] + ');' -%}
+    {%- else -%}
+      {%- set hue = (name|length * 47 + parts[0]|length * 23) % 360 -%}
+      {%- set bg_style = 'background:linear-gradient(135deg, hsl(' + hue|string + ',55%,32%), hsl(' + hue|string + ',45%,18%));' -%}
+    {%- endif -%}
     <div class="fighter-avatar-wrap{{ ' winner' if is_winner }}" style="width:{{ size }}px;height:{{ size }}px;">
-      <div class="fighter-avatar{{ ' winner-glow' if is_winner }}" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size*0.38)|round|int }}px;background:linear-gradient(135deg, hsl({{ hue }},55%,32%), hsl({{ hue }},45%,18%));">{{ initials }}</div>
+      <div class="fighter-avatar{{ ' winner-glow' if is_winner }}" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size*0.38)|round|int }}px;{{ bg_style }}">{{ initials }}</div>
       {% if is_winner %}<div class="winner-check" style="width:{{ (size*0.4)|round|int }}px;height:{{ (size*0.4)|round|int }}px;"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>{% endif %}
     </div>
   {%- endmacro %}
@@ -1968,7 +1974,7 @@
   </div>
   {% if is_first_event %}
   {%- set segs = [] -%}
-  {%- for f in event.fights %}{% if f.segment_label not in segs %}{% set _ = segs.append(f.segment_label) %}{% endif %}{% endfor -%}
+  {%- for f in event.fights|reverse %}{% if f.segment_label not in segs %}{% set _ = segs.append(f.segment_label) %}{% endif %}{% endfor -%}
   {% if segs|length > 1 %}
   <div class="seg-tabs">
     {% for seg in segs %}
@@ -1978,7 +1984,7 @@
   {% set ns = namespace(i=0) %}
   {% for seg in segs %}
   <div class="seg-pane{{ ' active' if loop.first }}" id="seg-pane-{{ loop.index }}">
-    {% set pane_fights = event.fights|selectattr('segment_label', 'equalto', seg)|list %}
+    {% set pane_fights = event.fights|reverse|selectattr('segment_label', 'equalto', seg)|list %}
     {% for fight in pane_fights %}
     {% set ns.i = ns.i + 1 %}
     {{ render_fight_card(fight, ns.i) }}
@@ -1986,7 +1992,7 @@
   </div>
   {% endfor %}
   {% else %}
-  {% for fight in event.fights %}
+  {% for fight in event.fights|reverse %}
   {{ render_fight_card(fight, loop.index) }}
   {% endfor %}
   {% endif %}

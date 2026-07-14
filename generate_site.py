@@ -19,7 +19,7 @@ from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
 from src.card_matcher import (
     load_fight_cards, group_edges_by_card, top_standout_props, top_favorite_picks,
-    assign_canonical_fight_ids, group_unmatched_by_fight,
+    assign_canonical_fight_ids, group_unmatched_by_fight, COUNTRY_COLORS,
 )
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
@@ -417,6 +417,21 @@ def main():
     env.filters["american"] = format_american_odds
     env.globals["donut_svg"] = build_donut_svg
     env.globals["damage_svg"] = build_damage_silhouette_svg
+
+    # Fighter avatar flag-colors: maps a fighter's name to their country's
+    # gradient pair, so the template can use it in place of the default
+    # hash-based hue when available. Returns None for any fighter not in
+    # fighters.csv, or whose country isn't in COUNTRY_COLORS -- both cases
+    # the template treats identically, falling back to the existing
+    # hash-based gradient rather than showing nothing.
+    _fighter_country = dict(zip(fighters_df["name"], fighters_df.get("country", [])))
+    def fighter_avatar_colors(name):
+        country = _fighter_country.get(name)
+        if country is None or (isinstance(country, float) and country != country):  # NaN check
+            return None
+        return COUNTRY_COLORS.get(country)
+    env.globals["fighter_avatar_colors"] = fighter_avatar_colors
+
     env.filters["tojson"] = lambda obj: json.dumps(obj, default=str)
     # NaN is truthy in Python, so a plain {% if x %} check doesn't catch a
     # pandas-filled missing value -- it just prints the literal word

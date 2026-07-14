@@ -40,6 +40,29 @@ WEIGHT_CLASS_COLORS = {
     "Heavyweight": "#d64545",
 }
 
+# Avatar gradient pairs per country, for the fighter-flag-colors feature.
+# Deliberately muted/curated rather than literal official flag hex values
+# -- picked to stay legible with white initials text on top and to fit
+# the site's existing dark, restrained palette instead of clashing with
+# it the way vibrant flag colors would. Falls back to the existing
+# hash-based hue gradient for any fighter whose country isn't mapped.
+COUNTRY_COLORS = {
+    "USA": ("#3b5998", "#1a2744"),
+    "Brazil": ("#2e8b57", "#153d28"),
+    "UK": ("#2a3d66", "#141f36"),
+    "Ireland": ("#2f9e44", "#164d21"),
+    "Russia": ("#3a5f8a", "#1c2f45"),
+    "Nigeria": ("#1a7a4c", "#0d3d26"),
+    "South Africa": ("#4a8f4a", "#1f3a1f"),
+    "China": ("#b83232", "#5c1919"),
+    "Aruba": ("#4a7fc4", "#1f3a5c"),
+    "Ukraine": ("#3f6fb0", "#8a7a2a"),
+    "Australia": ("#3d5a8a", "#1a2a42"),
+    "Canada": ("#c8393f", "#6b1a1e"),
+    "Georgia": ("#b8323f", "#5c1922"),
+    "France": ("#3a5a8f", "#1c2c47"),
+}
+
 
 def _normalize_name(name: str) -> str:
     """
