@@ -1,7 +1,10 @@
 """
 Automated results lookup -- runs as part of every generate_site.py call,
 so results get filled in without anyone manually searching and typing
-them into fight_results.csv after each card.
+them into fight_results.csv after each card. Also syncs each newly-found
+result into fighters.csv (win/loss counts, method breakdown, last-fight
+fields), which previously only got updated by hand -- see
+sync_fighter_records for why that gap mattered.
 
 *** HONEST CAVEAT, READ BEFORE TRUSTING THIS BLINDLY ***
 This was written and tested for Python syntax and internal logic, but
@@ -15,6 +18,12 @@ time extraction) is new and unverified. Treat this as a serious,
 well-reasoned first attempt, not a guaranteed-working feature. Check the
 GitHub Action logs after a real run to see what actually happened --
 every branch below prints exactly what it did or why it gave up.
+
+sync_fighter_records specifically IS unit-tested in isolation (KO/TKO,
+decision-type mapping, and the untracked-fighter skip all pass) -- what's
+NOT verified is the end-to-end path of a real scrape actually succeeding
+and triggering it for real event data, since that depends on the same
+unverified scraping this whole caveat is about.
 
 Design principles, all deliberate:
 - NEVER raises. Every failure mode (site unreachable, structure changed,
@@ -54,6 +63,65 @@ METHOD_PATTERNS = [
     ("Decision - Majority", re.compile(r"\bM-?DEC\b|MAJORITY", re.I)),
     ("DQ", re.compile(r"\bDQ\b|DISQUALIFICATION", re.I)),
 ]
+
+# Maps fight_results.csv's longer method strings (e.g. "Decision - Split")
+# to fighters.csv's win/loss breakdown column prefix (ko_wins/sub_wins/
+# dec_wins etc.) and its own shorter last_fight_method convention. All
+# three decision types collapse to "dec" since fighters.csv doesn't
+# distinguish split/majority/unanimous in its breakdown columns. DQ has
+# no matching breakdown column -- the overall win/loss count still gets
+# incremented, just not a method-specific one.
+_METHOD_TO_PREFIX = {
+    "KO/TKO": "ko",
+    "Submission": "sub",
+    "Decision - Unanimous": "dec",
+    "Decision - Split": "dec",
+    "Decision - Majority": "dec",
+}
+_PREFIX_TO_LAST_FIGHT_METHOD = {"ko": "KO/TKO", "sub": "SUB", "dec": "DEC"}
+
+
+def sync_fighter_records(fighters_df: pd.DataFrame, fighter_a: str, fighter_b: str,
+                          winner: str, method: str, event_date: str) -> pd.DataFrame:
+    """
+    Updates both fighters' win/loss counts, method breakdown, and
+    last-fight fields in fighters_df after a new result is found. This is
+    what keeps fighters.csv (used for future matchup predictions) in sync
+    with fight_results.csv (used for the site's track record display) --
+    before this existed, results could land in one file and never reach
+    the other, silently leaving win/loss counts and last-fight dates
+    stale for every fighter on a card once it actually happened.
+
+    Silently skips any fighter not present in fighters_df (untracked
+    undercard names aren't all in the curated roster) rather than
+    raising, consistent with the rest of this module never breaking site
+    generation over a data-matching gap.
+    """
+    loser = fighter_b if winner == fighter_a else fighter_a
+    prefix = _METHOD_TO_PREFIX.get(method)
+    last_fight_method = _PREFIX_TO_LAST_FIGHT_METHOD.get(prefix, method)
+
+    for fighter, opponent, result in [(winner, loser, "W"), (loser, winner, "L")]:
+        matches = fighters_df.index[fighters_df["name"] == fighter]
+        if len(matches) == 0:
+            continue
+        idx = matches[0]
+        if result == "W":
+            fighters_df.loc[idx, "wins"] = fighters_df.loc[idx, "wins"] + 1
+            if prefix:
+                fighters_df.loc[idx, f"{prefix}_wins"] = fighters_df.loc[idx, f"{prefix}_wins"] + 1
+        else:
+            fighters_df.loc[idx, "losses"] = fighters_df.loc[idx, "losses"] + 1
+            if prefix:
+                fighters_df.loc[idx, f"{prefix}_losses"] = fighters_df.loc[idx, f"{prefix}_losses"] + 1
+        fighters_df.loc[idx, "last_fight_date"] = event_date
+        fighters_df.loc[idx, "last_fight_opponent"] = opponent
+        fighters_df.loc[idx, "last_fight_result"] = result
+        fighters_df.loc[idx, "last_fight_method"] = last_fight_method
+
+    return fighters_df
+
+
 STAT_COLS = [
     "fa_sig_landed", "fa_sig_att", "fb_sig_landed", "fb_sig_att",
     "fa_total_landed", "fa_total_att", "fb_total_landed", "fb_total_att",
@@ -367,7 +435,8 @@ def _fetch_from_wikipedia(event_name: str) -> list[dict]:
     return results
 
 
-def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, results_path: str = "data/fight_results.csv") -> int:
+def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, results_path: str = "data/fight_results.csv",
+                               fighters_path: str = "data/fighters.csv") -> int:
     """
     Entry point called from generate_site.py. Returns the number of rows
     actually added or updated -- never raises. Handles two cases:
@@ -375,6 +444,12 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     if the detail page has them), and fights that already have a basic
     result but are still missing the stat columns (attempts to backfill
     just the stats, leaving the existing winner/method/round/time alone).
+
+    Also syncs fighters.csv for every newly-found result (win/loss counts,
+    method breakdown, last-fight fields) -- see sync_fighter_records for
+    why this matters. If fighters.csv can't be read, the sync is skipped
+    (logged, not raised) but fight_results.csv still gets written normally,
+    since the two are independent concerns.
     """
     try:
         existing = pd.read_csv(results_path)
@@ -417,9 +492,25 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
         print("[results_fetcher] no source found any results this run -- will try again next scheduled run")
         return 0
 
+    fighters_df = None
+    try:
+        fighters_df = pd.read_csv(fighters_path)
+    except Exception as e:
+        print(f"[results_fetcher] could not read {fighters_path} -- roster sync will be skipped this run: {e}")
+
+    # Prefer the actual event date over "today", since this pipeline can
+    # run a day or two after the event itself -- last_fight_date should
+    # reflect when the fight happened, not when it was discovered.
+    event_date = pd.Timestamp.now().strftime("%Y-%m-%d")
+    if "event_date" in fight_cards_df.columns and not fight_cards_df.empty:
+        first_date = fight_cards_df["event_date"].iloc[0]
+        if pd.notna(first_date):
+            event_date = str(first_date)
+
     roster_names_lower = {n.strip().lower() for n in pd.concat([fight_cards_df["fighter_a"], fight_cards_df["fighter_b"]])}
     new_rows = []
     updated_count = 0
+    fighters_synced = 0
 
     for r in scraped:
         key = _key(r["fighter_a"], r["fighter_b"])
@@ -444,12 +535,23 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
             new_rows.append(row)
             print(f"[results_fetcher] found new result: {r['fighter_a']} vs {r['fighter_b']} -> {r['winner']} by {r['method']}" + (" (with stats)" if stats else " (no stats yet)"))
 
+            if fighters_df is not None and r.get("winner") and r.get("method"):
+                fighters_df = sync_fighter_records(fighters_df, r["fighter_a"], r["fighter_b"], r["winner"], r["method"], event_date)
+                fighters_synced += 1
+
         elif key in needs_stats_only and stats:
             mask = existing.apply(lambda row: _key(row["fighter_a"], row["fighter_b"]) == key, axis=1)
             for col, val in stats.items():
                 existing.loc[mask, col] = val
             updated_count += 1
             print(f"[results_fetcher] backfilled stats for existing result: {r['fighter_a']} vs {r['fighter_b']}")
+
+    if fighters_synced:
+        try:
+            fighters_df.to_csv(fighters_path, index=False)
+            print(f"[results_fetcher] synced {fighters_synced} result(s) into {fighters_path}")
+        except Exception as e:
+            print(f"[results_fetcher] found results but could not write {fighters_path}: {e}")
 
     if not new_rows and not updated_count:
         return 0
