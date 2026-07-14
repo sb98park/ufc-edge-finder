@@ -47,6 +47,22 @@ def build_ratings(fighters_df: pd.DataFrame, history_df: pd.DataFrame) -> dict[s
     return build_effective_ratings(fighters_df, elo.ratings, history_df)
 
 
+def _format_estimated_time(iso_str: str) -> str:
+    """
+    "2026-07-18T17:30:00-04:00" -> "~5:30 PM ET". The schedule is a
+    distributed-across-the-window ESTIMATE, not a broadcaster-confirmed
+    walkout time -- the leading "~" is there specifically so this never
+    reads as a promise. Falls back to the raw ISO string on a genuinely
+    malformed value rather than crashing the whole page over one bad
+    timestamp.
+    """
+    try:
+        parsed = dt.datetime.fromisoformat(iso_str)
+        return f"~{parsed.strftime('%-I:%M %p')} ET"
+    except (ValueError, TypeError):
+        return iso_str
+
+
 def main():
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
     history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
@@ -377,6 +393,25 @@ def main():
         fight_schedule, last_confirmed_at = apply_live_corrections(fight_schedule, finished_keys)
         if just_concluded:
             just_concluded["last_confirmed_at"] = last_confirmed_at
+
+        # Attach a human-readable estimated start time to each fight for
+        # display on This Weekend's card. Uses the SAME schedule already
+        # computed above (including apply_live_corrections' re-anchoring
+        # off real results as the night progresses) rather than a second,
+        # separate estimate -- one source of truth for fight timing, not
+        # two that could quietly drift apart from each other. Fights that
+        # have already concluded are naturally absent here, since
+        # apply_live_corrections strips confirmed fights out of the
+        # schedule entirely -- exactly the ones that don't need an
+        # "estimated" time anyway, since they already show a real result.
+        schedule_lookup = {
+            frozenset({f["fighter_a"].strip().lower(), f["fighter_b"].strip().lower()}): f["estimated_start_iso"]
+            for f in fight_schedule
+        }
+        for fight in events[0]["fights"]:
+            fkey = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
+            iso = schedule_lookup.get(fkey)
+            fight["estimated_start_display"] = _format_estimated_time(iso) if iso else None
 
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
