@@ -138,9 +138,27 @@
     background: #0d0f14; border: 1px solid #2a2410; border-radius: 8px;
     padding: 7px 11px; min-width: 44px;
   }
-  .countdown-box-value { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.3px; font-family: var(--font-display); }
+  .digit-pair { display: flex; justify-content: center; }
+  .scroll-digit {
+    position: relative; width: 13px; height: 25px; overflow: hidden;
+    font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px; font-family: var(--font-display);
+  }
+  .scroll-digit .track {
+    position: absolute; left: 0; top: 0; width: 100%;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .scroll-digit .num { height: 25px; line-height: 25px; }
+  .scroll-digit .track.animating {
+    animation: scrollUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  @keyframes scrollUp { from { transform: translateY(0); } to { transform: translateY(-25px); } }
   .countdown-box-label { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
-  .countdown-sep { font-size: 17px; font-weight: 800; color: #3a2f14; }
+  .countdown-sep {
+    font-size: 17px; font-weight: 800; color: #3a2f14;
+    animation: sepPulse 2.6s ease-in-out infinite;
+  }
+  @keyframes sepPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
   .live-header { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; }
   .live-header-macro {
@@ -968,6 +986,12 @@
 </style>
 </head>
 <body>
+{% macro scroll_value(id) %}
+    <div class="digit-pair">
+      <div class="scroll-digit" id="sd-{{ id }}-tens"><div class="track"><div class="num">-</div></div></div>
+      <div class="scroll-digit" id="sd-{{ id }}-ones"><div class="track"><div class="num">-</div></div></div>
+    </div>
+  {%- endmacro %}
 {% macro icon_track() -%}
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart"><defs><linearGradient id="hi-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><polyline points="3,19 9,12 14,16 22,5" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><polyline points="16,5 22,5 22,11" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
 {%- endmacro %}
@@ -1076,22 +1100,22 @@
     <div class="countdown-label" id="countdown-label">⏱ {{ countdown_label }}</div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
-        <div class="countdown-box-value" id="cd-days">--</div>
+        {{ scroll_value('days') }}
         <div class="countdown-box-label">Days</div>
       </div>
       <div class="countdown-sep">:</div>
       <div class="countdown-box">
-        <div class="countdown-box-value" id="cd-hours">--</div>
+        {{ scroll_value('hours') }}
         <div class="countdown-box-label">Hrs</div>
       </div>
       <div class="countdown-sep">:</div>
       <div class="countdown-box">
-        <div class="countdown-box-value" id="cd-mins">--</div>
+        {{ scroll_value('mins') }}
         <div class="countdown-box-label">Min</div>
       </div>
       <div class="countdown-sep">:</div>
       <div class="countdown-box">
-        <div class="countdown-box-value" id="cd-secs">--</div>
+        {{ scroll_value('secs') }}
         <div class="countdown-box-label">Sec</div>
       </div>
     </div>
@@ -2273,10 +2297,46 @@
       const liveHeader = document.getElementById('live-header');
       const liveMacroText = document.getElementById('live-macro-text');
       const liveMicro = document.getElementById('live-header-micro');
-      const daysEl = document.getElementById('cd-days');
-      const hoursEl = document.getElementById('cd-hours');
-      const minsEl = document.getElementById('cd-mins');
-      const secsEl = document.getElementById('cd-secs');
+
+      // Per-digit scroll animation: each unit (days/hours/mins/secs) is
+      // two independent digit elements (tens, ones). Only the digit(s)
+      // whose value actually changed animate -- a normal tick like
+      // 23 -> 24 moves only the ones digit, while a rollover like
+      // 29 -> 30 moves both at once, since both genuinely changed.
+      const lastCountdownValues = {};
+      function scrollDigit(id, place, newDigit) {
+        const el = document.getElementById(`sd-${id}-${place}`);
+        if (!el) return;
+        const track = el.querySelector('.track');
+        const newNum = document.createElement('div');
+        newNum.className = 'num';
+        newNum.textContent = newDigit;
+        track.appendChild(newNum);
+        track.classList.add('animating');
+        track.addEventListener('animationend', function handler() {
+          track.removeEventListener('animationend', handler);
+          track.querySelector('.num').remove();
+          track.classList.remove('animating');
+          track.style.transform = 'translateY(0)';
+        }, { once: true });
+      }
+      function updateCountdownUnit(id, newValue) {
+        const newStr = String(newValue).padStart(2, '0');
+        const oldStr = lastCountdownValues[id];
+        if (newStr === oldStr) return;
+        if (oldStr === undefined) {
+          // First paint: no previous value to animate from, just set both
+          // digits directly so the initial load doesn't scroll in from "-".
+          const el0 = document.getElementById(`sd-${id}-tens`);
+          const el1 = document.getElementById(`sd-${id}-ones`);
+          if (el0) el0.querySelector('.num').textContent = newStr[0];
+          if (el1) el1.querySelector('.num').textContent = newStr[1];
+        } else {
+          if (newStr[0] !== oldStr[0]) scrollDigit(id, 'tens', newStr[0]);
+          if (newStr[1] !== oldStr[1]) scrollDigit(id, 'ones', newStr[1]);
+        }
+        lastCountdownValues[id] = newStr;
+      }
 
       let schedule = [];
       try { schedule = JSON.parse(card.dataset.schedule || '[]'); } catch (e) { schedule = []; }
@@ -2427,10 +2487,10 @@
         const hours = Math.floor((diff % 86400000) / 3600000);
         const minutes = Math.floor((diff % 3600000) / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
-        daysEl.textContent = String(days).padStart(2, '0');
-        hoursEl.textContent = String(hours).padStart(2, '0');
-        minsEl.textContent = String(minutes).padStart(2, '0');
-        secsEl.textContent = String(seconds).padStart(2, '0');
+        updateCountdownUnit('days', days);
+        updateCountdownUnit('hours', hours);
+        updateCountdownUnit('mins', minutes);
+        updateCountdownUnit('secs', seconds);
       }
       update();
       setInterval(update, 1000);
