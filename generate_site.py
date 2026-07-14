@@ -19,7 +19,7 @@ from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
 from src.card_matcher import (
     load_fight_cards, group_edges_by_card, top_standout_props, top_favorite_picks,
-    assign_canonical_fight_ids, group_unmatched_by_fight, COUNTRY_COLORS,
+    assign_canonical_fight_ids, group_unmatched_by_fight, COUNTRY_FLAG_COLORS,
 )
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
@@ -418,18 +418,22 @@ def main():
     env.globals["donut_svg"] = build_donut_svg
     env.globals["damage_svg"] = build_damage_silhouette_svg
 
-    # Fighter avatar flag-colors: maps a fighter's name to their country's
-    # gradient pair, so the template can use it in place of the default
-    # hash-based hue when available. Returns None for any fighter not in
-    # fighters.csv, or whose country isn't in COUNTRY_COLORS -- both cases
-    # the template treats identically, falling back to the existing
-    # hash-based gradient rather than showing nothing.
-    _fighter_country = dict(zip(fighters_df["name"], fighters_df.get("country", [])))
+    # Fighter avatar flag-colors: maps a fighter's name to their
+    # country's real flag color segments (rendered as a ring around the
+    # avatar), so the template can use it in place of the default
+    # hash-based hue when available. Reads from a dedicated lookup file
+    # rather than fighters.csv, since most fighters here (undercard/
+    # prelim names) aren't in the main stats roster at all. Returns None
+    # for any fighter with no mapped country, or whose country isn't in
+    # COUNTRY_FLAG_COLORS -- both cases the template treats identically,
+    # falling back to the existing hash-based gradient.
+    _countries_df = pd.read_csv(f"{DATA_DIR}/fighter_countries.csv")
+    _fighter_country = dict(zip(_countries_df["name"], _countries_df["country"]))
     def fighter_avatar_colors(name):
         country = _fighter_country.get(name)
-        if country is None or (isinstance(country, float) and country != country):  # NaN check
+        if country is None:
             return None
-        return COUNTRY_COLORS.get(country)
+        return COUNTRY_FLAG_COLORS.get(country)
     env.globals["fighter_avatar_colors"] = fighter_avatar_colors
 
     env.filters["tojson"] = lambda obj: json.dumps(obj, default=str)
