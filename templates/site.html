@@ -765,8 +765,6 @@
   .matchup-fighter { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
   .matchup-fighter.right { justify-content: flex-end; text-align: right; }
   .matchup-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; display: block; }
-  .fighter-country { font-size: 10px; color: var(--muted); margin-top: 1px; }
-  .fighter-country.right { text-align: right; }
   .factor-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
   .factor-badges.right { justify-content: flex-end; }
   .factor-badge {
@@ -1025,7 +1023,7 @@
 {%- endmacro %}
 
 {% macro icon_target() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Target"><defs><linearGradient id="hi-target" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><circle cx="13" cy="13" r="8" stroke="url(#hi-target)" stroke-width="1.8"/><circle cx="13" cy="13" r="5" stroke="url(#hi-target)" stroke-width="1.8"/><circle cx="13" cy="13" r="1.8" fill="url(#hi-target)"/><line x1="13" y1="5" x2="13" y2="2" stroke="url(#hi-target)" stroke-width="1.8" stroke-linecap="round"/><line x1="13" y1="21" x2="13" y2="24" stroke="url(#hi-target)" stroke-width="1.8" stroke-linecap="round"/><line x1="5" y1="13" x2="2" y2="13" stroke="url(#hi-target)" stroke-width="1.8" stroke-linecap="round"/><line x1="21" y1="13" x2="24" y2="13" stroke="url(#hi-target)" stroke-width="1.8" stroke-linecap="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Redline gauge"><defs><linearGradient id="hi-target" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M4,20 A9,9 0 1,1 22,20" stroke="url(#hi-target)" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.45"/><line x1="13" y1="20" x2="18.5" y2="9.5" stroke="url(#hi-target)" stroke-width="2" stroke-linecap="round"/><circle cx="13" cy="20" r="2.2" fill="url(#hi-target)"/><circle cx="19.7" cy="7.3" r="1.3" fill="url(#hi-target)" opacity="0.7"/></svg>
 {%- endmacro %}
 
 {% macro empty_state(icon_svg, headline, description) %}
@@ -1625,8 +1623,6 @@
           {{ fighter_avatar(fight.fighter_a, is_winner=(fight.winner == fight.fighter_a)) }}
           <div>
             <span class="matchup-name">{{ fight.fighter_a }}</span>
-            {% set country_label = fighter_country_label(fight.fighter_a) %}
-            {% if country_label %}<div class="fighter-country">{{ country_label }}</div>{% endif %}
             {% if fight.preview and fight.preview.comparison.a.badges %}
             <div class="factor-badges">
               {% for b in fight.preview.comparison.a.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}
@@ -1649,8 +1645,6 @@
         <div class="matchup-fighter right">
           <div>
             <span class="matchup-name">{{ fight.fighter_b }}</span>
-            {% set country_label_b = fighter_country_label(fight.fighter_b) %}
-            {% if country_label_b %}<div class="fighter-country right">{{ country_label_b }}</div>{% endif %}
             {% if fight.preview and fight.preview.comparison.b.badges %}
             <div class="factor-badges right">
               {% for b in fight.preview.comparison.b.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}

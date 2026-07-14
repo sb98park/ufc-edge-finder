@@ -19,7 +19,7 @@ from src.edge_finder import find_all_edges
 from src.live_props import get_live_props
 from src.card_matcher import (
     load_fight_cards, group_edges_by_card, top_standout_props, top_favorite_picks,
-    assign_canonical_fight_ids, group_unmatched_by_fight, COUNTRY_FLAG_EMOJI,
+    assign_canonical_fight_ids, group_unmatched_by_fight,
 )
 from src.power_rating import build_effective_ratings
 from src.odds_utils import format_american_odds
@@ -417,27 +417,6 @@ def main():
     env.filters["american"] = format_american_odds
     env.globals["donut_svg"] = build_donut_svg
     env.globals["damage_svg"] = build_damage_silhouette_svg
-
-    # Fighter country label: maps a fighter's name to "🇿🇦 South Africa"
-    # style text, shown directly below their name on the fight card.
-    # Explicit text + flag emoji rather than a color-coded visual
-    # indicator -- a colored ring around the avatar was tried first and
-    # confirmed confusing in real use (read as some kind of performance
-    # metric, understandably, since this site already uses a ring shape
-    # elsewhere for model confidence). Returns None for any fighter with
-    # no mapped country, or whose country isn't in COUNTRY_FLAG_EMOJI --
-    # the template simply omits the label in that case.
-    _countries_df = pd.read_csv(f"{DATA_DIR}/fighter_countries.csv")
-    _fighter_country = dict(zip(_countries_df["name"], _countries_df["country"]))
-    def fighter_country_label(name):
-        country = _fighter_country.get(name)
-        if country is None:
-            return None
-        emoji = COUNTRY_FLAG_EMOJI.get(country)
-        if emoji is None:
-            return None
-        return f"{emoji} {country}"
-    env.globals["fighter_country_label"] = fighter_country_label
 
     env.filters["tojson"] = lambda obj: json.dumps(obj, default=str)
     # NaN is truthy in Python, so a plain {% if x %} check doesn't catch a
