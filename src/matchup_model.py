@@ -159,6 +159,77 @@ def missed_weight_penalty(row: pd.Series) -> float:
     return -min(MISSED_WEIGHT_PENALTY_PER_INSTANCE * float(count), MISSED_WEIGHT_PENALTY_CAP)
 
 
+# Canonical lightest-to-heaviest ordering, used to measure how many
+# divisions a fighter is jumping -- a one-division move (e.g. Welterweight
+# to Middleweight) and a two-division move (e.g. Lightweight to
+# Middleweight) are not the same risk, and shouldn't score identically.
+DIVISION_ORDER = [
+    "Strawweight", "Flyweight", "Bantamweight", "Featherweight", "Lightweight",
+    "Welterweight", "Middleweight", "Light Heavyweight", "Heavyweight",
+]
+
+# Deliberately modest magnitudes -- this factor is NOT backtested against
+# historical outcomes the way e.g. the durability calibration was (that
+# would require weight-class data per historical fight, which
+# fight_history.csv doesn't have). Moving up is scaled by how many
+# divisions are jumped; moving down gets a flat, smaller bonus, since a
+# clean cut's advantage is real but shouldn't be overstated relative to
+# an unvalidated theory. Deliberately asymmetric: moving up is riskier
+# than moving down is advantageous, per the reasoning discussed with the
+# user (power/leverage disadvantage facing larger opponents, versus a
+# capped upside from cutting into a smaller field).
+WEIGHT_CLASS_UP_PENALTY_PER_DIVISION = 10.0
+WEIGHT_CLASS_UP_PENALTY_CAP = 30.0
+WEIGHT_CLASS_DOWN_BONUS = 8.0
+
+
+def recent_weight_class(name: str, history_df: pd.DataFrame | None) -> str | None:
+    """
+    A fighter's settled recent division: simply their single most recent
+    fight's weight class. This deliberately does NOT average over a
+    window of several fights -- by the time we're predicting a fighter's
+    CURRENT upcoming fight, any past one-off aberration (a short-notice
+    or catchweight booking at an unusual weight) has already been
+    superseded by whatever they actually fought at next, so the most
+    recent entry already reflects reality. Concretely: Usman's one-off
+    2023 Middleweight fight is correctly ignored because his following
+    fight (2025, Welterweight) is now the most recent entry -- and
+    Makhachev's genuine, deliberate Welterweight title win is correctly
+    recognized immediately, rather than needing a second Welterweight
+    fight to outvote two years of Lightweight history first. Returns
+    None with no history at all, which the caller treats as "unknown,
+    don't penalize" rather than guessing.
+    """
+    if history_df is None or history_df.empty:
+        return None
+    rows = history_df[history_df["name"] == name].sort_values("date", ascending=False)
+    if rows.empty:
+        return None
+    return rows["weight_class"].iloc[0]
+
+
+def weight_class_change_penalty(name: str, this_fight_weight_class: str | None, history_df: pd.DataFrame | None) -> float:
+    """
+    Penalizes a fighter moving up in weight (scaled by how many divisions),
+    rewards moving down (flat, smaller bonus). Returns 0.0 -- no penalty,
+    no bonus -- whenever there isn't enough information to say anything:
+    no history, no current division, an unrecognized division name, or no
+    settled division different from this fight's. Silence over a guess is
+    deliberate here, same as elsewhere in this module.
+    """
+    settled = recent_weight_class(name, history_df)
+    if not settled or not this_fight_weight_class or settled == this_fight_weight_class:
+        return 0.0
+    if settled not in DIVISION_ORDER or this_fight_weight_class not in DIVISION_ORDER:
+        return 0.0
+
+    division_distance = DIVISION_ORDER.index(this_fight_weight_class) - DIVISION_ORDER.index(settled)
+    if division_distance > 0:  # moving up (this fight's division is heavier)
+        return -min(WEIGHT_CLASS_UP_PENALTY_PER_DIVISION * division_distance, WEIGHT_CLASS_UP_PENALTY_CAP)
+    else:  # moving down
+        return WEIGHT_CLASS_DOWN_BONUS
+
+
 def compute_divisional_method_priors(fighters_df: pd.DataFrame) -> dict[str, dict[str, float]]:
     """
     Divisional average method-of-victory rates, computed from the roster's
@@ -251,6 +322,15 @@ def build_factor_badges(matchup: dict) -> dict:
     elif missed_weight_adj > BADGE_THRESHOLD / 3:
         badges_b.append({"label": "Missed Weight", "direction": "-"})
 
+    if matchup.get("weight_class_change_flag_a"):
+        direction = matchup.get("weight_class_change_direction_a")
+        label = "Moving Up" if direction == "up" else "Moving Down"
+        badges_a.append({"label": label, "direction": "-" if direction == "up" else "+"})
+    if matchup.get("weight_class_change_flag_b"):
+        direction = matchup.get("weight_class_change_direction_b")
+        label = "Moving Up" if direction == "up" else "Moving Down"
+        badges_b.append({"label": label, "direction": "-" if direction == "up" else "+"})
+
     return {"a": badges_a, "b": badges_b}
 
 
@@ -302,7 +382,10 @@ def submission_threat_adjustment(row_a: pd.Series, row_b: pd.Series) -> float:
     return (sub_rate_a - sub_rate_b) * SUBMISSION_THREAT_SCALE
 
 
-def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
+def style_matchup_adjustment(
+    row_a: pd.Series, row_b: pd.Series,
+    weight_class_history_df: pd.DataFrame | None = None, this_fight_weight_class: str | None = None,
+) -> dict:
     """
     Returns a rating-point adjustment (in favor of fighter A, can be
     negative) plus a breakdown of what drove it, for transparency.
@@ -372,13 +455,17 @@ def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
     missed_weight_adj_b = missed_weight_penalty(row_b)
     missed_weight_adj = missed_weight_adj_a - missed_weight_adj_b
 
+    weight_class_change_adj_a = weight_class_change_penalty(row_a.get("name"), this_fight_weight_class, weight_class_history_df)
+    weight_class_change_adj_b = weight_class_change_penalty(row_b.get("name"), this_fight_weight_class, weight_class_history_df)
+    weight_class_change_adj = weight_class_change_adj_a - weight_class_change_adj_b
+
     stance_adj = stance_matchup_adjustment(row_a, row_b)
     submission_threat_adj = submission_threat_adjustment(row_a, row_b)
 
     total_adj = (
         wrestling_adj + striking_adj + durability_adj + layoff_adj
-        + quick_return_adj + age_cliff_adj + missed_weight_adj + stance_adj
-        + submission_threat_adj
+        + quick_return_adj + age_cliff_adj + missed_weight_adj + weight_class_change_adj
+        + stance_adj + submission_threat_adj
     )
 
     return {
@@ -397,6 +484,11 @@ def style_matchup_adjustment(row_a: pd.Series, row_b: pd.Series) -> dict:
         "age_cliff_flag_a": age_cliff_adj_a < 0,
         "age_cliff_flag_b": age_cliff_adj_b < 0,
         "missed_weight_adjustment": missed_weight_adj,
+        "weight_class_change_adjustment": weight_class_change_adj,
+        "weight_class_change_flag_a": weight_class_change_adj_a != 0,
+        "weight_class_change_flag_b": weight_class_change_adj_b != 0,
+        "weight_class_change_direction_a": "up" if weight_class_change_adj_a < 0 else ("down" if weight_class_change_adj_a > 0 else None),
+        "weight_class_change_direction_b": "up" if weight_class_change_adj_b < 0 else ("down" if weight_class_change_adj_b > 0 else None),
         "stance_adjustment": stance_adj,
         "style_a": classify_style(row_a),
         "style_b": classify_style(row_b),
@@ -448,6 +540,8 @@ def predict_matchup(
     fighters_df: pd.DataFrame,
     effective_ratings: dict[str, float],
     fight_history_df: pd.DataFrame | None = None,
+    weight_class_history_df: pd.DataFrame | None = None,
+    fight_weight_class: str | None = None,
 ) -> dict | None:
     """
     Full pairwise prediction: base rating gap + style-matchup adjustment,
@@ -462,7 +556,12 @@ def predict_matchup(
     base_r_a = effective_ratings.get(fighter_a, 1500.0)
     base_r_b = effective_ratings.get(fighter_b, 1500.0)
 
-    style = style_matchup_adjustment(row_a, row_b)
+    # Prefer the caller's card-specific division when they have it (the
+    # actual booked weight class for this fight) over fighters_df's own
+    # weight_class column, which reflects "most recently known division"
+    # and could in principle drift from what a specific card says.
+    this_fight_wc = fight_weight_class or row_a.get("weight_class")
+    style = style_matchup_adjustment(row_a, row_b, weight_class_history_df, this_fight_wc)
     recent_form_adj = recent_form_adjustment(fighter_a, fighter_b, fight_history_df)
     raw_layer = style["total_adjustment"] + recent_form_adj
     applied_layer = max(-ADJUSTMENT_TOTAL_CAP, min(ADJUSTMENT_TOTAL_CAP, raw_layer))

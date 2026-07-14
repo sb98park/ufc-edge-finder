@@ -181,6 +181,7 @@ def group_edges_by_card(
     cards_df: pd.DataFrame,
     fighters_df: pd.DataFrame | None = None,
     effective_ratings: dict[str, float] | None = None,
+    weight_class_history_df: pd.DataFrame | None = None,
 ) -> tuple[list[dict], pd.DataFrame]:
     """
     Returns (events, unmatched_edges):
@@ -195,7 +196,8 @@ def group_edges_by_card(
         is_five_round = str(row.get("card_position", "")).strip() == "Main Event"
         if fighters_df is not None and effective_ratings is not None:
             preview = build_fight_preview(
-                row["fighter_a"], row["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round
+                row["fighter_a"], row["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round,
+                weight_class_history_df=weight_class_history_df, fight_weight_class=row.get("weight_class"),
             )
         fights.append({
             "event_name": row["event_name"],

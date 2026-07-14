@@ -132,12 +132,17 @@ def build_fight_preview(
     fighters_df: pd.DataFrame,
     effective_ratings: dict[str, float],
     is_five_round: bool = False,
+    weight_class_history_df: pd.DataFrame | None = None,
+    fight_weight_class: str | None = None,
 ) -> dict | None:
     row_a, row_b = _fighter_row(fighters_df, fighter_a), _fighter_row(fighters_df, fighter_b)
     if row_a is None or row_b is None:
         return None
 
-    matchup = predict_matchup(fighter_a, fighter_b, fighters_df, effective_ratings)
+    matchup = predict_matchup(
+        fighter_a, fighter_b, fighters_df, effective_ratings,
+        weight_class_history_df=weight_class_history_df, fight_weight_class=fight_weight_class,
+    )
     prob_a = matchup["prob_a"]
 
     favorite, favorite_prob, underdog = (

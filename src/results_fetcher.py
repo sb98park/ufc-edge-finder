@@ -82,7 +82,7 @@ _PREFIX_TO_LAST_FIGHT_METHOD = {"ko": "KO/TKO", "sub": "SUB", "dec": "DEC"}
 
 
 def sync_fighter_records(fighters_df: pd.DataFrame, fighter_a: str, fighter_b: str,
-                          winner: str, method: str, event_date: str) -> pd.DataFrame:
+                          winner: str, method: str, event_date: str, weight_class: str | None = None) -> pd.DataFrame:
     """
     Updates both fighters' win/loss counts, method breakdown, and
     last-fight fields in fighters_df after a new result is found. This is
@@ -91,6 +91,12 @@ def sync_fighter_records(fighters_df: pd.DataFrame, fighter_a: str, fighter_b: s
     before this existed, results could land in one file and never reach
     the other, silently leaving win/loss counts and last-fight dates
     stale for every fighter on a card once it actually happened.
+
+    Also updates each fighter's own weight_class column to whatever this
+    fight was actually booked at, when known -- otherwise a division
+    change (like Holloway's welterweight debut) would keep silently
+    reading as the fighter's old division in fighters.csv forever, the
+    same class of staleness this whole sync exists to prevent.
 
     Silently skips any fighter not present in fighters_df (untracked
     undercard names aren't all in the curated roster) rather than
@@ -118,8 +124,36 @@ def sync_fighter_records(fighters_df: pd.DataFrame, fighter_a: str, fighter_b: s
         fighters_df.loc[idx, "last_fight_opponent"] = opponent
         fighters_df.loc[idx, "last_fight_result"] = result
         fighters_df.loc[idx, "last_fight_method"] = last_fight_method
+        if weight_class:
+            fighters_df.loc[idx, "weight_class"] = weight_class
 
     return fighters_df
+
+
+def append_weight_class_history(fighter_a: str, fighter_b: str, event_date: str, weight_class: str | None,
+                                 history_path: str = "data/fighter_weight_class_history.csv") -> None:
+    """
+    Appends one row per fighter (name, date, weight_class) to the weight
+    class history file whenever a new result is found -- this is what
+    lets the weight-class-change factor stay current automatically,
+    without anyone having to research a fighter's recent division by
+    hand. Silently does nothing if weight_class is missing (can't log
+    what isn't known), consistent with this module never raising over an
+    incomplete data point.
+    """
+    if not weight_class:
+        return
+    try:
+        existing = pd.read_csv(history_path)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        existing = pd.DataFrame(columns=["name", "date", "weight_class"])
+
+    new_rows = pd.DataFrame([
+        {"name": fighter_a, "date": event_date, "weight_class": weight_class},
+        {"name": fighter_b, "date": event_date, "weight_class": weight_class},
+    ])
+    combined = pd.concat([existing, new_rows], ignore_index=True)
+    combined.to_csv(history_path, index=False)
 
 
 STAT_COLS = [
@@ -508,6 +542,10 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
             event_date = str(first_date)
 
     roster_names_lower = {n.strip().lower() for n in pd.concat([fight_cards_df["fighter_a"], fight_cards_df["fighter_b"]])}
+    weight_class_by_key = {}
+    if "weight_class" in fight_cards_df.columns:
+        for c in fight_cards_df.to_dict("records"):
+            weight_class_by_key[_key(c["fighter_a"], c["fighter_b"])] = c.get("weight_class")
     new_rows = []
     updated_count = 0
     fighters_synced = 0
@@ -536,8 +574,13 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
             print(f"[results_fetcher] found new result: {r['fighter_a']} vs {r['fighter_b']} -> {r['winner']} by {r['method']}" + (" (with stats)" if stats else " (no stats yet)"))
 
             if fighters_df is not None and r.get("winner") and r.get("method"):
-                fighters_df = sync_fighter_records(fighters_df, r["fighter_a"], r["fighter_b"], r["winner"], r["method"], event_date)
+                fighters_df = sync_fighter_records(
+                    fighters_df, r["fighter_a"], r["fighter_b"], r["winner"], r["method"], event_date,
+                    weight_class=weight_class_by_key.get(key),
+                )
                 fighters_synced += 1
+
+            append_weight_class_history(r["fighter_a"], r["fighter_b"], event_date, weight_class_by_key.get(key))
 
         elif key in needs_stats_only and stats:
             mask = existing.apply(lambda row: _key(row["fighter_a"], row["fighter_b"]) == key, axis=1)

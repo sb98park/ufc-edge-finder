@@ -71,6 +71,11 @@ def main():
     future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")
     cards_df, future_cards_df, days_since_event = promote_card_if_stale(cards_df, future_cards_df)
 
+    try:
+        weight_class_history_df = pd.read_csv(f"{DATA_DIR}/fighter_weight_class_history.csv")
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        weight_class_history_df = pd.DataFrame(columns=["name", "date", "weight_class"])
+
     live_error = None
     edges_df = pd.DataFrame()
     source = None
@@ -92,8 +97,8 @@ def main():
     except Exception as exc:
         live_error = f"Couldn't fetch live odds: {exc}"
 
-    events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings)
-    future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings)
+    events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings, weight_class_history_df)
+    future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings, weight_class_history_df)
 
     tracked_edges = pd.DataFrame(
         [edge for event in events for fight in event["fights"] for edge in fight["edges"]]
