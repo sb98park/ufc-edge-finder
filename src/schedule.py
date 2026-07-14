@@ -69,6 +69,24 @@ VERIFIED_CHRONOLOGICAL_ORDER = {
     ("Cory Sandhagen", "Mario Bautista"): 3,
 }
 
+# Real, sportsbook-confirmed start times (FanDuel, verified by the user
+# directly against the live odds board) for UFC Fight Night: Du Plessis
+# vs. Usman -- used in place of the generic evenly-distributed estimate
+# for these specific fights, since an actual anchor beats a guess.
+VERIFIED_FIGHT_TIMES = {
+    ("Dione Barbosa", "Anna Melisano"): "17:10",
+    ("Alvin Hines", "RJ Harris"): "17:35",
+    ("Alden Coria", "Stewart Nicoll"): "18:00",
+    ("Felipe Franco", "Levi Rodrigues Jr."): "18:25",
+    ("Jean-Paul Lebosnoyani", "Seokhyeon Ko"): "18:50",
+    ("Austin Bashi", "Jose Delgado"): "19:15",
+    ("Tabatha Ricci", "Fatima Kline"): "19:40",
+    ("Tommy McMillen", "Alberto Montes"): "20:45",
+    ("Chase Hooper", "Mitch Ramirez"): "21:15",
+    ("Jared Cannonier", "Christian Leroy Duncan"): "21:45",
+    ("Dricus Du Plessis", "Kamaru Usman"): "22:45",
+}
+
 
 def _fight_key(f: dict) -> tuple:
     return (f["fighter_a"], f["fighter_b"])
@@ -149,6 +167,20 @@ def build_fight_schedule(
             "estimated_start_iso": _fmt(cursor), "estimated_end_iso": _fmt(slot_end),
         })
         cursor = slot_end
+
+    # Swap in real, sportsbook-confirmed start times wherever one exists,
+    # in place of the generic evenly-distributed estimate above -- an
+    # actual anchor beats a guess. Only the start time was confirmed
+    # (not a fight-specific end time), so estimated_end_iso uses a fixed
+    # 20-minute display window here rather than reusing the distributed
+    # segment's own end-of-slot value, which wouldn't line up with the
+    # now-corrected start.
+    for entry in schedule:
+        verified = VERIFIED_FIGHT_TIMES.get((entry["fighter_a"], entry["fighter_b"]))
+        if verified:
+            start = _parse(event_date, verified)
+            entry["estimated_start_iso"] = _fmt(start)
+            entry["estimated_end_iso"] = _fmt(start + dt.timedelta(minutes=20))
 
     return schedule
 
