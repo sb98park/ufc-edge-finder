@@ -365,25 +365,30 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
         implied_a = True
         print(f"[charts] {fighter_a}: derived as inverse of {fighter_b}'s real line (no independent data)")
     elif len(points_a) >= 2 and len(points_b) >= 2:
-        # Both sides have independently-sourced real data -- sanity check
-        # that they're actually consistent with each other. A genuine
-        # two-way market's two prices should sum close to 100% (minor vig
-        # aside); if they don't, the two independent sources disagree.
-        # Confirmed live: McGregor 43% + Holloway 70% = 113%, a real bug.
+        # Both sides have independently-sourced real data. A genuine
+        # two-way market's two prices are complementary (ignoring vig),
+        # but independently-scraped sides are rarely sampled at the exact
+        # same timestamps, so their raw latest points can drift apart by
+        # a few percent even when nothing is actually wrong -- and
+        # unlike a sportsbook's displayed odds, this chart shows no vig
+        # figure to explain that gap, so ANY visible gap reads as a bug
+        # to someone looking at it, not just a large one. Always trust
+        # whichever side's most recent point is actually more recent
+        # (not whichever has more total accumulated points -- snapshot
+        # data is captured opportunistically per-run, unlike CLOB history
+        # which covers both sides over the identical window, so a side
+        # with more total points can still have a staler latest reading
+        # than a side with fewer but fresher ones. Confirmed live:
+        # McGregor had 15 points but a stale latest one; Holloway had
+        # fewer but more current data) and derive the other side as its
+        # exact complement across the whole line, not just the latest
+        # point, so the two displayed lines always sum to 100% everywhere
+        # on the chart, not only at one end of it.
         sorted_a = sorted(points_a, key=lambda p: p[0])
         sorted_b = sorted(points_b, key=lambda p: p[0])
         latest_ts_a, latest_a = sorted_a[-1]
         latest_ts_b, latest_b = sorted_b[-1]
-        if abs((latest_a + latest_b) - 1.0) > 0.08:
-            # Trust whichever side's MOST RECENT point is actually more
-            # recent, not whichever has more total accumulated points --
-            # snapshot data is captured opportunistically per-run (unlike
-            # CLOB history, which covers both sides over the identical
-            # window), so a side with more total points can still have a
-            # staler latest reading than a side with fewer but fresher
-            # ones. Confirmed live: this was the actual root cause, not
-            # just normal vig -- McGregor had 15 points but a stale
-            # latest one; Holloway had fewer but more current data.
+        if abs((latest_a + latest_b) - 1.0) > 0.005:
             if latest_ts_a >= latest_ts_b:
                 points_b = [(t, 1 - p) for t, p in points_a]
                 implied_b = True
