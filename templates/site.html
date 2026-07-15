@@ -761,23 +761,14 @@
   }
   details.fight-card summary::-webkit-details-marker { display: none; }
 
+  .matchup-content { flex: 1; min-width: 0; }
   .matchup-header { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
-  .matchup-fighter {
-    display: grid; grid-template-columns: auto 1fr; grid-template-areas: "avatar name" "avatar badges";
-    align-items: center; column-gap: 8px; flex: 1; min-width: 0;
-  }
-  .matchup-fighter .fighter-avatar-wrap { grid-area: avatar; align-self: center; }
-  .matchup-fighter .matchup-name-wrap { grid-area: name; min-width: 0; }
-  .matchup-fighter .factor-badges { grid-area: badges; min-width: 0; }
-  .matchup-fighter.right {
-    grid-template-columns: 1fr auto; grid-template-areas: "name avatar" "badges avatar";
-    text-align: right;
-  }
-  @media (max-width: 480px) {
-    .matchup-fighter { grid-template-areas: "avatar name" "badges badges"; align-self: start; }
-    .matchup-fighter.right { grid-template-areas: "name avatar" "badges badges"; align-self: start; }
-  }
+  .matchup-fighter { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .matchup-fighter.right { justify-content: flex-end; text-align: right; }
+  .matchup-fighter .matchup-name-wrap { min-width: 0; }
   .matchup-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; display: block; }
+  .matchup-badges-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .matchup-badges-row .factor-badges { flex: 1; min-width: 0; margin-top: 0; }
   .factor-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
   .factor-badges.right { justify-content: flex-end; }
   .factor-badge {
@@ -786,13 +777,11 @@
   }
   .factor-badge.pos { background: #10251a; color: var(--green); }
   .factor-badge.neg { background: #2a1414; color: var(--red); }
-  .matchup-vs {
-    text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: 124px; min-width: 0; overflow: hidden;
-    position: relative; min-height: 71px; display: flex; flex-direction: column; justify-content: space-between;
-  }
-  .vs-text {
-    position: absolute; top: 50%; left: 4px; right: 4px; transform: translateY(-50%);
-    display: block; font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: 0.5px;
+  .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: 124px; min-width: 0; overflow: hidden; }
+  .vs-text { display: block; font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: 0.5px; }
+  @media (max-width: 480px) {
+    .matchup-fighter .fighter-avatar-wrap { display: none; }
+    .matchup-fighter { align-self: start; }
   }
 
   .fighter-avatar {
@@ -1646,6 +1635,7 @@
   {% macro render_fight_card(fight, card_index=none) %}
   <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
     <summary>
+      <div class="matchup-content">
       <div class="matchup-header">
         <div class="matchup-fighter">
           {{ fighter_avatar(fight.fighter_a, is_winner=(fight.winner == fight.fighter_a)) }}
@@ -1653,11 +1643,6 @@
             <span class="matchup-name">{{ fight.fighter_a }}</span>
             {% if fight.winner == fight.fighter_a %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>{% endif %}
           </div>
-          {% if fight.preview and fight.preview.comparison.a.badges %}
-          <div class="factor-badges">
-            {% for b in fight.preview.comparison.a.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}
-          </div>
-          {% endif %}
         </div>
         <div class="matchup-vs">
           <div class="matchup-vs-top">
@@ -1677,13 +1662,19 @@
             {% if fight.winner == fight.fighter_b %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>{% endif %}
             <span class="matchup-name">{{ fight.fighter_b }}</span>
           </div>
-          {% if fight.preview and fight.preview.comparison.b.badges %}
-          <div class="factor-badges right">
-            {% for b in fight.preview.comparison.b.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}
-          </div>
-          {% endif %}
           {{ fighter_avatar(fight.fighter_b, is_winner=(fight.winner == fight.fighter_b)) }}
         </div>
+      </div>
+      {% if (fight.preview and fight.preview.comparison.a.badges) or (fight.preview and fight.preview.comparison.b.badges) %}
+      <div class="matchup-badges-row">
+        <div class="factor-badges">
+          {% if fight.preview and fight.preview.comparison.a.badges %}{% for b in fight.preview.comparison.a.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
+        </div>
+        <div class="factor-badges right">
+          {% if fight.preview and fight.preview.comparison.b.badges %}{% for b in fight.preview.comparison.b.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
+        </div>
+      </div>
+      {% endif %}
       </div>
       <span class="chevron">▶</span>
     </summary>
