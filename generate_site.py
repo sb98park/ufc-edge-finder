@@ -435,7 +435,23 @@ def main():
             return f"{fighter} by {market[len('Method: '):]}"
         return market
 
+    def short_market_label(market):
+        """
+        Strips the "Method: " / "Fight Outcome: " prefix for tables that
+        already show the fighter or selection in their own column right
+        next to it -- unlike clear_market_label above, there's no
+        ambiguity to resolve here, so the prefix is pure redundancy that
+        costs real width on narrow screens for no added clarity.
+        """
+        if not market:
+            return market
+        for prefix in ("Method: ", "Fight Outcome: "):
+            if market.startswith(prefix):
+                return market[len(prefix):]
+        return market
+
     env.filters["clear_market"] = clear_market_label
+    env.filters["short_market"] = short_market_label
     template = env.get_template("site.html")
 
     # Lightweight snapshot for the "what's new since your last visit" strip --

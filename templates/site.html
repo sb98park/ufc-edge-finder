@@ -994,6 +994,13 @@
   .edge-pos { color: var(--green); font-weight: 700; }
   .edge-neg { color: var(--red); }
   .model-only-table td { color: var(--muted); font-style: italic; }
+  @media (max-width: 480px) {
+    .model-only-table { table-layout: fixed; }
+    .model-only-table th:first-child, .model-only-table td:first-child { width: 48%; }
+    .model-only-table th:nth-child(2), .model-only-table td:nth-child(2) { width: 34%; }
+    .model-only-table th:last-child, .model-only-table td:last-child { width: 18%; }
+    .model-only-table th, .model-only-table td { white-space: normal; word-break: break-word; }
+  }
   .model-only-note { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
   .section-title { font-size: 14px; margin: 26px 0 10px; color: var(--accent); font-weight: 700; }
@@ -1828,9 +1835,9 @@
       {% if fight.model_only_rows %}
       <div class="market-group-label">🧮 Model projection (no live book line to compare yet)</div>
       <div class="table-scroll"><table class="model-only-table">
-        <tr><th>Selection</th><th>Market</th><th>Model Prob</th></tr>
+        <tr><th>Selection</th><th>Market</th><th>Prob</th></tr>
         {% for row in fight.model_only_rows %}
-        <tr><td>{{ row.fighter }}</td><td>{{ row.market }}</td><td>{{ (row.model_prob*100)|round(1) }}%</td></tr>
+        <tr><td>{{ row.fighter }}</td><td>{{ row.market | short_market }}</td><td>{{ (row.model_prob*100)|round(1) }}%</td></tr>
         {% endfor %}
       </table></div>
       <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
