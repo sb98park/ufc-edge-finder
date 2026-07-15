@@ -5,6 +5,8 @@ mystery percentage, you can see the stat behind it and judge for yourself
 whether it's a real signal or a model blind spot.
 """
 
+import re
+
 import pandas as pd
 
 from src.odds_utils import format_american_odds
@@ -186,6 +188,10 @@ def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
         f"vs. the model's {row['model_prob']*100:.0f}% ({row['edge_pct']:+.1f}% edge)."
     )
 
+    is_over = "Over" in row["market"]
+    line_match = re.search(r"(\d+\.\d+)", row["market"])
+    line_value = float(line_match.group(1)) if line_match else None
+
     if len(fighter_stats) == 2:
         (name_a, s_a), (name_b, s_b) = fighter_stats
         rate_a, rate_b = s_a["finish_rate"], s_b["finish_rate"]
@@ -193,42 +199,79 @@ def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
         gap = abs(rate_a - rate_b)
 
         if gap >= 0.30:
-            # one fighter is a clear finisher, the other isn't -- the average would hide this, so name it directly
             higher_name, higher_rate = (name_a, rate_a) if rate_a > rate_b else (name_b, rate_b)
             lower_name, lower_rate = (name_b, rate_b) if rate_a > rate_b else (name_a, rate_a)
-            base += (
-                f" This one's lopsided on paper -- {higher_name} finishes {higher_rate*100:.0f}% of wins, "
-                f"while {lower_name} sits at just {lower_rate*100:.0f}%, so the combined number undersells "
-                f"how much this depends on which fighter's game show up."
-            )
+            if is_over:
+                base += (
+                    f" This one's lopsided on paper -- {higher_name} finishes {higher_rate*100:.0f}% of wins, "
+                    f"while {lower_name} sits at just {lower_rate*100:.0f}%. For the Over, the hope is {lower_name} "
+                    f"gets the win, or {higher_name} wins in a way that isn't their usual game."
+                )
+            else:
+                base += (
+                    f" This one's lopsided on paper -- {higher_name} finishes {higher_rate*100:.0f}% of wins, "
+                    f"while {lower_name} sits at just {lower_rate*100:.0f}%. The Under really just needs "
+                    f"{higher_name}'s normal finishing instinct to show up if they're the one who wins."
+                )
         elif avg_finish >= 0.65:
-            base += f" Both fighters finish often ({rate_a*100:.0f}% and {rate_b*100:.0f}% of their wins), which is the real driver here."
+            if is_over:
+                base += f" Both fighters finish often ({rate_a*100:.0f}% and {rate_b*100:.0f}% of their wins) -- real risk for anyone leaning Over here."
+            else:
+                base += f" Both fighters finish often ({rate_a*100:.0f}% and {rate_b*100:.0f}% of their wins), which is exactly what the Under is pricing in."
         elif avg_finish <= 0.30:
-            base += f" Neither fighter finishes much ({rate_a*100:.0f}% and {rate_b*100:.0f}% of wins) -- this leans toward distance almost by default."
+            if is_over:
+                base += f" Neither fighter finishes much ({rate_a*100:.0f}% and {rate_b*100:.0f}% of wins) -- this leans toward distance almost by default, favoring the Over."
+            else:
+                base += f" Neither fighter finishes much ({rate_a*100:.0f}% and {rate_b*100:.0f}% of wins) -- the Under is fighting the tape here."
         else:
-            base += f" A fairly even {avg_finish*100:.0f}% combined finish rate between the two, nothing lopsided either way."
+            base += f" A fairly even {avg_finish*100:.0f}% combined finish rate between the two, nothing lopsided pushing this line either way."
 
     if fast_finishers:
+        at_the_line = line_value is not None and line_value <= 1.5
         for name, rate in fast_finishers:
-            base += f" Worth flagging: {rate*100:.0f}% of {name}'s career wins have come in round 1 specifically."
+            if at_the_line:
+                base += f" Worth flagging: {rate*100:.0f}% of {name}'s career wins have come in round 1 specifically -- directly on point at this line."
+            else:
+                base += f" Worth flagging: {rate*100:.0f}% of {name}'s career wins have come in round 1 -- part of a broader early-finish pattern, even if this specific line isn't about round 1 alone."
     return base
 
 
 def explain_goes_the_distance(row: dict, fighters_df: pd.DataFrame) -> str:
     names = row["fighter"].split(" vs ")
-    dec_rates = []
+    fighter_dec_info = []
     for name in names:
         s = _fighter_stats(fighters_df, name.strip())
         if s:
-            dec_rates.append(s["dec_rate"])
+            fighter_dec_info.append((name.strip(), s["dec_rate"]))
 
     base = (
         f"{row['market']} at {format_american_odds(row['odds_american'])} implies {row['book_fair_prob']*100:.0f}%, "
         f"vs. the model's {row['model_prob']*100:.0f}% ({row['edge_pct']:+.1f}% edge)."
     )
-    if dec_rates:
-        avg_dec = sum(dec_rates) / len(dec_rates)
-        base += f" Based on both fighters' career decision rate averaging {avg_dec*100:.0f}%."
+    is_distance = "Goes The Distance" in row["market"]
+    if fighter_dec_info:
+        avg_dec = sum(r for _, r in fighter_dec_info) / len(fighter_dec_info)
+        gap = abs(fighter_dec_info[0][1] - fighter_dec_info[1][1]) if len(fighter_dec_info) == 2 else 0
+
+        if len(fighter_dec_info) == 2 and gap >= 0.30:
+            higher_name, higher_rate = max(fighter_dec_info, key=lambda x: x[1])
+            lower_name, lower_rate = min(fighter_dec_info, key=lambda x: x[1])
+            if is_distance:
+                base += (
+                    f" Split profile here -- {higher_name} goes to the cards {higher_rate*100:.0f}% of the time, "
+                    f"but {lower_name} only {lower_rate*100:.0f}%. Going the distance really hinges on "
+                    f"{lower_name}'s usual finishing instinct not showing up."
+                )
+            else:
+                base += (
+                    f" Split profile here -- {higher_name} goes to the cards {higher_rate*100:.0f}% of the time, "
+                    f"but {lower_name} only {lower_rate*100:.0f}%. If {lower_name}'s normal game shows up, "
+                    f"this ends before the scorecards matter."
+                )
+        elif is_distance:
+            base += f" Based on both fighters' career decision rate averaging {avg_dec*100:.0f}%, which directly supports this going to the cards."
+        else:
+            base += f" Based on both fighters' career decision rate averaging {avg_dec*100:.0f}% -- the lower that number, the more room there is for an early finish."
     return base
 
 
