@@ -925,6 +925,28 @@
   .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
   .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
   .compare-table th { color: var(--accent2); font-size: 10.5px; font-weight: 700; }
+  @media (max-width: 480px) {
+    /* Fixed layout + explicit column widths keeps the table within the
+       viewport regardless of content length -- without this, table-layout's
+       default "auto" sizing lets a single long cell (Last Fight's date +
+       result + opponent) force the ENTIRE table wider than its container,
+       which is what was causing the whole table to need horizontal scroll,
+       not just that one row. Widths are proportional to what the content
+       actually needs (confirmed via direct measurement), not an equal split
+       -- an equal split starves the label column for its longest entries
+       ("Decision Record", "KO/TKO Record") while leaving the value columns
+       wider than they need. white-space:normal overrides the site-wide
+       `table td, table th { white-space: nowrap }` rule specifically for
+       this table -- that global rule is what was forcing Last Fight's long
+       text to stay on one line at its full, unwrapped width in the first
+       place, which is the actual root cause of the overflow.
+    */
+    .compare-table { table-layout: fixed; }
+    .compare-table th:first-child, .compare-table td:first-child,
+    .compare-table th:last-child, .compare-table td:last-child { width: 34%; }
+    .compare-table th:nth-child(2), .compare-table td:nth-child(2) { width: 32%; }
+    .compare-table th, .compare-table td { white-space: normal; word-break: break-word; }
+  }
 
   .tape-block { margin-bottom: 14px; }
   .tape-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 3px; }
@@ -1601,9 +1623,9 @@
   <div class="table-scroll"><table class="compare-table">
     <tr><th>{{ comparison.a.name }}</th><th></th><th>{{ comparison.b.name }}</th></tr>
     <tr><td>{{ comparison.a.record }}</td><td>Record</td><td>{{ comparison.b.record }}</td></tr>
-    <tr><td>{{ comparison.a.ko_wins }}-{{ comparison.a.ko_losses if comparison.a.ko_losses is not none else "—" }}</td><td>KO/TKO Record</td><td>{{ comparison.b.ko_wins }}-{{ comparison.b.ko_losses if comparison.b.ko_losses is not none else "—" }}</td></tr>
-    <tr><td>{{ comparison.a.sub_wins }}-{{ comparison.a.sub_losses if comparison.a.sub_losses is not none else "—" }}</td><td>Sub Record</td><td>{{ comparison.b.sub_wins }}-{{ comparison.b.sub_losses if comparison.b.sub_losses is not none else "—" }}</td></tr>
-    <tr><td>{{ comparison.a.dec_wins }}-{{ comparison.a.dec_losses if comparison.a.dec_losses is not none else "—" }}</td><td>Decision Record</td><td>{{ comparison.b.dec_wins }}-{{ comparison.b.dec_losses if comparison.b.dec_losses is not none else "—" }}</td></tr>
+    <tr><td>{{ comparison.a.ko_wins }}-{{ comparison.a.ko_losses if comparison.a.ko_losses is not none else "—" }}</td><td>KO/TKO</td><td>{{ comparison.b.ko_wins }}-{{ comparison.b.ko_losses if comparison.b.ko_losses is not none else "—" }}</td></tr>
+    <tr><td>{{ comparison.a.sub_wins }}-{{ comparison.a.sub_losses if comparison.a.sub_losses is not none else "—" }}</td><td>Sub</td><td>{{ comparison.b.sub_wins }}-{{ comparison.b.sub_losses if comparison.b.sub_losses is not none else "—" }}</td></tr>
+    <tr><td>{{ comparison.a.dec_wins }}-{{ comparison.a.dec_losses if comparison.a.dec_losses is not none else "—" }}</td><td>Decision</td><td>{{ comparison.b.dec_wins }}-{{ comparison.b.dec_losses if comparison.b.dec_losses is not none else "—" }}</td></tr>
     <tr><td>{{ comparison.a.age or "—" }}</td><td>Age</td><td>{{ comparison.b.age or "—" }}</td></tr>
     <tr><td>{{ comparison.a.height_in }}"</td><td>Height</td><td>{{ comparison.b.height_in }}"</td></tr>
     <tr><td>{{ comparison.a.reach_in }}"</td><td>Reach</td><td>{{ comparison.b.reach_in }}"</td></tr>
