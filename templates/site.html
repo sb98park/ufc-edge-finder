@@ -991,6 +991,8 @@
   th { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; }
   tr:last-child td { border-bottom: none; }
   .edge-pos { color: var(--green); font-weight: 700; }
+  .edges-table .edge-selection-cell { text-align: left; padding-bottom: 2px; border-bottom: none; white-space: normal; }
+  .edge-market-text { color: var(--muted); font-size: 11px; margin-left: 4px; }
   .edge-neg { color: var(--red); }
   .model-only-table td { color: var(--muted); font-style: italic; }
   @media (max-width: 480px) {
@@ -1809,12 +1811,16 @@
 
       {% if fight.edges %}
       <div class="market-group-label">📊 Live lines vs. model</div>
-      <div class="table-scroll"><table>
-        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>Stake</th></tr>
+      <div class="table-scroll"><table class="edges-table">
+        <tr><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>Stake</th></tr>
         {% for row in fight.edges %}
         <tr class="edge-heat-{{ 3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0)) }}">
-          <td>{{ row.fighter }}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ '⭐' if row.odds_american < 0 else '🐶' }}</span>{% endif %}</td>
-          <td>{{ row.market }}</td>
+          <td colspan="5" class="edge-selection-cell">
+            {{ row.fighter }}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ '⭐' if row.odds_american < 0 else '🐶' }}</span>{% endif %}
+            <span class="edge-market-text">— {{ row.market | short_market }}</span>
+          </td>
+        </tr>
+        <tr class="edge-heat-{{ 3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0)) }}">
           <td>{{ odds_cell(row) }}</td>
           <td>{{ row.model_prob }}</td>
           <td>{{ row.book_fair_prob }}</td>
