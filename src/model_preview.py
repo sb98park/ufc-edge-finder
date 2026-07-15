@@ -162,12 +162,12 @@ def build_fight_preview(
         (fighter_a, prob_a, fighter_b) if prob_a >= 0.5 else (fighter_b, 1 - prob_a, fighter_a)
     )
     favorite_row = row_a if favorite == fighter_a else row_b
+    underdog_row = row_b if favorite == fighter_a else row_a
 
-    total_wins = max(int(favorite_row["wins"]), 1)
+    divisional_priors = compute_divisional_method_priors(fighters_df)
     method_rates = {
-        "KO/TKO": _get(favorite_row, "ko_wins", 0) / total_wins,
-        "Submission": _get(favorite_row, "sub_wins", 0) / total_wins,
-        "Decision": _get(favorite_row, "dec_wins", 0) / total_wins,
+        method: _method_vulnerability_blend(favorite_row, underdog_row, method, divisional_priors)
+        for method in ["KO/TKO", "Submission", "Decision"]
     }
     likely_method = max(method_rates, key=method_rates.get)
 
@@ -244,7 +244,8 @@ def build_fight_preview(
         f"Model favors {favorite} at {favorite_prob*100:.0f}% over {underdog} "
         f"({matchup['style_a']} vs. {matchup['style_b']} stylistically). "
         f"Path to victory most likely runs through {likely_method.lower()} "
-        f"({method_rates[likely_method]*100:.0f}% of {favorite.split()[-1]}'s career wins). "
+        f"(projected at {method_rates[likely_method]*100:.0f}%, weighing {favorite.split()[-1]}'s own tendencies "
+        f"against {underdog.split()[-1]}'s specific vulnerability profile). "
         f"Combined finish rate between both fighters sits at {combined_finish_rate*100:.0f}%, "
         f"leaning {rounds_lean.lower()} on total rounds."
         f"{style_note}{reach_note}{layoff_note}{quick_return_note}{age_cliff_note}{missed_weight_note}{five_round_note}{fast_finisher_note}"
