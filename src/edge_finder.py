@@ -13,7 +13,7 @@ import re
 import pandas as pd
 
 from .odds_utils import american_to_implied_prob, remove_vig_two_way, edge_percent, kelly_fraction
-from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability
+from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
 
 
 def compute_moneyline_edges(
@@ -94,9 +94,9 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
         total_wins = max(int(f["wins"]), 1)
 
         rate_map = {
-            "KO/TKO": f["ko_wins"] / total_wins,
-            "SUB": f["sub_wins"] / total_wins,
-            "DEC": f["dec_wins"] / total_wins,
+            "KO/TKO": _get(f, "ko_wins", 0) / total_wins,
+            "SUB": _get(f, "sub_wins", 0) / total_wins,
+            "DEC": _get(f, "dec_wins", 0) / total_wins,
         }
         own_rate = rate_map.get(row["selection_method"])
         if own_rate is None:
@@ -173,7 +173,7 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 continue
             f = stats.iloc[0]
             total_wins = max(int(f["wins"]), 1)
-            finish_rates.append((f["ko_wins"] + f["sub_wins"]) / total_wins)
+            finish_rates.append((_get(f, "ko_wins", 0) + _get(f, "sub_wins", 0)) / total_wins)
             if "first_round_finish_pct" in f and pd.notna(f["first_round_finish_pct"]):
                 first_round_rates.append(float(f["first_round_finish_pct"]))
 
@@ -231,8 +231,8 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
         if f_a.empty or f_b.empty:
             continue
         a, b = f_a.iloc[0], f_b.iloc[0]
-        dec_rate_a = a["dec_wins"] / max(int(a["wins"]), 1)
-        dec_rate_b = b["dec_wins"] / max(int(b["wins"]), 1)
+        dec_rate_a = _get(a, "dec_wins", 0) / max(int(a["wins"]), 1)
+        dec_rate_b = _get(b, "dec_wins", 0) / max(int(b["wins"]), 1)
         # rough proxy: average of both fighters' decision tendency as the
         # fight-level chance it goes the distance
         goes_distance_prob = (dec_rate_a + dec_rate_b) / 2

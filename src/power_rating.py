@@ -21,10 +21,27 @@ def compute_stats_rating(row: pd.Series) -> float:
     A rough power rating on the same numeric scale as Elo (centered at 1500),
     built purely from career stats. Not a substitute for real fight-by-fight
     history -- just a reasonable prior when that history doesn't exist yet.
+
+    Every field read here is explicitly NaN-checked, not just defaulted via
+    .get() -- .get(col, default) only falls back when the COLUMN is entirely
+    absent from the row, not when it's present but holds NaN, which is the
+    actual shape missing data takes in fighters.csv (the column always
+    exists in the schema; individual fighters are just missing a value).
+    Confirmed live: this was silently producing a NaN power rating for any
+    fighter missing reach_in or a win-method breakdown, which then became
+    their fallback Elo rating (since a new/obscure fighter typically has no
+    connected fight_history.csv entries yet), corrupting every downstream
+    prediction and ultimately crashing the parlay builder on a NaN price.
     """
-    total_fights = max(row["wins"] + row["losses"], 1)
-    win_pct = row["wins"] / total_fights
-    finish_rate = (row["ko_wins"] + row["sub_wins"]) / max(row["wins"], 1)
+    wins = row["wins"] if pd.notna(row.get("wins")) else 0
+    losses = row["losses"] if pd.notna(row.get("losses")) else 0
+    ko_wins = row["ko_wins"] if pd.notna(row.get("ko_wins")) else 0
+    sub_wins = row["sub_wins"] if pd.notna(row.get("sub_wins")) else 0
+    reach_in = row["reach_in"] if pd.notna(row.get("reach_in")) else 70
+
+    total_fights = max(wins + losses, 1)
+    win_pct = wins / total_fights
+    finish_rate = (ko_wins + sub_wins) / max(wins, 1)
 
     # experience damps how much we trust a small sample (a 3-0 record
     # shouldn't swing as hard as a 26-7 record even at similar win%)
@@ -33,7 +50,7 @@ def compute_stats_rating(row: pd.Series) -> float:
     rating = RATING_CENTER
     rating += 500.0 * (win_pct - 0.5) * experience_weight
     rating += 150.0 * (finish_rate - 0.4)
-    rating += 4.0 * (row.get("reach_in", 70) - 70)
+    rating += 4.0 * (reach_in - 70)
 
     return rating
 

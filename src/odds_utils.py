@@ -33,8 +33,19 @@ def decimal_to_american(decimal_odds_value: float) -> float:
 
 
 def implied_prob_to_american(prob: float) -> float:
-    """Inverse of the above, useful for sanity checks."""
-    if prob <= 0 or prob >= 1:
+    """
+    Inverse of the above, useful for sanity checks.
+
+    Explicitly checks for NaN, not just the 0/1 bounds -- prob <= 0 and
+    prob >= 1 both evaluate to False when prob is NaN (any comparison
+    with NaN is False under IEEE 754), so a NaN probability used to sail
+    straight through this guard, produce a NaN "American odds" value, and
+    only fail much later and less clearly when something tried to format
+    it for display. Raising here, at the actual source of the bad value,
+    is what lets the caller's existing try/except around this function
+    actually catch it.
+    """
+    if prob != prob or prob <= 0 or prob >= 1:  # prob != prob is true only for NaN
         raise ValueError("probability must be between 0 and 1")
     if prob >= 0.5:
         return -100 * prob / (1 - prob)

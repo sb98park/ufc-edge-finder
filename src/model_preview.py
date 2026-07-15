@@ -8,7 +8,7 @@ clearly labeled as a projection rather than a live-market edge.
 
 import pandas as pd
 
-from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges
+from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, _get
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg
 
 
@@ -18,12 +18,23 @@ def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
 
 
 def _method_vulnerability_blend(fighter_row: pd.Series, opponent_row: pd.Series, method: str, divisional_priors: dict) -> float:
-    """Same prior-informed blend used in edge_finder.compute_method_edges, but usable without a live line."""
+    """
+    Same prior-informed blend used in edge_finder.compute_method_edges, but
+    usable without a live line.
+
+    Every count read here (the fighter's own method-breakdown wins, and
+    the opponent's method-breakdown losses) is explicitly NaN-checked
+    rather than directly indexed -- a fighter can have a populated wins
+    total but an unresearched method breakdown (0 wins by any specific
+    method isn't the same claim as "we don't know"), and direct indexing
+    let that NaN silently poison this fighter's whole rate calculation,
+    the same failure shape fixed in compute_stats_rating.
+    """
     total_wins = max(int(fighter_row["wins"]), 1)
     rate_map = {
-        "KO/TKO": fighter_row["ko_wins"] / total_wins,
-        "Submission": fighter_row["sub_wins"] / total_wins,
-        "Decision": fighter_row["dec_wins"] / total_wins,
+        "KO/TKO": _get(fighter_row, "ko_wins", 0) / total_wins,
+        "Submission": _get(fighter_row, "sub_wins", 0) / total_wins,
+        "Decision": _get(fighter_row, "dec_wins", 0) / total_wins,
     }
     own_rate = rate_map[method]
 
@@ -31,9 +42,11 @@ def _method_vulnerability_blend(fighter_row: pd.Series, opponent_row: pd.Series,
     method_key_map = {"KO/TKO": "KO/TKO", "Submission": "SUB", "Decision": "DEC"}
     divisional_prior = divisional_priors.get(fighter_row["weight_class"], {}).get(method_key_map[method], own_rate)
 
-    opp_losses = max(int(opponent_row["losses"]), 1) if opponent_row["losses"] else 0
+    opp_losses_raw = _get(opponent_row, "losses", 0)
+    opp_losses = max(int(opp_losses_raw), 1) if opp_losses_raw else 0
     loss_col = {"KO/TKO": "ko_losses", "Submission": "sub_losses", "Decision": "dec_losses"}[method]
-    opp_vulnerability = opponent_row[loss_col] / opp_losses if opp_losses else own_rate
+    opp_loss_count = _get(opponent_row, loss_col, 0)
+    opp_vulnerability = opp_loss_count / opp_losses if opp_losses else own_rate
 
     return blend_method_probability(divisional_prior, own_rate, opp_vulnerability, total_wins)
 
@@ -75,8 +88,8 @@ def build_full_market_projection(
             })
 
     combined_finish_rate = (
-        (row_a["ko_wins"] + row_a["sub_wins"]) / max(int(row_a["wins"]), 1)
-        + (row_b["ko_wins"] + row_b["sub_wins"]) / max(int(row_b["wins"]), 1)
+        (_get(row_a, "ko_wins", 0) + _get(row_a, "sub_wins", 0)) / max(int(row_a["wins"]), 1)
+        + (_get(row_b, "ko_wins", 0) + _get(row_b, "sub_wins", 0)) / max(int(row_b["wins"]), 1)
     ) / 2
 
     first_round_rates = [
@@ -107,8 +120,8 @@ def build_full_market_projection(
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 2.5", "model_prob": round(1 - rounds_2_5, 3)},
         ]
 
-    dec_rate_a = row_a["dec_wins"] / max(int(row_a["wins"]), 1)
-    dec_rate_b = row_b["dec_wins"] / max(int(row_b["wins"]), 1)
+    dec_rate_a = _get(row_a, "dec_wins", 0) / max(int(row_a["wins"]), 1)
+    dec_rate_b = _get(row_b, "dec_wins", 0) / max(int(row_b["wins"]), 1)
     goes_distance_prob = (dec_rate_a + dec_rate_b) / 2
     distance_rows = [
         {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Fight Outcome: Goes The Distance", "model_prob": round(goes_distance_prob, 3)},
@@ -152,15 +165,15 @@ def build_fight_preview(
 
     total_wins = max(int(favorite_row["wins"]), 1)
     method_rates = {
-        "KO/TKO": favorite_row["ko_wins"] / total_wins,
-        "Submission": favorite_row["sub_wins"] / total_wins,
-        "Decision": favorite_row["dec_wins"] / total_wins,
+        "KO/TKO": _get(favorite_row, "ko_wins", 0) / total_wins,
+        "Submission": _get(favorite_row, "sub_wins", 0) / total_wins,
+        "Decision": _get(favorite_row, "dec_wins", 0) / total_wins,
     }
     likely_method = max(method_rates, key=method_rates.get)
 
     combined_finish_rate = (
-        (row_a["ko_wins"] + row_a["sub_wins"]) / max(int(row_a["wins"]), 1)
-        + (row_b["ko_wins"] + row_b["sub_wins"]) / max(int(row_b["wins"]), 1)
+        (_get(row_a, "ko_wins", 0) + _get(row_a, "sub_wins", 0)) / max(int(row_a["wins"]), 1)
+        + (_get(row_b, "ko_wins", 0) + _get(row_b, "sub_wins", 0)) / max(int(row_b["wins"]), 1)
     ) / 2
     rounds_lean = "Under" if combined_finish_rate >= 0.5 else "Over"
 
@@ -186,7 +199,7 @@ def build_fight_preview(
                 f"regardless of what their career numbers say."
             )
 
-    reach_diff = row_a["reach_in"] - row_b["reach_in"]
+    reach_diff = _get(row_a, "reach_in", 70) - _get(row_b, "reach_in", 70)
     reach_note = ""
     if abs(reach_diff) >= 4:
         longer = fighter_a if reach_diff > 0 else fighter_b

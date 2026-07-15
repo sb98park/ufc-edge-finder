@@ -149,9 +149,21 @@ def main():
             if fid is not None and fight.get("model_only_rows"):
                 model_only_by_fight[fid] = fight["model_only_rows"]
 
-    bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight)
-    lotto_parlays = build_lotto_parlays(tracked_edges_list, model_only_by_fight)
-    moonshot_parlays = build_moonshot_parlays(tracked_edges_list, model_only_by_fight)
+    try:
+        bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight)
+        lotto_parlays = build_lotto_parlays(tracked_edges_list, model_only_by_fight)
+        moonshot_parlays = build_moonshot_parlays(tracked_edges_list, model_only_by_fight)
+    except Exception as e:
+        # Never let a parlay-building bug take the whole site down with it --
+        # confirmed live: a single fighter with a NaN power rating (missing
+        # reach_in, silently un-defaulted) corrupted a projected price deep
+        # in this pipeline and crashed the ENTIRE generate_site.py run before
+        # it ever reached the line that writes docs/index.html, freezing the
+        # whole site on stale data. The actual data-completeness bugs are
+        # fixed at the source now, but this stays as a second line of
+        # defense against whatever the next one turns out to be.
+        print(f"[parlays] build failed unexpectedly, continuing without parlay sections: {e}")
+        bankroll_parlays, lotto_parlays, moonshot_parlays = [], [], []
 
     # Notable line movement across everything we track, for its own section
     all_display_edges = tracked_edges_list + [

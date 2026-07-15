@@ -8,6 +8,7 @@ whether it's a real signal or a model blind spot.
 import pandas as pd
 
 from src.odds_utils import format_american_odds
+from src.matchup_model import _get
 
 
 def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
@@ -20,14 +21,14 @@ def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
     total_fights = max(int(r["wins"]) + int(r["losses"]), 1)
     return {
         "win_pct": r["wins"] / total_fights,
-        "finish_rate": (r["ko_wins"] + r["sub_wins"]) / total_wins,
-        "ko_rate": r["ko_wins"] / total_wins,
-        "sub_rate": r["sub_wins"] / total_wins,
-        "dec_rate": r["dec_wins"] / total_wins,
-        "ko_loss_rate": (r["ko_losses"] / total_losses) if total_losses else 0.0,
-        "sub_loss_rate": (r["sub_losses"] / total_losses) if total_losses else 0.0,
-        "dec_loss_rate": (r["dec_losses"] / total_losses) if total_losses else 0.0,
-        "reach_in": r["reach_in"],
+        "finish_rate": (_get(r, "ko_wins", 0) + _get(r, "sub_wins", 0)) / total_wins,
+        "ko_rate": _get(r, "ko_wins", 0) / total_wins,
+        "sub_rate": _get(r, "sub_wins", 0) / total_wins,
+        "dec_rate": _get(r, "dec_wins", 0) / total_wins,
+        "ko_loss_rate": (_get(r, "ko_losses", 0) / total_losses) if total_losses else 0.0,
+        "sub_loss_rate": (_get(r, "sub_losses", 0) / total_losses) if total_losses else 0.0,
+        "dec_loss_rate": (_get(r, "dec_losses", 0) / total_losses) if total_losses else 0.0,
+        "reach_in": _get(r, "reach_in", 70),
         "wins": int(r["wins"]),
         "losses": int(r["losses"]),
         "weight_class": r["weight_class"],
