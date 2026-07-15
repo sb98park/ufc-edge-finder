@@ -764,12 +764,13 @@
   .matchup-header { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
   .matchup-fighter { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
   .matchup-fighter.right { justify-content: flex-end; text-align: right; }
+  .matchup-fighter-info { min-width: 0; }
   .matchup-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; display: block; }
   .factor-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
   .factor-badges.right { justify-content: flex-end; }
   .factor-badge {
     font-size: 8.5px; font-weight: 700; border-radius: 6px; padding: 1.5px 5px;
-    white-space: nowrap; letter-spacing: 0.2px;
+    white-space: normal; letter-spacing: 0.2px; max-width: 100%; box-sizing: border-box;
   }
   .factor-badge.pos { background: #10251a; color: var(--green); }
   .factor-badge.neg { background: #2a1414; color: var(--red); }
@@ -1625,7 +1626,7 @@
       <div class="matchup-header">
         <div class="matchup-fighter">
           {{ fighter_avatar(fight.fighter_a, is_winner=(fight.winner == fight.fighter_a)) }}
-          <div>
+          <div class="matchup-fighter-info">
             <span class="matchup-name">{{ fight.fighter_a }}</span>
             {% if fight.preview and fight.preview.comparison.a.badges %}
             <div class="factor-badges">
@@ -1648,7 +1649,7 @@
           <div class="weight-class-badge{{ ' womens' if fight.is_womens_division else '' }}">{{ "Women's " if fight.is_womens_division and not fight.weight_class.startswith("Women's") else "" }}{{ fight.weight_class }}</div>
         </div>
         <div class="matchup-fighter right">
-          <div>
+          <div class="matchup-fighter-info">
             <span class="matchup-name">{{ fight.fighter_b }}</span>
             {% if fight.preview and fight.preview.comparison.b.badges %}
             <div class="factor-badges right">
