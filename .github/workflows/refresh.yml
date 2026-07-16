@@ -54,7 +54,18 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/index.html data/odds_snapshot.json data/predictions_log.csv data/clob_token_cache.json data/fight_results.csv data/schedule_state.json data/accuracy_history.csv
+          # Directory-scoped, not an explicit file list -- an explicit
+          # list silently misses any new output file a future change
+          # adds (this is exactly what broke: data/future_cards.csv and
+          # data/fighters.csv were both being written by the pipeline
+          # but weren't in the old list, which left them uncommitted and
+          # made every subsequent `git pull --rebase` below fail against
+          # a dirty working tree, halting the job before it ever reached
+          # `git push`). Scoped to docs/ and data/ specifically rather
+          # than `git add -A` at the repo root, so it can never
+          # accidentally stage something outside the pipeline's own
+          # output (source changes, workflow edits, etc.).
+          git add -A -- docs/ data/
           git diff --staged --quiet || git commit -m "Auto-refresh site [skip ci]"
           # Rebase onto whatever landed on the remote while this run was
           # working (a manual push, or a run that slipped past the
