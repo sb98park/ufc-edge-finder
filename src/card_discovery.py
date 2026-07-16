@@ -117,6 +117,70 @@ def _infer_card_positions(competitions: list[dict]) -> dict[int, str]:
     return positions
 
 
+def _sort_into_billing_order(rows: list[dict]) -> list[dict]:
+    """
+    Sorts one event's fight rows into billing order (Main Event first),
+    matching the established convention in the manually-curated
+    fight_cards.csv -- display order is billing order, not chronological
+    order. Groups fights by segment and orders the SEGMENTS by billing
+    order; within a segment, the relative order of the input is
+    preserved as-is rather than reversed or otherwise rearranged.
+
+    Deliberately idempotent: calling this on its own output must be a
+    true no-op, since normalize_existing_card_order below runs on every
+    generate_site.py call (every 5 minutes via cron). An earlier version
+    of this function unconditionally reversed each segment's fights
+    every call -- correct once, but flipped already-correct data back on
+    the very next call, which would have made the displayed order within
+    each segment visibly flip-flop on every scheduled refresh. Caught
+    directly by testing a second call on the first call's own output
+    before this shipped, not left to surface in production.
+    """
+    billing_order = {"Main Event": 0, "Co-Main Event": 1, "Main Card": 2, "Prelims": 3, "Early Prelims": 4}
+    segments: dict[str, list[dict]] = {}
+    for r in rows:
+        segments.setdefault(r["card_position"], []).append(r)
+    ordered_rows = []
+    for segment in sorted(segments.keys(), key=lambda s: billing_order.get(s, 99)):
+        ordered_rows.extend(segments[segment])
+    return ordered_rows
+
+
+def normalize_existing_card_order(future_cards_path: str = "data/future_cards.csv") -> int:
+    """
+    Self-healing pass: re-sorts every already-tracked event's rows into
+    billing order. Exists because the fix to _fetch_espn_full_card only
+    prevents the chronological-order bug for events discovered AFTER
+    that fix landed -- any event already in future_cards.csv from
+    before it (discover_and_append_new_cards doesn't re-fetch an event
+    already present by name) would otherwise stay in the wrong order
+    indefinitely. Runs every generate_site.py call; a no-op read+
+    compare+skip-write on every run after the first one that actually
+    needs it. Returns the number of events whose order was corrected.
+    Never raises.
+    """
+    try:
+        df = pd.read_csv(future_cards_path)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        return 0
+    if df.empty or "card_position" not in df.columns:
+        return 0
+
+    corrected = 0
+    reordered_frames = []
+    for event_name, group in df.groupby("event_name", sort=False):
+        rows = group.to_dict("records")
+        ordered = _sort_into_billing_order(rows)
+        if [r["fighter_a"] for r in ordered] != [r["fighter_a"] for r in rows]:
+            corrected += 1
+            print(f"[card_discovery] corrected fight order for {event_name!r} (was not in billing order)")
+        reordered_frames.append(pd.DataFrame(ordered))
+
+    if corrected:
+        pd.concat(reordered_frames, ignore_index=True).to_csv(future_cards_path, index=False)
+    return corrected
+
+
 def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
     """Fetches one event's complete fight card from ESPN's scoreboard and
     transforms it into future_cards.csv's row schema. Never raises --
@@ -200,7 +264,7 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
     for r in rows:
         r["event_start_time_et"] = prelims_time_et or "19:00"
 
-    return rows
+    return _sort_into_billing_order(rows)
 
 
 def discover_and_append_new_cards(future_cards_path: str = "data/future_cards.csv",

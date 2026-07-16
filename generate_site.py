@@ -31,7 +31,7 @@ from src.line_movement import (
 from src.track_record import log_predictions, compute_track_record, load_momentum_by_key
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
-from src.card_discovery import discover_and_append_new_cards
+from src.card_discovery import discover_and_append_new_cards, normalize_existing_card_order
 from src.fighter_backfill import backfill_fighters
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
@@ -69,6 +69,11 @@ def main():
         discover_and_append_new_cards(f"{DATA_DIR}/future_cards.csv", current_event_name=current_event_name)
     except Exception as e:
         print(f"[generate_site] card discovery failed unexpectedly, continuing without it: {e}")
+
+    try:
+        normalize_existing_card_order(f"{DATA_DIR}/future_cards.csv")
+    except Exception as e:
+        print(f"[generate_site] card order normalization failed unexpectedly, continuing without it: {e}")
 
     try:
         backfill_fighters(f"{DATA_DIR}/fighters.csv", f"{DATA_DIR}/future_cards.csv")

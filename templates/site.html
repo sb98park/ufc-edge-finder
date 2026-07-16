@@ -746,6 +746,13 @@
   .event-header { margin: 26px 0 10px; }
   .event-name { font-size: 18px; font-weight: 700; }
   .event-date { color: var(--muted); font-size: 12px; }
+  .future-event-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+  .future-event-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; cursor: pointer; list-style: none; }
+  .future-event-summary::-webkit-details-marker { display: none; }
+  .future-event-summary-text { min-width: 0; }
+  .future-event-teaser { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .future-event-body { padding: 0 16px 16px; }
+  .future-event-card .event-header { margin-top: 0; }
 
   details.fight-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
@@ -2138,20 +2145,32 @@
   <div class="section-title" id="section-future">{{ icon_calendar() }} Coming Up Next</div>
   <div class="parlay-subtitle">Verified upcoming UFC cards beyond this weekend, sourced from official event announcements. Live odds included where available; model projections always shown otherwise.</div>
   {% for event in future_events %}
-  <div class="event-header">
-    <div class="event-name">{{ event.event_name }}</div>
-    <div class="event-date">{{ event.event_date|friendly_date }}</div>
-  </div>
-  {% for fight in event.fights %}
-  {% if loop.first or fight.segment_label != loop.previtem.segment_label %}
-  <div class="segment-divider">
-    <span class="segment-divider-line"></span>
-    <span class="segment-divider-label">{{ fight.segment_label }}</span>
-    <span class="segment-divider-line"></span>
-  </div>
-  {% endif %}
-  {{ render_fight_card(fight) }}
-  {% endfor %}
+  <details class="future-event-card" {% if loop.first %}open{% endif %}>
+    <summary class="future-event-summary">
+      <div class="future-event-summary-text">
+        <div class="event-header">
+          <div class="event-name">{{ event.event_name }}</div>
+          <div class="event-date">{{ event.event_date|friendly_date }}</div>
+        </div>
+        {% if event.fights %}
+        <div class="future-event-teaser">{{ event.fights[0].fighter_a }} vs. {{ event.fights[0].fighter_b }} · {{ event.fights|length }} fight{{ 's' if event.fights|length != 1 else '' }}</div>
+        {% endif %}
+      </div>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="future-event-body">
+      {% for fight in event.fights %}
+      {% if loop.first or fight.segment_label != loop.previtem.segment_label %}
+      <div class="segment-divider">
+        <span class="segment-divider-line"></span>
+        <span class="segment-divider-label">{{ fight.segment_label }}</span>
+        <span class="segment-divider-line"></span>
+      </div>
+      {% endif %}
+      {{ render_fight_card(fight) }}
+      {% endfor %}
+    </div>
+  </details>
   {% endfor %}
   {% endif %}
   </div>
