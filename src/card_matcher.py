@@ -195,10 +195,24 @@ def group_edges_by_card(
         preview = None
         is_five_round = str(row.get("card_position", "")).strip() == "Main Event"
         if fighters_df is not None and effective_ratings is not None:
-            preview = build_fight_preview(
-                row["fighter_a"], row["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round,
-                weight_class_history_df=weight_class_history_df, fight_weight_class=row.get("weight_class"),
-            )
+            try:
+                preview = build_fight_preview(
+                    row["fighter_a"], row["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round,
+                    weight_class_history_df=weight_class_history_df, fight_weight_class=row.get("weight_class"),
+                )
+            except Exception as e:
+                # One fight's preview failing -- bad roster data, a NaN slipping
+                # past validation, anything unforeseen -- must never take down
+                # site generation for every other fight on the card. Discovered
+                # in production (July 2026): a single fighter with no real data
+                # crashed the entire run, meaning the whole site failed to
+                # publish over one incomplete row. Degrades to no preview for
+                # just this fight, exactly like the existing "no fighters_df
+                # supplied" case already does -- the template already handles
+                # preview=None everywhere.
+                print(f"[card_matcher] preview generation failed for {row['fighter_a']} vs {row['fighter_b']}, "
+                      f"showing this fight without a preview rather than failing the whole run: {e}")
+                preview = None
         fights.append({
             "event_name": row["event_name"],
             "event_date": row["event_date"],
@@ -305,7 +319,9 @@ def _sample_size_flag(fighter_field: str, fighters_df: pd.DataFrame | None) -> d
         if row.empty:
             continue
         r = row.iloc[0]
-        total = int(r.get("wins", 0) or 0) + int(r.get("losses", 0) or 0)
+        wins = r.get("wins", 0)
+        losses = r.get("losses", 0)
+        total = int(wins if pd.notna(wins) else 0) + int(losses if pd.notna(losses) else 0)
         if total < LOW_SAMPLE_THRESHOLD and (thinnest is None or total < thinnest["fights"]):
             thinnest = {"fighter": name, "fights": total}
     return thinnest

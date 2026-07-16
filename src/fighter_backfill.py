@@ -38,7 +38,7 @@ import re
 import pandas as pd
 import requests
 
-from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL
+from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, is_placeholder_fighter_name
 
 FIGHTERS_COLUMNS_MINIMAL = ["name", "weight_class", "country", "wins", "losses"]
 
@@ -151,7 +151,7 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
         return 0
 
     roster_names = set(fighters["name"])
-    future_fighters = set(future["fighter_a"]) | set(future["fighter_b"])
+    future_fighters = {n for n in (set(future["fighter_a"]) | set(future["fighter_b"])) if not is_placeholder_fighter_name(n)}
     needs_basic = future_fighters - roster_names
     gap_cols = ["stance", "country", "reach_in", "height_in"]
     needs_gap_fill = set(

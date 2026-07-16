@@ -79,6 +79,24 @@ EVENTS_LIST_URL = "https://www.ufcstats.com/statistics/events/completed"
 WIKIPEDIA_OPENSEARCH_URL = "https://en.wikipedia.org/w/api.php"
 ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard"
 
+# ESPN lists not-yet-confirmed fight slots with a literal placeholder
+# name instead of omitting the fight -- e.g. "TBA" or "Opponent TBA" for
+# a bout where the promotion has announced one side but not the other
+# yet. These are real entries in the API response, not malformed data,
+# but they aren't real fighters: no record, no stats, nothing to
+# predict against. Discovered in production (July 2026) when one such
+# entry made it all the way to a roster row with no win/loss data,
+# which crashed prediction generation for the entire site the first
+# time anything tried to compute a stat ratio from it.
+_PLACEHOLDER_NAME_PATTERN = re.compile(r"\bTBA\b|\bTBD\b", re.I)
+
+
+def is_placeholder_fighter_name(name: str | None) -> bool:
+    """True for a literal placeholder like "TBA" or "Opponent TBA" --
+    not a real fighter, should never become a roster row or a tracked
+    fight."""
+    return bool(name) and bool(_PLACEHOLDER_NAME_PATTERN.search(name))
+
 METHOD_PATTERNS = [
     ("KO/TKO", re.compile(r"\bKO/TKO\b|\bTKO\b|\bKO\b", re.I)),
     ("Submission", re.compile(r"\bSUB(MISSION)?\b", re.I)),

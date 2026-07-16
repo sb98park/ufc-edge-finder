@@ -406,10 +406,10 @@ def submission_threat_adjustment(row_a: pd.Series, row_b: pd.Series) -> float:
     is exactly how each fight was actually decided) -- a gap this factor
     is meant to close, not a guess without a specific motivating case.
     """
-    wins_a = int(row_a.get("wins", 0)) or 0
-    wins_b = int(row_b.get("wins", 0)) or 0
-    sub_rate_a = (row_a.get("sub_wins", 0) / wins_a) if wins_a else 0.0
-    sub_rate_b = (row_b.get("sub_wins", 0) / wins_b) if wins_b else 0.0
+    wins_a = int(_get(row_a, "wins", 0))
+    wins_b = int(_get(row_b, "wins", 0))
+    sub_rate_a = (_get(row_a, "sub_wins", 0) / wins_a) if wins_a else 0.0
+    sub_rate_b = (_get(row_b, "sub_wins", 0) / wins_b) if wins_b else 0.0
     return (sub_rate_a - sub_rate_b) * SUBMISSION_THREAT_SCALE
 
 
@@ -464,10 +464,10 @@ def style_matchup_adjustment(
     # Durability: how often has each been finished before (by any method)?
     # A high finish-loss rate against someone with strong finishing tools
     # is a real, specific risk -- not just "durability" in the abstract.
-    losses_a = max(int(row_a.get("losses", 0)), 1) if row_a.get("losses", 0) else 1
-    losses_b = max(int(row_b.get("losses", 0)), 1) if row_b.get("losses", 0) else 1
-    finish_loss_rate_a = (row_a.get("ko_losses", 0) + row_a.get("sub_losses", 0)) / losses_a if row_a.get("losses", 0) else 0
-    finish_loss_rate_b = (row_b.get("ko_losses", 0) + row_b.get("sub_losses", 0)) / losses_b if row_b.get("losses", 0) else 0
+    losses_a = max(int(_get(row_a, "losses", 0)), 1) if _get(row_a, "losses", 0) else 1
+    losses_b = max(int(_get(row_b, "losses", 0)), 1) if _get(row_b, "losses", 0) else 1
+    finish_loss_rate_a = (_get(row_a, "ko_losses", 0) + _get(row_a, "sub_losses", 0)) / losses_a if _get(row_a, "losses", 0) else 0
+    finish_loss_rate_b = (_get(row_b, "ko_losses", 0) + _get(row_b, "sub_losses", 0)) / losses_b if _get(row_b, "losses", 0) else 0
     durability_adj = (finish_loss_rate_b - finish_loss_rate_a) * DURABILITY_SCALE
 
     layoff_adj_a = layoff_penalty(row_a)
@@ -625,8 +625,8 @@ def predict_matchup(
     # than one where both have 25, even if the point estimate is
     # identical. Floors around ~5pp even for deep records, since MMA has
     # real irreducible variance no amount of data fully removes.
-    fights_a = int(row_a.get("wins", 0) or 0) + int(row_a.get("losses", 0) or 0)
-    fights_b = int(row_b.get("wins", 0) or 0) + int(row_b.get("losses", 0) or 0)
+    fights_a = int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0))
+    fights_b = int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0))
     thinner_record = min(fights_a, fights_b)
     uncertainty = UNCERTAINTY_BASE / math.sqrt(thinner_record + 1)
     prob_low = max(0.01, prob_a - uncertainty)

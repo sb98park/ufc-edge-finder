@@ -39,7 +39,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import requests
 
-from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL
+from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, is_placeholder_fighter_name
 
 FUTURE_CARDS_COLUMNS = [
     "event_name", "event_date", "card_position", "weight_class",
@@ -159,6 +159,10 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
         a_name = by_order[0].get("athlete", {}).get("fullName")
         b_name = by_order[1].get("athlete", {}).get("fullName")
         if not a_name or not b_name:
+            continue
+        if is_placeholder_fighter_name(a_name) or is_placeholder_fighter_name(b_name):
+            print(f"[card_discovery] skipping not-yet-confirmed bout ({a_name} vs {b_name}) -- "
+                  f"one side is still a placeholder, nothing real to track yet")
             continue
 
         weight_class, is_womens = _weight_class_from_espn(comp.get("type", {}).get("abbreviation", "Unknown"))
