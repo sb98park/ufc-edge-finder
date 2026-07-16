@@ -2103,7 +2103,7 @@
   </div>
   {% if is_first_event %}
   {%- set segs = [] -%}
-  {%- for f in event.fights|reverse %}{% if f.segment_label not in segs %}{% set _ = segs.append(f.segment_label) %}{% endif %}{% endfor -%}
+  {%- for f in event.fights %}{% if f.segment_label not in segs %}{% set _ = segs.append(f.segment_label) %}{% endif %}{% endfor -%}
   {% if segs|length > 1 %}
   <div class="seg-tabs">
     {% for seg in segs %}
@@ -2113,7 +2113,7 @@
   {% set ns = namespace(i=0) %}
   {% for seg in segs %}
   <div class="seg-pane{{ ' active' if loop.first }}" id="seg-pane-{{ loop.index }}">
-    {% set pane_fights = event.fights|reverse|selectattr('segment_label', 'equalto', seg)|list %}
+    {% set pane_fights = event.fights|selectattr('segment_label', 'equalto', seg)|list %}
     {% for fight in pane_fights %}
     {% set ns.i = ns.i + 1 %}
     {{ render_fight_card(fight, ns.i) }}
@@ -2121,7 +2121,7 @@
   </div>
   {% endfor %}
   {% else %}
-  {% for fight in event.fights|reverse %}
+  {% for fight in event.fights %}
   {{ render_fight_card(fight, loop.index) }}
   {% endfor %}
   {% endif %}
