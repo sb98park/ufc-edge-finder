@@ -1138,7 +1138,7 @@
   <div class="subtitle"><span class="subtitle-model">Model probability</span><span class="subtitle-vs">vs.</span><span class="subtitle-market">live sportsbook lines</span></div>
 
   {% if countdown_target_iso %}
-  <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}">
+  <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}" data-espn-live-key="{{ espn_live_fight_key_json | e }}">
     <div class="countdown-label" id="countdown-label">⏱ {{ countdown_label }}</div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
@@ -2443,6 +2443,17 @@
       const daysSinceEvent = parseInt(card.dataset.daysSinceEvent || '0', 10);
       let resultsCoverage = null;
       try { resultsCoverage = JSON.parse(card.dataset.resultsCoverage || 'null'); } catch (e) { resultsCoverage = null; }
+      let espnLiveKey = null;
+      try { espnLiveKey = JSON.parse(card.dataset.espnLiveKey || 'null'); } catch (e) { espnLiveKey = null; }
+
+      // Must match the server's canonicalization in fetch_espn_live_fight_key
+      // exactly (lowercase, alphabetically sorted) -- ESPN's own competitor
+      // ordering has no reason to match our fighter_a/fighter_b convention
+      // for the same fight, so comparing raw fightKey() strings would miss
+      // real matches whenever the order happens to differ.
+      function canonicalKey(a, b) {
+        return [a, b].map(s => (s || '').trim().toLowerCase()).sort().join('|');
+      }
 
       let currentLiveKey = null;
 
@@ -2521,6 +2532,19 @@
           const end = new Date(f.estimated_end_iso).getTime();
           if (now >= start && now < end) { live = f; }
           if (now < start && !upcoming) { upcoming = f; }
+        }
+
+        // ESPN's real-time signal overrides the window guess when it's
+        // available and points at a fight still in `schedule` -- this is
+        // what actually fixes the case an estimate structurally can't:
+        // a fight running long past its estimated window, where the guess
+        // above would otherwise conclude nothing is live right now.
+        if (espnLiveKey) {
+          const espnMatch = schedule.find(f => canonicalKey(f.fighter_a, f.fighter_b) === espnLiveKey);
+          if (espnMatch) {
+            live = espnMatch;
+            upcoming = schedule.find(f => f !== live && new Date(f.estimated_start_iso).getTime() > new Date(live.estimated_start_iso).getTime()) || upcoming;
+          }
         }
 
         const lastFight = schedule.length ? schedule[schedule.length - 1] : null;

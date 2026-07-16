@@ -2,19 +2,30 @@ name: Refresh UFC Edge Finder
 
 on:
   schedule:
-    # Every 15 minutes, all the time -- not just during the Saturday
-    # fight-night window. Widened from a 4-hour baseline + narrow boost
-    # window so results, odds, and line movement get picked up quickly
-    # regardless of when they actually happen (early weigh-in news,
-    # a result posted late, odds moving on a weekday, etc.), not just
-    # during a specific anticipated card.
-    # Note: Actions schedules can lag 5-20 min under load; the manual
-    # "Run workflow" button (workflow_dispatch) is the guaranteed
-    # on-demand refresh, including from the GitHub mobile app.
-    - cron: "*/15 * * * *"
+    # Every 5 minutes -- GitHub Actions' minimum cron interval. Honest
+    # expectation-setting: scheduled triggers are best-effort and lag
+    # 5-20 min under load (especially at the top of the hour), so this
+    # buys a faster AVERAGE cadence, not a guaranteed 5-minute tick.
+    # The manual "Run workflow" button (workflow_dispatch) remains the
+    # guaranteed on-demand refresh, including from the GitHub mobile app.
+    # Note the front-end already updates displayed prices in real time
+    # client-side (data-live-token); this job's cadence governs model
+    # recalcs, result detection, movement tags, and charts.
+    - cron: "*/5 * * * *"
   workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
   push:
     branches: [main]
+
+# At 5-minute spacing, schedule jitter can bunch two runs together --
+# without this, both would generate, both would commit, and one push
+# would be rejected (exactly the fetch-first race a manual push hits
+# when the remote moves underneath it). Serialize: one run at a time,
+# at most one queued behind it; further triggers collapse into the
+# queued one, which is the correct behavior for a refresh job (running
+# three stale queued refreshes back-to-back would add nothing).
+concurrency:
+  group: refresh
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -45,4 +56,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/index.html data/odds_snapshot.json data/predictions_log.csv data/clob_token_cache.json data/fight_results.csv data/schedule_state.json data/accuracy_history.csv
           git diff --staged --quiet || git commit -m "Auto-refresh site [skip ci]"
+          # Rebase onto whatever landed on the remote while this run was
+          # working (a manual push, or a run that slipped past the
+          # concurrency queue) instead of failing on a non-fast-forward.
+          git pull --rebase origin main
           git push

@@ -7,17 +7,39 @@ fields), which previously only got updated by hand -- see
 sync_fighter_records for why that gap mattered.
 
 *** HONEST CAVEAT, READ BEFORE TRUSTING THIS BLINDLY ***
-This was written and tested for Python syntax and internal logic, but
-NOT against the live ufcstats.com site -- this sandbox has no network
-access, so there was no way to verify the actual page structure matches
-what's assumed below. The fighter-listing selectors
-(tr.b-fight-details__table-row, a.b-link_style_black) come from
-src/scraper.py, which WAS validated against the real site in an earlier
-session -- those are trusted. The result-detail parsing (method/round/
-time extraction) is new and unverified. Treat this as a serious,
-well-reasoned first attempt, not a guaranteed-working feature. Check the
-GitHub Action logs after a real run to see what actually happened --
-every branch below prints exactly what it did or why it gave up.
+Diagnosed directly (July 2026) using live web access outside this sandbox
+(this sandbox's own bash_tool has no network access at all -- an earlier
+apparent "403 Forbidden" from ufcstats.com in this project's history was
+actually this sandbox's own egress proxy denying the request, not a real
+response from the site; worth knowing since it means that specific
+failure was never evidence about the scraper itself).
+
+What was actually verified, live:
+- ufcstats.com now serves a JavaScript browser-challenge page ("Checking
+  your browser... this site requires JavaScript") instead of raw HTML on
+  its main listing page. This is a SITE change, not a bug in the request
+  code below -- no header or User-Agent fix can pass a JS challenge from
+  a plain HTTP request, since it never executes JavaScript. Left in place
+  as a best-effort first attempt (the challenge may not always trigger,
+  and the site could change again), but treat it as likely-nonfunctional
+  until proven otherwise in the Action logs. The alternative -- real
+  headless-browser automation (Playwright/Selenium) -- would reliably
+  work but is a materially heavier dependency to run on a 5-minute CI
+  cron; not added without that being a deliberate, discussed tradeoff.
+- The Wikipedia fallback's PAGE LOOKUP previously guessed the page's URL
+  slug from the event name and had a confirmed, real bug: it only
+  produced a correct URL for numbered events ("UFC 329" -> "UFC_329");
+  for "UFC Fight Night: X vs. Y" events -- most events, including the
+  exact card this project has been tracking -- it truncated to
+  "UFC_Fight_Night", dropping the fighters entirely. Now uses Wikipedia's
+  own OpenSearch API to resolve the real page instead of guessing.
+- What remains UNVERIFIED against a live page: the RESULTS TABLE parsing
+  once the correct Wikipedia page is found, and ufcstats.com's
+  fighter-listing selectors IF its challenge ever doesn't trigger. Trust
+  status is otherwise unchanged from before -- treat this as a serious,
+  well-reasoned attempt, not a guaranteed-working feature. Check the
+  GitHub Action logs after a real run; every branch prints exactly what
+  it did or why it gave up.
 
 sync_fighter_records specifically IS unit-tested in isolation (KO/TKO,
 decision-type mapping, and the untracked-fighter skip all pass) -- what's
@@ -54,6 +76,8 @@ BASE_HEADERS = {"User-Agent": "Mozilla/5.0 (personal research script; Octane Alp
 REQUEST_TIMEOUT = 12
 REQUEST_DELAY_SECONDS = 1.5
 EVENTS_LIST_URL = "https://www.ufcstats.com/statistics/events/completed"
+WIKIPEDIA_OPENSEARCH_URL = "https://en.wikipedia.org/w/api.php"
+ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard"
 
 METHOD_PATTERNS = [
     ("KO/TKO", re.compile(r"\bKO/TKO\b|\bTKO\b|\bKO\b", re.I)),
@@ -406,24 +430,243 @@ def _parse_fight_stats(fight_url: str, fighter_a: str, fighter_b: str) -> dict |
         return None
 
 
+def _extract_round_time_from_text(text: str) -> tuple[int | None, str | None]:
+    """
+    Free-text round/time extraction for ESPN's status-detail-style strings
+    (e.g. "Round 5, 5:00" embedded in a longer sentence), as opposed to
+    _extract_round_time's cell-list extraction built for a wikitable's
+    already-separated cells. Uses re.search rather than fullmatch since
+    the numbers are embedded in prose, not isolated.
+    """
+    end_round = None
+    end_time = None
+    round_match = re.search(r"\bR(?:ound)?\.?\s*([1-5])\b", text, re.I)
+    if round_match:
+        end_round = int(round_match.group(1))
+    time_match = re.search(r"\b([0-5]:[0-5]\d)\b", text)
+    if time_match:
+        end_time = time_match.group(1)
+    return end_round, end_time
+
+
+def _fetch_from_espn(event_name: str, event_date: str, known_fighters_lower: set) -> list[dict]:
+    """
+    ESPN's undocumented "site API" scoreboard -- tried FIRST as of July
+    2026, ahead of ufcstats.com and Wikipedia. Verified live during
+    development: returns clean JSON, no HTML parsing at all, and every
+    fight carries a real completion signal (status.type.completed) plus
+    a winner flag per competitor -- the highest-confidence source of the
+    three for both "did this fight happen" and "who won."
+
+    *** HONEST CAVEAT, SAME SPIRIT AS EVERYTHING ELSE IN THIS FILE ***
+    This is an unofficial, undocumented ESPN endpoint -- not designed as
+    a public API, no stability commitment, and ESPN can change or remove
+    it without notice. That's a different, more serious risk than
+    ufcstats.com (fragile to markup drift but not going anywhere on
+    purpose) or Wikipedia (a mission-stable, real API). Tried first
+    anyway because it's currently by a wide margin the most reliable of
+    the three -- the other two stay in place specifically so this isn't
+    a single point of failure if ESPN ever pulls it.
+
+    Also honest: the method/round/time schema for a COMPLETED fight was
+    never directly observed during development -- every event fetched
+    while building this was still pre-fight (this sandbox has no way to
+    control what's live on the internet on any given day). Winner
+    detection is high confidence, since it uses the same status.type /
+    competitor.winner convention ESPN uses identically across every
+    other sport on this API. Method/round/time is a best-effort text
+    search across the fields most likely to carry it. If no method can
+    be confidently found, the fight is deliberately treated as NOT YET
+    a complete result (skipped, not logged with a blank method) so it
+    gets retried on a later run instead of silently going stale -- see
+    fetch_and_log_new_results, which only ever marks a fight "known" once
+    a result with a winner AND a method has actually been recorded.
+    """
+    params = {}
+    if event_date:
+        try:
+            params["dates"] = pd.Timestamp(event_date).strftime("%Y%m%d")
+        except (ValueError, TypeError):
+            pass
+
+    try:
+        resp = requests.get(ESPN_SCOREBOARD_URL, params=params, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
+    except (requests.RequestException, ValueError) as e:
+        print(f"[results_fetcher] ESPN scoreboard fetch failed: {e}")
+        return []
+
+    events = data.get("events", [])
+    if not events:
+        print(f"[results_fetcher] ESPN: scoreboard returned no events for {event_date}")
+        return []
+
+    # Match by fighter-name overlap against our own card, not by event
+    # name string -- ESPN's event name ("UFC Fight Night: Oklahoma City")
+    # frequently differs from ours ("UFC Fight Night: Du Plessis vs.
+    # Usman"), but the fighters on the card are the same regardless of
+    # what either side calls the event.
+    matched_event = None
+    for ev in events:
+        ev_fighter_names = {
+            c.get("athlete", {}).get("fullName", "").strip().lower()
+            for comp in ev.get("competitions", [])
+            for c in comp.get("competitors", [])
+        }
+        if ev_fighter_names & known_fighters_lower:
+            matched_event = ev
+            break
+    if matched_event is None:
+        print(f"[results_fetcher] ESPN: no event on {event_date} shares a fighter with our card -- not matched")
+        return []
+
+    results = []
+    for comp in matched_event.get("competitions", []):
+        status_type = comp.get("status", {}).get("type", {})
+        if not status_type.get("completed"):
+            continue  # still scheduled or in progress -- not a result yet
+
+        competitors = comp.get("competitors", [])
+        if len(competitors) != 2:
+            continue
+        winner_comp = next((c for c in competitors if c.get("winner")), None)
+        if winner_comp is None:
+            continue  # completed with no winner flagged (draw/no-contest) -- not modeled downstream, skip
+        loser_comp = next(c for c in competitors if c is not winner_comp)
+
+        winner_name = winner_comp.get("athlete", {}).get("fullName")
+        loser_name = loser_comp.get("athlete", {}).get("fullName")
+        if not winner_name or not loser_name:
+            continue
+
+        detail_text = " ".join(filter(None, [
+            status_type.get("description"), status_type.get("detail"), status_type.get("shortDetail"),
+            " ".join(n.get("headline", "") for n in comp.get("notes", []) if isinstance(n, dict)),
+        ]))
+        method = _extract_method([detail_text])
+        if not method:
+            print(f"[results_fetcher] ESPN: {winner_name} vs {loser_name} completed with a winner, but no "
+                  f"method could be confidently extracted from the available text -- treating as not-yet-complete.")
+            continue
+        end_round, end_time = _extract_round_time_from_text(detail_text)
+
+        results.append({
+            "fighter_a": winner_name, "fighter_b": loser_name, "winner": winner_name,
+            "method": method, "end_round": end_round, "end_time": end_time,
+            "detail_url": None,
+        })
+
+    if results:
+        print(f"[results_fetcher] ESPN: found {len(results)} completed fight(s) with a confident method")
+    return results
+
+
+def fetch_espn_live_fight_key(event_name: str, event_date: str, known_fighters_lower: set) -> str | None:
+    """
+    Returns a canonical "name-one|name-two" key (both names lowercased
+    and alphabetically sorted, NOT necessarily in fighter_a/fighter_b
+    order) for whichever fight ESPN's scoreboard currently reports as in
+    progress (status.type.state == "in"), or None if no fight is live
+    right now or the source isn't available. Canonical rather than
+    order-preserving on purpose: ESPN's own competitor ordering has no
+    reason to match our fighter_a/fighter_b convention for the same
+    fight, so an order-sensitive key would silently fail to match on the
+    JS side half the time. The countdown JS canonicalizes the same way
+    before comparing -- see the matching comment there.
+
+    This exists ALONGSIDE the schedule's own self-correcting estimate
+    (see apply_live_corrections in schedule.py), not instead of it --
+    that system already handles the common case well by shifting
+    remaining estimates once a confirmed result lands. What this adds is
+    a real ground-truth signal for the specific edge case an estimate
+    structurally can't cover: a fight that's running long. If a bout
+    goes past its estimated window without a confirmed result yet, the
+    static-window heuristic alone would conclude nothing is live right
+    now, when something actually is. Never raises; returns None on any
+    failure so the countdown simply falls back to the existing
+    estimate-only behavior, exactly as it did before this existed.
+    """
+    params = {}
+    if event_date:
+        try:
+            params["dates"] = pd.Timestamp(event_date).strftime("%Y%m%d")
+        except (ValueError, TypeError):
+            pass
+    try:
+        resp = requests.get(ESPN_SCOREBOARD_URL, params=params, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
+    except (requests.RequestException, ValueError) as e:
+        print(f"[results_fetcher] ESPN live-status fetch failed: {e}")
+        return None
+
+    matched_event = None
+    for ev in data.get("events", []):
+        ev_fighter_names = {
+            c.get("athlete", {}).get("fullName", "").strip().lower()
+            for comp in ev.get("competitions", [])
+            for c in comp.get("competitors", [])
+        }
+        if ev_fighter_names & known_fighters_lower:
+            matched_event = ev
+            break
+    if matched_event is None:
+        return None
+
+    for comp in matched_event.get("competitions", []):
+        status_type = comp.get("status", {}).get("type", {})
+        if status_type.get("state") != "in":
+            continue
+        competitors = comp.get("competitors", [])
+        if len(competitors) != 2:
+            continue
+        a = competitors[0].get("athlete", {}).get("fullName")
+        b = competitors[1].get("athlete", {}).get("fullName")
+        if a and b:
+            return "|".join(sorted([a.strip().lower(), b.strip().lower()]))
+    return None
+
+
 def _fetch_from_wikipedia(event_name: str) -> list[dict]:
     """
     Independent fallback source, tried when ufcstats.com finds nothing.
-    Deliberately a DIFFERENT site with a different structure and a
-    different URL scheme -- Wikipedia's numbered-event URLs are
-    predictable slugs ("UFC 329" -> /wiki/UFC_329), unlike ufcstats.com's
-    opaque per-event hash that requires a listing-page lookup first, so
-    this has genuinely different failure modes. Same honest caveat as
-    everything else in this file: the exact table structure below is
+    Deliberately a DIFFERENT site with a different structure -- genuinely
+    different failure modes from ufcstats.com's opaque per-event hash.
+
+    Page lookup uses Wikipedia's own OpenSearch API (a real, documented,
+    free MediaWiki endpoint) rather than guessing the URL slug from the
+    event name string. A prior version guessed slugs directly and had a
+    confirmed bug: it only produced a correct URL for numbered events
+    ("UFC 329: ..." -> "UFC_329", which happens to be the real slug) --
+    for "UFC Fight Night: X vs. Y" events, which is most events, it took
+    everything before the first colon and produced "UFC_Fight_Night",
+    dropping the fighters' names entirely. Even fixed to keep the full
+    name, Wikipedia has its own naming quirks a string rule can't safely
+    replicate (e.g. surname particles like "du" in "du Plessis" stay
+    lowercase in the real title). Searching resolves the actual page
+    Wikipedia has, regardless of exact casing or punctuation.
+
+    Same honest caveat as everything else in this file: the RESULTS
+    TABLE parsing below (once the correct page is found) is still
     unverified against a live page, since this sandbox has no network
-    access to check it. Parses the "Results" wikitable, expected to have
-    a Method/Round/Time column set and a winner-vs-loser fighter pairing
-    per row.
+    access to check it against a real one.
     """
-    # "UFC 329: McGregor vs. Holloway 2" -> "UFC 329" -> "UFC_329"
-    short_name = event_name.split(":")[0].strip()
-    slug = short_name.replace(" ", "_")
-    url = f"https://en.wikipedia.org/wiki/{slug}"
+    search_params = {"action": "opensearch", "search": event_name, "namespace": "0", "limit": "1", "format": "json"}
+    try:
+        search_resp = requests.get(WIKIPEDIA_OPENSEARCH_URL, params=search_params, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        search_resp.raise_for_status()
+        search_data = search_resp.json()
+    except (requests.RequestException, ValueError) as e:
+        print(f"[results_fetcher] wikipedia fallback: search failed for {event_name!r}: {e}")
+        return []
+
+    # OpenSearch response shape: [query, [titles], [descriptions], [urls]]
+    urls = search_data[3] if len(search_data) > 3 else []
+    if not urls:
+        print(f"[results_fetcher] wikipedia fallback: no page match for {event_name!r}")
+        return []
+    url = urls[0]
 
     try:
         resp = requests.get(url, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
@@ -512,14 +755,33 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     if not truly_missing and not needs_stats_only:
         return 0  # everything on this card is fully filled in -- nothing to do
 
+    # Computed here (moved ahead of the source attempts) since ESPN's
+    # scoreboard needs the event date to narrow its query, and the
+    # fighter-name set to match the right event without relying on
+    # event-name strings agreeing across sources.
+    event_date = pd.Timestamp.now().strftime("%Y-%m-%d")
+    if "event_date" in fight_cards_df.columns and not fight_cards_df.empty:
+        first_date = fight_cards_df["event_date"].iloc[0]
+        if pd.notna(first_date):
+            event_date = str(first_date)
+    roster_names_lower = {n.strip().lower() for n in pd.concat([fight_cards_df["fighter_a"], fight_cards_df["fighter_b"]])}
+
     scraped = []
     try:
-        event_url = _find_event_url(event_name)
-        if event_url:
-            scraped = _parse_event_results(event_url)
+        scraped = _fetch_from_espn(event_name, event_date, roster_names_lower)
     except Exception as e:
-        print(f"[results_fetcher] ufcstats.com attempt failed unexpectedly: {e}")
+        print(f"[results_fetcher] ESPN attempt failed unexpectedly: {e}")
         scraped = []
+
+    if not scraped:
+        print("[results_fetcher] ESPN found nothing usable -- trying ufcstats.com")
+        try:
+            event_url = _find_event_url(event_name)
+            if event_url:
+                scraped = _parse_event_results(event_url)
+        except Exception as e:
+            print(f"[results_fetcher] ufcstats.com attempt failed unexpectedly: {e}")
+            scraped = []
 
     if not scraped:
         print("[results_fetcher] ufcstats.com found nothing usable -- trying the wikipedia fallback")
@@ -539,16 +801,6 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     except Exception as e:
         print(f"[results_fetcher] could not read {fighters_path} -- roster sync will be skipped this run: {e}")
 
-    # Prefer the actual event date over "today", since this pipeline can
-    # run a day or two after the event itself -- last_fight_date should
-    # reflect when the fight happened, not when it was discovered.
-    event_date = pd.Timestamp.now().strftime("%Y-%m-%d")
-    if "event_date" in fight_cards_df.columns and not fight_cards_df.empty:
-        first_date = fight_cards_df["event_date"].iloc[0]
-        if pd.notna(first_date):
-            event_date = str(first_date)
-
-    roster_names_lower = {n.strip().lower() for n in pd.concat([fight_cards_df["fighter_a"], fight_cards_df["fighter_b"]])}
     weight_class_by_key = {}
     if "weight_class" in fight_cards_df.columns:
         for c in fight_cards_df.to_dict("records"):

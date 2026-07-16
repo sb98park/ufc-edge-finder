@@ -30,7 +30,8 @@ from src.line_movement import (
 )
 from src.track_record import log_predictions, compute_track_record, load_momentum_by_key
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
-from src.results_fetcher import fetch_and_log_new_results
+from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
+from src.card_discovery import discover_and_append_new_cards
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
 from src.units_chart import build_units_timeseries_svg
@@ -64,6 +65,13 @@ def main():
     history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
     elo_ratings = build_ratings(fighters_df, history_df)
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
+
+    try:
+        current_event_name = cards_df["event_name"].iloc[0] if not cards_df.empty else None
+        discover_and_append_new_cards(f"{DATA_DIR}/future_cards.csv", current_event_name=current_event_name)
+    except Exception as e:
+        print(f"[generate_site] card discovery failed unexpectedly, continuing without it: {e}")
+
     future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")
     cards_df, future_cards_df, days_since_event = promote_card_if_stale(cards_df, future_cards_df)
 
@@ -407,6 +415,29 @@ def main():
         if just_concluded:
             just_concluded["last_confirmed_at"] = last_confirmed_at
 
+    # ESPN's live-fight signal is only meaningful on the actual event day --
+    # deliberately checking the event's own date directly rather than
+    # days_since_event, which has different semantics (0 for the entire
+    # window from card promotion through the day after the event, not
+    # specifically "today is fight day" -- see promote_card_if_stale).
+    # Getting this gate wrong would mean a wasted call every 5 minutes for
+    # days before the event actually happens.
+    espn_live_fight_key = None
+    if events:
+        try:
+            today_et = dt.datetime.now(dt.timezone(dt.timedelta(hours=-4))).date()
+            event_date_actual = dt.date.fromisoformat(str(events[0]["event_date"]))
+            if today_et == event_date_actual:
+                known_fighters_lower = {
+                    str(n).strip().lower() for n in pd.concat([cards_df["fighter_a"], cards_df["fighter_b"]])
+                }
+                espn_live_fight_key = fetch_espn_live_fight_key(
+                    events[0]["event_name"], events[0]["event_date"], known_fighters_lower
+                )
+        except Exception as e:
+            print(f"[generate_site] ESPN live-status lookup failed unexpectedly, continuing without it: {e}")
+            espn_live_fight_key = None
+
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
     env.filters["friendly_date"] = _format_friendly_date
@@ -483,6 +514,7 @@ def main():
         countdown_target_iso=countdown_target_iso,
         fight_schedule_json=json.dumps(fight_schedule),
         just_concluded_json=json.dumps(just_concluded),
+        espn_live_fight_key_json=json.dumps(espn_live_fight_key),
         days_since_event=days_since_event,
         results_coverage=results_coverage,
         analytics_source_event=analytics_source_event,
