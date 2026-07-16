@@ -271,12 +271,18 @@ def discover_and_append_new_cards(future_cards_path: str = "data/future_cards.cs
                                    current_event_name: str | None = None,
                                    days_ahead: int = 60) -> int:
     """
-    Entry point called from generate_site.py. Returns the number of new
-    rows appended -- never raises. Reads ESPN's scoreboard calendar
+    Entry point called from generate_site.py. Returns the number of rows
+    added or removed -- never raises. Reads ESPN's scoreboard calendar
     (covers the full year), finds UFC events within `days_ahead` that
     aren't already in future_cards.csv or currently the active card
-    (current_event_name), fetches each one's full fight card, and
-    appends it. Existing rows are read but never modified or removed.
+    (current_event_name), fetches each one's full fight card, and adds
+    it. A tracked event whose booking changed (a fighter dropped out,
+    the event got renamed for the replacement) is detected by matching
+    on event_date against the calendar's current name for that date, and
+    the stale entry is replaced -- covering both the case where the new
+    name needs fetching fresh, and the case where it's already separately
+    tracked (both old and new names present as two "different" events).
+    Any other existing row is read but never modified.
     """
     try:
         existing = pd.read_csv(future_cards_path)
@@ -304,8 +310,47 @@ def discover_and_append_new_cards(future_cards_path: str = "data/future_cards.cs
     today = dt.datetime.now(dt.timezone.utc).date()
     cutoff = today + dt.timedelta(days=days_ahead)
 
+    existing_dates_to_names: dict = {}
+    if "event_name" in existing.columns and "event_date" in existing.columns:
+        for name, date_str in existing[["event_name", "event_date"]].drop_duplicates().itertuples(index=False):
+            existing_dates_to_names.setdefault(str(date_str), name)
+
+    # Self-healing: the calendar is ground truth for "what UFC currently
+    # calls the event on date X." If an existing tracked event's name
+    # doesn't match that, it's a stale pre-replacement name -- including
+    # the case where the CURRENT name is already separately tracked too
+    # (both "vs. Rountree Jr." and "vs. Guskov" present as two different
+    # events), which the discovery loop below can't catch on its own since
+    # it skips any calendar entry whose name is already known, before ever
+    # checking whether that name replaced something else on the same date.
+    calendar_current_name_by_date: dict = {}
+    for entry in calendar:
+        label, start = entry.get("label"), entry.get("startDate")
+        if not label or not start:
+            continue
+        try:
+            d = dt.datetime.fromisoformat(start.replace("Z", "+00:00")).date().isoformat()
+        except (ValueError, TypeError):
+            continue
+        calendar_current_name_by_date[d] = label
+
+    stale_event_names = set()
+    for date_str, tracked_name in existing_dates_to_names.items():
+        current_name = calendar_current_name_by_date.get(date_str)
+        # Only remove the old entry here if the replacement is ALREADY a
+        # separately-tracked event with real data -- safe, since nothing is
+        # lost. If the replacement isn't tracked yet, leave this alone and
+        # let the main loop below fetch it first; that loop only marks an
+        # old entry as replaced after confirming the fetch actually
+        # succeeded, which this pre-pass must not bypass.
+        if current_name and current_name != tracked_name and current_name in known_event_names:
+            stale_event_names.add(tracked_name)
+            print(f"[card_discovery] '{tracked_name}' is stale -- ESPN now calls this date's event "
+                  f"'{current_name}', which is already tracked separately. Removing the stale entry.")
+
     new_rows = []
     added_events = []
+    replaced_event_names = set()
     for entry in calendar:
         label = entry.get("label")
         start = entry.get("startDate")
@@ -318,16 +363,35 @@ def discover_and_append_new_cards(future_cards_path: str = "data/future_cards.cs
         if not (today <= event_date <= cutoff):
             continue
 
+        # Same date, different name than something already tracked -- almost
+        # certainly the same booking after a lineup change (a fighter dropped
+        # out, a replacement was announced, and the event got renamed for it),
+        # not a second, different event UFC happens to be running the same
+        # day. Replace the old entry rather than keeping both -- but only
+        # once the replacement card is confirmed to actually have fights;
+        # marking the old entry for removal before that would lose the event
+        # entirely if this fetch fails or comes back empty.
+        old_name = existing_dates_to_names.get(event_date.isoformat())
+
         card_rows = _fetch_espn_full_card(label, event_date.isoformat())
         if card_rows:
+            if old_name and old_name != label:
+                print(f"[card_discovery] '{old_name}' appears to have become '{label}' (same date, {event_date}) "
+                      f"-- likely a lineup change, replacing the old entry rather than tracking both")
+                replaced_event_names.add(old_name)
             new_rows.extend(card_rows)
             added_events.append(label)
             known_event_names.add(label)  # avoid double-adding if the calendar lists it twice
 
-    if not new_rows:
+    all_removed = stale_event_names | replaced_event_names
+    if not new_rows and not all_removed:
         return 0
 
-    combined = pd.concat([existing, pd.DataFrame(new_rows)], ignore_index=True)
+    if all_removed:
+        existing = existing[~existing["event_name"].isin(all_removed)]
+
+    combined = pd.concat([existing, pd.DataFrame(new_rows)], ignore_index=True) if new_rows else existing
     combined.to_csv(future_cards_path, index=False)
-    print(f"[card_discovery] added {len(added_events)} new card(s): {', '.join(added_events)} ({len(new_rows)} fights)")
-    return len(new_rows)
+    if added_events:
+        print(f"[card_discovery] added {len(added_events)} new card(s): {', '.join(added_events)} ({len(new_rows)} fights)")
+    return len(new_rows) + len(all_removed)

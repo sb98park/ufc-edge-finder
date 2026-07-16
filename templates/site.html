@@ -2145,13 +2145,14 @@
   <div class="section-title" id="section-future">{{ icon_calendar() }} Coming Up Next</div>
   <div class="parlay-subtitle">Verified upcoming UFC cards beyond this weekend, sourced from official event announcements. Live odds included where available; model projections always shown otherwise.</div>
   {% for event in future_events %}
-  <details class="future-event-card" {% if loop.first %}open{% endif %}>
+  <details class="future-event-card">
     <summary class="future-event-summary">
       <div class="future-event-summary-text">
         <div class="event-header">
           <div class="event-name">{{ event.event_name }}</div>
           <div class="event-date">{{ event.event_date|friendly_date }}</div>
         </div>
+        {% if event.event_location %}<div class="hub-card-location">📍 {{ event.event_location }}</div>{% endif %}
         {% if event.fights %}
         <div class="future-event-teaser">{{ event.fights[0].fighter_a }} vs. {{ event.fights[0].fighter_b }} · {{ event.fights|length }} fight{{ 's' if event.fights|length != 1 else '' }}</div>
         {% endif %}
