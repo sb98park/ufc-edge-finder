@@ -32,6 +32,7 @@ from src.track_record import log_predictions, compute_track_record, load_momentu
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
 from src.card_discovery import discover_and_append_new_cards
+from src.fighter_backfill import backfill_fighters
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
 from src.units_chart import build_units_timeseries_svg
@@ -61,9 +62,6 @@ def build_ratings(fighters_df: pd.DataFrame, history_df: pd.DataFrame) -> dict[s
 
 
 def main():
-    fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
-    history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
-    elo_ratings = build_ratings(fighters_df, history_df)
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
 
     try:
@@ -71,6 +69,15 @@ def main():
         discover_and_append_new_cards(f"{DATA_DIR}/future_cards.csv", current_event_name=current_event_name)
     except Exception as e:
         print(f"[generate_site] card discovery failed unexpectedly, continuing without it: {e}")
+
+    try:
+        backfill_fighters(f"{DATA_DIR}/fighters.csv", f"{DATA_DIR}/future_cards.csv")
+    except Exception as e:
+        print(f"[generate_site] fighter backfill failed unexpectedly, continuing without it: {e}")
+
+    fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
+    history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
+    elo_ratings = build_ratings(fighters_df, history_df)
 
     future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")
     cards_df, future_cards_df, days_since_event = promote_card_if_stale(cards_df, future_cards_df)
