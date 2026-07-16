@@ -126,6 +126,13 @@ def sync_fighter_records(fighters_df: pd.DataFrame, fighter_a: str, fighter_b: s
         fighters_df.loc[idx, "last_fight_method"] = last_fight_method
         if weight_class:
             fighters_df.loc[idx, "weight_class"] = weight_class
+        # A short-notice flag describes ONE specific booking. Once that
+        # fight's result lands, the flag has served its purpose -- clear
+        # it here so it can't silently penalize this fighter's NEXT
+        # matchup, where it no longer applies. (Set manually at
+        # card-research time when a late replacement is confirmed.)
+        if "short_notice" in fighters_df.columns:
+            fighters_df.loc[idx, "short_notice"] = 0
 
     return fighters_df
 

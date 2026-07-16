@@ -53,8 +53,28 @@ UNCERTAINTY_BASE = 0.30
 # aggregate career record) gets a small rating nudge that decays to zero
 # over RECENT_FORM_DECAY_YEARS -- deliberately modest since this is a
 # single data point, not an aggregate trend.
-RECENT_FORM_BONUS = 20.0
+RECENT_FORM_SCALE = 10.0  # per decayed win/loss unit, summed over last 3 fights (backtest-validated, July 2026)
 RECENT_FORM_DECAY_YEARS = 2.0
+RECENT_FORM_LOOKBACK = 3
+
+# Height advantage in the adjustment layer. Deliberately small: reach
+# (which correlates strongly with height) is already worth 4 pts/inch in
+# the stats-based power rating, so a large height weight here would
+# double-count the same physical edge. NOT backtest-validatable with
+# current data (fight_history.csv has no physical stats), so this is a
+# documented heuristic, kept conservative for exactly that reason.
+HEIGHT_ADVANTAGE_SCALE = 2.0
+
+# Short-notice fights: fighters accepting a bout on short notice
+# (typically < ~30 days, no full camp) win measurably less often --
+# roughly a 10 percentage-point drop is the commonly reported figure in
+# published analyses of UFC short-notice outcomes. ~10pp at even odds
+# corresponds to ~70 Elo points (dP/dgap near 50% is ~0.144pp per
+# point). NOT backtest-validatable (fight_history.csv has no notice
+# data); literature-derived rather than fitted, flagged per-fighter via
+# the short_notice column in fighters.csv at card-research time and
+# cleared automatically once that fighter's bout result is logged.
+SHORT_NOTICE_PENALTY = 70.0
 
 # Safety rail on the ADJUSTMENT LAYER (style factors + recent form), NOT
 # on the Elo/base rating gap. Evidence basis: the walk-forward backtest
@@ -71,11 +91,16 @@ RECENT_FORM_DECAY_YEARS = 2.0
 ADJUSTMENT_TOTAL_CAP = 150.0
 
 # Ring rust: no penalty for a normal 6-12 month camp cycle. Beyond a year
-# away, each additional year away costs more -- extended layoffs (multi-year,
-# often tied to serious injury) are a real, well-documented risk factor in
-# combat sports, not just "conventional wisdom."
+# away, each additional year away costs more. WEIGHT REVISED by the July
+# 2026 walk-forward backtest: the previous 60 pts/yr scored WORSE than no
+# layoff penalty at all on both the pre-2019 train split and the 2019+
+# held-out split -- the penalty as sized was actively hurting predictions.
+# The data tolerates 0-20 pts/yr (differences within noise across that
+# range); 20 keeps the domain-motivated factor alive at the highest
+# level the evidence supports rather than the loudest level intuition
+# suggested.
 LAYOFF_GRACE_YEARS = 1.0
-LAYOFF_PENALTY_PER_YEAR = 60.0
+LAYOFF_PENALTY_PER_YEAR = 20.0
 LAYOFF_PENALTY_CAP = 300.0
 
 
@@ -299,6 +324,12 @@ def build_factor_badges(matchup: dict) -> dict:
     add_advantage(matchup.get("durability_adjustment", 0), "Durability")
     add_advantage(matchup.get("stance_adjustment", 0), "Stance")
     add_advantage(matchup.get("submission_threat_adjustment", 0), "Sub Threat")
+    add_advantage(matchup.get("height_adjustment", 0), "Height")
+
+    if matchup.get("short_notice_flag_a"):
+        badges_a.append({"label": "Short Notice", "direction": "-"})
+    if matchup.get("short_notice_flag_b"):
+        badges_b.append({"label": "Short Notice", "direction": "-"})
 
     layoff_adj = matchup.get("layoff_adjustment", 0)
     if layoff_adj < -BADGE_THRESHOLD:
@@ -462,10 +493,18 @@ def style_matchup_adjustment(
     stance_adj = stance_matchup_adjustment(row_a, row_b)
     submission_threat_adj = submission_threat_adjustment(row_a, row_b)
 
+    height_a = _get(row_a, "height_in", 70)
+    height_b = _get(row_b, "height_in", 70)
+    height_adj = (height_a - height_b) * HEIGHT_ADVANTAGE_SCALE
+
+    short_notice_a = bool(_get(row_a, "short_notice", 0))
+    short_notice_b = bool(_get(row_b, "short_notice", 0))
+    short_notice_adj = (SHORT_NOTICE_PENALTY if short_notice_b else 0.0) - (SHORT_NOTICE_PENALTY if short_notice_a else 0.0)
+
     total_adj = (
         wrestling_adj + striking_adj + durability_adj + layoff_adj
         + quick_return_adj + age_cliff_adj + missed_weight_adj + weight_class_change_adj
-        + stance_adj + submission_threat_adj
+        + stance_adj + submission_threat_adj + height_adj + short_notice_adj
     )
 
     return {
@@ -474,6 +513,10 @@ def style_matchup_adjustment(
         "striking_adjustment": striking_adj,
         "durability_adjustment": durability_adj,
         "submission_threat_adjustment": submission_threat_adj,
+        "height_adjustment": height_adj,
+        "short_notice_adjustment": short_notice_adj,
+        "short_notice_flag_a": short_notice_a,
+        "short_notice_flag_b": short_notice_b,
         "layoff_adjustment": layoff_adj,
         "layoff_years_a": layoff_years(row_a),
         "layoff_years_b": layoff_years(row_b),
@@ -526,11 +569,17 @@ def recent_form_adjustment(
         rows = rows.dropna(subset=["date"]).sort_values("date")
         if rows.empty:
             return 0.0
-        last = rows.iloc[-1]
-        won = last["winner"] == name
-        years_ago = max((reference_date - last["date"].date()).days / 365.25, 0.0)
-        decay = max(0.0, 1.0 - years_ago / RECENT_FORM_DECAY_YEARS)
-        return (RECENT_FORM_BONUS if won else -RECENT_FORM_BONUS) * decay
+        # Last-3-fights decayed form, VALIDATED on the July 2026 walk-forward
+        # backtest: formulation + scale selected on pre-2019 fights, confirmed
+        # on held-out 2019+ fights, where it beat both no-form-at-all and the
+        # previous single-most-recent-fight version this replaces.
+        signal = 0.0
+        for _, last in rows.tail(RECENT_FORM_LOOKBACK).iterrows():
+            won = last["winner"] == name
+            years_ago = max((reference_date - last["date"].date()).days / 365.25, 0.0)
+            decay = max(0.0, 1.0 - years_ago / RECENT_FORM_DECAY_YEARS)
+            signal += (1.0 if won else -1.0) * decay * RECENT_FORM_SCALE
+        return signal
 
     return fighter_signal(fighter_a) - fighter_signal(fighter_b)
 

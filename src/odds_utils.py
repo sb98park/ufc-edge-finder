@@ -86,6 +86,34 @@ def edge_percent(model_prob: float, book_fair_prob: float) -> float:
     return (model_prob - book_fair_prob) * 100.0
 
 
+MARKET_BLEND_MODEL_WEIGHT = 0.30
+
+
+def market_blended_prob(model_prob: float, book_fair_prob: float) -> float:
+    """
+    Shrinks the model's probability toward the market's de-vigged price
+    for STAKE SIZING purposes (not for the displayed edge %, which by
+    definition is the raw model-vs-book comparison).
+
+    Why: the 2026 backtest of the Elo backbone over ~2,900 out-of-sample
+    historical fights put its standalone log loss at 0.6825 vs. a coin
+    flip's 0.6931 -- real signal, but far from sportsbook-closing-line
+    quality. Sizing Kelly bets from the raw model probability treats the
+    model as the sole truth and systematically overbets whenever the
+    model and a sharp book disagree by a lot -- which is exactly when
+    the model is most likely to be the wrong one. Blending toward the
+    market is the standard fix.
+
+    The 0.30 model weight is a deliberate, conservative HEURISTIC, not a
+    fitted value -- fitting it properly needs a dataset of past model
+    probabilities alongside closing odds and outcomes, which
+    fight_history.csv doesn't contain (no odds column). predictions_log.csv
+    is accumulating exactly that data going forward; revisit this weight
+    once enough graded picks exist to fit it out-of-sample.
+    """
+    return MARKET_BLEND_MODEL_WEIGHT * model_prob + (1.0 - MARKET_BLEND_MODEL_WEIGHT) * book_fair_prob
+
+
 def kelly_fraction(model_prob: float, american_odds: float, fraction: float = 0.10, max_stake_pct: float = 0.05) -> float:
     """
     Fractional Kelly stake sizing (as a fraction of bankroll).

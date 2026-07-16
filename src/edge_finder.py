@@ -12,7 +12,7 @@ import re
 
 import pandas as pd
 
-from .odds_utils import american_to_implied_prob, remove_vig_two_way, edge_percent, kelly_fraction
+from .odds_utils import american_to_implied_prob, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob
 from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
 
 
@@ -61,7 +61,7 @@ def compute_moneyline_edges(
                 "model_prob": round(model_p, 3),
                 "book_fair_prob": round(fair_p, 3),
                 "edge_pct": round(edge_percent(model_p, fair_p), 2),
-                "suggested_stake_pct": round(kelly_fraction(model_p, odds) * 100, 2),
+                "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, fair_p), odds) * 100, 2),
                 "clob_token_id": token_id,
             })
 
@@ -129,7 +129,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
             "model_prob": round(model_p, 3),
             "book_fair_prob": round(imp, 3),  # not devigged (single-sided prop)
             "edge_pct": round(edge_percent(model_p, imp), 2),
-            "suggested_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
         })
 
@@ -208,7 +208,7 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 "model_prob": round(model_p, 3),
                 "book_fair_prob": round(imp, 3),
                 "edge_pct": round(edge_percent(model_p, imp), 2),
-                "suggested_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+                "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
                 "clob_token_id": row.get("clob_token_id"),
             })
 
@@ -247,7 +247,7 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
             "model_prob": round(model_p, 3),
             "book_fair_prob": round(imp, 3),
             "edge_pct": round(edge_percent(model_p, imp), 2),
-            "suggested_stake_pct": round(kelly_fraction(model_p, row["odds_american"]) * 100, 2),
+            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
         })
 

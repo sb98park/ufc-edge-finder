@@ -1497,7 +1497,49 @@
         <div class="model-factor-icon">⏱️</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Layoff / Ring Rust vs. Quick Return</div>
-          <div class="model-factor-text">Fighters back after more than a year away take a ring-rust penalty; fighters back too soon after being finished (under ~6 months) take a separate, opposite-direction penalty.</div>
+          <div class="model-factor-text">Fighters back after more than a year away take a ring-rust penalty; fighters back too soon after being finished (under ~6 months) take a separate, opposite-direction penalty. The layoff weight was revised down sharply after backtesting against 30 years of fight history showed the original penalty was sized far too aggressively — the current weight is the strongest the historical evidence actually supports.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">🔥</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Recent Form (Backtest-Validated)</div>
+          <div class="model-factor-text">Each fighter's last three results, weighted by how recent they are (a win last month counts more than a win 18 months ago). Both the three-fight window and the weight were selected on pre-2019 historical fights and confirmed on held-out 2019+ fights — one of the few adjustments fitted to evidence rather than hand-tuned.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">🤜</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Stance Matchup</div>
+          <div class="model-factor-text">Southpaw or switch fighters get a modest edge against pure-orthodox opponents — the classic "unfamiliar look" advantage. Two fighters sharing a stance (including two southpaws) is neutral, since neither has the familiarity edge.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">🐍</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Submission Threat</div>
+          <div class="model-factor-text">A fighter's rate of finishing wins by submission, as a distinct skill from raw wrestling stats — a fighter can have modest takedown numbers but a live submission threat off scrambles and clinch entries, which takedown accuracy alone misses.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">🔀</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Weight Class Change</div>
+          <div class="model-factor-text">Moving up a division (facing bigger opponents) carries a penalty per division jumped; moving down earns a small bonus. Detected automatically from each fighter's tracked division history against the division this specific fight is booked at.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">📏</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Height Advantage</div>
+          <div class="model-factor-text">A small edge per inch of height difference — deliberately small, because reach (which tracks height closely) already carries weight in the base rating, and counting the same physical edge twice would overstate it.</div>
+        </div>
+      </div>
+      <div class="model-factor-card group-blue">
+        <div class="model-factor-icon">🚨</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Short Notice</div>
+          <div class="model-factor-text">Fighters who accept a bout on short notice — a late replacement without a full training camp — win measurably less often; published analyses of UFC short-notice outcomes put the drop at roughly 10 percentage points, which is the penalty applied here. Flagged per fighter when a late booking is confirmed, and cleared automatically once that fight happens, so a one-booking fact never bleeds into the fighter's next matchup.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
@@ -1536,7 +1578,7 @@
         <div class="model-factor-icon">💰</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Suggested Stake</div>
-          <div class="model-factor-text">Tenth-Kelly, hard-capped at 5% of bankroll regardless of the math. In genuinely efficient sports betting markets, an edge large enough to produce a raw half-Kelly stake above ~10% is itself a warning sign — it usually means the model is overconfident somewhere (a method-of-victory prop resting on a small career sample, a stat that hasn't caught up to recent injury or camp news) rather than a real edge that big. The cap exists to protect against staking real money on the model's own miscalibration, not to suggest the edge itself is wrong.</div>
+          <div class="model-factor-text">Tenth-Kelly, hard-capped at 5% of bankroll — and sized from a probability that's deliberately shrunk most of the way toward the market's own de-vigged price, not the raw model number. Backtesting showed the model's standalone probabilities carry real but modest signal, while sportsbook closing lines are among the sharpest predictors in sports — so when the model and the market disagree hugely, the stake respects that the market is usually the one that's right. Practical effect: big claimed edges get meaningfully smaller stakes than raw Kelly would suggest, and small edges (under roughly 5 points) stake zero, because after the shrink they no longer clear the vig. That's the system being deliberately humble, not broken.</div>
         </div>
       </div>
       <div class="model-factor-card group-green">
@@ -1551,6 +1593,15 @@
         <div class="model-factor-content">
           <div class="model-factor-title">Historical Upset Analysis</div>
           <div class="model-factor-text">Separately from live tracking, the rating engine is walked back through its full fight history in chronological order — replaying each fight using only the ratings as they stood the moment before, no future information — to see how favorites at each confidence level actually lost when they lost: close decision, or getting finished. This is diagnostic, not automatic: a pattern here is a reason to investigate a specific adjustment, not an instruction that silently reweights anything on its own.</div>
+        </div>
+      </div>
+
+      <div class="model-group-title">Validation</div>
+      <div class="model-factor-card group-gold">
+        <div class="model-factor-icon">🧪</div>
+        <div class="model-factor-content">
+          <div class="model-factor-title">Walk-Forward Backtest</div>
+          <div class="model-factor-text">The rating backbone is validated against 30 years of real fight history — nearly 3,000 strictly out-of-sample predictions, each made only from fights that happened before it, never retrodicted. This is also what keeps the adjustment weights honest: it's how the layoff penalty got cut to a third of its original size, how the recent-form window was fitted rather than guessed, and how a proposed strength-of-schedule factor got rejected entirely (it looked good in-sample and fell apart on held-out data — the exact failure the backtest exists to catch). Factors that can't be validated this way, like short notice, are labeled by what actually backs them instead of being presented as fitted.</div>
         </div>
       </div>
 
