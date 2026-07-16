@@ -116,6 +116,15 @@ def main():
     events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings, weight_class_history_df)
     future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings, weight_class_history_df)
 
+    # Event display order must be chronological (soonest first), independent
+    # of whatever order their rows happen to sit in the source CSV -- that
+    # order reflects when each card was discovered or re-discovered (e.g.
+    # after a lineup-change replacement), not the event's actual date. This
+    # is a separate concern from fight order WITHIN one event (billing
+    # order, Main Event first), which group_edges_by_card already handles.
+    events.sort(key=lambda e: e["event_date"])
+    future_events.sort(key=lambda e: e["event_date"])
+
     tracked_edges = pd.DataFrame(
         [edge for event in events for fight in event["fights"] for edge in fight["edges"]]
     )
