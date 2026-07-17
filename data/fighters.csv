@@ -49,21 +49,96 @@ Cong Wang,Flyweight,65.0,65.5,Orthodox,10,1,3.0,1.0,6.0,0.0,1.0,0.0,46.0,25.0,80
 John Garza,Bantamweight,67.0,69.0,Orthodox,9,4,4.0,3.0,2.0,1.0,1.0,2.0,45.0,30.0,60.0,2026-07-11,0.25,28.0,L,DEC,0.0,,,,Farid Basharat,USA,0.0
 Chase Hooper,Lightweight,73.0,74.0,Orthodox,16,5,4.0,8.0,4.0,3.0,0.0,2.0,49.0,2.0,55.0,2026-03-28,0.38,26.0,L,KO/TKO,0.0,4.5,3.02,,Lance Gibson Jr.,USA,0.0
 Mitch Ramirez,Lightweight,71.0,71.0,Orthodox,8,3,5.0,2.0,1.0,3.0,0.0,0.0,44.0,33.0,25.0,2025-07-12,0.75,32.0,L,KO/TKO,0.0,3.51,3.98,,Mike Davis,USA,0.0
-Tommy McMillen,Featherweight,72.0,74.0,,10,0,4.0,5.0,1.0,0.0,0.0,0.0,53.0,0.0,83.0,2026-04-04,0.9,28.0,W,KO/TKO,0.0,9.87,5.54,,Manolo Zecchini,,0.0
+Tommy McMillen,Featherweight,72.0,74.0,Orthodox,10,0,4.0,5.0,1.0,0.0,0.0,0.0,53.0,0.0,83.0,2026-04-04,0.9,28.0,W,KO/TKO,0.0,9.87,5.54,,Manolo Zecchini,USA,0.0
 Alberto Montes,Featherweight,67.0,69.0,Orthodox,12,1,1.0,7.0,4.0,1.0,0.0,0.0,61.0,,78.0,2026-03-07,0.25,31.0,W,SUB,0.0,5.26,4.44,,Ricky Turcios,Venezuela,0.0
-Tabatha Ricci,Women's Strawweight,61.0,61.0,,12,4,2.0,3.0,7.0,1.0,0.0,3.0,37.0,8.0,65.0,2026-04-04,0.17,31.0,L,DEC,0.0,4.0,4.83,,Virna Jandiroba,Brazil,0.0
-Fatima Kline,Women's Strawweight,66.0,67.0,,9,1,4.0,1.0,4.0,0.0,0.0,1.0,50.0,8.0,50.0,2025-11-15,0.11,25.0,W,DEC,0.0,5.01,2.71,,Angela Hill,USA,0.0
+Tabatha Ricci,Women's Strawweight,61.0,61.0,Orthodox,12,4,2.0,3.0,7.0,1.0,0.0,3.0,37.0,8.0,65.0,2026-04-04,0.17,31.0,L,DEC,0.0,4.0,4.83,,Virna Jandiroba,Brazil,0.0
+Fatima Kline,Women's Strawweight,66.0,67.0,Orthodox,9,1,4.0,1.0,4.0,0.0,0.0,1.0,50.0,8.0,50.0,2025-11-15,0.11,25.0,W,DEC,0.0,5.01,2.71,,Angela Hill,USA,0.0
 Austin Bashi,Featherweight,66.0,70.0,Orthodox,14,1,3.0,6.0,5.0,0.0,0.0,1.0,47.0,9.0,63.0,2025-08-02,0.29,24.0,W,SUB,0.0,1.75,2.34,,John Yannis,USA,0.0
 Jose Delgado,Featherweight,71.0,73.0,,10,2,6.0,4.0,0.0,0.0,0.0,2.0,55.0,0.0,50.0,2026-03-14,0.7,27.0,W,DEC,1.0,7.48,4.95,,Andre Fili,USA,0.0
-Jean-Paul Lebosnoyani,Welterweight,71.0,72.0,,10,2,3.0,5.0,2.0,2.0,0.0,0.0,62.0,30.0,,2026-02-21,0.7,27.0,W,DEC,0.0,4.77,3.72,,Phil Rowe,USA,0.0
+Jean-Paul Lebosnoyani,Welterweight,71.0,72.0,Switch,10,2,3.0,5.0,2.0,2.0,0.0,0.0,62.0,30.0,,2026-02-21,0.7,27.0,W,DEC,0.0,4.77,3.72,,Phil Rowe,USA,0.0
 Seokhyeon Ko,Welterweight,70.0,71.0,Southpaw,13,2,6.0,0.0,7.0,2.0,0.0,0.0,67.0,77.0,,2025-11-01,,32.0,W,DEC,0.0,2.3,2.13,,Phil Rowe,South Korea,0.0
-Felipe Franco,Light Heavyweight,73.0,,,10,2,6.0,4.0,0.0,0.0,1.0,1.0,51.0,0.0,88.0,2026-03-21,1.0,25.0,L,DEC,0.0,1.81,2.55,,Mario Pinto,Brazil,0.0
+Felipe Franco,Light Heavyweight,73.0,76.0,Orthodox,10,2,6.0,4.0,0.0,0.0,1.0,1.0,51.0,0.0,88.0,2026-03-21,1.0,25.0,L,DEC,0.0,1.81,2.55,,Mario Pinto,Brazil,0.0
 Levi Rodrigues Jr.,Light Heavyweight,72.0,76.5,Orthodox,5,0,5.0,0.0,0.0,0.0,0.0,0.0,79.0,,100.0,2025-10-14,1.0,29.0,NC,KO/TKO,0.0,4.5,2.1,,Freddy Vidal,Brazil,0.0
 Alden Coria,Flyweight,68.0,67.0,Southpaw,12,3,5.0,4.0,3.0,0.0,1.0,2.0,45.0,50.0,71.0,2026-02-21,0.25,27.0,W,DEC,0.0,4.69,2.4,,Luis Gurule,USA,0.0
 Stewart Nicoll,Flyweight,65.0,65.5,Orthodox,8,3,4.0,3.0,1.0,1.0,1.0,1.0,39.0,12.0,29.0,2026-04-04,,31.0,L,KO/TKO,0.0,3.63,5.84,,Alessandro Costa,Australia,0.0
 Alvin Hines,Heavyweight,74.0,74.0,Orthodox,7,1,3.0,3.0,1.0,0.0,0.0,1.0,32.0,10.0,,2025-06-28,0.29,34.0,L,DEC,0.0,5.47,7.47,,Jhonata Diniz,USA,0.0
 RJ Harris,Heavyweight,78.0,80.0,Orthodox,5,0,1.0,3.0,1.0,0.0,0.0,0.0,,,,,,27.0,,,0.0,,,,,USA,1.0
 Dione Barbosa,Women's Flyweight,66.0,66.0,Orthodox,9,4,0.0,4.0,5.0,1.0,0.0,3.0,45.0,42.0,50.0,2026-04-04,,34.0,W,DEC,0.0,2.27,2.45,,Melissa Gatto,Brazil,0.0
-Anna Melisano,Women's Flyweight,66.0,70.0,,6,1,2.0,1.0,3.0,1.0,0.0,0.0,,,,,,29.0,L,KO/TKO,0.0,,,,Andrea Amaro,,1.0
+Anna Melisano,Women's Flyweight,66.0,70.0,Orthodox,6,1,2.0,1.0,3.0,1.0,0.0,0.0,,,,,,29.0,L,KO/TKO,0.0,,,,Andrea Amaro,USA,1.0
 Ezra Elliott,Featherweight,70.0,70.0,,7,0,2.0,5.0,0.0,0.0,0.0,0.0,,,,2026-05-02,1.0,26.0,W,KO/TKO,,,,,Ashton Caniglia,USA,0.0
-Damien Anderson,Featherweight,,,,5,0,1.0,4.0,0.0,0.0,0.0,0.0,,,,2026-02-15,,29.0,W,Submission,,,,,Hondo Gutierrez,USA,0.0
+Damien Anderson,Featherweight,68.0,,,5,0,1.0,4.0,0.0,0.0,0.0,0.0,,,,2026-02-15,,29.0,W,Submission,,,,,Hondo Gutierrez,USA,0.0
+Neil Magny,Welterweight,75.0,80.0,Orthodox,31,15,,,,,,,,,,,,38.0,,,,,,,,USA,
+Ramiz Brahimaj,Welterweight,70.0,72.0,Orthodox,13,6,,,,,,,,,,,,33.0,,,,,,,,USA,
+Vicente Luque,Middleweight,71.0,75.5,Orthodox,24,12,,,,,,,,,,,,34.0,,,,,,,,Brazil,
+Tresean Gore,Middleweight,72.0,75.0,Switch,7,4,,,,,,,,,,,,32.0,,,,,,,,USA,
+Chidi Njokuani,Welterweight,75.0,80.0,Orthodox,25,12,,,,,,,,,,,,37.0,,,,,,,,USA,
+Geoff Neal,Welterweight,71.0,75.0,Southpaw,16,8,,,,,,,,,,,,35.0,,,,,,,,USA,
+Jeremiah Wells,Welterweight,69.0,74.0,Switch,13,4,,,,,,,,,,,,39.0,,,,,,,,USA,
+Myktybek Orolbai,Welterweight,70.0,74.0,Orthodox,16,2,,,,,,,,,,,,28.0,,,,,,,,Kyrgyzstan,
+Edson Barboza,Lightweight,71.0,75.0,Orthodox,24,14,,,,,,,,,,,,40.0,,,,,,,,Brazil,
+Esteban Ribovics,Lightweight,70.0,69.0,Orthodox,15,3,,,,,,,,,,,,30.0,,,,,,,,Argentina,
+Dustin Stoltzfus,Middleweight,72.0,75.0,Orthodox,16,8,,,,,,,,,,,,34.0,,,,,,,,USA,
+Mansur Abdul-Malik,Middleweight,74.0,79.5,Orthodox,9,1,,,,,,,,,,,,28.0,,,,,,,,USA,
+Jalin Turner,Lightweight,75.0,77.0,Southpaw,15,9,,,,,,,,,,,,31.0,,,,,,,,USA,
+Erin Blanchfield,Flyweight,64.0,66.0,Orthodox,14,2,,,,,,,,,,,,27.0,,,,,,,,USA,
+Jasmine Jasudavicius,Flyweight,67.0,68.0,Orthodox,15,4,,,,,,,,,,,,37.0,,,,,,,,Canada,
+Mike Davis,Lightweight,72.0,72.5,Orthodox,12,3,,,,,,,,,,,,33.0,,,,,,,,USA,
+Nurullo Aliev,Lightweight,70.0,72.0,Orthodox,11,0,,,,,,,,,,,,25.0,,,,,,,,Tajikistan,
+Brendson Ribeiro,Light Heavyweight,75.0,81.0,Orthodox,17,10,,,,,,,,,,,,29.0,,,,,,,,Brazil,
+Magomed Tuchalov,Light Heavyweight,77.0,,,6,0,,,,,,,,,,,,26.0,,,,,,,,Russia,
+Ismael Bonfim,Lightweight,68.0,71.5,Orthodox,20,6,,,,,,,,,,,,30.0,,,,,,,,Brazil,
+Axel Sola,Lightweight,72.0,74.0,Southpaw,11,1,,,,,,,,,,,,28.0,,,,,,,,France,
+Santiago Ponzinibbio,Welterweight,72.0,73.0,Orthodox,31,9,,,,,,,,,,,,39.0,,,,,,,,Argentina,
+Sam Patterson,Welterweight,75.0,78.0,Orthodox,14,3,,,,,,,,,,,,30.0,,,,,,,,England,
+Dustin Jacoby,Light Heavyweight,75.0,76.0,Orthodox,22,9,,,,,,,,,,,,38.0,,,,,,,,USA,
+Uran Satybaldiev,Light Heavyweight,76.0,79.0,Orthodox,9,1,,,,,,,,,,,,31.0,,,,,,,,Kyrgyzstan,
+Thomas Petersen,Heavyweight,73.0,74.0,Southpaw,11,4,,,,,,,,,,,,31.0,,,,,,,,USA,
+Valter Walker,Heavyweight,78.0,78.5,Orthodox,15,1,,,,,,,,,,,,28.0,,,,,,,,Brazil,
+Abubakar Vagaev,Welterweight,72.0,,,24,4,,,,,,,,,,,,33.0,,,,,,,,Russia,
+Saygid Izagakhmaev,Welterweight,73.0,74.0,,22,3,,,,,,,,,,,,31.0,,,,,,,,Russia,
+Rizvan Kuniev,Heavyweight,76.0,76.0,Orthodox,13,3,,,,,,,,,,,,34.0,,,,,,,,Russia,
+Tyrell Fortune,Heavyweight,74.0,77.0,,18,3,,,,,,,,,,,,36.0,,,,,,,,USA,
+Magomed Zaynukov,Lightweight,70.0,68.0,Orthodox,8,0,,,,,,,,,,,,31.0,,,,,,,,Russia,
+Damian Rzepecki,Lightweight,70.0,73.5,,10,0,,,,,,,,,,,,24.0,,,,,,,,Poland,
+Wellington Turman,Welterweight,72.0,72.0,Orthodox,18,8,,,,,,,,,,,,29.0,,,,,,,,Brazil,
+Islam Dulatov,Welterweight,75.0,75.0,Orthodox,12,1,,,,,,,,,,,,27.0,,,,,,,,Germany,
+Ramazan Temirov,Flyweight,64.0,63.0,Orthodox,19,3,,,,,,,,,,,,29.0,,,,,,,,Uzbekistan,
+Steve Erceg,Flyweight,68.0,68.0,Orthodox,14,4,,,,,,,,,,,,30.0,,,,,,,,Australia,
+Bogdan Guskov,Light Heavyweight,75.0,76.0,Orthodox,18,3,,,,,,,,,,,,33.0,,,,,,,,Uzbekistan,
+Kyle Prepolec,Lightweight,70.0,70.0,Southpaw,18,10,,,,,,,,,,,,36.0,,,,,,,,Canada,
+Mateusz Rębecki,Lightweight,67.0,66.0,Southpaw,20,5,,,,,,,,,,,,33.0,,,,,,,,Poland,
+Jan Blachowicz,Light Heavyweight,74.0,78.0,Orthodox,29,11,,,,,,,,,,,,43.0,,,,,,,,Poland,
+Navajo Stirling,Light Heavyweight,76.0,79.0,Orthodox,10,0,,,,,,,,,,,,28.0,,,,,,,,New Zealand,
+Jovan Leka,Heavyweight,76.0,75.0,Orthodox,13,2,,,,,,,,,,,,24.0,,,,,,,,Serbia,
+Max Gimenis,Heavyweight,74.0,75.0,Orthodox,6,2,,,,,,,,,,,,33.0,,,,,,,,Brazil,
+Hailey Cowan,Women's Bantamweight,68.0,67.0,Southpaw,7,5,,,,,,,,,,,,34.0,,,,,,,,USA,
+Nina Milošević,Women's Bantamweight,65.0,65.0,,8,1,,,,,,,,,,,,29.0,,,,,,,,Australia,
+Dennis Buzukja,Featherweight,69.0,70.5,Switch,12,6,,,,,,,,,,,,28.0,,,,,,,,USA,
+Bogdan Grad,Featherweight,68.0,70.0,Orthodox,15,4,,,,,,,,,,,,30.0,,,,,,,,Austria,
+Josias Musasa,Bantamweight,68.0,74.0,Southpaw,8,2,,,,,,,,,,,,27.0,,,,,,,,Democratic Republic of Congo,
+Mark Vologdin,Bantamweight,63.0,65.0,Orthodox,12,4,,,,,,,,,,,,26.0,,,,,,,,Russia,
+Oban Elliott,Welterweight,72.0,72.0,Orthodox,12,4,,,,,,,,,,,,28.0,,,,,,,,Wales,
+Michael Oliveira,Welterweight,73.0,78.5,Orthodox,9,0,,,,,,,,,,,,28.0,,,,,,,,Brazil,
+Ludovit Klein,Lightweight,67.0,72.5,Southpaw,24,5,,,,,,,,,,,,31.0,,,,,,,,Slovakia,
+Tofiq Musayev,Lightweight,69.0,69.0,Orthodox,23,6,,,,,,,,,,,,36.0,,,,,,,,Azerbaijan,
+Gilbert Urbina,Middleweight,75.0,75.0,Orthodox,7,5,,,,,,,,,,,,30.0,,,,,,,,USA,
+Vlasto Čepo,Middleweight,73.0,,,14,3,,,,,,,,,,,,31.0,,,,,,,,Serbia,
+Duško Todorović,Middleweight,73.0,74.0,Orthodox,13,6,,,,,,,,,,,,32.0,,,,,,,,Serbia,
+Robert Valentin,Middleweight,74.0,77.0,Orthodox,12,6,,,,,,,,,,,,31.0,,,,,,,,Switzerland,
+Marcin Tybura,Heavyweight,75.0,78.0,Orthodox,27,11,,,,,,,,,,,,40.0,,,,,,,,Poland,
+Aleksandar Rakic,Heavyweight,76.0,78.0,Orthodox,14,6,,,,,,,,,,,,34.0,,,,,,,,Serbia,
+Daniel Rodriguez,Welterweight,73.0,74.0,Southpaw,20,5,,,,,,,,,,,,39.0,,,,,,,,USA,
+Uroš Medić,Welterweight,73.0,71.0,Southpaw,13,3,,,,,,,,,,,,33.0,,,,,,,,Serbia,
+Mateusz Gamrot,Lightweight,70.0,70.5,Southpaw,26,4,,,,,,,,,,,,35.0,,,,,,,,Poland,
+Quillan Salkilld,Lightweight,72.0,75.0,Orthodox,12,1,,,,,,,,,,,,26.0,,,,,,,,Australia,
+Junior Tafa,Light Heavyweight,75.0,75.0,Orthodox,7,6,,,,,,,,,,,,29.0,,,,,,,,Australia,
+Ce Liu,Light Heavyweight,77.0,77.5,,3,1,,,,,,,,,,,,29.0,,,,,,,,China,
+Kai Asakura,Bantamweight,68.0,69.0,Orthodox,22,6,,,,,,,,,,,,32.0,,,,,,,,Japan,
+Aoriqileng,Bantamweight,67.0,69.0,Orthodox,26,13,,,,,,,,,,,,33.0,,,,,,,,China,
+Rei Tsuruya,Flyweight,66.0,68.0,Orthodox,11,1,,,,,,,,,,,,24.0,,,,,,,,Japan,
+Kevin Borjas,Flyweight,65.0,68.0,Orthodox,11,5,,,,,,,,,,,,28.0,,,,,,,,Peru,
+Alex Perez,Flyweight,66.0,65.5,Orthodox,26,10,,,,,,,,,,,,34.0,,,,,,,,USA,
+Sumudaerji,Flyweight,68.0,72.0,Southpaw,19,7,,,,,,,,,,,,30.0,,,,,,,,China,
+Yan Xiaonan,Women's Strawweight,65.0,63.0,Orthodox,19,5,,,,,,,,,,,,37.0,,,,,,,,China,
+Denise Gomes,Women's Strawweight,62.0,63.0,Orthodox,12,3,,,,,,,,,,,,26.0,,,,,,,,Brazil,
+Song Yadong,Bantamweight,68.0,67.0,Orthodox,23,9,,,,,,,,,,,,28.0,,,,,,,,China,
