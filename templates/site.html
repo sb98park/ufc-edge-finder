@@ -1719,7 +1719,7 @@
   {%- endmacro %}
 
   {% macro render_fight_card(fight, card_index=none) %}
-  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
+  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" name="fight-cards" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
     <summary>
       <div class="matchup-content">
       <div class="matchup-header">
