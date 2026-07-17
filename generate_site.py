@@ -366,6 +366,26 @@ def main():
             fkey = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
             fight["is_lock_of_week"] = fkey in lock_keys
 
+    # Locks of the Week, pulled out into their own flat list for a dedicated
+    # section -- previously only visible as a badge on each fight card, so
+    # seeing all of them meant checking every fight individually. A lock is
+    # about the model's conviction on the fight itself, independent of
+    # market price (unlike favorite_picks, which is specifically about
+    # favorable odds) -- kept as its own section rather than folded into
+    # Favorite Picks, since blending those two different concepts together
+    # would blur what each one actually means.
+    lock_picks = [
+        {
+            "fighter_a": fight["fighter_a"], "fighter_b": fight["fighter_b"],
+            "weight_class": fight.get("weight_class"), "card_position": fight.get("card_position"),
+            "favorite": fight["preview"]["favorite"], "favorite_prob": fight["preview"]["favorite_prob"],
+            "underdog": fight["preview"]["underdog"], "likely_method": fight["preview"]["likely_method"],
+            "narrative": fight["preview"]["narrative"],
+        }
+        for event in events for fight in event["fights"]
+        if fight.get("is_lock_of_week") and fight.get("preview")
+    ]
+
     # Results coverage, for This Weekend's card specifically -- surfaced
     # both as a step summary (visible directly in the GitHub Actions run
     # UI, not buried in console logs someone has to think to check) and
@@ -531,6 +551,7 @@ def main():
         unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
         standout_props=standout_props,
         favorite_picks=favorite_picks,
+        lock_picks=lock_picks,
         event_short_name=event_short_name,
         countdown_target_iso=countdown_target_iso,
         fight_schedule_json=json.dumps(fight_schedule),

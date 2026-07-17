@@ -26,7 +26,7 @@
 <meta name="twitter:image" content="https://octanealpha.com/og-share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Newsreader:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0c10; --panel: #14171f; --panel2: #1a1e28; --border: #262b36;
@@ -34,6 +34,7 @@
     --red: #ff5c5c; --accent: #d4af37; --accent2: #e8c766;
     --accent-cool: #5fb8c9;
     --font-display: 'Space Grotesk', -apple-system, Segoe UI, Roboto, sans-serif;
+    --font-prose: 'Newsreader', Georgia, 'Times New Roman', serif;
   }
   * { box-sizing: border-box; }
   html { scrollbar-color: var(--accent) #14171f; scrollbar-width: thin; scroll-behavior: smooth; }
@@ -113,7 +114,7 @@
   .subtitle { font-size: 12.5px; margin-bottom: 8px; letter-spacing: 0.15px; }
   .subtitle-model { color: #d4af37; font-weight: 700; }
   .subtitle-vs { color: var(--accent-cool); font-weight: 700; font-style: italic; font-size: 11px; margin: 0 5px; }
-  .subtitle-market { color: var(--muted); font-weight: 500; }
+  .subtitle-market { color: var(--accent-cool); font-weight: 500; }
   .made-with-love {
     text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.3px;
     margin-top: 4px; padding-bottom: 24px; font-style: italic;
@@ -237,6 +238,21 @@
   .favorite-main { font-size: 14.5px; font-weight: 800; }
   .favorite-vs { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .favorite-odds { font-size: 19px; font-weight: 800; color: var(--green); flex-shrink: 0; font-variant-numeric: tabular-nums; font-family: var(--font-display); }
+  .lock-pick-card {
+    background: var(--panel2);
+    border: 1px solid var(--border); border-left: 3px solid #8b5cf6; border-radius: 14px; padding: 14px 16px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .lock-pick-card:active { transform: scale(0.98); }
+  @media (hover: hover) {
+    .lock-pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(139,92,246,0.15); }
+  }
+  .lock-pick-top { display: flex; align-items: center; gap: 12px; }
+  .lock-pick-info { min-width: 0; }
+  .lock-pick-matchup { font-size: 14.5px; font-weight: 800; }
+  .lock-pick-vs { color: var(--muted); font-weight: 500; }
+  .lock-pick-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .lock-pick-narrative { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
   .favorite-prob-row { margin-bottom: 8px; }
   .favorite-prob-bar-track { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
   .favorite-prob-bar { height: 100%; background: linear-gradient(90deg, #1e4a2f, var(--green)); border-radius: 3px; transition: width 0.9s ease-out; }
@@ -664,7 +680,7 @@
   .odds-compare-col { flex: 1; text-align: center; min-width: 0; }
   .odds-compare-label { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; }
   .odds-compare-value { font-size: 19px; font-weight: 800; margin-top: 2px; }
-  .odds-compare-value.book { color: var(--muted); }
+  .odds-compare-value.book { color: var(--accent-cool); }
   .odds-compare-value.model { color: var(--accent2); }
   .move-arrow { font-size: 13px; margin-left: 3px; vertical-align: middle; }
   .move-arrow.up { color: var(--green); }
@@ -672,11 +688,32 @@
   .odds-compare-pct { font-size: 10px; color: var(--muted); margin-top: 1px; }
   .odds-compare-delta { text-align: center; font-size: 10.5px; color: var(--accent2); margin: -4px 0 10px; font-weight: 600; }
   .odds-compare-arrow { color: var(--muted); font-size: 16px; flex-shrink: 0; }
+  .edge-divergence { margin: 14px 4px 18px; }
+  .edge-divergence-track { position: relative; height: 3px; background: var(--border); border-radius: 2px; margin: 26px 6px 0; }
+  .edge-divergence-fill {
+    position: absolute; top: 0; height: 3px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent-cool), var(--accent2));
+    transition: width 1.1s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 0 10px rgba(232, 199, 102, 0.35);
+  }
+  .edge-divergence-dot {
+    position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%;
+    transform: translate(-50%, -50%); border: 2px solid var(--bg); z-index: 1;
+  }
+  .edge-divergence-dot.book { background: var(--accent-cool); box-shadow: 0 0 8px rgba(95, 184, 201, 0.5); }
+  .edge-divergence-dot.model { background: var(--accent2); box-shadow: 0 0 8px rgba(232, 199, 102, 0.5); }
+  .edge-divergence-label {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    font-size: 9.5px; line-height: 1.3; text-align: center; white-space: nowrap; font-weight: 700;
+  }
+  .edge-divergence-dot.model .edge-divergence-label { bottom: auto; top: 14px; }
+  .edge-divergence-label.book { color: var(--accent-cool); }
+  .edge-divergence-label.model { color: var(--accent2); }
+  .edge-divergence-gap-value { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 6px; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.2px; }
   .standout-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
   .rationale {
-    font-size: 12px; color: var(--muted); margin-top: 8px;
-    line-height: 1.5; border-top: 1px solid #2a2410; padding-top: 8px;
-    white-space: normal;
+    font-size: 13px; color: var(--muted); margin-top: 8px;
+    line-height: 1.55; border-top: 1px solid #2a2410; padding-top: 8px;
+    white-space: normal; font-family: var(--font-prose);
   }
 
   .movement-tag {
@@ -858,13 +895,13 @@
     background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid rgba(255,255,255,0.08); border-radius: 10px;
-    padding: 12px 14px; margin: 4px 0 14px; font-size: 12.5px; color: var(--text); line-height: 1.6;
-    white-space: normal; box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+    padding: 12px 14px; margin: 4px 0 14px; font-size: 13.5px; color: var(--text); line-height: 1.65;
+    white-space: normal; box-shadow: 0 4px 18px rgba(0,0,0,0.18); font-family: var(--font-prose);
   }
   .model-preview.masterpiece {
     border-left: 3px solid #3ddc84;
   }
-  .preview-label { color: var(--accent); font-weight: 700; }
+  .preview-label { color: var(--accent); font-weight: 700; font-family: var(--font-display); }
   .chart-block {
     background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
     padding: 10px 12px; margin: 8px 0; text-align: center;
@@ -1051,6 +1088,10 @@
 
 {% macro icon_diamond() -%}
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond"><defs><linearGradient id="hi-diamond" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M6 9 L20 9 L24 13 L13 23 L2 13 Z" fill="url(#hi-diamond)" opacity="0.18" stroke="url(#hi-diamond)" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9 L9 13 L13 9 M20 9 L17 13 L13 9 M2 13 L24 13 M13 9 L13 23 M9 13 L13 23 L17 13" stroke="url(#hi-diamond)" stroke-width="1.1" opacity="0.85" stroke-linejoin="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_lock() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Padlock"><defs><linearGradient id="hi-lock" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><rect x="5" y="12" width="16" height="11" rx="2.2" fill="url(#hi-lock)" opacity="0.18" stroke="url(#hi-lock)" stroke-width="1.8"/><path d="M8.5 12 V8 a4.5 4.5 0 0 1 9 0 V12" stroke="url(#hi-lock)" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="13" cy="17" r="1.9" fill="url(#hi-lock)"/></svg>
 {%- endmacro %}
 
 {% macro icon_coins() -%}
@@ -1250,6 +1291,21 @@
         <div class="hub-card-text">
           <div class="hub-card-title">Favorite Picks <span class="count-badge">{{ favorite_picks|length }}</span></div>
           <div class="hub-card-sub">straight bets worth real size</div>
+        </div>
+        <span class="hub-card-arrow">→</span>
+      </div>
+      <div class="hub-card" style="--card-accent:#8b5cf6" onclick="showSection('locks')">
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Padlock">
+            <defs><linearGradient id="icon-locks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
+            <rect x="5" y="12" width="16" height="11" rx="2.2" fill="url(#icon-locks)" opacity="0.15" stroke="url(#icon-locks)" stroke-width="1.6"/>
+            <path d="M8.5 12 V8 a4.5 4.5 0 0 1 9 0 V12" stroke="url(#icon-locks)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <circle cx="13" cy="17" r="1.8" fill="url(#icon-locks)"/>
+          </svg>
+        </div>
+        <div class="hub-card-text">
+          <div class="hub-card-title">Locks of the Week <span class="count-badge">{{ lock_picks|length }}</span></div>
+          <div class="hub-card-sub">the model's top-conviction picks, all in one place</div>
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
@@ -1718,6 +1774,34 @@
     </svg>
   {%- endmacro %}
 
+  {% macro edge_divergence(book_prob, model_prob, edge_pct) %}
+    {#- The site's signature visual for its actual thesis: where the model
+       disagrees with the market. One horizontal track, two dots (book=cyan,
+       model=gold, matching the site-wide model/market color language), and
+       a highlighted gap between them whose width IS the edge -- not a
+       decorative bar, the literal data value. Reuses the same
+       data-target-width scroll-reveal mechanism already used for the tape
+       bars and favorite-prob bar elsewhere on this page, so it requires
+       zero new JavaScript: this macro's own .edge-divergence-fill element
+       just needs to be added to the existing fillObserver query list. #}
+    {%- set book_pct = (book_prob*100)|round(1) -%}
+    {%- set model_pct = (model_prob*100)|round(1) -%}
+    {%- set left_pct = [book_pct, model_pct]|min -%}
+    {%- set gap_width = (model_pct - book_pct)|abs -%}
+    <div class="edge-divergence">
+      <div class="edge-divergence-track">
+        <div class="edge-divergence-fill" data-target-width="{{ gap_width }}%" style="left: {{ left_pct }}%; width: 0%;"></div>
+        <div class="edge-divergence-dot book" style="left: {{ book_pct }}%;">
+          <span class="edge-divergence-label book">Book<br>{{ book_pct }}%</span>
+        </div>
+        <div class="edge-divergence-dot model" style="left: {{ model_pct }}%;">
+          <span class="edge-divergence-label model">Model<br>{{ model_pct }}%</span>
+        </div>
+      </div>
+      <div class="edge-divergence-gap-value">{{ edge_pct|round(1) }} pt gap</div>
+    </div>
+  {%- endmacro %}
+
   {% macro render_fight_card(fight, card_index=none) %}
   <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" name="fight-cards" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
     <summary>
@@ -1941,22 +2025,19 @@
             {% endif %}
           </div>
         </div>
-        <div class="standout-edge-badge {{ 'edge-pos' if p.edge_pct > 0 else 'edge-neg' }}">{{ p.edge_pct }}%</div>
       </div>
+      {{ edge_divergence(p.book_fair_prob, p.model_prob, p.edge_pct) }}
       <div class="odds-compare">
         <div class="odds-compare-col">
           <div class="odds-compare-label">Book Price</div>
           <div class="odds-compare-value book"><span class="live-odds"{% if p.clob_token_id %} data-live-token="{{ p.clob_token_id }}"{% endif %}>{{ p.odds_american | american }}</span>{{ movement_arrow(p) }}</div>
-          <div class="odds-compare-pct countup">{{ (p.book_fair_prob*100)|round(1) }}%</div>
         </div>
         <div class="odds-compare-arrow">→</div>
         <div class="odds-compare-col">
           <div class="odds-compare-label">Model Says</div>
           <div class="odds-compare-value model">{{ p.model_fair_odds }}</div>
-          <div class="odds-compare-pct countup">{{ (p.model_prob*100)|round(1) }}%</div>
         </div>
       </div>
-      <div class="odds-compare-delta">Δ {{ ((p.model_prob - p.book_fair_prob)*100)|round(1) }} percentage points</div>
       <div class="standout-sub">Suggested stake: {{ p.suggested_stake_pct }}% of bankroll</div>
       {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
     </div>
@@ -1999,6 +2080,29 @@
   </div>
   {% else %}
   {{ empty_state(icon_diamond(), "No favorite picks right now", "Nothing in the realistic straight-bet range at the moment — check back as odds update, or the model just doesn't see a clean high-probability edge on this card yet.") }}
+  {% endif %}
+  </div>
+
+  <div class="detail-section" data-section="locks">
+  {% if lock_picks %}
+  <div class="standout-title" id="section-locks">{{ icon_lock() }} Locks of the Week</div>
+  <div class="parlay-subtitle">The model's single highest-conviction picks on this weekend's card, all in one place — previously only visible as a badge you'd have to find on each individual fight. Capped at 3 per event, so a real standout doesn't get diluted by padded-out picks.</div>
+  <div class="standout-grid">
+    {% for l in lock_picks %}
+    <div class="lock-pick-card reveal-target" data-key="{{ l.fighter_a }}|{{ l.fighter_b }}">
+      <div class="lock-pick-top">
+        {{ confidence_ring(l.favorite_prob, 'High Confidence', size=46) }}
+        <div class="lock-pick-info">
+          <div class="lock-pick-matchup">{{ l.favorite }} <span class="lock-pick-vs">vs. {{ l.underdog }}</span></div>
+          <div class="lock-pick-meta">{{ l.weight_class }}{% if l.card_position %} · {{ l.card_position }}{% endif %} · by {{ l.likely_method }}</div>
+        </div>
+      </div>
+      {% if l.narrative %}<div class="rationale lock-pick-narrative">{{ l.narrative }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  {{ empty_state(icon_lock(), "No locks this week", "The model doesn't have a standout, top-tier-conviction pick on this card right now — check back as its projections settle in.") }}
   {% endif %}
   </div>
 
@@ -2235,7 +2339,7 @@
           // measure yet) and gets handled by that card's own toggle
           // listener once actually expanded.
           if (window.__resetAndRewatch) {
-            document.querySelectorAll(`.detail-section[data-section="${id}"] .tape-block, .detail-section[data-section="${id}"] .model-pick-badge, .detail-section[data-section="${id}"] .radar-block, .detail-section[data-section="${id}"] .chart-block, .detail-section[data-section="${id}"] .favorite-card`).forEach(el => {
+            document.querySelectorAll(`.detail-section[data-section="${id}"] .tape-block, .detail-section[data-section="${id}"] .model-pick-badge, .detail-section[data-section="${id}"] .radar-block, .detail-section[data-section="${id}"] .chart-block, .detail-section[data-section="${id}"] .favorite-card, .detail-section[data-section="${id}"] .standout-card, .detail-section[data-section="${id}"] .lock-pick-card`).forEach(el => {
               if (el.offsetParent === null) return;
               window.__resetAndRewatch(el);
             });
@@ -2760,7 +2864,7 @@
       if (!('IntersectionObserver' in window)) {
         // Older browser fallback -- just show everything immediately, no animation
         document.querySelectorAll('.reveal-target').forEach(el => el.classList.add('revealed'));
-        document.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar').forEach(el => { el.style.width = el.dataset.targetWidth; });
+        document.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .edge-divergence-fill').forEach(el => { el.style.width = el.dataset.targetWidth; });
         document.querySelectorAll('.ring-progress').forEach(el => { el.style.strokeDashoffset = el.dataset.targetOffset; });
         document.querySelectorAll('.radar-chart').forEach(el => el.classList.add('revealed'));
         return;
@@ -2777,7 +2881,7 @@
       document.querySelectorAll('.reveal-target').forEach(el => cardObserver.observe(el));
 
       function revealFillTarget(el) {
-        el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar').forEach(bar => {
+        el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .edge-divergence-fill').forEach(bar => {
           bar.style.width = bar.dataset.targetWidth;
         });
         el.querySelectorAll('.ring-progress').forEach(ring => {
@@ -2796,10 +2900,10 @@
       // Used to let a section replay its fill animations fresh every
       // time you navigate back into it, instead of only ever playing once.
       function resetFillTarget(el) {
-        const affected = el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .ring-progress');
+        const affected = el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .ring-progress, .edge-divergence-fill');
         affected.forEach(node => { node.style.transition = 'none'; });
 
-        el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar').forEach(bar => {
+        el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .edge-divergence-fill').forEach(bar => {
           bar.style.width = '0%';
         });
         el.querySelectorAll('.ring-progress').forEach(ring => {
@@ -2822,7 +2926,7 @@
           obs.unobserve(entry.target);
         });
       }, { threshold: 0.15 });
-      document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card').forEach(el => fillObserver.observe(el));
+      document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card, .standout-card, .lock-pick-card').forEach(el => fillObserver.observe(el));
       window.__fillObserver = fillObserver;
 
       // A brief, one-time celebration flourish the first time a Perfect
