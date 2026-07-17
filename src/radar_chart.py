@@ -2,12 +2,25 @@
 Radar/spider chart for the Tale of the Tape: overlays both fighters' core
 model metrics on one chart so the stylistic matchup reads at a glance.
 
-Five axes, all fully populated for the whole roster:
+Six axes, all fully populated for the whole roster:
   - Striking Accuracy    (strike_accuracy_pct)
   - Grappling Offense    (control_time_pct if populated, else td_accuracy_pct)
   - Grappling Defense    (td_defense_pct)
-  - Finishing Ability     (career finish rate: KO+Sub wins / total wins)
-  - Experience/Durability (blend of career fight count and how rarely they've been finished)
+  - Finishing Ability    (career finish rate: KO+Sub wins / total wins)
+  - Experience           (career fight count, scaled to a 0-100 veteran curve)
+  - Durability           (how rarely they've been finished, i.e. inverse finish-loss rate)
+
+Experience and Durability were originally a single averaged "Exp/Dur" axis;
+split into two separate axes on request, since the underlying calculation
+was already computing them independently before averaging them together --
+no new data or logic was needed, just exposing both instead of blending them.
+
+Axis labels are spelled out in full rather than abbreviated (e.g.
+"Grappling Offense" instead of "Gr. Off.") -- the chart is rendered at a
+fixed size on every single fight (see model_preview.py's one call site,
+which never overrides the default `size`), so there's no real space
+constraint forcing abbreviation, and the shorthand risked being unclear to
+users without an MMA background.
 
 Striking Defense and Striking Volume (SLpM/SApM) were both considered and
 left out deliberately -- neither is real data this roster has. Striking
@@ -17,21 +30,20 @@ source here provides; faking that axis would be worse than leaving it out.
 
 import math
 
-AXIS_LABELS = ["Str. Acc.", "Gr. Off.", "Gr. Def.", "Finish", "Exp/Dur"]
+AXIS_LABELS = ["Striking Accuracy", "Grappling Offense", "Grappling Defense", "Finishing Ability", "Experience", "Durability"]
 
 
-def _experience_durability_score(row: dict) -> float:
+def _experience_score(row: dict) -> float:
     total_fights = (row.get("wins") or 0) + (row.get("losses") or 0)
-    experience_score = min(100.0, total_fights * 4.0)  # ~25 fights = veteran-level 100
+    return round(min(100.0, total_fights * 4.0), 1)  # ~25 fights = veteran-level 100
 
+
+def _durability_score(row: dict) -> float:
     losses = row.get("losses") or 0
-    if losses > 0:
-        finish_loss_rate = ((row.get("ko_losses") or 0) + (row.get("sub_losses") or 0)) / losses
-        durability_score = (1 - finish_loss_rate) * 100
-    else:
-        durability_score = 100.0  # undefeated -- no data on how they take a loss, don't penalize
-
-    return round((experience_score + durability_score) / 2, 1)
+    if losses <= 0:
+        return 100.0  # undefeated -- no data on how they take a loss, don't penalize
+    finish_loss_rate = ((row.get("ko_losses") or 0) + (row.get("sub_losses") or 0)) / losses
+    return round((1 - finish_loss_rate) * 100, 1)
 
 
 def _finish_rate_score(row: dict) -> float:
@@ -43,7 +55,7 @@ def _finish_rate_score(row: dict) -> float:
 
 
 def compute_radar_metrics(row: dict) -> list[float]:
-    """Returns [striking_acc, grappling_off, grappling_def, finishing, exp_durability], each 0-100."""
+    """Returns [striking_acc, grappling_off, grappling_def, finishing, experience, durability], each 0-100."""
     striking_acc = float(row.get("strike_accuracy_pct") or 0)
 
     control_time = row.get("control_time_pct")
@@ -51,9 +63,10 @@ def compute_radar_metrics(row: dict) -> list[float]:
 
     grappling_def = float(row.get("td_defense_pct") or 0)
     finishing = _finish_rate_score(row)
-    exp_durability = _experience_durability_score(row)
+    experience = _experience_score(row)
+    durability = _durability_score(row)
 
-    return [striking_acc, grappling_off, grappling_def, finishing, exp_durability]
+    return [striking_acc, grappling_off, grappling_def, finishing, experience, durability]
 
 
 def build_radar_chart_svg(
