@@ -26,7 +26,7 @@
 <meta name="twitter:image" content="https://octanealpha.com/og-share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Newsreader:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0c10; --panel: #14171f; --panel2: #1a1e28; --border: #262b36;
@@ -34,7 +34,7 @@
     --red: #ff5c5c; --accent: #d4af37; --accent2: #e8c766;
     --accent-cool: #5fb8c9;
     --font-display: 'Space Grotesk', -apple-system, Segoe UI, Roboto, sans-serif;
-    --font-prose: 'Newsreader', Georgia, 'Times New Roman', serif;
+    --font-prose: 'IBM Plex Sans', -apple-system, Segoe UI, Roboto, sans-serif;
   }
   * { box-sizing: border-box; }
   html { scrollbar-color: var(--accent) #14171f; scrollbar-width: thin; scroll-behavior: smooth; }
@@ -2989,6 +2989,42 @@
         card.addEventListener('toggle', () => {
           if (!card.open) return;
           card.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block').forEach(resetAndRewatch);
+        });
+      });
+    })();
+
+    // Keep the fight card someone just clicked pinned at the same screen
+    // position, regardless of how much content collapses or expands
+    // elsewhere on the page as a result. Necessary specifically because
+    // fight cards are an exclusive accordion (see the `name="fight-cards"`
+    // attribute) -- opening one can auto-close a DIFFERENT, possibly very
+    // tall card further up the page, which the browser doesn't account
+    // for at all: it preserves the raw scrollY pixel offset, not which
+    // element is under it, so a large card collapsing above the viewport
+    // silently drags everything below (including the card just opened) up
+    // by its full height. Confirmed directly: opening a card below a ~2000px
+    // open card moved the just-clicked card's own position by over 1500px,
+    // landing the viewport somewhere in the middle of its content instead
+    // of at its top -- exactly the "jumps to the end" report this fixes.
+    (function() {
+      document.querySelectorAll('details.fight-card > summary').forEach(summary => {
+        summary.addEventListener('click', () => {
+          const anchor = summary.getBoundingClientRect().top;
+          // Diagnostic timing showed the position settling almost entirely
+          // by the first animation frame (the accordion collapse/expand
+          // itself), but then drifting further over roughly the next
+          // 200ms -- likely a web font swap or another still-running
+          // transition changing text height slightly after the main
+          // layout change. Re-correcting at a few checkpoints covers
+          // that secondary drift instead of one correction landing too
+          // early and leaving a smaller, but still noticeable, residual.
+          [0, 60, 150, 300, 500].forEach(delay => {
+            setTimeout(() => {
+              const now = summary.getBoundingClientRect().top;
+              const drift = now - anchor;
+              if (Math.abs(drift) > 1) window.scrollBy(0, drift);
+            }, delay);
+          });
         });
       });
     })();
