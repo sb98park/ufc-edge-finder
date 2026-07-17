@@ -2992,62 +2992,62 @@
       });
     })();
 
-    // Keep the fight card someone just clicked pinned at the same screen
-    // position, regardless of how much content collapses or expands
-    // elsewhere on the page as a result. Necessary specifically because
-    // fight cards are an exclusive accordion (see the `name="fight-cards"`
+    // Fight cards are an exclusive accordion (see the `name="fight-cards"`
     // attribute) -- opening one can auto-close a DIFFERENT, possibly very
-    // tall card further up the page, which the browser doesn't account
-    // for at all: it preserves the raw scrollY pixel offset, not which
+    // tall card further up the page. The browser doesn't compensate for
+    // this at all: it preserves the raw scrollY pixel offset, not which
     // element is under it, so a large card collapsing above the viewport
     // silently drags everything below (including the card just opened) up
-    // by its full height. Confirmed directly: opening a card below a ~2000px
-    // open card moved the just-clicked card's own position by over 1500px,
-    // landing the viewport somewhere in the middle of its content instead
-    // of at its top -- exactly the "jumps to the end" report this fixes.
+    // by its full height.
+    //
+    // Two earlier approaches both tried to correct this AFTER the fact --
+    // first with a single delayed check, then with several delayed
+    // rechecks to catch a secondary drift that turned out to be this same
+    // fix's own correction getting caught by the page's global smooth-
+    // scroll CSS and animating into view over ~800ms instead of applying
+    // instantly. Fixing that (forcing an instant scroll) helped, but a
+    // real device report afterward showed a jump was STILL visible even
+    // then: "instant" only means the correction itself doesn't animate --
+    // it doesn't mean invisible, since the browser has already painted
+    // the wrong position at least once by the time any JS callback (even
+    // the very first animation frame) gets a chance to run and fix it. No
+    // amount of correcting faster closes that gap, because the native
+    // <details> toggle applies and paints synchronously as part of the
+    // browser's own click handling, before any of this page's JS runs at
+    // all -- confirmed directly: a capture-phase click listener still saw
+    // the OLD position, while the very next animation frame already saw
+    // the fully-jumped one.
+    //
+    // <details> has no beforetoggle event to hook into either (unlike
+    // popover/dialog) -- confirmed directly, this isn't shipped for
+    // <details> in any browser -- so there's no native way to intervene
+    // before the toggle applies.
+    //
+    // The only way to actually prevent the jump, rather than chase it, is
+    // to stop letting the browser's own opaque, auto-closing accordion
+    // logic run at all: take over the whole sequence manually, so the
+    // close, the open, and the scroll correction all happen inside the
+    // same synchronous block of code, before the browser has painted
+    // anything. Only kicks in when there's actually another open card to
+    // worry about -- opening a card with nothing else open, or closing
+    // the one you're already looking at, has no other content to shift
+    // and is left entirely to native behavior (already confirmed
+    // jump-free on its own).
     (function() {
       document.querySelectorAll('details.fight-card > summary').forEach(summary => {
-        summary.addEventListener('click', () => {
+        summary.addEventListener('click', (e) => {
+          const card = summary.closest('details.fight-card');
+          if (card.open) return; // closing the card you're already on -- nothing else shifts, let native handle it
+
+          const otherOpen = [...document.querySelectorAll('details.fight-card[open]')].find(d => d !== card);
+          if (!otherOpen) return; // nothing else open -- native behavior alone is already jump-free here
+
+          e.preventDefault(); // stop the native toggle (and its auto-close side effect) from running at all
           const anchor = summary.getBoundingClientRect().top;
-          // Diagnostic timing showed the position settling almost entirely
-          // by the first animation frame (the accordion collapse/expand
-          // itself), but then drifting further over roughly the next
-          // 200ms -- likely a web font swap or another still-running
-          // transition changing text height slightly after the main
-          // layout change. Re-correcting at a few checkpoints covers
-          // that secondary drift instead of one correction landing too
-          // early and leaving a smaller, but still noticeable, residual.
-          //
-          // Reported afterward: real jumping on an actual device during
-          // this same window. Likely cause -- untestable in a headless
-          // browser, which never simulates a genuine touch gesture --
-          // is that tapping a card and immediately swiping toward the
-          // next one (the natural motion when browsing a list like this,
-          // and iOS scrolling carries momentum after the finger lifts)
-          // races against these delayed corrections: they can't tell a
-          // real layout drift apart from the user deliberately scrolling
-          // away, and were forcing the page back to the anchored position
-          // on top of an in-progress scroll gesture. Bail out of all
-          // remaining corrections the instant real touch/wheel input is
-          // seen, so this can only ever act during genuine stillness.
-          let userTookOver = false;
-          const markUserScroll = () => { userTookOver = true; };
-          window.addEventListener('touchmove', markUserScroll, { passive: true, once: true });
-          window.addEventListener('wheel', markUserScroll, { passive: true, once: true });
-
-          [0, 60, 150, 300, 500].forEach(delay => {
-            setTimeout(() => {
-              if (userTookOver) return;
-              const now = summary.getBoundingClientRect().top;
-              const drift = now - anchor;
-              if (Math.abs(drift) > 1) window.scrollBy({ top: drift, left: 0, behavior: 'instant' });
-            }, delay);
-          });
-
-          setTimeout(() => {
-            window.removeEventListener('touchmove', markUserScroll);
-            window.removeEventListener('wheel', markUserScroll);
-          }, 550);
+          otherOpen.open = false;
+          card.open = true;
+          const drift = summary.getBoundingClientRect().top - anchor;
+          if (Math.abs(drift) > 0.5) window.scrollBy({ top: drift, left: 0, behavior: 'instant' });
         });
       });
     })();
