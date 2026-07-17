@@ -1802,7 +1802,7 @@
   {%- endmacro %}
 
   {% macro render_fight_card(fight, card_index=none) %}
-  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" name="fight-cards" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
+  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
     <summary>
       <div class="matchup-content">
       <div class="matchup-header">
@@ -2323,6 +2323,15 @@
       function activateAndReveal() {
         document.querySelectorAll('.detail-section').forEach(el => {
           el.style.display = (el.dataset.section === id) ? 'block' : 'none';
+        });
+        // Every fresh visit to a section should start with its fight cards
+        // collapsed, not however they were left from a previous visit --
+        // <details> elements aren't removed from the DOM when a section is
+        // hidden (this just toggles display:none/block), so their open
+        // state would otherwise silently persist across navigating away
+        // and back.
+        document.querySelectorAll(`.detail-section[data-section="${id}"] details.fight-card`).forEach(card => {
+          card.open = false;
         });
         // Give hidden-until-now elements a chance to be re-measured for the
         // scroll-reveal observers, in case they're already in view the
@@ -2988,66 +2997,6 @@
         card.addEventListener('toggle', () => {
           if (!card.open) return;
           card.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block').forEach(resetAndRewatch);
-        });
-      });
-    })();
-
-    // Fight cards are an exclusive accordion (see the `name="fight-cards"`
-    // attribute) -- opening one can auto-close a DIFFERENT, possibly very
-    // tall card further up the page. The browser doesn't compensate for
-    // this at all: it preserves the raw scrollY pixel offset, not which
-    // element is under it, so a large card collapsing above the viewport
-    // silently drags everything below (including the card just opened) up
-    // by its full height.
-    //
-    // Two earlier approaches both tried to correct this AFTER the fact --
-    // first with a single delayed check, then with several delayed
-    // rechecks to catch a secondary drift that turned out to be this same
-    // fix's own correction getting caught by the page's global smooth-
-    // scroll CSS and animating into view over ~800ms instead of applying
-    // instantly. Fixing that (forcing an instant scroll) helped, but a
-    // real device report afterward showed a jump was STILL visible even
-    // then: "instant" only means the correction itself doesn't animate --
-    // it doesn't mean invisible, since the browser has already painted
-    // the wrong position at least once by the time any JS callback (even
-    // the very first animation frame) gets a chance to run and fix it. No
-    // amount of correcting faster closes that gap, because the native
-    // <details> toggle applies and paints synchronously as part of the
-    // browser's own click handling, before any of this page's JS runs at
-    // all -- confirmed directly: a capture-phase click listener still saw
-    // the OLD position, while the very next animation frame already saw
-    // the fully-jumped one.
-    //
-    // <details> has no beforetoggle event to hook into either (unlike
-    // popover/dialog) -- confirmed directly, this isn't shipped for
-    // <details> in any browser -- so there's no native way to intervene
-    // before the toggle applies.
-    //
-    // The only way to actually prevent the jump, rather than chase it, is
-    // to stop letting the browser's own opaque, auto-closing accordion
-    // logic run at all: take over the whole sequence manually, so the
-    // close, the open, and the scroll correction all happen inside the
-    // same synchronous block of code, before the browser has painted
-    // anything. Only kicks in when there's actually another open card to
-    // worry about -- opening a card with nothing else open, or closing
-    // the one you're already looking at, has no other content to shift
-    // and is left entirely to native behavior (already confirmed
-    // jump-free on its own).
-    (function() {
-      document.querySelectorAll('details.fight-card > summary').forEach(summary => {
-        summary.addEventListener('click', (e) => {
-          const card = summary.closest('details.fight-card');
-          if (card.open) return; // closing the card you're already on -- nothing else shifts, let native handle it
-
-          const otherOpen = [...document.querySelectorAll('details.fight-card[open]')].find(d => d !== card);
-          if (!otherOpen) return; // nothing else open -- native behavior alone is already jump-free here
-
-          e.preventDefault(); // stop the native toggle (and its auto-close side effect) from running at all
-          const anchor = summary.getBoundingClientRect().top;
-          otherOpen.open = false;
-          card.open = true;
-          const drift = summary.getBoundingClientRect().top - anchor;
-          if (Math.abs(drift) > 0.5) window.scrollBy({ top: drift, left: 0, behavior: 'instant' });
         });
       });
     })();
