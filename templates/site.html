@@ -1687,14 +1687,14 @@
   <div class="table-scroll"><table class="compare-table">
     <tr><th>{{ comparison.a.name }}</th><th></th><th>{{ comparison.b.name }}</th></tr>
     <tr><td>{{ comparison.a.record }}</td><td>Record</td><td>{{ comparison.b.record }}</td></tr>
-    <tr><td>{{ comparison.a.ko_wins }}-{{ comparison.a.ko_losses if comparison.a.ko_losses is not none else "—" }}</td><td>KO/TKO</td><td>{{ comparison.b.ko_wins }}-{{ comparison.b.ko_losses if comparison.b.ko_losses is not none else "—" }}</td></tr>
-    <tr><td>{{ comparison.a.sub_wins }}-{{ comparison.a.sub_losses if comparison.a.sub_losses is not none else "—" }}</td><td>Sub</td><td>{{ comparison.b.sub_wins }}-{{ comparison.b.sub_losses if comparison.b.sub_losses is not none else "—" }}</td></tr>
-    <tr><td>{{ comparison.a.dec_wins }}-{{ comparison.a.dec_losses if comparison.a.dec_losses is not none else "—" }}</td><td>Decision</td><td>{{ comparison.b.dec_wins }}-{{ comparison.b.dec_losses if comparison.b.dec_losses is not none else "—" }}</td></tr>
+    <tr><td>{{ comparison.a.ko_wins if comparison.a.ko_wins is not none else "—" }}-{{ comparison.a.ko_losses if comparison.a.ko_losses is not none else "—" }}</td><td>KO/TKO</td><td>{{ comparison.b.ko_wins if comparison.b.ko_wins is not none else "—" }}-{{ comparison.b.ko_losses if comparison.b.ko_losses is not none else "—" }}</td></tr>
+    <tr><td>{{ comparison.a.sub_wins if comparison.a.sub_wins is not none else "—" }}-{{ comparison.a.sub_losses if comparison.a.sub_losses is not none else "—" }}</td><td>Sub</td><td>{{ comparison.b.sub_wins if comparison.b.sub_wins is not none else "—" }}-{{ comparison.b.sub_losses if comparison.b.sub_losses is not none else "—" }}</td></tr>
+    <tr><td>{{ comparison.a.dec_wins if comparison.a.dec_wins is not none else "—" }}-{{ comparison.a.dec_losses if comparison.a.dec_losses is not none else "—" }}</td><td>Decision</td><td>{{ comparison.b.dec_wins if comparison.b.dec_wins is not none else "—" }}-{{ comparison.b.dec_losses if comparison.b.dec_losses is not none else "—" }}</td></tr>
     <tr><td>{{ comparison.a.age or "—" }}</td><td>Age</td><td>{{ comparison.b.age or "—" }}</td></tr>
-    <tr><td>{{ comparison.a.height_in }}"</td><td>Height</td><td>{{ comparison.b.height_in }}"</td></tr>
-    <tr><td>{{ comparison.a.reach_in }}"</td><td>Reach</td><td>{{ comparison.b.reach_in }}"</td></tr>
-    <tr><td>{{ comparison.a.stance }}</td><td>Stance</td><td>{{ comparison.b.stance }}</td></tr>
-    <tr><td>{{ comparison.a.style }}</td><td>Style</td><td>{{ comparison.b.style }}</td></tr>
+    <tr><td>{{ (comparison.a.height_in ~ '"') if comparison.a.height_in is not none else "—" }}</td><td>Height</td><td>{{ (comparison.b.height_in ~ '"') if comparison.b.height_in is not none else "—" }}</td></tr>
+    <tr><td>{{ (comparison.a.reach_in ~ '"') if comparison.a.reach_in is not none else "—" }}</td><td>Reach</td><td>{{ (comparison.b.reach_in ~ '"') if comparison.b.reach_in is not none else "—" }}</td></tr>
+    <tr><td>{{ comparison.a.stance or "—" }}</td><td>Stance</td><td>{{ comparison.b.stance or "—" }}</td></tr>
+    <tr><td>{{ comparison.a.style or "—" }}</td><td>Style</td><td>{{ comparison.b.style or "—" }}</td></tr>
     <tr>
       <td>{% if comparison.a.last_fight_date %}{{ comparison.a.last_fight_date }}{% if comparison.a.last_fight_result %}<br>({{ comparison.a.last_fight_result }} by {{ comparison.a.last_fight_method }}{% if comparison.a.last_fight_opponent %} against {{ comparison.a.last_fight_opponent }}{% endif %}){% endif %}{% else %}—{% endif %}</td>
       <td>Last Fight</td>

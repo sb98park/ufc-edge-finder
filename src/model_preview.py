@@ -262,9 +262,9 @@ def build_fight_preview(
         return {
             "name": name,
             "age": int(row["age"]) if pd.notna(row.get("age")) else None,
-            "height_in": row.get("height_in"),
-            "reach_in": row.get("reach_in"),
-            "stance": row.get("stance"),
+            "height_in": float(row["height_in"]) if pd.notna(row.get("height_in")) else None,
+            "reach_in": float(row["reach_in"]) if pd.notna(row.get("reach_in")) else None,
+            "stance": row.get("stance") if pd.notna(row.get("stance")) else None,
             "style": classify_style(row),
             "record": f"{int(row['wins'])}-{int(row['losses'])}",
             "ko_wins": int(row["ko_wins"]) if pd.notna(row.get("ko_wins")) else None,
