@@ -3018,13 +3018,37 @@
           // layout change. Re-correcting at a few checkpoints covers
           // that secondary drift instead of one correction landing too
           // early and leaving a smaller, but still noticeable, residual.
+          //
+          // Reported afterward: real jumping on an actual device during
+          // this same window. Likely cause -- untestable in a headless
+          // browser, which never simulates a genuine touch gesture --
+          // is that tapping a card and immediately swiping toward the
+          // next one (the natural motion when browsing a list like this,
+          // and iOS scrolling carries momentum after the finger lifts)
+          // races against these delayed corrections: they can't tell a
+          // real layout drift apart from the user deliberately scrolling
+          // away, and were forcing the page back to the anchored position
+          // on top of an in-progress scroll gesture. Bail out of all
+          // remaining corrections the instant real touch/wheel input is
+          // seen, so this can only ever act during genuine stillness.
+          let userTookOver = false;
+          const markUserScroll = () => { userTookOver = true; };
+          window.addEventListener('touchmove', markUserScroll, { passive: true, once: true });
+          window.addEventListener('wheel', markUserScroll, { passive: true, once: true });
+
           [0, 60, 150, 300, 500].forEach(delay => {
             setTimeout(() => {
+              if (userTookOver) return;
               const now = summary.getBoundingClientRect().top;
               const drift = now - anchor;
               if (Math.abs(drift) > 1) window.scrollBy(0, drift);
             }, delay);
           });
+
+          setTimeout(() => {
+            window.removeEventListener('touchmove', markUserScroll);
+            window.removeEventListener('wheel', markUserScroll);
+          }, 550);
         });
       });
     })();
