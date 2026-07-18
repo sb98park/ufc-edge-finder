@@ -181,6 +181,111 @@ def normalize_existing_card_order(future_cards_path: str = "data/future_cards.cs
     return corrected
 
 
+def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") -> int:
+    """
+    Self-healing pass, complementary to normalize_existing_card_order
+    above: that function only re-sorts by SEGMENT (Main Event before
+    Co-Main before Main Card, etc.), deliberately preserving whatever
+    within-segment order the data already has, since blindly reordering
+    within a segment with no real data to sort by caused a worse bug
+    once already (see _sort_into_billing_order's docstring -- an
+    earlier version that reversed each segment unconditionally flipped
+    already-correct order back on the very next run). This function is
+    what supplies the real data that makes within-segment reordering
+    safe: it re-fetches each tracked event's CURRENT full card from
+    ESPN and uses ESPN's own, live competitions order -- already
+    trusted elsewhere in this file as the ground truth for which
+    segment a fight belongs to -- to catch a fight that's been
+    genuinely promoted or demoted since it was first added. Concretely:
+    a fight added early (e.g. announced right when a card was first
+    booked) that later gets moved up the actual lineup would otherwise
+    stay wherever it was first placed forever, since
+    discover_and_append_new_cards never re-fetches an event already
+    present by name.
+
+    Matches fights between the existing tracked rows and the fresh ESPN
+    fetch by fighter pair (order-independent, since fighter_a/b
+    assignment isn't guaranteed identical between two separate
+    fetches). For a matched fight, only card_position is corrected and
+    its position in the list is taken from the fresh order -- every
+    other column (backfilled fighter research, manually-verified data,
+    etc.) is preserved exactly as already tracked, never overwritten by
+    the fresh fetch. A previously-tracked fight absent from the fresh
+    fetch is kept, not dropped -- could be a transient ESPN gap rather
+    than a real cancellation, same conservative default this file uses
+    elsewhere for removing anything. A fight the fresh fetch reveals
+    that wasn't tracked yet is added in its correct position, inheriting
+    this event's own event_start_time_et from an existing row rather
+    than the fresh fetch's independently-computed value, since that
+    field is meant to be identical across every row of the same event.
+
+    Runs every generate_site.py call, before normalize_existing_card_order,
+    which still runs after as a final, cheap segment-order safety net.
+    A no-op read+compare+skip-write for an event whose order hasn't
+    actually changed. Never raises -- any single event's fetch failing
+    just leaves that event's existing order untouched, rather than
+    losing or scrambling data because of a network hiccup.
+    """
+    try:
+        df = pd.read_csv(future_cards_path)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        return 0
+    if df.empty or "event_name" not in df.columns:
+        return 0
+
+    def _key(row: dict) -> frozenset:
+        return frozenset({str(row["fighter_a"]).strip().lower(), str(row["fighter_b"]).strip().lower()})
+
+    corrected = 0
+    reordered_groups = []
+    for event_name, group in df.groupby("event_name", sort=False):
+        rows = group.to_dict("records")
+        event_date = rows[0].get("event_date")
+        if not event_date:
+            reordered_groups.append(pd.DataFrame(rows))
+            continue
+
+        fresh_rows = _fetch_espn_full_card(str(event_name), str(event_date))
+        if not fresh_rows:
+            # Fetch failed, or matched nothing usable -- leave this
+            # event's existing order untouched rather than act on no
+            # data at all.
+            reordered_groups.append(pd.DataFrame(rows))
+            continue
+
+        existing_by_key = {_key(r): r for r in rows}
+        before_snapshot = [(_key(r), r["card_position"]) for r in rows]
+        matched_keys = set()
+        new_order = []
+        for fresh in fresh_rows:
+            key = _key(fresh)
+            existing_row = existing_by_key.get(key)
+            if existing_row is not None:
+                matched_keys.add(key)
+                existing_row["card_position"] = fresh["card_position"]
+                new_order.append(existing_row)
+            else:
+                fresh["event_start_time_et"] = rows[0].get("event_start_time_et")
+                new_order.append(fresh)
+
+        orphaned = [r for k, r in existing_by_key.items() if k not in matched_keys]
+        if orphaned:
+            print(f"[card_discovery] {len(orphaned)} previously-tracked fight(s) for {event_name!r} "
+                  f"not found in ESPN's current card -- keeping them, appended, rather than dropping "
+                  f"data that might just be a transient gap")
+        new_order.extend(orphaned)
+
+        if [(_key(r), r["card_position"]) for r in new_order] != before_snapshot:
+            corrected += 1
+            print(f"[card_discovery] re-synced fight order for {event_name!r} against ESPN's current card")
+
+        reordered_groups.append(pd.DataFrame(new_order))
+
+    if corrected:
+        pd.concat(reordered_groups, ignore_index=True).to_csv(future_cards_path, index=False)
+    return corrected
+
+
 def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
     """Fetches one event's complete fight card from ESPN's scoreboard and
     transforms it into future_cards.csv's row schema. Never raises --
