@@ -117,8 +117,8 @@ def build_fight_schedule(
 
     chronological = sorted(fights, key=lambda f: _SEGMENT_ORDER.get(f.get("card_position"), 2))
 
-    early_prelims = [f for f in chronological if f.get("card_position") == "Early Prelims"]
-    prelims = [f for f in chronological if f.get("card_position") == "Prelims"]
+    early_prelims = [f for f in chronological if f.get("card_position") == "Early Prelims"][::-1]
+    prelims = [f for f in chronological if f.get("card_position") == "Prelims"][::-1]
     main_block = [f for f in chronological if f.get("card_position") in ("Main Card", "Co-Main Event", "Main Event")]
     main_event_fights = [f for f in main_block if f.get("card_position") == "Main Event"]
     main_block_undercard = [f for f in main_block if f.get("card_position") != "Main Event"]
