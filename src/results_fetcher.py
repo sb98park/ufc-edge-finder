@@ -565,7 +565,9 @@ def _fetch_from_espn(event_name: str, event_date: str, known_fighters_lower: set
         method = _extract_method([detail_text])
         if not method:
             print(f"[results_fetcher] ESPN: {winner_name} vs {loser_name} completed with a winner, but no "
-                  f"method could be confidently extracted from the available text -- treating as not-yet-complete.")
+                  f"method could be confidently extracted from the available text -- treating as not-yet-complete. "
+                  f"Raw detail_text searched: {detail_text!r} | Raw status.type: {status_type!r} | "
+                  f"Raw notes: {comp.get('notes', [])!r}")
             continue
         end_round, end_time = _extract_round_time_from_text(detail_text)
 
