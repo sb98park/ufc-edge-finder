@@ -181,6 +181,75 @@ def normalize_existing_card_order(future_cards_path: str = "data/future_cards.cs
     return corrected
 
 
+def deduplicate_tracked_fights(future_cards_path: str = "data/future_cards.csv") -> int:
+    """
+    Self-healing pass: merges rows that represent the same real fight
+    but ended up as two separate rows because of a name-format mismatch
+    between data sources (e.g. "Jose Delgado" vs "Jose Miguel Delgado"
+    for the same person). Confirmed happening in production: the
+    original exact-name-only matching in an earlier version of
+    resync_tracked_card_order below orphaned the short-name row while
+    also adding a "new" row under the fuller name, creating a real
+    duplicate fight on the live site. resync_tracked_card_order's own
+    loose-match fallback (see its docstring) stops this specific
+    failure mode from creating any NEW duplicate going forward, but
+    fixing that matching logic does nothing to retroactively clean up
+    a duplicate a previous, buggier run already wrote to disk -- this
+    function is what actually removes it.
+
+    Uses the same loose-name match (first + last word of each fighter)
+    as resync_tracked_card_order. When two rows for the same event
+    turn out to be the same fight under that looser comparison, keeps
+    the first one encountered and discards the other -- arbitrary but
+    deterministic, since there's no reliable signal here for which
+    name variant is more correct -- and logs exactly which two rows
+    were merged, so this is visible and auditable rather than data
+    silently vanishing.
+
+    Runs every generate_site.py call, before resync_tracked_card_order,
+    so that function always operates on already-deduplicated data. A
+    no-op read+compare+skip-write once nothing needs merging. Never
+    raises.
+    """
+    try:
+        df = pd.read_csv(future_cards_path)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        return 0
+    if df.empty or "event_name" not in df.columns:
+        return 0
+
+    def _loose_name(name: str) -> tuple:
+        parts = str(name).strip().lower().split()
+        return (parts[0], parts[-1]) if parts else (str(name).strip().lower(),)
+
+    def _loose_key(row: dict) -> frozenset:
+        return frozenset({_loose_name(row["fighter_a"]), _loose_name(row["fighter_b"])})
+
+    removed = 0
+    kept_groups = []
+    for event_name, group in df.groupby("event_name", sort=False):
+        rows = group.to_dict("records")
+        seen: dict = {}
+        deduped = []
+        for r in rows:
+            key = _loose_key(r)
+            if key in seen:
+                removed += 1
+                kept = seen[key]
+                print(f"[card_discovery] merging duplicate fight for {event_name!r}: "
+                      f"{r['fighter_a']!r} vs {r['fighter_b']!r} looks like the same fight as "
+                      f"already-kept {kept['fighter_a']!r} vs {kept['fighter_b']!r} -- keeping the "
+                      f"first-seen row, dropping this one")
+                continue
+            seen[key] = r
+            deduped.append(r)
+        kept_groups.append(pd.DataFrame(deduped))
+
+    if removed:
+        pd.concat(kept_groups, ignore_index=True).to_csv(future_cards_path, index=False)
+    return removed
+
+
 def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") -> int:
     """
     Self-healing pass, complementary to normalize_existing_card_order
@@ -394,7 +463,22 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
     for r in rows:
         r["event_start_time_et"] = prelims_time_et or "19:00"
 
-    return _sort_into_billing_order(rows)
+    # Reversed before billing-order sorting: display order within a given
+    # segment (prelims or main) should run from the soonest-to-happen
+    # fight at the top down to the earliest -- explicit user preference,
+    # not a guess. `rows` here is always freshly fetched from ESPN in
+    # forward-chronological order (fight 1 first), never already-reversed
+    # stored data, so reversing it on every call is safe and stable --
+    # unlike reversing inside _sort_into_billing_order itself, which is
+    # ALSO called on existing stored future_cards.csv rows elsewhere
+    # (normalize_existing_card_order) that could already be in the
+    # correct order; unconditionally reversing there caused a real
+    # flip-flopping bug once already (see that function's own docstring).
+    # A plain list reversal here correctly flips order WITHIN each
+    # segment while leaving segment-level billing order (Main Event
+    # first, etc.) untouched, since _sort_into_billing_order re-groups by
+    # segment regardless of what order it's handed.
+    return _sort_into_billing_order(rows[::-1])
 
 
 def discover_and_append_new_cards(future_cards_path: str = "data/future_cards.csv",
