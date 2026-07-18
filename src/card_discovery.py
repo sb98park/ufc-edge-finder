@@ -206,7 +206,16 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
     Matches fights between the existing tracked rows and the fresh ESPN
     fetch by fighter pair (order-independent, since fighter_a/b
     assignment isn't guaranteed identical between two separate
-    fetches). For a matched fight, only card_position is corrected and
+    fetches), with a loose fallback (first + last word of each name)
+    for when the two data sources disagree on exactly how a name is
+    written -- confirmed in production: the originally-tracked "Jose
+    Delgado" didn't exact-match ESPN's fresher "Jose Miguel Delgado",
+    so the exact-only matching orphaned the old row AND added a "new"
+    one under the fuller name, producing a real duplicate fight on the
+    live site. A loose match still preserves the EXISTING row's own
+    fighter_a/fighter_b spelling rather than adopting ESPN's, since the
+    rest of the pipeline (fighters.csv, schedule.py, model lookups)
+    all key off whatever name was already tracked. For a matched fight, only card_position is corrected and
     its position in the list is taken from the fresh order -- every
     other column (backfilled fighter research, manually-verified data,
     etc.) is preserved exactly as already tracked, never overwritten by
@@ -236,6 +245,19 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
     def _key(row: dict) -> frozenset:
         return frozenset({str(row["fighter_a"]).strip().lower(), str(row["fighter_b"]).strip().lower()})
 
+    def _loose_name(name: str) -> tuple:
+        # First + last word only, e.g. "Jose Miguel Delgado" -> ("jose", "delgado") --
+        # matches "Jose Delgado" too. Deliberately not fuzzy string matching: two
+        # different real fighters sharing an exact first AND last word on the same
+        # card is a much rarer collision than a middle name being present in one
+        # data source and missing in another, which is a real, confirmed case in
+        # this project's own data (see this function's docstring).
+        parts = str(name).strip().lower().split()
+        return (parts[0], parts[-1]) if parts else (str(name).strip().lower(),)
+
+    def _loose_key(row: dict) -> frozenset:
+        return frozenset({_loose_name(row["fighter_a"]), _loose_name(row["fighter_b"])})
+
     corrected = 0
     reordered_groups = []
     for event_name, group in df.groupby("event_name", sort=False):
@@ -254,14 +276,17 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
             continue
 
         existing_by_key = {_key(r): r for r in rows}
+        existing_by_loose_key = {_loose_key(r): r for r in rows}
         before_snapshot = [(_key(r), r["card_position"]) for r in rows]
         matched_keys = set()
         new_order = []
         for fresh in fresh_rows:
             key = _key(fresh)
             existing_row = existing_by_key.get(key)
+            if existing_row is None:
+                existing_row = existing_by_loose_key.get(_loose_key(fresh))
             if existing_row is not None:
-                matched_keys.add(key)
+                matched_keys.add(_key(existing_row))
                 existing_row["card_position"] = fresh["card_position"]
                 new_order.append(existing_row)
             else:
