@@ -285,7 +285,16 @@ def _compute_calibration(matched: list[dict]) -> dict | None:
             "n": len(bucket),
         })
 
-    return {"ready": True, "total": len(eligible), "points": points}
+    total_n = sum(p["n"] for p in points)
+    weighted_gap = sum((p["actual"] - p["predicted"]) * p["n"] for p in points) / total_n if total_n else 0
+    if abs(weighted_gap) < 0.05:
+        summary = "Across every confidence level, our picks won almost exactly as often as we said they would — the model isn't over- or under-selling itself."
+    elif weighted_gap > 0:
+        summary = f"On average, our picks have actually won about {round(weighted_gap*100)} points MORE often than the confidence we stated — if anything, we've been modest, not overselling."
+    else:
+        summary = f"On average, our picks have won about {round(abs(weighted_gap)*100)} points LESS often than the confidence we stated — a real sign of overconfidence worth watching."
+
+    return {"ready": True, "total": len(eligible), "points": points, "summary": summary}
 
 
 def _pair_key(fighter_a: str, fighter_b: str) -> frozenset:
@@ -448,7 +457,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "favorite_won": _favorite_won(pred.get("pick_odds"), correct),
             "units_result": units_result,
             "unit_size": UNITS_BY_CONFIDENCE.get(pred["confidence_label"]),
-            "is_lock_of_week": pred.get("is_lock_of_week") == "true",
+            "is_lock_of_week": pred.get("is_lock_of_week") is True or str(pred.get("is_lock_of_week")).strip().lower() == "true",
             "date_added": result.get("date_added", ""),
             "card_position": result.get("card_position"),
         })

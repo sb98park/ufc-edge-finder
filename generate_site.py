@@ -36,6 +36,7 @@ from src.fighter_backfill import backfill_fighters
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
 from src.units_chart import build_units_timeseries_svg
+from src.clv_chart import build_clv_dumbbell_svg
 from src.donut_chart import build_donut_svg
 from src.damage_silhouette import build_damage_silhouette_svg
 
@@ -245,6 +246,7 @@ def main():
     sparkline_svg = None
     units_sparkline_svg = None
     units_timeseries_svg = None
+    clv_dumbbell_svg = None
     if track_record and track_record.get("calibration", {}).get("ready"):
         calibration_svg = build_calibration_svg(track_record["calibration"]["points"])
     if track_record and track_record.get("accuracy_sparkline"):
@@ -252,6 +254,9 @@ def main():
     if track_record and track_record.get("units_stats") and len(track_record["units_stats"]["running_total"]) >= 2:
         units_sparkline_svg = build_sparkline_svg(track_record["units_stats"]["running_total"])
         units_timeseries_svg = build_units_timeseries_svg(track_record["units_stats"]["running_total"])
+    if track_record and track_record.get("clv_stats"):
+        clv_eligible = [m for m in track_record["results"] if m.get("clv") is not None]
+        clv_dumbbell_svg = build_clv_dumbbell_svg(clv_eligible)
 
     event_short_name = (
         analytics_source_event.split(":")[0].strip() if analytics_source_event
@@ -577,6 +582,7 @@ def main():
         sparkline_svg=sparkline_svg,
         units_sparkline_svg=units_sparkline_svg,
         units_timeseries_svg=units_timeseries_svg,
+        clv_dumbbell_svg=clv_dumbbell_svg,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
         moonshot_parlays=moonshot_parlays,

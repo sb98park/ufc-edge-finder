@@ -513,6 +513,11 @@
   .units-tier-value.positive { color: var(--green); }
   .units-tier-value.negative { color: var(--red); }
   .units-caption { font-size: 9.5px; color: var(--muted); line-height: 1.5; margin-top: 10px; text-align: left; }
+  .clv-explainer { font-size: 10.5px; color: var(--muted); line-height: 1.55; margin-top: 8px; text-align: left; }
+  .calibration-summary { font-size: 10.5px; color: var(--muted); line-height: 1.55; margin: 4px 0 10px; text-align: left; }
+  .clv-explainer em { color: var(--text); font-style: normal; font-weight: 600; }
+  .clv-dumbbell-wrap { margin-top: 10px; }
+  .clv-chart-caption { font-size: 9px; color: var(--muted); line-height: 1.4; margin-top: 4px; text-align: left; }
   .units-timeseries-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
   .units-chart-wrap.chart-block { background: none; border: none; padding: 0; margin: 10px 0 4px; }
   .units-pick-badge {
@@ -590,9 +595,6 @@
   .calibration-block.calibration-pending { padding: 10px; background: var(--panel2); border-radius: 8px; border-top: none; }
   .calibration-title { font-size: 11.5px; font-weight: 700; color: var(--accent2); margin-bottom: 8px; }
   .calibration-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
-  .calibration-legend { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
-  .calibration-legend-item { font-size: 9px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
-  .calibration-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
   .badge {
     display: inline-flex; align-items: center; gap: 5px;
     background: var(--panel2); border: 1px solid var(--border); border-radius: 20px;
@@ -1419,6 +1421,11 @@
       <div class="clv-badge-label">🎯 Beat the Closing Line</div>
       <div class="clv-badge-value countup">{{ track_record.clv_stats.beat_pct }}%</div>
       <div class="clv-badge-sub">{{ track_record.clv_stats.beat }}/{{ track_record.clv_stats.total }} picks · avg {{ '+' if track_record.clv_stats.avg_clv_pct >= 0 else '' }}{{ track_record.clv_stats.avg_clv_pct }}pp move toward the model's side</div>
+      <div class="clv-explainer">When we pick a fighter, the betting market has already priced in a chance they win. "Beating the closing line" means that by fight night — after sharp bettors and late info had moved the price — the market came around <em>closer to our side</em> than it was when we made the pick. It's a sign the model saw something worth backing before the crowd fully caught on, independent of whether that fighter actually won.</div>
+      {% if clv_dumbbell_svg %}
+      <div class="chart-block clv-dumbbell-wrap">{{ clv_dumbbell_svg | safe }}</div>
+      <div class="clv-chart-caption">Each line: the market's implied chance our pick wins, from when we picked it (○) to fight night. Green means the market moved toward us.</div>
+      {% endif %}
     </div>
     {% endif %}
     {% if track_record.market_baseline %}
@@ -1548,6 +1555,21 @@
           <div class="event-summary-label">Perfect Props</div>
         </div>
       </div>
+      {% if group.summary.lock_picks %}
+      <div class="lock-of-week-block" style="margin: 0 14px 10px;">
+        <div class="lock-of-week-title">
+          🔒 Lock{{ 's' if group.summary.lock_picks|length > 1 }} of the Week
+          <span class="lock-of-week-alltime">{{ group.summary.lock_picks|selectattr('correct')|list|length }}/{{ group.summary.lock_picks|length }} this card</span>
+        </div>
+        {% for lock in group.summary.lock_picks %}
+        <div class="lock-of-week-row">
+          <span class="lock-of-week-icon {{ 'correct' if lock.correct else 'incorrect' }}">{{ '✓' if lock.correct else '✗' }}</span>
+          <span class="lock-of-week-pick">{{ lock.predicted_favorite }}</span>
+          <span class="lock-of-week-vs">vs. {{ lock.fighter_a if lock.fighter_a != lock.predicted_favorite else lock.fighter_b }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
       <div class="fight-strip">
         {% for r in group.results|reverse %}
         <div class="fight-strip-block {{ 'hit' if r.correct else 'miss' }}" title="{{ r.fighter_a }} vs. {{ r.fighter_b }} — {{ 'model got it right' if r.correct else 'model missed' }}"></div>
@@ -1589,14 +1611,11 @@
     {% if calibration_svg %}
     <div class="calibration-block">
       <div class="calibration-title">📐 Calibration — does "70% confident" actually win ~70%?</div>
+      {% if track_record.calibration.summary %}
+      <div class="calibration-summary">{{ track_record.calibration.summary }}</div>
+      {% endif %}
       {{ calibration_svg | safe }}
-      <div class="calibration-legend">
-        <span class="calibration-legend-item"><span class="calibration-dot" style="background:#3ddc84;"></span>well-calibrated</span>
-        <span class="calibration-legend-item"><span class="calibration-dot" style="background:#e8c766;"></span>mild drift</span>
-        <span class="calibration-legend-item"><span class="calibration-dot" style="background:#ff5c5c;"></span>overconfident</span>
-        <span class="calibration-legend-item"><span class="calibration-dot" style="background:#5fb8c9;"></span>underconfident (high value)</span>
-      </div>
-      <div class="chart-caption">Dashed line = perfect calibration. Above it = model underconfident in that range; below = overconfident. Dot size = sample size.</div>
+      <div class="chart-caption">Each row: a confidence level we've used, gold bar = how confident we said we were, colored bar = how often that pick actually won. The closer the two bars, the better-calibrated that confidence level is.</div>
     </div>
     {% elif track_record.calibration and not track_record.calibration.ready %}
     <div class="calibration-block calibration-pending">
