@@ -567,7 +567,17 @@ def _fetch_from_espn(event_name: str, event_date: str, known_fighters_lower: set
             print(f"[results_fetcher] ESPN: {winner_name} vs {loser_name} completed with a winner, but no "
                   f"method could be confidently extracted from the available text -- treating as not-yet-complete. "
                   f"Raw detail_text searched: {detail_text!r} | Raw status.type: {status_type!r} | "
-                  f"Raw notes: {comp.get('notes', [])!r}")
+                  f"Raw notes: {comp.get('notes', [])!r} | "
+                  # Widened after status.type/notes were conclusively confirmed empty of method info
+                  # across every fight on a real, fully-concluded card (12/12, zero exceptions) -- the
+                  # two fields already checked were simply the wrong place, not under-parsed. This
+                  # captures the competition object's other top-level keys (in case method lives
+                  # somewhere neither status nor notes) and the winning competitor's full raw structure
+                  # specifically to check for an athlete id, the prerequisite for trying the same
+                  # eventLog approach fighter_backfill.py uses for last-fight-date -- never confirmed
+                  # present in this particular (scoreboard) response before now.
+                  f"Competition object's other top-level keys: {sorted(k for k in comp.keys() if k not in ('status', 'notes'))} | "
+                  f"Winning competitor's full raw structure: {winner_comp!r}")
             continue
         end_round, end_time = _extract_round_time_from_text(detail_text)
 

@@ -251,7 +251,9 @@ def main():
         sparkline_svg = build_sparkline_svg(track_record["accuracy_sparkline"])
     if track_record and track_record.get("units_stats") and len(track_record["units_stats"]["running_total"]) >= 2:
         units_sparkline_svg = build_sparkline_svg(track_record["units_stats"]["running_total"])
-        units_timeseries_svg = build_units_timeseries_svg(track_record["units_stats"]["running_total"])
+        units_timeseries_svg = build_units_timeseries_svg(
+            track_record["units_stats"]["running_total"], track_record["units_stats"].get("running_dates")
+        )
 
     event_short_name = (
         analytics_source_event.split(":")[0].strip() if analytics_source_event

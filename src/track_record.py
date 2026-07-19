@@ -495,10 +495,13 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         # pick's own result -- otherwise the very first data point would
         # misleadingly look like where the series "started."
         running = [0.0]
+        reversed_eligible = list(reversed(units_eligible))
+        running_dates = [reversed_eligible[0]["date_added"]] if reversed_eligible else []
         cumulative = 0.0
-        for m in reversed(units_eligible):
+        for m in reversed_eligible:
             cumulative += m["units_result"]
             running.append(round(cumulative, 2))
+            running_dates.append(m["date_added"])
         units_stats = {
             "total_units": total_units,
             "total_staked": total_staked,
@@ -506,6 +509,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "eligible_count": len(units_eligible),
             "by_tier": by_tier,
             "running_total": running,
+            "running_dates": running_dates,
         }
 
     # Event Summary: an at-a-glance digest for the most recent event

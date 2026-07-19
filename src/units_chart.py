@@ -17,13 +17,30 @@ reveal observer automatically via the shared .chart-block wrapper class,
 no new JS required.
 """
 
+import datetime as dt
 
-def build_units_timeseries_svg(running_total: list[float], width: int = 300, height: int = 180) -> str:
+
+def build_units_timeseries_svg(running_total: list[float], running_dates: list[str] | None = None,
+                                width: int = 300, height: int = 180) -> str:
     """
     running_total should already include the 0 baseline as its first
     element (the model's starting point before any tracked results) --
     this function doesn't prepend it, since the caller knows whether
     that's already been done.
+
+    running_dates, if provided, must be the same length as running_total
+    (one date string per point, "YYYY-MM-DD") and is what makes the
+    x-axis honest: points are positioned by REAL elapsed time between
+    dates, not evenly by index. Without this, a multi-day idle gap
+    between one event ending and the next starting (nothing moves, since
+    there's nothing to grade in between) looked visually identical to
+    the tight spacing between picks logged hours apart on the same
+    card -- implying a steady, continuous climb that never actually
+    happened. Falls back to the old even-index spacing if dates are
+    missing, unparseable, or all the same day (can't derive a meaningful
+    time span from a single day), so this never divides by zero or
+    breaks the chart over a data quirk -- it just loses the extra
+    honesty for that one render.
     """
     if not running_total or len(running_total) < 2:
         return ""
@@ -44,8 +61,55 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     hi += span * 0.12
     span = hi - lo
 
-    def x_at(i: int) -> float:
-        return pad_left + (i / (len(running_total) - 1)) * plot_w
+    parsed_dates = None
+    if running_dates and len(running_dates) == len(running_total):
+        candidates = []
+        for d in running_dates:
+            try:
+                candidates.append(dt.datetime.strptime(str(d), "%Y-%m-%d"))
+            except (ValueError, TypeError):
+                candidates = None
+                break
+        if candidates and len({c.date() for c in candidates}) > 1:
+            # Same-day points get a small artificial spread so they don't
+            # render exactly on top of each other -- date_added only has
+            # day granularity, but these are already in true chronological
+            # order (same date-sort used everywhere else), so this just
+            # preserves that real relative order visually. Capped at a
+            # small fraction of a day specifically so it can never rival a
+            # genuine multi-day gap between events.
+            day_counts: dict = {}
+            for c in candidates:
+                day_counts[c.date()] = day_counts.get(c.date(), 0) + 1
+            day_seen: dict = {}
+            spread_candidates = []
+            for c in candidates:
+                day = c.date()
+                idx = day_seen.get(day, 0)
+                day_seen[day] = idx + 1
+                total_that_day = day_counts[day]
+                # Spread across at most 6 hours of the day, evenly, so
+                # multiple same-day picks fan out left-to-right in order
+                # without implying real clock times that aren't known.
+                offset_hours = 0 if total_that_day <= 1 else (idx / (total_that_day - 1)) * 6
+                spread_candidates.append(c + dt.timedelta(hours=offset_hours))
+            parsed_dates = spread_candidates
+
+    if parsed_dates:
+        first_ts = parsed_dates[0].timestamp()
+        last_ts = parsed_dates[-1].timestamp()
+        time_span = (last_ts - first_ts) or 1.0
+
+        def x_at(i: int) -> float:
+            return pad_left + ((parsed_dates[i].timestamp() - first_ts) / time_span) * plot_w
+
+        start_label = parsed_dates[0].strftime("%b %-d")
+        end_label = parsed_dates[-1].strftime("%b %-d")
+    else:
+        def x_at(i: int) -> float:
+            return pad_left + (i / (len(running_total) - 1)) * plot_w
+
+        start_label, end_label = "Start", "Now"
 
     def y_at(v: float) -> float:
         return pad_top + plot_h - ((v - lo) / span) * plot_h
@@ -70,8 +134,8 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
         grid_svg += f'<text x="{pad_left-6}" y="{y+3:.1f}" font-size="8" fill="#5a5f6a" text-anchor="end">{sign}{v:g}U</text>'
 
     x_labels_svg = (
-        f'<text x="{x_at(0):.1f}" y="{height-4}" font-size="8" fill="#5a5f6a" text-anchor="start">Start</text>'
-        f'<text x="{x_at(len(running_total)-1):.1f}" y="{height-4}" font-size="8" fill="#5a5f6a" text-anchor="end">Now</text>'
+        f'<text x="{x_at(0):.1f}" y="{height-4}" font-size="8" fill="#5a5f6a" text-anchor="start">{start_label}</text>'
+        f'<text x="{x_at(len(running_total)-1):.1f}" y="{height-4}" font-size="8" fill="#5a5f6a" text-anchor="end">{end_label}</text>'
     )
 
     points = [(x_at(i), y_at(v)) for i, v in enumerate(running_total)]
