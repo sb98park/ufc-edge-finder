@@ -560,6 +560,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "total_staked": total_staked,
             "roi_pct": round(total_units / total_staked * 100, 1) if total_staked else None,
             "eligible_count": len(units_eligible),
+            "event_count": len({m["event_name"] for m in units_eligible}),
             "by_tier": by_tier,
             "running_total": running,
         }

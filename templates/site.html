@@ -371,9 +371,7 @@
   .event-summary-label { font-size: 8.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
   .track-record-headline { font-size: 24px; font-weight: 800; font-family: var(--font-display); }
   .track-record-headline span { font-size: 14px; color: var(--muted); font-weight: 600; }
-  .sparkline-wrap { margin: 8px 0 4px; }
   .sparkline-svg { display: block; }
-  .sparkline-caption { font-size: 10px; color: var(--muted); margin-top: 2px; }
   .track-record-breakdown { margin-top: 8px; }
   .track-record-conf-row {
     display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0;
@@ -516,8 +514,6 @@
   .clv-explainer { font-size: 10.5px; color: var(--muted); line-height: 1.55; margin-top: 8px; text-align: left; }
   .calibration-summary { font-size: 10.5px; color: var(--muted); line-height: 1.55; margin: 4px 0 10px; text-align: left; }
   .clv-explainer em { color: var(--text); font-style: normal; font-weight: 600; }
-  .clv-dumbbell-wrap { margin-top: 10px; }
-  .clv-chart-caption { font-size: 9px; color: var(--muted); line-height: 1.4; margin-top: 4px; text-align: left; }
   .units-timeseries-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
   .units-chart-wrap.chart-block { background: none; border: none; padding: 0; margin: 10px 0 4px; }
   .units-pick-badge {
@@ -1371,18 +1367,13 @@
     <div class="track-record-title">{{ icon_track() }} Model Track Record</div>
     {% if track_record %}
     <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span class="countup">({{ track_record.accuracy_pct }}%)</span></div>
-    {% if sparkline_svg %}
-    <div class="sparkline-wrap">
-      {{ sparkline_svg | safe }}
-      <div class="sparkline-caption">Accuracy trend across tracked runs — forward-tracking only, same as everything else here.</div>
-    </div>
-    {% endif %}
     {% if track_record.by_confidence %}
-    <div class="track-record-breakdown">
+    <div class="donut-row confidence-donut-row">
       {% for label, stats in track_record.by_confidence.items() %}
-      <div class="track-record-conf-row">
-        <span class="track-record-conf-label">{{ label }}</span>
-        <span class="track-record-conf-value">{{ stats.correct }}/{{ stats.total }} ({{ stats.accuracy_pct }}%)</span>
+      {% set tier_color = {'High Confidence': '#3ddc84', 'Medium Confidence': '#e8c766', 'Low Confidence': '#8a8f9a'}[label] %}
+      <div class="donut-col">
+        {{ donut_svg(stats.correct, stats.total, tier_color, size=90) | safe }}
+        <div class="donut-caption">{{ label|replace(' Confidence', '') }}</div>
       </div>
       {% endfor %}
     </div>
@@ -1394,7 +1385,7 @@
         {{ '+' if track_record.units_stats.total_units >= 0 else '' }}{{ track_record.units_stats.total_units }}<span class="units-suffix">U</span>
       </div>
       <div class="units-sub">
-        {{ track_record.units_stats.eligible_count }} pick{{ 's' if track_record.units_stats.eligible_count != 1 }} priced
+        {{ track_record.units_stats.eligible_count }} pick{{ 's' if track_record.units_stats.eligible_count != 1 }} priced across {{ track_record.units_stats.event_count }} fight card{{ 's' if track_record.units_stats.event_count != 1 }}
         {% if track_record.units_stats.roi_pct is not none %}<span class="units-roi {{ 'positive' if track_record.units_stats.roi_pct >= 0 else 'negative' }}"> · ROI {{ '+' if track_record.units_stats.roi_pct >= 0 else '' }}{{ track_record.units_stats.roi_pct }}%</span>{% endif %}
       </div>
       {% if units_sparkline_svg %}
@@ -1422,10 +1413,6 @@
       <div class="clv-badge-value countup">{{ track_record.clv_stats.beat_pct }}%</div>
       <div class="clv-badge-sub">{{ track_record.clv_stats.beat }}/{{ track_record.clv_stats.total }} picks · avg {{ '+' if track_record.clv_stats.avg_clv_pct >= 0 else '' }}{{ track_record.clv_stats.avg_clv_pct }}pp move toward the model's side</div>
       <div class="clv-explainer">When we pick a fighter, the betting market has already priced in a chance they win. "Beating the closing line" means that by fight night — after sharp bettors and late info had moved the price — the market came around <em>closer to our side</em> than it was when we made the pick. It's a sign the model saw something worth backing before the crowd fully caught on, independent of whether that fighter actually won.</div>
-      {% if clv_dumbbell_svg %}
-      <div class="chart-block clv-dumbbell-wrap">{{ clv_dumbbell_svg | safe }}</div>
-      <div class="clv-chart-caption">Each line: the market's implied chance our pick wins, from when we picked it (○) to fight night. Green means the market moved toward us.</div>
-      {% endif %}
     </div>
     {% endif %}
     {% if track_record.market_baseline %}
