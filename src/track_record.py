@@ -593,6 +593,26 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "hits": underdog_hits,
         }
 
+    # Favorite vs. underdog accuracy: a genuinely different question than
+    # underdog_record above (which only ever looks at correct underdog
+    # picks, for the highlight reel) -- this is the real hit rate in
+    # EACH group, correct and incorrect alike, since "how often do we
+    # nail underdogs specifically" needs the denominator of every
+    # underdog pick attempted, not just the wins.
+    market_position_odds_known = [m for m in matched if m.get("pick_odds") is not None]
+    favorite_picks = [m for m in market_position_odds_known if not _is_underdog(m["pick_odds"], m.get("opponent_odds"))]
+    underdog_picks = [m for m in market_position_odds_known if _is_underdog(m["pick_odds"], m.get("opponent_odds"))]
+    market_position_accuracy = None
+    if favorite_picks or underdog_picks:
+        fav_correct = sum(1 for m in favorite_picks if m["correct"])
+        dog_correct = sum(1 for m in underdog_picks if m["correct"])
+        market_position_accuracy = {
+            "favorites": {"correct": fav_correct, "total": len(favorite_picks),
+                          "accuracy_pct": round(fav_correct / len(favorite_picks) * 100, 1) if favorite_picks else None},
+            "underdogs": {"correct": dog_correct, "total": len(underdog_picks),
+                          "accuracy_pct": round(dog_correct / len(underdog_picks) * 100, 1) if underdog_picks else None},
+        }
+
     # Units/ROI tracking: sized by confidence tier, priced with the real
     # market odds at pick time -- never the model's own probability,
     # which would just be grading the model against itself instead of
@@ -673,6 +693,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         "latest_event_summary": latest_event_summary,
         "lock_record": lock_record,
         "underdog_record": underdog_record,
+        "market_position_accuracy": market_position_accuracy,
         "accuracy_sparkline": sparkline,
     }
 
