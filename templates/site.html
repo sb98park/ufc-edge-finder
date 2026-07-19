@@ -462,9 +462,15 @@
   .clv-badge-label { font-size: 10.5px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.4px; }
   .clv-badge-value { font-size: 26px; font-weight: 800; margin-top: 2px; font-family: var(--font-display); }
   .clv-badge-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .accuracy-split-row { display: flex; gap: 8px; margin-top: 10px; }
+  .accuracy-split-row .clv-badge { flex: 1; margin-top: 0; min-width: 0; }
+  .favorite-accuracy-badge {
+    background: linear-gradient(135deg, rgba(61,220,132,0.14), #14171f 70%); border: 1px solid rgba(61,220,132,0.35);
+  }
+  .favorite-accuracy-badge .clv-badge-label { color: var(--green); }
+  .favorite-accuracy-value { color: var(--green); }
   .underdog-accuracy-badge {
     background: linear-gradient(135deg, rgba(240,149,74,0.14), #14171f 70%); border: 1px solid rgba(240,149,74,0.35);
-    margin-top: 10px;
   }
   .underdog-accuracy-badge .clv-badge-label { color: #f0954a; }
   .underdog-accuracy-value { color: #f0954a; }
@@ -1408,10 +1414,17 @@
     {% endif %}
     {% if track_record.market_position_accuracy and track_record.market_position_accuracy.underdogs.total %}
     {% set mpa = track_record.market_position_accuracy %}
-    <div class="clv-badge underdog-accuracy-badge">
-      <div class="clv-badge-label">🐕 Underdog Accuracy</div>
-      <div class="clv-badge-value countup underdog-accuracy-value">{{ mpa.underdogs.accuracy_pct }}%</div>
-      <div class="clv-badge-sub">{{ mpa.underdogs.correct }}/{{ mpa.underdogs.total }} correct{% if mpa.favorites.total %} · vs. {{ mpa.favorites.accuracy_pct }}% on favorite picks ({{ mpa.favorites.correct }}/{{ mpa.favorites.total }}){% endif %}</div>
+    <div class="accuracy-split-row">
+      <div class="clv-badge favorite-accuracy-badge">
+        <div class="clv-badge-label">⭐ Favorite Accuracy</div>
+        <div class="clv-badge-value countup favorite-accuracy-value">{{ mpa.favorites.accuracy_pct }}%</div>
+        <div class="clv-badge-sub">{{ mpa.favorites.correct }} for {{ mpa.favorites.total }}</div>
+      </div>
+      <div class="clv-badge underdog-accuracy-badge">
+        <div class="clv-badge-label">🐕 Underdog Accuracy</div>
+        <div class="clv-badge-value countup underdog-accuracy-value">{{ mpa.underdogs.accuracy_pct }}%</div>
+        <div class="clv-badge-sub">{{ mpa.underdogs.correct }} for {{ mpa.underdogs.total }}</div>
+      </div>
     </div>
     {% endif %}
     {% if track_record.units_stats %}
