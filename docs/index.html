@@ -371,9 +371,7 @@
   .event-summary-label { font-size: 8.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
   .track-record-headline { font-size: 24px; font-weight: 800; font-family: var(--font-display); }
   .track-record-headline span { font-size: 14px; color: var(--muted); font-weight: 600; }
-  .sparkline-wrap { margin: 8px 0 4px; }
   .sparkline-svg { display: block; }
-  .sparkline-caption { font-size: 10px; color: var(--muted); margin-top: 2px; }
   .track-record-breakdown { margin-top: 8px; }
   .track-record-conf-row {
     display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0;
@@ -516,8 +514,6 @@
   .clv-explainer { font-size: 10.5px; color: var(--muted); line-height: 1.55; margin-top: 8px; text-align: left; }
   .calibration-summary { font-size: 10.5px; color: var(--muted); line-height: 1.55; margin: 4px 0 10px; text-align: left; }
   .clv-explainer em { color: var(--text); font-style: normal; font-weight: 600; }
-  .clv-dumbbell-wrap { margin-top: 10px; }
-  .clv-chart-caption { font-size: 9px; color: var(--muted); line-height: 1.4; margin-top: 4px; text-align: left; }
   .units-timeseries-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
   .units-chart-wrap.chart-block { background: none; border: none; padding: 0; margin: 10px 0 4px; }
   .units-pick-badge {
@@ -1226,7 +1222,7 @@
   </div>
 
   <div class="meta-row">
-    🕒 Updated Jul 19, 08:55 AM ET
+    🕒 Updated Jul 19, 09:24 AM ET
   </div>
 
   
@@ -1289,7 +1285,7 @@
           </svg>
         </div>
         <div class="hub-card-text">
-          <div class="hub-card-title">Favorite Picks <span class="count-badge">1</span></div>
+          <div class="hub-card-title">Favorite Picks <span class="count-badge">3</span></div>
           <div class="hub-card-sub">straight bets worth real size</div>
         </div>
         <span class="hub-card-arrow">→</span>
@@ -1355,37 +1351,45 @@
     
     <div class="track-record-headline">21/26 <span class="countup">(80.8%)</span></div>
     
-    <div class="sparkline-wrap">
-      <svg viewBox="0 0 280 56" width="100%" height="56" preserveAspectRatio="none" class="sparkline-svg">
-  <defs>
-    <linearGradient id="sparkline-fill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#3ddc84" stop-opacity="0.28"/>
-      <stop offset="100%" stop-color="#3ddc84" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
-  <path d="M6.0,50 L6.0,50.0 L274.0,6.0 L274.0,50 Z" fill="url(#sparkline-fill)" stroke="none"/>
-  <polyline points="6.0,50.0 274.0,6.0" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-  <circle cx="274.0" cy="6.0" r="3" fill="#3ddc84"/>
+    <div class="donut-row confidence-donut-row">
+      
+      
+      <div class="donut-col">
+        <svg viewBox="0 0 90 90" width="90" height="90" class="donut-svg">
+  <circle cx="45.0" cy="45.0" r="39.5" fill="none" stroke="#262b36" stroke-width="11"/>
+  <circle cx="45.0" cy="45.0" r="39.5" fill="none" stroke="#3ddc84" stroke-width="11"
+    stroke-dasharray="248.2 248.2" stroke-linecap="round"
+    transform="rotate(-90 45.0 45.0)"/>
+  <text x="45.0" y="39.0" text-anchor="middle" class="donut-center-value">5/5</text>
+  <text x="45.0" y="59.0" text-anchor="middle" class="donut-center-pct">100%</text>
 </svg>
-      <div class="sparkline-caption">Accuracy trend across tracked runs — forward-tracking only, same as everything else here.</div>
-    </div>
-    
-    
-    <div class="track-record-breakdown">
-      
-      <div class="track-record-conf-row">
-        <span class="track-record-conf-label">High Confidence</span>
-        <span class="track-record-conf-value">5/5 (100.0%)</span>
+        <div class="donut-caption">High</div>
       </div>
       
-      <div class="track-record-conf-row">
-        <span class="track-record-conf-label">Medium Confidence</span>
-        <span class="track-record-conf-value">8/9 (88.9%)</span>
+      
+      <div class="donut-col">
+        <svg viewBox="0 0 90 90" width="90" height="90" class="donut-svg">
+  <circle cx="45.0" cy="45.0" r="39.5" fill="none" stroke="#262b36" stroke-width="11"/>
+  <circle cx="45.0" cy="45.0" r="39.5" fill="none" stroke="#e8c766" stroke-width="11"
+    stroke-dasharray="220.6 248.2" stroke-linecap="round"
+    transform="rotate(-90 45.0 45.0)"/>
+  <text x="45.0" y="39.0" text-anchor="middle" class="donut-center-value">8/9</text>
+  <text x="45.0" y="59.0" text-anchor="middle" class="donut-center-pct">89%</text>
+</svg>
+        <div class="donut-caption">Medium</div>
       </div>
       
-      <div class="track-record-conf-row">
-        <span class="track-record-conf-label">Low Confidence</span>
-        <span class="track-record-conf-value">8/12 (66.7%)</span>
+      
+      <div class="donut-col">
+        <svg viewBox="0 0 90 90" width="90" height="90" class="donut-svg">
+  <circle cx="45.0" cy="45.0" r="39.5" fill="none" stroke="#262b36" stroke-width="11"/>
+  <circle cx="45.0" cy="45.0" r="39.5" fill="none" stroke="#8a8f9a" stroke-width="11"
+    stroke-dasharray="165.5 248.2" stroke-linecap="round"
+    transform="rotate(-90 45.0 45.0)"/>
+  <text x="45.0" y="39.0" text-anchor="middle" class="donut-center-value">8/12</text>
+  <text x="45.0" y="59.0" text-anchor="middle" class="donut-center-pct">67%</text>
+</svg>
+        <div class="donut-caption">Low</div>
       </div>
       
     </div>
@@ -1397,7 +1401,7 @@
         +27.22<span class="units-suffix">U</span>
       </div>
       <div class="units-sub">
-        26 picks priced
+        26 picks priced across 2 fight cards
         <span class="units-roi positive"> · ROI +42.5%</span>
       </div>
       
@@ -1456,15 +1460,6 @@
       <div class="clv-badge-value countup">66.7%</div>
       <div class="clv-badge-sub">8/12 picks · avg +2.6pp move toward the model's side</div>
       <div class="clv-explainer">When we pick a fighter, the betting market has already priced in a chance they win. "Beating the closing line" means that by fight night — after sharp bettors and late info had moved the price — the market came around <em>closer to our side</em> than it was when we made the pick. It's a sign the model saw something worth backing before the crowd fully caught on, independent of whether that fighter actually won.</div>
-      
-      <div class="chart-block clv-dumbbell-wrap"><svg width="300" height="316" viewBox="0 0 300 316" class="clv-dumbbell-chart" role="img"
-  aria-label="Market probability when picked versus at closing, per pick">
-  <line x1="8.0" y1="22" x2="8.0" y2="298" stroke="#1c2028" stroke-width="1"/><line x1="79.0" y1="22" x2="79.0" y2="298" stroke="#1c2028" stroke-width="1"/><line x1="150.0" y1="22" x2="150.0" y2="298" stroke="#1c2028" stroke-width="1"/><line x1="221.0" y1="22" x2="221.0" y2="298" stroke="#1c2028" stroke-width="1"/><line x1="292.0" y1="22" x2="292.0" y2="298" stroke="#1c2028" stroke-width="1"/><text x="8" y="17" font-size="8" fill="#5a5f6a" text-anchor="start">0%</text><text x="150.0" y="17" font-size="8" fill="#5a5f6a" text-anchor="middle">50%</text><text x="292" y="17" font-size="8" fill="#5a5f6a" text-anchor="end">100%</text>
-  <text x="8" y="28.0" font-size="9.5" font-weight="700" fill="#e8e8ec">Jose Delgado</text><line x1="186.8" y1="39.0" x2="159.9" y2="39.0" stroke="#5a5f6a" stroke-width="2.5" stroke-linecap="round"/><polygon points="159.9,39.0 164.9,35.5 164.9,42.5" fill="#5a5f6a"/><circle cx="186.8" cy="39.0" r="4.5" fill="#0a0c10" stroke="#5fb8c9" stroke-width="2"/><text x="8" y="54.0" font-size="8" fill="#8a8f9a">vs. Austin Bashi · line moved away (-9.5pp)</text><text x="8" y="62.0" font-size="9.5" font-weight="700" fill="#e8e8ec">Jean-Paul Lebosnoyani</text><line x1="102.7" y1="73.0" x2="119.8" y2="73.0" stroke="#3ddc84" stroke-width="2.5" stroke-linecap="round"/><polygon points="119.8,73.0 114.8,69.5 114.8,76.5" fill="#3ddc84"/><circle cx="102.7" cy="73.0" r="4.5" fill="#0a0c10" stroke="#5fb8c9" stroke-width="2"/><text x="8" y="88.0" font-size="8" fill="#8a8f9a">vs. Seokhyeon Ko · beat the close (+6.0pp)</text><text x="8" y="96.0" font-size="9.5" font-weight="700" fill="#e8e8ec">Levi Rodrigues Jr.</text><line x1="156.8" y1="107.0" x2="177.5" y2="107.0" stroke="#3ddc84" stroke-width="2.5" stroke-linecap="round"/><polygon points="177.5,107.0 172.5,103.5 172.5,110.5" fill="#3ddc84"/><circle cx="156.8" cy="107.0" r="4.5" fill="#0a0c10" stroke="#5fb8c9" stroke-width="2"/><text x="8" y="122.0" font-size="8" fill="#8a8f9a">vs. Felipe Franco · beat the close (+7.3pp)</text><text x="8" y="130.0" font-size="9.5" font-weight="700" fill="#e8e8ec">Ezra Elliott</text><line x1="178.4" y1="141.0" x2="146.5" y2="141.0" stroke="#5a5f6a" stroke-width="2.5" stroke-linecap="round"/><polygon points="146.5,141.0 151.5,137.5 151.5,144.5" fill="#5a5f6a"/><circle cx="178.4" cy="141.0" r="4.5" fill="#0a0c10" stroke="#5fb8c9" stroke-width="2"/><text x="8" y="156.0" font-size="8" fill="#8a8f9a">vs. Damien Anderson · line moved away (-11.2pp)</text><text x="8" y="164.0" font-size="9.5" font-weight="700" fill="#e8e8ec">Alden Coria</text><line x1="260.4" y1="175.0" x2="267.3" y2="175.0" stroke="#3ddc84" stroke-width="2.5" stroke-linecap="round"/><polygon points="267.3,175.0 262.3,171.5 262.3,178.5" fill="#3ddc84"/><circle cx="260.4" cy="175.0" r="4.5" fill="#0a0c10" stroke="#5fb8c9" stroke-width="2"/><text x="8" y="190.0" font-size="8" fill="#8a8f9a">vs. Stewart Nicoll · beat the close (+2.4pp)</text><text x="8" y="198.0" font-size="9.5" font-weight="700" fill="#e8e8ec">RJ Harris</text><line x1="197.3" y1="209.0" x2="150.0" y2="209.0" stroke="#5a5f6a" stroke-width="2.5" stroke-linecap="round"/><polygon points="150.0,209.0 155.0,205.5 155.0,212.5" fill="#5a5f6a"/><circle cx="197.3" cy="209.0" r="4.5" fill="#0a0c10" stroke="#5fb8c9" stroke-width="2"/><text x="8" y="224.0" font-size="8" fill="#8a8f9a">vs. Alvin Hines · line moved away (-16.7pp)</text><text x="8" y="232.0" font-size="9.5" font-weight="700" fill="#e8e8ec">Dione Barbosa</text><line x1="217.3" y1="243.0" x2="252.8" y2="243.0" stroke="#3ddc84" stroke-width="2.5" stroke-linecap="round"/><polygon points="252.8,243.0 247.8,239.5 247.8,246.5" fill="#3ddc84"/><circle cx="217.3" cy="243.0" r="4.5" fill="#0a0c10" stroke="#5fb8c9" stroke-width="2"/><text x="8" y="258.0" font-size="8" fill="#8a8f9a">vs. Anna Melisano · beat the close (+12.5pp)</text><text x="8" y="266.0" font-size="9.5" font-weight="700" fill="#e8e8ec">Kamaru Usman</text><line x1="195.7" y1="277.0" x2="182.8" y2="277.0" stroke="#5a5f6a" stroke-width="2.5" stroke-linecap="round"/><polygon points="182.8,277.0 187.8,273.5 187.8,280.5" fill="#5a5f6a"/><circle cx="195.7" cy="277.0" r="4.5" fill="#0a0c10" stroke="#5fb8c9" stroke-width="2"/><text x="8" y="292.0" font-size="8" fill="#8a8f9a">vs. Dricus Du Plessis · line moved away (-4.6pp)</text>
-  <circle cx="12" cy="302" r="3" fill="#0a0c10" stroke="#5fb8c9" stroke-width="1.5"/><text x="19" y="305" font-size="8" fill="#8a8f9a">When picked</text><line x1="76" y1="302" x2="90" y2="302" stroke="#3ddc84" stroke-width="2.5"/><text x="94" y="305" font-size="8" fill="#8a8f9a">→ At close</text>
-</svg></div>
-      <div class="clv-chart-caption">Each line: the market's implied chance our pick wins, from when we picked it (○) to fight night. Green means the market moved toward us.</div>
-      
     </div>
     
     
@@ -2530,6 +2525,43 @@
   <div class="standout-title" id="section-standout"><svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame"><defs><linearGradient id="hi-flame" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 2 C13 2 8 8 8 13 C8 16.5 10 19 13 19 C16 19 18 16.5 18 13 C18 13 16 15 15 13 C15 13 17 9 13 2 Z" fill="url(#hi-flame)" opacity="0.9"/><path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#14171f"/></svg> Standout Props for UFC Fight Night</div>
   <div class="standout-grid">
     
+    <div class="standout-card reveal-target heat-3" data-key="Islam Dulatov vs Wellington Turman|Total Rounds Over 1.5">
+      <div class="standout-top">
+        <div>
+          <div class="standout-main">Islam Dulatov vs Wellington Turman<span class="standout-vs"></span></div>
+          <div class="standout-market">Total Rounds Over 1.5
+            
+            
+          </div>
+        </div>
+      </div>
+      <div class="edge-divergence">
+      <div class="edge-divergence-track">
+        <div class="edge-divergence-fill" data-target-width="58.5%" style="left: 36.5%; width: 0%;"></div>
+        <div class="edge-divergence-dot book" style="left: 36.5%;">
+          <span class="edge-divergence-label book">Book<br>36.5%</span>
+        </div>
+        <div class="edge-divergence-dot model" style="left: 95.0%;">
+          <span class="edge-divergence-label model">Model<br>95.0%</span>
+        </div>
+        <div class="edge-divergence-gap-value" style="left: 65.75%;">58.5 pt gap</div>
+      </div>
+    </div>
+      <div class="odds-compare">
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Book Price</div>
+          <div class="odds-compare-value book"><span class="live-odds">+174</span></div>
+        </div>
+        <div class="odds-compare-arrow">→</div>
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Model Says</div>
+          <div class="odds-compare-value model">-1900</div>
+        </div>
+      </div>
+      <div class="standout-sub">Suggested stake: 2.76% of bankroll</div>
+      <div class="rationale">Total Rounds Over 1.5 at +174 implies 36%, vs. the model's 95% (+58.5% edge). Low finish rates across the board here (0% and 0%) -- there's no obvious source of an early stoppage, which is the Over's whole case.</div>
+    </div>
+    
     <div class="standout-card reveal-target heat-3" data-key="Damian Rzepecki|Moneyline">
       <div class="standout-top">
         <div>
@@ -2583,14 +2615,14 @@
       </div>
       <div class="edge-divergence">
       <div class="edge-divergence-track">
-        <div class="edge-divergence-fill" data-target-width="30.1%" style="left: 30.4%; width: 0%;"></div>
-        <div class="edge-divergence-dot book" style="left: 30.4%;">
-          <span class="edge-divergence-label book">Book<br>30.4%</span>
+        <div class="edge-divergence-fill" data-target-width="29.9%" style="left: 30.6%; width: 0%;"></div>
+        <div class="edge-divergence-dot book" style="left: 30.6%;">
+          <span class="edge-divergence-label book">Book<br>30.6%</span>
         </div>
         <div class="edge-divergence-dot model" style="left: 60.5%;">
           <span class="edge-divergence-label model">Model<br>60.5%</span>
         </div>
-        <div class="edge-divergence-gap-value" style="left: 45.45%;">30.1 pt gap</div>
+        <div class="edge-divergence-gap-value" style="left: 45.55%;">30.0 pt gap</div>
       </div>
     </div>
       <div class="odds-compare">
@@ -2604,8 +2636,45 @@
           <div class="odds-compare-value model">-153</div>
         </div>
       </div>
-      <div class="standout-sub">Suggested stake: 1.13% of bankroll</div>
-      <div class="rationale">The model puts Tyrell Fortune's win probability at 60%, higher than the market's 30% implied probability at +215 (+30.1% edge). That's built on a 18-3 record (86% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.</div>
+      <div class="standout-sub">Suggested stake: 1.15% of bankroll</div>
+      <div class="rationale">The model puts Tyrell Fortune's win probability at 60%, higher than the market's 31% implied probability at +215 (+30.0% edge). That's built on a 18-3 record (86% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.</div>
+    </div>
+    
+    <div class="standout-card reveal-target heat-3" data-key="Magomed Zaynukov vs Damian Rzepecki|Total Rounds Over 1.5">
+      <div class="standout-top">
+        <div>
+          <div class="standout-main">Magomed Zaynukov vs Damian Rzepecki<span class="standout-vs"></span></div>
+          <div class="standout-market">Total Rounds Over 1.5
+            
+            
+          </div>
+        </div>
+      </div>
+      <div class="edge-divergence">
+      <div class="edge-divergence-track">
+        <div class="edge-divergence-fill" data-target-width="26.200000000000003%" style="left: 68.8%; width: 0%;"></div>
+        <div class="edge-divergence-dot book" style="left: 68.8%;">
+          <span class="edge-divergence-label book">Book<br>68.8%</span>
+        </div>
+        <div class="edge-divergence-dot model" style="left: 95.0%;">
+          <span class="edge-divergence-label model">Model<br>95.0%</span>
+        </div>
+        <div class="edge-divergence-gap-value" style="left: 81.9%;">26.2 pt gap</div>
+      </div>
+    </div>
+      <div class="odds-compare">
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Book Price</div>
+          <div class="odds-compare-value book"><span class="live-odds">-220</span></div>
+        </div>
+        <div class="odds-compare-arrow">→</div>
+        <div class="odds-compare-col">
+          <div class="odds-compare-label">Model Says</div>
+          <div class="odds-compare-value model">-1900</div>
+        </div>
+      </div>
+      <div class="standout-sub">Suggested stake: 2.52% of bankroll</div>
+      <div class="rationale">Total Rounds Over 1.5 at -220 implies 69%, vs. the model's 95% (+26.2% edge). Neither fighter finishes much (0% and 0% of wins) -- this leans toward distance almost by default, favoring the Over.</div>
     </div>
     
     <div class="standout-card reveal-target heat-3" data-key="Bogdan Guskov|Moneyline">
@@ -2622,20 +2691,20 @@
       </div>
       <div class="edge-divergence">
       <div class="edge-divergence-track">
-        <div class="edge-divergence-fill" data-target-width="24.500000000000004%" style="left: 19.2%; width: 0%;"></div>
-        <div class="edge-divergence-dot book" style="left: 19.2%;">
-          <span class="edge-divergence-label book">Book<br>19.2%</span>
+        <div class="edge-divergence-fill" data-target-width="24.6%" style="left: 19.1%; width: 0%;"></div>
+        <div class="edge-divergence-dot book" style="left: 19.1%;">
+          <span class="edge-divergence-label book">Book<br>19.1%</span>
         </div>
         <div class="edge-divergence-dot model" style="left: 43.7%;">
           <span class="edge-divergence-label model">Model<br>43.7%</span>
         </div>
-        <div class="edge-divergence-gap-value" style="left: 31.450000000000003%;">24.5 pt gap</div>
+        <div class="edge-divergence-gap-value" style="left: 31.400000000000002%;">24.6 pt gap</div>
       </div>
     </div>
       <div class="odds-compare">
         <div class="odds-compare-col">
           <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book"><span class="live-odds">+400</span></div>
+          <div class="odds-compare-value book"><span class="live-odds">+400</span><span class="move-arrow down" title="Drifted 0.1% since last check">▼</span></div>
         </div>
         <div class="odds-compare-arrow">→</div>
         <div class="odds-compare-col">
@@ -2644,85 +2713,7 @@
         </div>
       </div>
       <div class="standout-sub">Suggested stake: 0.81% of bankroll</div>
-      <div class="rationale">The model puts Bogdan Guskov's win probability at 44%, higher than the market's 19% implied probability at +400 (+24.5% edge). Biggest factors in that number: Bogdan Guskov having been finished less often historically.</div>
-    </div>
-    
-    <div class="standout-card reveal-target heat-3" data-key="Brendson Ribeiro|Moneyline">
-      <div class="standout-top">
-        <div>
-          <div class="standout-main">Brendson Ribeiro<span class="standout-vs"> (vs. Magomed Tuchalov)</span></div>
-          <div class="standout-market">Moneyline
-            
-              <span class="dog-badge dog">🐶 Underdog</span>
-            
-            
-          </div>
-        </div>
-      </div>
-      <div class="edge-divergence">
-      <div class="edge-divergence-track">
-        <div class="edge-divergence-fill" data-target-width="21.5%" style="left: 16.6%; width: 0%;"></div>
-        <div class="edge-divergence-dot book" style="left: 16.6%;">
-          <span class="edge-divergence-label book">Book<br>16.6%</span>
-        </div>
-        <div class="edge-divergence-dot model" style="left: 38.1%;">
-          <span class="edge-divergence-label model">Model<br>38.1%</span>
-        </div>
-        <div class="edge-divergence-gap-value" style="left: 27.35%;">21.6 pt gap</div>
-      </div>
-    </div>
-      <div class="odds-compare">
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book"><span class="live-odds">+475</span></div>
-        </div>
-        <div class="odds-compare-arrow">→</div>
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Model Says</div>
-          <div class="odds-compare-value model">+162</div>
-        </div>
-      </div>
-      <div class="standout-sub">Suggested stake: 0.68% of bankroll</div>
-      <div class="rationale">The model puts Brendson Ribeiro's win probability at 38%, higher than the market's 17% implied probability at +475 (+21.6% edge). That's built on a 17-10 record (63% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.</div>
-    </div>
-    
-    <div class="standout-card reveal-target heat-2" data-key="Santiago Ponzinibbio|Moneyline">
-      <div class="standout-top">
-        <div>
-          <div class="standout-main">Santiago Ponzinibbio<span class="standout-vs"> (vs. Sam Patterson)</span></div>
-          <div class="standout-market">Moneyline
-            
-              <span class="dog-badge dog">🐶 Underdog</span>
-            
-            
-          </div>
-        </div>
-      </div>
-      <div class="edge-divergence">
-      <div class="edge-divergence-track">
-        <div class="edge-divergence-fill" data-target-width="18.299999999999997%" style="left: 23.1%; width: 0%;"></div>
-        <div class="edge-divergence-dot book" style="left: 23.1%;">
-          <span class="edge-divergence-label book">Book<br>23.1%</span>
-        </div>
-        <div class="edge-divergence-dot model" style="left: 41.4%;">
-          <span class="edge-divergence-label model">Model<br>41.4%</span>
-        </div>
-        <div class="edge-divergence-gap-value" style="left: 32.25%;">18.3 pt gap</div>
-      </div>
-    </div>
-      <div class="odds-compare">
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book"><span class="live-odds">+315</span></div>
-        </div>
-        <div class="odds-compare-arrow">→</div>
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Model Says</div>
-          <div class="odds-compare-value model">+142</div>
-        </div>
-      </div>
-      <div class="standout-sub">Suggested stake: 0.59% of bankroll</div>
-      <div class="rationale">The model puts Santiago Ponzinibbio's win probability at 41%, higher than the market's 23% implied probability at +315 (+18.3% edge). That's built on a 31-9 record (78% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.</div>
+      <div class="rationale">The model puts Bogdan Guskov's win probability at 44%, higher than the market's 19% implied probability at +400 (+24.6% edge). Biggest factors in that number: Bogdan Guskov having been finished less often historically.</div>
     </div>
     
   </div>
@@ -2738,6 +2729,42 @@
   <div class="parlay-subtitle">Straight, single-leg bets in a realistic odds range (-220 to +160) — built for real size, not a coinflip longshot or a -4000 favorite with no payout. Sorted by model probability, so the safest genuine plays lead.</div>
   <div class="standout-grid">
     
+    <div class="favorite-card reveal-target" data-key="Magomed Zaynukov vs Damian Rzepecki|Total Rounds Over 1.5">
+      <div class="favorite-top">
+        <div>
+          <div class="favorite-main">Magomed Zaynukov vs Damian Rzepecki</div>
+          <div class="favorite-vs">Total Rounds Over 1.5</div>
+          
+        </div>
+        <div class="favorite-odds"><span class="live-odds">-220</span></div>
+      </div>
+      <div class="favorite-prob-row">
+        <div class="favorite-prob-bar-track">
+          <div class="favorite-prob-bar" data-target-width="95.0%" style="width:0%"></div>
+        </div>
+        <div class="favorite-prob-label countup">95.0% model confidence</div>
+      </div>
+      <div class="rationale">Total Rounds Over 1.5 at -220 implies 69%, vs. the model's 95% (+26.2% edge). Neither fighter finishes much (0% and 0% of wins) -- this leans toward distance almost by default, favoring the Over.</div>
+    </div>
+    
+    <div class="favorite-card reveal-target" data-key="Magomed Ankalaev vs Bogdan Guskov|Total Rounds Over 2.5">
+      <div class="favorite-top">
+        <div>
+          <div class="favorite-main">Magomed Ankalaev vs Bogdan Guskov</div>
+          <div class="favorite-vs">Total Rounds Over 2.5</div>
+          
+        </div>
+        <div class="favorite-odds"><span class="live-odds">-110</span></div>
+      </div>
+      <div class="favorite-prob-row">
+        <div class="favorite-prob-bar-track">
+          <div class="favorite-prob-bar" data-target-width="76.3%" style="width:0%"></div>
+        </div>
+        <div class="favorite-prob-label countup">76.3% model confidence</div>
+      </div>
+      <div class="rationale">Total Rounds Over 2.5 at -110 implies 52%, vs. the model's 76% (+23.9% edge). Magomed Ankalaev finishes 52% of career wins against Bogdan Guskov's 0% -- a real gap. Backing the Over here means betting against Magomed Ankalaev's own history if they're the one who wins.</div>
+    </div>
+    
     <div class="favorite-card reveal-target" data-key="Axel Sola|Moneyline">
       <div class="favorite-top">
         <div>
@@ -2745,7 +2772,7 @@
           <div class="favorite-vs">vs Ismael Bonfim · Moneyline</div>
           
         </div>
-        <div class="favorite-odds"><span class="live-odds">-182</span></div>
+        <div class="favorite-odds"><span class="live-odds">-180</span></div>
       </div>
       <div class="favorite-prob-row">
         <div class="favorite-prob-bar-track">
@@ -2753,7 +2780,7 @@
         </div>
         <div class="favorite-prob-label countup">70.8% model confidence</div>
       </div>
-      <div class="rationale">Nothing dramatic separates this matchup on paper -- it's a cleaner, lower-variance read on Axel Sola rather than one built on a single standout factor. At -182, that's real, bettable value on a pick the model has at 71% -- the kind of number worth sizing up on rather than treating as a coinflip.</div>
+      <div class="rationale">Nothing dramatic separates this matchup on paper -- it's a cleaner, lower-variance read on Axel Sola rather than one built on a single standout factor. At -180, that's real, bettable value on a pick the model has at 71% -- the kind of number worth sizing up on rather than treating as a coinflip.</div>
     </div>
     
   </div>
@@ -2814,16 +2841,16 @@
   
   <div class="parlay-card reveal-target bankroll">
     <div class="parlay-top">
-      <div class="parlay-odds">+102</div>
-      <div class="parlay-prob">Model-estimated hit rate: 31.7%</div>
+      <div class="parlay-odds">+126</div>
+      <div class="parlay-prob">Model-estimated hit rate: 67.3%</div>
     </div>
     <ul class="parlay-legs">
       
       <li class="parlay-leg">
         <span class="parlay-leg-num">1</span>
-        <span class="parlay-leg-label">Islam Dulatov ML</span>
+        <span class="parlay-leg-label">Magomed Zaynukov vs Damian Rzepecki Over 1.5 rounds</span>
         <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">-715</span>
+          <span class="parlay-leg-odds">-220</span>
           
         </span>
       </li>
@@ -2832,16 +2859,7 @@
         <span class="parlay-leg-num">2</span>
         <span class="parlay-leg-label">Axel Sola ML</span>
         <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">-182</span>
-          
-        </span>
-      </li>
-      
-      <li class="parlay-leg">
-        <span class="parlay-leg-num">3</span>
-        <span class="parlay-leg-label">Magomed Tuchalov ML</span>
-        <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">-700</span>
+          <span class="parlay-leg-odds">-180</span>
           
         </span>
       </li>
@@ -2851,25 +2869,25 @@
   
   <div class="parlay-card reveal-target bankroll">
     <div class="parlay-top">
-      <div class="parlay-odds">+149</div>
-      <div class="parlay-prob">Model-estimated hit rate: 32.6%</div>
+      <div class="parlay-odds">+213</div>
+      <div class="parlay-prob">Model-estimated hit rate: 58.8%</div>
     </div>
     <ul class="parlay-legs">
       
       <li class="parlay-leg">
         <span class="parlay-leg-num">1</span>
-        <span class="parlay-leg-label">Valter Walker ML</span>
+        <span class="parlay-leg-label">Islam Dulatov vs Wellington Turman Over 1.5 rounds</span>
         <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">-192</span>
+          <span class="parlay-leg-odds">+174</span>
           
         </span>
       </li>
       
       <li class="parlay-leg">
         <span class="parlay-leg-num">2</span>
-        <span class="parlay-leg-label">Nurullo Aliev ML</span>
+        <span class="parlay-leg-label">Magomed Tuchalov ML</span>
         <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">-157</span>
+          <span class="parlay-leg-odds">-700</span>
           
         </span>
       </li>
@@ -2914,16 +2932,44 @@
   
   <div class="parlay-card reveal-target lotto">
     <div class="parlay-top">
-      <div class="parlay-odds">+1174</div>
-      <div class="parlay-prob">Model-estimated hit rate: 35.03%</div>
+      <div class="parlay-odds">+1008</div>
+      <div class="parlay-prob">Model-estimated hit rate: 55.0%</div>
     </div>
     <ul class="parlay-legs">
       
       <li class="parlay-leg">
         <span class="parlay-leg-num">1</span>
+        <span class="parlay-leg-label">Islam Dulatov vs Wellington Turman Over 1.5 rounds</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">+174</span>
+          
+        </span>
+      </li>
+      
+      <li class="parlay-leg">
+        <span class="parlay-leg-num">2</span>
         <span class="parlay-leg-label">Damian Rzepecki ML</span>
         <span class="parlay-leg-right">
           <span class="parlay-leg-odds">+304</span>
+          
+        </span>
+      </li>
+      
+    </ul>
+  </div>
+  
+  <div class="parlay-card reveal-target lotto">
+    <div class="parlay-top">
+      <div class="parlay-odds">+4577</div>
+      <div class="parlay-prob">Model-estimated hit rate: 14.28%</div>
+    </div>
+    <ul class="parlay-legs">
+      
+      <li class="parlay-leg">
+        <span class="parlay-leg-num">1</span>
+        <span class="parlay-leg-label">Bogdan Guskov ML + Magomed Ankalaev vs Bogdan Guskov Over 2.5 rounds</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">+855</span>
           
         </span>
       </li>
@@ -2937,21 +2983,30 @@
         </span>
       </li>
       
+      <li class="parlay-leg">
+        <span class="parlay-leg-num">3</span>
+        <span class="parlay-leg-label">Axel Sola ML</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">-180</span>
+          
+        </span>
+      </li>
+      
     </ul>
   </div>
   
   <div class="parlay-card reveal-target lotto">
     <div class="parlay-top">
-      <div class="parlay-odds">+3112</div>
-      <div class="parlay-prob">Model-estimated hit rate: 12.81%</div>
+      <div class="parlay-odds">+14170</div>
+      <div class="parlay-prob">Model-estimated hit rate: 2.83%</div>
     </div>
     <ul class="parlay-legs">
       
       <li class="parlay-leg">
         <span class="parlay-leg-num">1</span>
-        <span class="parlay-leg-label">Bogdan Guskov ML</span>
+        <span class="parlay-leg-label">Thomas Petersen ML</span>
         <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">+400</span>
+          <span class="parlay-leg-odds">+160</span>
           
         </span>
       </li>
@@ -2967,46 +3022,18 @@
       
       <li class="parlay-leg">
         <span class="parlay-leg-num">3</span>
-        <span class="parlay-leg-label">Axel Sola ML</span>
-        <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">-182</span>
-          
-        </span>
-      </li>
-      
-    </ul>
-  </div>
-  
-  <div class="parlay-card reveal-target lotto">
-    <div class="parlay-top">
-      <div class="parlay-odds">+8870</div>
-      <div class="parlay-prob">Model-estimated hit rate: 3.96%</div>
-    </div>
-    <ul class="parlay-legs">
-      
-      <li class="parlay-leg">
-        <span class="parlay-leg-num">1</span>
-        <span class="parlay-leg-label">Wellington Turman ML</span>
-        <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">+500</span>
-          
-        </span>
-      </li>
-      
-      <li class="parlay-leg">
-        <span class="parlay-leg-num">2</span>
-        <span class="parlay-leg-label">Thomas Petersen ML</span>
-        <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">+160</span>
-          
-        </span>
-      </li>
-      
-      <li class="parlay-leg">
-        <span class="parlay-leg-num">3</span>
         <span class="parlay-leg-label">Brendson Ribeiro ML</span>
         <span class="parlay-leg-right">
           <span class="parlay-leg-odds">+475</span>
+          
+        </span>
+      </li>
+      
+      <li class="parlay-leg">
+        <span class="parlay-leg-num">4</span>
+        <span class="parlay-leg-label">Mike Davis ML</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">+130</span>
           
         </span>
       </li>
@@ -3023,25 +3050,25 @@
   
   <div class="parlay-card reveal-target moonshot">
     <div class="parlay-top">
-      <div class="parlay-odds">+6265</div>
-      <div class="parlay-prob">Model-estimated hit rate: 15.31%</div>
+      <div class="parlay-odds">+6565</div>
+      <div class="parlay-prob">Model-estimated hit rate: 25.39%</div>
     </div>
     <ul class="parlay-legs">
       
       <li class="parlay-leg">
         <span class="parlay-leg-num">1</span>
-        <span class="parlay-leg-label">Bogdan Guskov ML</span>
+        <span class="parlay-leg-label">Islam Dulatov vs Wellington Turman Over 1.5 rounds</span>
         <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">+400</span>
+          <span class="parlay-leg-odds">+174</span>
           
         </span>
       </li>
       
       <li class="parlay-leg">
         <span class="parlay-leg-num">2</span>
-        <span class="parlay-leg-label">Damian Rzepecki ML</span>
+        <span class="parlay-leg-label">Magomed Ankalaev vs Bogdan Guskov Over 2.5 rounds</span>
         <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">+304</span>
+          <span class="parlay-leg-odds">-110</span>
           
         </span>
       </li>
@@ -3055,21 +3082,30 @@
         </span>
       </li>
       
+      <li class="parlay-leg">
+        <span class="parlay-leg-num">4</span>
+        <span class="parlay-leg-label">Damian Rzepecki ML</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">+304</span>
+          
+        </span>
+      </li>
+      
     </ul>
   </div>
   
   <div class="parlay-card reveal-target moonshot">
     <div class="parlay-top">
-      <div class="parlay-odds">+14218</div>
-      <div class="parlay-prob">Model-estimated hit rate: 4.37%</div>
+      <div class="parlay-odds">+25798</div>
+      <div class="parlay-prob">Model-estimated hit rate: 0.9%</div>
     </div>
     <ul class="parlay-legs">
       
       <li class="parlay-leg">
         <span class="parlay-leg-num">1</span>
-        <span class="parlay-leg-label">Wellington Turman ML</span>
+        <span class="parlay-leg-label">Nurullo Aliev ML</span>
         <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">+500</span>
+          <span class="parlay-leg-odds">-157</span>
           
         </span>
       </li>
@@ -3092,36 +3128,8 @@
         </span>
       </li>
       
-    </ul>
-  </div>
-  
-  <div class="parlay-card reveal-target moonshot">
-    <div class="parlay-top">
-      <div class="parlay-odds">+45601</div>
-      <div class="parlay-prob">Model-estimated hit rate: 0.63%</div>
-    </div>
-    <ul class="parlay-legs">
-      
       <li class="parlay-leg">
-        <span class="parlay-leg-num">1</span>
-        <span class="parlay-leg-label">Bogdan Guskov ML</span>
-        <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">+400</span>
-          
-        </span>
-      </li>
-      
-      <li class="parlay-leg">
-        <span class="parlay-leg-num">2</span>
-        <span class="parlay-leg-label">Wellington Turman ML</span>
-        <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">+500</span>
-          
-        </span>
-      </li>
-      
-      <li class="parlay-leg">
-        <span class="parlay-leg-num">3</span>
+        <span class="parlay-leg-num">4</span>
         <span class="parlay-leg-label">Thomas Petersen ML</span>
         <span class="parlay-leg-right">
           <span class="parlay-leg-odds">+160</span>
@@ -3130,7 +3138,7 @@
       </li>
       
       <li class="parlay-leg">
-        <span class="parlay-leg-num">4</span>
+        <span class="parlay-leg-num">5</span>
         <span class="parlay-leg-label">Ismael Bonfim ML</span>
         <span class="parlay-leg-right">
           <span class="parlay-leg-odds">+155</span>
@@ -3138,11 +3146,48 @@
         </span>
       </li>
       
+    </ul>
+  </div>
+  
+  <div class="parlay-card reveal-target moonshot">
+    <div class="parlay-top">
+      <div class="parlay-odds">+133917</div>
+      <div class="parlay-prob">Model-estimated hit rate: 2.89%</div>
+    </div>
+    <ul class="parlay-legs">
+      
       <li class="parlay-leg">
-        <span class="parlay-leg-num">5</span>
-        <span class="parlay-leg-label">Mike Davis ML</span>
+        <span class="parlay-leg-num">1</span>
+        <span class="parlay-leg-label">Damian Rzepecki ML + Magomed Zaynukov vs Damian Rzepecki Over 1.5 rounds</span>
         <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">+130</span>
+          <span class="parlay-leg-odds">+488</span>
+          
+        </span>
+      </li>
+      
+      <li class="parlay-leg">
+        <span class="parlay-leg-num">2</span>
+        <span class="parlay-leg-label">Santiago Ponzinibbio ML</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">+315</span>
+          
+        </span>
+      </li>
+      
+      <li class="parlay-leg">
+        <span class="parlay-leg-num">3</span>
+        <span class="parlay-leg-label">Brendson Ribeiro ML</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">+475</span>
+          
+        </span>
+      </li>
+      
+      <li class="parlay-leg">
+        <span class="parlay-leg-num">4</span>
+        <span class="parlay-leg-label">Bogdan Guskov ML + Magomed Ankalaev vs Bogdan Guskov Over 2.5 rounds</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">+855</span>
           
         </span>
       </li>
@@ -6063,7 +6108,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Magomed Ankalaev vs Bogdan Guskov probability over time (one side implied)"><line x1="36" y1="141.7" x2="290" y2="141.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="144.7" font-size="9" fill="#8a8f9a" text-anchor="end">10%</text><line x1="36" y1="121.9" x2="290" y2="121.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="124.9" font-size="9" fill="#8a8f9a" text-anchor="end">25%</text><line x1="36" y1="102.2" x2="290" y2="102.2" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="105.2" font-size="9" fill="#8a8f9a" text-anchor="end">40%</text><line x1="36" y1="75.8" x2="290" y2="75.8" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="78.8" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,53.8 36.0,46.6 36.3,53.8 36.3,46.6 36.3,53.8 36.3,46.6 37.3,53.8 37.3,46.6 42.3,53.8 42.3,46.6 103.4,53.8 103.4,46.6 262.7,43.6 262.7,43.6 262.9,43.6 264.0,43.6 264.0,43.6 264.4,43.6 264.5,43.6 264.7,43.6 264.8,43.6 265.6,43.6 265.7,43.6 270.4,43.6 277.2,43.6 281.9,43.6 285.4,43.6 287.7,43.6 289.9,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,124.2 36.0,131.4 36.3,124.2 36.3,131.4 36.3,124.2 36.3,131.4 37.3,124.2 37.3,131.4 42.3,124.2 42.3,131.4 103.4,124.2 103.4,131.4 262.7,134.4 262.7,134.4 262.9,134.4 264.0,134.4 264.0,134.4 264.4,134.4 264.5,134.4 264.7,134.4 264.8,134.4 265.6,134.4 265.7,134.4 270.4,134.4 277.2,134.4 281.9,134.4 285.4,134.4 287.7,134.4 289.9,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Ankalaev 84%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Guskov ~ 16%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Magomed Ankalaev vs Bogdan Guskov probability over time (one side implied)"><line x1="36" y1="141.4" x2="290" y2="141.4" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="144.4" font-size="9" fill="#8a8f9a" text-anchor="end">10%</text><line x1="36" y1="121.8" x2="290" y2="121.8" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="124.8" font-size="9" fill="#8a8f9a" text-anchor="end">25%</text><line x1="36" y1="102.1" x2="290" y2="102.1" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="105.1" font-size="9" fill="#8a8f9a" text-anchor="end">40%</text><line x1="36" y1="75.9" x2="290" y2="75.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="78.9" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,46.9 36.2,53.9 36.2,46.9 36.3,53.9 36.3,46.9 37.3,53.9 37.3,46.9 42.3,53.9 42.3,46.9 103.0,53.9 103.0,46.9 261.4,43.9 261.4,43.9 261.6,43.9 262.7,43.9 262.7,43.9 263.1,43.9 263.2,43.9 263.4,43.9 263.5,43.9 264.3,43.9 264.4,43.9 269.0,43.9 275.8,43.9 280.5,43.9 284.0,43.9 286.3,43.9 288.5,43.9 288.6,43.9 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,131.1 36.2,124.1 36.2,131.1 36.3,124.1 36.3,131.1 37.3,124.1 37.3,131.1 42.3,124.1 42.3,131.1 103.0,124.1 103.0,131.1 261.4,134.1 261.4,134.1 261.6,134.1 262.7,134.1 262.7,134.1 263.1,134.1 263.2,134.1 263.4,134.1 263.5,134.1 264.3,134.1 264.4,134.1 269.0,134.1 275.8,134.1 280.5,134.1 284.0,134.1 286.3,134.1 288.5,134.1 288.6,134.1 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Ankalaev 85%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Guskov ~ 15%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -6077,36 +6122,68 @@
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>Stake</th></tr>
         
         <tr class="edge-heat-3">
+          <td>Magomed Ankalaev vs Bogdan Guskov</td>
+          <td>Total Rounds Under 2.5</td>
+          <td><span class="live-odds">-110</span></td>
+          <td>0.237</td>
+          <td>0.524</td>
+          <td class="edge-neg">-28.65%</td>
+          <td>0.0%</td>
+        </tr>
+        
+        <tr class="edge-heat-3">
           <td>Bogdan Guskov<span class="dog-badge-sm dog">🐶</span></td>
           <td>Moneyline</td>
-          <td><span class="live-odds">+400</span></td>
+          <td><span class="live-odds">+400</span><span class="movement-tag drifting">📉0.1%</span></td>
           <td>0.437</td>
-          <td>0.192</td>
-          <td class="edge-pos">24.53%</td>
+          <td>0.191</td>
+          <td class="edge-pos">24.58%</td>
           <td>0.81%</td>
         </tr>
         
         <tr class="edge-heat-3">
           <td>Magomed Ankalaev<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
-          <td><span class="live-odds">-542</span></td>
+          <td><span class="live-odds">-550</span><span class="movement-tag shortening">📈0.2%</span></td>
           <td>0.563</td>
-          <td>0.808</td>
-          <td class="edge-neg">-24.53%</td>
+          <td>0.809</td>
+          <td class="edge-neg">-24.58%</td>
           <td>0.0%</td>
+        </tr>
+        
+        <tr class="edge-heat-3">
+          <td>Magomed Ankalaev vs Bogdan Guskov</td>
+          <td>Total Rounds Over 2.5</td>
+          <td><span class="live-odds">-110</span></td>
+          <td>0.763</td>
+          <td>0.524</td>
+          <td class="edge-pos">23.89%</td>
+          <td>1.5%</td>
         </tr>
         
       </table></div>
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Bogdan Guskov — Moneyline:</span> The model puts Bogdan Guskov's win probability at 44%, higher than the market's 19% implied probability at +400 (+24.5% edge). Biggest factors in that number: Bogdan Guskov having been finished less often historically.
+        <span class="preview-label">Magomed Ankalaev vs Bogdan Guskov — Total Rounds Under 2.5:</span> Total Rounds Under 2.5 at -110 implies 52%, vs. the model's 24% (-28.6% edge). A wide finish-rate gap here: 52% for Magomed Ankalaev vs. 0% for Bogdan Guskov. If Magomed Ankalaev wins, history says this doesn't see the judges.
       </div>
       
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Magomed Ankalaev — Moneyline:</span> The model puts Magomed Ankalaev's win probability at 56%, lower than the market's 81% implied probability at -542 (-24.5% edge). Biggest factors in that number: Bogdan Guskov having been finished less often historically.
+        <span class="preview-label">Bogdan Guskov — Moneyline:</span> The model puts Bogdan Guskov's win probability at 44%, higher than the market's 19% implied probability at +400 (+24.6% edge). Biggest factors in that number: Bogdan Guskov having been finished less often historically.
+      </div>
+      
+      
+      
+      <div class="model-preview edge-rationale">
+        <span class="preview-label">Magomed Ankalaev — Moneyline:</span> The model puts Magomed Ankalaev's win probability at 56%, lower than the market's 81% implied probability at -550 (-24.6% edge). Biggest factors in that number: Bogdan Guskov having been finished less often historically.
+      </div>
+      
+      
+      
+      <div class="model-preview edge-rationale">
+        <span class="preview-label">Magomed Ankalaev vs Bogdan Guskov — Total Rounds Over 2.5:</span> Total Rounds Over 2.5 at -110 implies 52%, vs. the model's 76% (+23.9% edge). Magomed Ankalaev finishes 52% of career wins against Bogdan Guskov's 0% -- a real gap. Backing the Over here means betting against Magomed Ankalaev's own history if they're the one who wins.
       </div>
       
       
@@ -6480,7 +6557,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Islam Dulatov vs Wellington Turman probability over time (one side implied)"><line x1="36" y1="136.5" x2="290" y2="136.5" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="139.5" font-size="9" fill="#8a8f9a" text-anchor="end">10%</text><line x1="36" y1="118.7" x2="290" y2="118.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="121.7" font-size="9" fill="#8a8f9a" text-anchor="end">25%</text><line x1="36" y1="100.9" x2="290" y2="100.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="103.9" font-size="9" fill="#8a8f9a" text-anchor="end">40%</text><line x1="36" y1="77.1" x2="290" y2="77.1" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="80.1" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,44.5 36.5,44.5 36.5,44.5 37.0,44.5 37.1,44.5 37.6,44.5 37.7,44.5 37.9,44.5 38.0,44.5 39.0,44.5 44.0,44.5 104.7,44.5 262.8,43.6 262.9,43.6 263.0,43.6 264.1,43.6 264.2,43.6 264.6,43.6 264.7,43.6 264.8,43.6 264.9,43.6 265.8,43.6 265.8,43.6 270.5,43.6 277.3,44.2 281.9,44.2 285.4,44.2 287.8,44.2 289.9,44.2 290.0,44.2" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="44.2" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="44.2" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,133.5 36.5,133.5 36.5,133.5 37.0,133.5 37.1,133.5 37.6,133.5 37.7,133.5 37.9,133.5 38.0,133.5 39.0,133.5 44.0,133.5 104.7,133.5 262.8,134.4 262.9,134.4 263.0,134.4 264.1,134.4 264.2,134.4 264.6,134.4 264.7,134.4 264.8,134.4 264.9,134.4 265.8,134.4 265.8,134.4 270.5,134.4 277.3,133.8 281.9,133.8 285.4,133.8 287.8,133.8 289.9,133.8 290.0,133.8" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="133.8" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="133.8" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Dulatov 88%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Turman ~ 12%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Islam Dulatov vs Wellington Turman probability over time (one side implied)"><line x1="36" y1="136.5" x2="290" y2="136.5" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="139.5" font-size="9" fill="#8a8f9a" text-anchor="end">10%</text><line x1="36" y1="118.7" x2="290" y2="118.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="121.7" font-size="9" fill="#8a8f9a" text-anchor="end">25%</text><line x1="36" y1="100.9" x2="290" y2="100.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="103.9" font-size="9" fill="#8a8f9a" text-anchor="end">40%</text><line x1="36" y1="77.1" x2="290" y2="77.1" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="80.1" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,44.5 36.0,44.5 36.5,44.5 36.6,44.5 37.1,44.5 37.2,44.5 37.4,44.5 37.5,44.5 38.5,44.5 43.4,44.5 103.9,44.5 261.5,43.6 261.5,43.6 261.7,43.6 262.8,43.6 262.8,43.6 263.3,43.6 263.4,43.6 263.5,43.6 263.6,43.6 264.5,43.6 264.5,43.6 269.1,43.6 275.9,44.2 280.5,44.2 284.0,44.2 286.3,44.2 288.5,44.2 288.6,44.2 290.0,44.5" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="44.5" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="44.5" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,133.5 36.0,133.5 36.5,133.5 36.6,133.5 37.1,133.5 37.2,133.5 37.4,133.5 37.5,133.5 38.5,133.5 43.4,133.5 103.9,133.5 261.5,134.4 261.5,134.4 261.7,134.4 262.8,134.4 262.8,134.4 263.3,134.4 263.4,134.4 263.5,134.4 263.6,134.4 264.5,134.4 264.5,134.4 269.1,134.4 275.9,133.8 280.5,133.8 284.0,133.8 286.3,133.8 288.5,133.8 288.6,133.8 290.0,133.5" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="133.5" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="133.5" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Dulatov 88%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Turman ~ 12%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -6493,27 +6570,59 @@
       <div class="table-scroll"><table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>Stake</th></tr>
         
+        <tr class="edge-heat-3">
+          <td>Islam Dulatov vs Wellington Turman</td>
+          <td>Total Rounds Under 1.5</td>
+          <td><span class="live-odds">-200</span></td>
+          <td>0.05</td>
+          <td>0.667</td>
+          <td class="edge-neg">-61.67%</td>
+          <td>0.0%</td>
+        </tr>
+        
+        <tr class="edge-heat-3">
+          <td>Islam Dulatov vs Wellington Turman</td>
+          <td>Total Rounds Over 1.5</td>
+          <td><span class="live-odds">+174</span></td>
+          <td>0.95</td>
+          <td>0.365</td>
+          <td class="edge-pos">58.5%</td>
+          <td>2.76%</td>
+        </tr>
+        
         <tr class="edge-heat-2">
           <td>Wellington Turman<span class="dog-badge-sm dog">🐶</span></td>
           <td>Moneyline</td>
           <td><span class="live-odds">+500</span></td>
           <td>0.277</td>
           <td>0.16</td>
-          <td class="edge-pos">11.78%</td>
+          <td class="edge-pos">11.75%</td>
           <td>0.34%</td>
         </tr>
         
         <tr class="edge-heat-2">
           <td>Islam Dulatov<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
-          <td><span class="live-odds">-715</span></td>
+          <td><span class="live-odds">-700</span><span class="movement-tag drifting">📉0.3%</span></td>
           <td>0.723</td>
           <td>0.84</td>
-          <td class="edge-neg">-11.78%</td>
+          <td class="edge-neg">-11.75%</td>
           <td>0.0%</td>
         </tr>
         
       </table></div>
+      
+      
+      <div class="model-preview edge-rationale">
+        <span class="preview-label">Islam Dulatov vs Wellington Turman — Total Rounds Under 1.5:</span> Total Rounds Under 1.5 at -200 implies 67%, vs. the model's 5% (-61.7% edge). Neither fighter finishes much (0% and 0% of wins) -- the Under is fighting the tape here.
+      </div>
+      
+      
+      
+      <div class="model-preview edge-rationale">
+        <span class="preview-label">Islam Dulatov vs Wellington Turman — Total Rounds Over 1.5:</span> Total Rounds Over 1.5 at +174 implies 36%, vs. the model's 95% (+58.5% edge). Low finish rates across the board here (0% and 0%) -- there's no obvious source of an early stoppage, which is the Over's whole case.
+      </div>
+      
       
       
       <div class="model-preview edge-rationale">
@@ -6523,7 +6632,7 @@
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Islam Dulatov — Moneyline:</span> The model puts Islam Dulatov's win probability at 72%, lower than the market's 84% implied probability at -715 (-11.8% edge). That's built on a 12-1 record (92% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+        <span class="preview-label">Islam Dulatov — Moneyline:</span> The model puts Islam Dulatov's win probability at 72%, lower than the market's 84% implied probability at -700 (-11.8% edge). That's built on a 12-1 record (92% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
       </div>
       
       
@@ -6545,10 +6654,6 @@
         <tr><td>Wellington Turman</td><td>Submission</td><td>0.0%</td></tr>
         
         <tr><td>Wellington Turman</td><td>Decision</td><td>0.0%</td></tr>
-        
-        <tr><td>Islam Dulatov vs Wellington Turman</td><td>Total Rounds Under 1.5</td><td>0.0%</td></tr>
-        
-        <tr><td>Islam Dulatov vs Wellington Turman</td><td>Total Rounds Over 1.5</td><td>100.0%</td></tr>
         
         <tr><td>Islam Dulatov vs Wellington Turman</td><td>Total Rounds Under 2.5</td><td>0.0%</td></tr>
         
@@ -6710,7 +6815,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Magomed Zaynukov vs Damian Rzepecki probability over time (one side implied)"><line x1="36" y1="134.5" x2="290" y2="134.5" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="137.5" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="111.8" x2="290" y2="111.8" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="114.8" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="66.2" x2="290" y2="66.2" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="69.2" font-size="9" fill="#8a8f9a" text-anchor="end">65%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,45.2 36.3,45.2 37.9,45.2 48.2,45.2 48.6,45.2 52.6,45.2 53.4,45.2 54.6,45.2 55.5,45.2 63.7,45.2 64.1,45.2 107.5,45.2 171.0,43.6 214.5,43.6 247.0,43.6 269.0,43.6 289.2,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,132.8 36.3,132.8 37.9,132.8 48.2,132.8 48.6,132.8 52.6,132.8 53.4,132.8 54.6,132.8 55.5,132.8 63.7,132.8 64.1,132.8 107.5,132.8 171.0,134.4 214.5,134.4 247.0,134.4 269.0,134.4 289.2,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Zaynukov 80%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Rzepecki ~ 20%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 19</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Magomed Zaynukov vs Damian Rzepecki probability over time (one side implied)"><line x1="36" y1="134.5" x2="290" y2="134.5" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="137.5" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="111.8" x2="290" y2="111.8" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="114.8" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="66.2" x2="290" y2="66.2" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="69.2" font-size="9" fill="#8a8f9a" text-anchor="end">65%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,45.2 36.3,45.2 37.8,45.2 47.6,45.2 48.0,45.2 51.7,45.2 52.5,45.2 53.6,45.2 54.5,45.2 62.3,45.2 62.7,45.2 103.9,45.2 164.2,43.6 205.5,43.6 236.4,43.6 257.2,43.6 276.5,43.6 277.2,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,132.8 36.3,132.8 37.8,132.8 47.6,132.8 48.0,132.8 51.7,132.8 52.5,132.8 53.6,132.8 54.5,132.8 62.3,132.8 62.7,132.8 103.9,132.8 164.2,134.4 205.5,134.4 236.4,134.4 257.2,134.4 276.5,134.4 277.2,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Zaynukov 80%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Rzepecki ~ 20%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 19</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -6743,6 +6848,26 @@
           <td>0.0%</td>
         </tr>
         
+        <tr class="edge-heat-3">
+          <td>Magomed Zaynukov vs Damian Rzepecki</td>
+          <td>Total Rounds Under 1.5</td>
+          <td><span class="live-odds">+186</span></td>
+          <td>0.05</td>
+          <td>0.35</td>
+          <td class="edge-neg">-29.97%</td>
+          <td>0.0%</td>
+        </tr>
+        
+        <tr class="edge-heat-3">
+          <td>Magomed Zaynukov vs Damian Rzepecki</td>
+          <td>Total Rounds Over 1.5</td>
+          <td><span class="live-odds">-220</span></td>
+          <td>0.95</td>
+          <td>0.688</td>
+          <td class="edge-pos">26.25%</td>
+          <td>2.52%</td>
+        </tr>
+        
       </table></div>
       
       
@@ -6754,6 +6879,18 @@
       
       <div class="model-preview edge-rationale">
         <span class="preview-label">Magomed Zaynukov — Moneyline:</span> The model puts Magomed Zaynukov's win probability at 42%, lower than the market's 76% implied probability at -398 (-34.3% edge). That's built on a 8-0 record (100% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+      </div>
+      
+      
+      
+      <div class="model-preview edge-rationale">
+        <span class="preview-label">Magomed Zaynukov vs Damian Rzepecki — Total Rounds Under 1.5:</span> Total Rounds Under 1.5 at +186 implies 35%, vs. the model's 5% (-30.0% edge). Low finish rates on both sides (0% and 0%) make the Under a tougher sell -- there's little history suggesting an early ending.
+      </div>
+      
+      
+      
+      <div class="model-preview edge-rationale">
+        <span class="preview-label">Magomed Zaynukov vs Damian Rzepecki — Total Rounds Over 1.5:</span> Total Rounds Over 1.5 at -220 implies 69%, vs. the model's 95% (+26.2% edge). Neither fighter finishes much (0% and 0% of wins) -- this leans toward distance almost by default, favoring the Over.
       </div>
       
       
@@ -6775,10 +6912,6 @@
         <tr><td>Damian Rzepecki</td><td>Submission</td><td>0.0%</td></tr>
         
         <tr><td>Damian Rzepecki</td><td>Decision</td><td>0.0%</td></tr>
-        
-        <tr><td>Magomed Zaynukov vs Damian Rzepecki</td><td>Total Rounds Under 1.5</td><td>0.0%</td></tr>
-        
-        <tr><td>Magomed Zaynukov vs Damian Rzepecki</td><td>Total Rounds Over 1.5</td><td>100.0%</td></tr>
         
         <tr><td>Magomed Zaynukov vs Damian Rzepecki</td><td>Total Rounds Under 2.5</td><td>0.0%</td></tr>
         
@@ -6940,7 +7073,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Rizvan Kuniev vs Tyrell Fortune probability over time (one side implied)"><line x1="36" y1="147.4" x2="290" y2="147.4" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="150.4" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="118.2" x2="290" y2="118.2" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="121.2" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="69.5" x2="290" y2="69.5" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="72.5" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,43.6 36.5,43.6 36.5,43.6 37.0,43.6 37.1,43.6 37.6,43.6 37.7,43.6 37.9,43.6 38.0,43.6 39.0,43.6 44.0,43.6 104.7,43.6 262.8,44.3 262.9,44.3 263.0,44.3 264.1,44.3 264.2,44.3 264.6,44.3 264.7,44.3 264.8,44.3 264.9,44.3 265.8,44.3 265.8,44.3 270.5,44.3 277.3,45.0 281.9,45.0 285.4,45.0 287.8,45.0 289.9,45.0 290.0,45.0" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="45.0" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="45.0" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,134.4 36.5,134.4 36.5,134.4 37.0,134.4 37.1,134.4 37.6,134.4 37.7,134.4 37.9,134.4 38.0,134.4 39.0,134.4 44.0,134.4 104.7,134.4 262.8,133.7 262.9,133.7 263.0,133.7 264.1,133.7 264.2,133.7 264.6,133.7 264.7,133.7 264.8,133.7 264.9,133.7 265.8,133.7 265.8,133.7 270.5,133.7 277.3,133.0 281.9,133.0 285.4,133.0 287.8,133.0 289.9,133.0 290.0,133.0" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="133.0" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="133.0" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Kuniev 73%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Fortune ~ 27%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Rizvan Kuniev vs Tyrell Fortune probability over time (one side implied)"><line x1="36" y1="147.4" x2="290" y2="147.4" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="150.4" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="118.2" x2="290" y2="118.2" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="121.2" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="69.5" x2="290" y2="69.5" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="72.5" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,43.6 36.0,43.6 36.5,43.6 36.6,43.6 37.1,43.6 37.2,43.6 37.4,43.6 37.5,43.6 38.5,43.6 43.4,43.6 103.9,43.6 261.5,44.3 261.5,44.3 261.7,44.3 262.8,44.3 262.8,44.3 263.3,44.3 263.4,44.3 263.5,44.3 263.6,44.3 264.5,44.3 264.5,44.3 269.1,44.3 275.9,45.0 280.5,45.0 284.0,45.0 286.3,45.0 288.5,45.0 288.6,45.0 290.0,46.1" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="46.1" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="46.1" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,134.4 36.0,134.4 36.5,134.4 36.6,134.4 37.1,134.4 37.2,134.4 37.4,134.4 37.5,134.4 38.5,134.4 43.4,134.4 103.9,134.4 261.5,133.7 261.5,133.7 261.7,133.7 262.8,133.7 262.8,133.7 263.3,133.7 263.4,133.7 263.5,133.7 263.6,133.7 264.5,133.7 264.5,133.7 269.1,133.7 275.9,133.0 280.5,133.0 284.0,133.0 286.3,133.0 288.5,133.0 288.6,133.0 290.0,131.9" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="131.9" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="131.9" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Kuniev 72%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Fortune ~ 28%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -6958,18 +7091,18 @@
           <td>Moneyline</td>
           <td><span class="live-odds">+215</span></td>
           <td>0.605</td>
-          <td>0.304</td>
-          <td class="edge-pos">30.12%</td>
-          <td>1.13%</td>
+          <td>0.306</td>
+          <td class="edge-pos">29.97%</td>
+          <td>1.15%</td>
         </tr>
         
         <tr class="edge-heat-3">
           <td>Rizvan Kuniev<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
-          <td><span class="live-odds">-265</span></td>
+          <td><span class="live-odds">-258</span><span class="movement-tag drifting">📉0.7%</span></td>
           <td>0.395</td>
-          <td>0.696</td>
-          <td class="edge-neg">-30.12%</td>
+          <td>0.694</td>
+          <td class="edge-neg">-29.97%</td>
           <td>0.0%</td>
         </tr>
         
@@ -6977,13 +7110,13 @@
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Tyrell Fortune — Moneyline:</span> The model puts Tyrell Fortune's win probability at 60%, higher than the market's 30% implied probability at +215 (+30.1% edge). That's built on a 18-3 record (86% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+        <span class="preview-label">Tyrell Fortune — Moneyline:</span> The model puts Tyrell Fortune's win probability at 60%, higher than the market's 31% implied probability at +215 (+30.0% edge). That's built on a 18-3 record (86% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
       </div>
       
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Rizvan Kuniev — Moneyline:</span> The model puts Rizvan Kuniev's win probability at 40%, lower than the market's 70% implied probability at -265 (-30.1% edge). That's built on a 13-3 record (81% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+        <span class="preview-label">Rizvan Kuniev — Moneyline:</span> The model puts Rizvan Kuniev's win probability at 40%, lower than the market's 69% implied probability at -258 (-30.0% edge). That's built on a 13-3 record (81% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
       </div>
       
       
@@ -7358,7 +7491,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Valter Walker vs Thomas Petersen probability over time (one side implied)"><line x1="36" y1="146.5" x2="290" y2="146.5" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="149.5" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="117.7" x2="290" y2="117.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="120.7" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="69.8" x2="290" y2="69.8" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="72.8" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,45.0 36.5,45.0 36.5,45.0 37.0,45.0 37.1,45.0 37.6,45.0 37.7,45.0 37.9,45.0 38.0,45.0 39.0,45.0 44.0,49.5 104.7,47.2 262.8,43.6 262.9,43.6 263.0,43.6 264.1,43.6 264.2,43.6 264.6,43.6 264.7,43.6 264.8,43.6 264.9,43.6 265.8,43.6 265.8,43.6 270.5,43.6 277.3,57.1 281.9,58.8 285.4,58.8 287.8,58.8 289.9,59.3 290.0,58.8" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="58.8" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="58.8" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,133.0 36.5,133.0 36.5,133.0 37.0,133.0 37.1,133.0 37.6,133.0 37.7,133.0 37.9,133.0 38.0,133.0 39.0,133.0 44.0,128.5 104.7,130.8 262.8,134.4 262.9,134.4 263.0,134.4 264.1,134.4 264.2,134.4 264.6,134.4 264.7,134.4 264.8,134.4 264.9,134.4 265.8,134.4 265.8,134.4 270.5,134.4 277.3,120.9 281.9,119.2 285.4,119.2 287.8,119.2 289.9,118.7 290.0,119.2" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="119.2" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="119.2" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Walker 66%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Petersen ~ 34%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Valter Walker vs Thomas Petersen probability over time (one side implied)"><line x1="36" y1="146.5" x2="290" y2="146.5" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="149.5" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="117.7" x2="290" y2="117.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="120.7" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="69.8" x2="290" y2="69.8" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="72.8" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,45.0 36.0,45.0 36.5,45.0 36.6,45.0 37.1,45.0 37.2,45.0 37.4,45.0 37.5,45.0 38.5,45.0 43.4,49.5 103.9,47.2 261.5,43.6 261.5,43.6 261.7,43.6 262.8,43.6 262.8,43.6 263.3,43.6 263.4,43.6 263.5,43.6 263.6,43.6 264.5,43.6 264.5,43.6 269.1,43.6 275.9,57.1 280.5,58.8 284.0,58.8 286.3,58.8 288.5,59.3 288.6,58.8 290.0,59.3" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="59.3" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="59.3" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,133.0 36.0,133.0 36.5,133.0 36.6,133.0 37.1,133.0 37.2,133.0 37.4,133.0 37.5,133.0 38.5,133.0 43.4,128.5 103.9,130.8 261.5,134.4 261.5,134.4 261.7,134.4 262.8,134.4 262.8,134.4 263.3,134.4 263.4,134.4 263.5,134.4 263.6,134.4 264.5,134.4 264.5,134.4 269.1,134.4 275.9,120.9 280.5,119.2 284.0,119.2 286.3,119.2 288.5,118.7 288.6,119.2 290.0,118.7" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="118.7" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="118.7" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Walker 66%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Petersen ~ 34%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -7376,18 +7509,18 @@
           <td>Moneyline</td>
           <td><span class="live-odds">+160</span></td>
           <td>0.375</td>
-          <td>0.369</td>
-          <td class="edge-pos">0.61%</td>
+          <td>0.37</td>
+          <td class="edge-pos">0.53%</td>
           <td>0.0%</td>
         </tr>
         
         <tr class="edge-heat-0">
           <td>Valter Walker<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
-          <td><span class="live-odds">-192</span><span class="movement-tag shortening">📈0.4%</span></td>
+          <td><span class="live-odds">-190</span><span class="movement-tag drifting">📉0.4%</span></td>
           <td>0.625</td>
-          <td>0.631</td>
-          <td class="edge-neg">-0.61%</td>
+          <td>0.63</td>
+          <td class="edge-neg">-0.53%</td>
           <td>0.0%</td>
         </tr>
         
@@ -7395,13 +7528,13 @@
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Thomas Petersen — Moneyline:</span> The model puts Thomas Petersen's win probability at 38%, higher than the market's 37% implied probability at +160 (+0.6% edge). That's built on a 11-4 record (73% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+        <span class="preview-label">Thomas Petersen — Moneyline:</span> The model puts Thomas Petersen's win probability at 38%, higher than the market's 37% implied probability at +160 (+0.5% edge). That's built on a 11-4 record (73% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
       </div>
       
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Valter Walker — Moneyline:</span> The model puts Valter Walker's win probability at 62%, lower than the market's 63% implied probability at -192 (-0.6% edge). That's built on a 15-1 record (94% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+        <span class="preview-label">Valter Walker — Moneyline:</span> The model puts Valter Walker's win probability at 62%, lower than the market's 63% implied probability at -190 (-0.5% edge). That's built on a 15-1 record (94% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
       </div>
       
       
@@ -7782,7 +7915,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Santiago Ponzinibbio vs Sam Patterson probability over time (one side implied)"><line x1="36" y1="140.4" x2="290" y2="140.4" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="143.4" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="114.7" x2="290" y2="114.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="117.7" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="71.9" x2="290" y2="71.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="74.9" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,134.4 36.5,134.4 36.5,134.4 37.0,134.4 37.1,134.4 37.6,134.4 37.7,134.4 37.9,134.4 38.0,134.4 39.0,134.4 44.0,134.4 104.7,134.3 262.8,133.9 262.9,133.9 263.0,133.9 264.1,133.9 264.2,133.9 264.6,133.9 264.7,133.9 264.8,133.9 264.9,133.9 265.8,133.9 265.8,133.9 270.5,133.4 277.3,133.4 281.9,133.4 285.4,133.4 287.8,133.4 289.9,133.4 290.0,133.4" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="133.4" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="133.4" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,43.6 36.5,43.6 36.5,43.6 37.0,43.6 37.1,43.6 37.6,43.6 37.7,43.6 37.9,43.6 38.0,43.6 39.0,43.6 44.0,43.6 104.7,43.7 262.8,44.1 262.9,44.1 263.0,44.1 264.1,44.1 264.2,44.1 264.6,44.1 264.7,44.1 264.8,44.1 264.9,44.1 265.8,44.1 265.8,44.1 270.5,44.6 277.3,44.6 281.9,44.6 285.4,44.6 287.8,44.6 289.9,44.6 290.0,44.6" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="44.6" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="44.6" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Ponzinibbio 24%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Patterson ~ 76%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Santiago Ponzinibbio vs Sam Patterson probability over time (one side implied)"><line x1="36" y1="140.4" x2="290" y2="140.4" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="143.4" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="114.7" x2="290" y2="114.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="117.7" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="71.9" x2="290" y2="71.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="74.9" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,134.4 36.0,134.4 36.5,134.4 36.6,134.4 37.1,134.4 37.2,134.4 37.4,134.4 37.5,134.4 38.5,134.4 43.4,134.4 103.9,134.3 261.5,133.9 261.5,133.9 261.7,133.9 262.8,133.9 262.8,133.9 263.3,133.9 263.4,133.9 263.5,133.9 263.6,133.9 264.5,133.9 264.5,133.9 269.1,133.4 275.9,133.4 280.5,133.4 284.0,133.4 286.3,133.4 288.5,133.4 288.6,133.4 290.0,133.4" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="133.4" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="133.4" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,43.6 36.0,43.6 36.5,43.6 36.6,43.6 37.1,43.6 37.2,43.6 37.4,43.6 37.5,43.6 38.5,43.6 43.4,43.6 103.9,43.7 261.5,44.1 261.5,44.1 261.7,44.1 262.8,44.1 262.8,44.1 263.3,44.1 263.4,44.1 263.5,44.1 263.6,44.1 264.5,44.1 264.5,44.1 269.1,44.6 275.9,44.6 280.5,44.6 284.0,44.6 286.3,44.6 288.5,44.6 288.6,44.6 290.0,44.6" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="44.6" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="44.6" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Ponzinibbio 24%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Patterson ~ 76%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -8021,7 +8154,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Ismael Bonfim vs Axel Sola probability over time (one side implied)"><line x1="36" y1="136.7" x2="290" y2="136.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="139.7" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="57.2" x2="290" y2="57.2" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="60.2" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,134.4 36.5,134.4 36.5,134.4 37.0,134.4 37.1,134.4 37.6,134.4 37.7,134.4 37.9,134.4 38.0,134.4 39.0,134.4 44.0,134.4 104.7,129.3 262.8,125.7 262.9,125.7 263.0,125.7 264.1,125.7 264.2,125.7 264.6,125.7 264.7,125.7 264.8,125.7 264.9,125.7 265.8,125.7 265.8,125.7 270.5,125.7 277.3,123.3 281.9,123.3 285.4,123.3 287.8,123.3 289.9,123.3 290.0,123.3" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="123.3" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="123.3" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,43.6 36.5,43.6 36.5,43.6 37.0,43.6 37.1,43.6 37.6,43.6 37.7,43.6 37.9,43.6 38.0,43.6 39.0,43.6 44.0,43.6 104.7,48.7 262.8,52.3 262.9,52.3 263.0,52.3 264.1,52.3 264.2,52.3 264.6,52.3 264.7,52.3 264.8,52.3 264.9,52.3 265.8,52.3 265.8,52.3 270.5,52.3 277.3,54.7 281.9,54.7 285.4,54.7 287.8,54.7 289.9,54.7 290.0,54.7" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="54.7" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="54.7" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Bonfim 39%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Sola ~ 61%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Ismael Bonfim vs Axel Sola probability over time (one side implied)"><line x1="36" y1="136.7" x2="290" y2="136.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="139.7" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="57.2" x2="290" y2="57.2" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="60.2" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,134.4 36.0,134.4 36.5,134.4 36.6,134.4 37.1,134.4 37.2,134.4 37.4,134.4 37.5,134.4 38.5,134.4 43.4,134.4 103.9,129.3 261.5,125.7 261.5,125.7 261.7,125.7 262.8,125.7 262.8,125.7 263.3,125.7 263.4,125.7 263.5,125.7 263.6,125.7 264.5,125.7 264.5,125.7 269.1,125.7 275.9,123.3 280.5,123.3 284.0,123.3 286.3,123.3 288.5,123.3 288.6,123.3 290.0,123.3" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="123.3" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="123.3" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,43.6 36.0,43.6 36.5,43.6 36.6,43.6 37.1,43.6 37.2,43.6 37.4,43.6 37.5,43.6 38.5,43.6 43.4,43.6 103.9,48.7 261.5,52.3 261.5,52.3 261.7,52.3 262.8,52.3 262.8,52.3 263.3,52.3 263.4,52.3 263.5,52.3 263.6,52.3 264.5,52.3 264.5,52.3 269.1,52.3 275.9,54.7 280.5,54.7 284.0,54.7 286.3,54.7 288.5,54.7 288.6,54.7 290.0,54.7" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="54.7" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="54.7" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Bonfim 39%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Sola ~ 61%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -8037,11 +8170,11 @@
         <tr class="edge-heat-1">
           <td>Axel Sola<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
-          <td><span class="live-odds">-182</span></td>
+          <td><span class="live-odds">-180</span><span class="movement-tag drifting">📉0.4%</span></td>
           <td>0.708</td>
-          <td>0.622</td>
-          <td class="edge-pos">8.56%</td>
-          <td>0.07%</td>
+          <td>0.621</td>
+          <td class="edge-pos">8.66%</td>
+          <td>0.12%</td>
         </tr>
         
         <tr class="edge-heat-1">
@@ -8049,8 +8182,8 @@
           <td>Moneyline</td>
           <td><span class="live-odds">+155</span></td>
           <td>0.292</td>
-          <td>0.378</td>
-          <td class="edge-neg">-8.56%</td>
+          <td>0.379</td>
+          <td class="edge-neg">-8.66%</td>
           <td>0.0%</td>
         </tr>
         
@@ -8058,13 +8191,13 @@
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Axel Sola — Moneyline:</span> The model puts Axel Sola's win probability at 71%, higher than the market's 62% implied probability at -182 (+8.6% edge). That's built on a 11-1 record (92% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+        <span class="preview-label">Axel Sola — Moneyline:</span> The model puts Axel Sola's win probability at 71%, higher than the market's 62% implied probability at -180 (+8.7% edge). That's built on a 11-1 record (92% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
       </div>
       
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Ismael Bonfim — Moneyline:</span> The model puts Ismael Bonfim's win probability at 29%, lower than the market's 38% implied probability at +155 (-8.6% edge). That's built on a 20-6 record (77% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+        <span class="preview-label">Ismael Bonfim — Moneyline:</span> The model puts Ismael Bonfim's win probability at 29%, lower than the market's 38% implied probability at +155 (-8.7% edge). That's built on a 20-6 record (77% win rate) and a 0% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
       </div>
       
       
@@ -8239,7 +8372,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Magomed Tuchalov vs Brendson Ribeiro probability over time (one side implied)"><line x1="36" y1="137.4" x2="290" y2="137.4" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="140.4" font-size="9" fill="#8a8f9a" text-anchor="end">10%</text><line x1="36" y1="119.3" x2="290" y2="119.3" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="122.3" font-size="9" fill="#8a8f9a" text-anchor="end">25%</text><line x1="36" y1="101.1" x2="290" y2="101.1" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="104.1" font-size="9" fill="#8a8f9a" text-anchor="end">40%</text><line x1="36" y1="76.9" x2="290" y2="76.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="79.9" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,44.2 36.3,44.2 37.9,44.2 48.2,44.2 48.6,44.2 52.6,44.2 53.4,44.2 54.6,44.2 55.5,44.2 63.7,44.2 64.1,44.2 107.5,44.2 171.0,43.6 214.5,43.6 247.0,43.6 269.0,43.6 289.2,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,133.8 36.3,133.8 37.9,133.8 48.2,133.8 48.6,133.8 52.6,133.8 53.4,133.8 54.6,133.8 55.5,133.8 63.7,133.8 64.1,133.8 107.5,133.8 171.0,134.4 214.5,134.4 247.0,134.4 269.0,134.4 289.2,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Tuchalov 88%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Ribeiro ~ 12%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 19</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Magomed Tuchalov vs Brendson Ribeiro probability over time (one side implied)"><line x1="36" y1="137.4" x2="290" y2="137.4" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="140.4" font-size="9" fill="#8a8f9a" text-anchor="end">10%</text><line x1="36" y1="119.3" x2="290" y2="119.3" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="122.3" font-size="9" fill="#8a8f9a" text-anchor="end">25%</text><line x1="36" y1="101.1" x2="290" y2="101.1" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="104.1" font-size="9" fill="#8a8f9a" text-anchor="end">40%</text><line x1="36" y1="76.9" x2="290" y2="76.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="79.9" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,44.2 36.3,44.2 37.8,44.2 47.6,44.2 48.0,44.2 51.7,44.2 52.5,44.2 53.6,44.2 54.5,44.2 62.3,44.2 62.7,44.2 103.9,44.2 164.2,43.6 205.5,43.6 236.4,43.6 257.2,43.6 276.5,43.6 277.2,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,133.8 36.3,133.8 37.8,133.8 47.6,133.8 48.0,133.8 51.7,133.8 52.5,133.8 53.6,133.8 54.5,133.8 62.3,133.8 62.7,133.8 103.9,133.8 164.2,134.4 205.5,134.4 236.4,134.4 257.2,134.4 276.5,134.4 277.2,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Tuchalov 88%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Ribeiro ~ 12%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 19</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -8469,7 +8602,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Nurullo Aliev vs Mike Davis probability over time (one side implied)"><line x1="36" y1="129.9" x2="290" y2="129.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="132.9" font-size="9" fill="#8a8f9a" text-anchor="end">40%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="48.1" x2="290" y2="48.1" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="51.1" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,48.1 36.5,48.7 36.5,48.7 37.0,48.7 37.1,48.7 37.6,48.7 37.7,48.7 37.9,48.7 38.0,48.7 39.0,48.7 44.0,48.7 104.7,48.4 262.8,51.4 262.9,51.4 263.0,51.4 264.1,51.4 264.2,51.4 264.6,44.9 264.7,44.9 264.8,44.9 264.9,44.9 265.8,44.9 265.8,44.9 270.5,44.9 277.3,43.6 281.9,43.6 285.4,43.6 287.8,43.6 289.9,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,129.9 36.5,129.3 36.5,129.3 37.0,129.3 37.1,129.3 37.6,129.3 37.7,129.3 37.9,129.3 38.0,129.3 39.0,129.3 44.0,129.3 104.7,129.6 262.8,126.6 262.9,126.6 263.0,126.6 264.1,126.6 264.2,126.6 264.6,133.1 264.7,133.1 264.8,133.1 264.9,133.1 265.8,133.1 265.8,133.1 270.5,133.1 277.3,134.4 281.9,134.4 285.4,134.4 287.8,134.4 289.9,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Aliev 61%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Davis ~ 39%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Nurullo Aliev vs Mike Davis probability over time (one side implied)"><line x1="36" y1="129.9" x2="290" y2="129.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="132.9" font-size="9" fill="#8a8f9a" text-anchor="end">40%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="48.1" x2="290" y2="48.1" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="51.1" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,48.7 36.0,48.7 36.5,48.7 36.6,48.7 37.1,48.7 37.2,48.7 37.4,48.7 37.5,48.7 38.5,48.7 43.4,48.7 103.9,48.4 261.5,51.4 261.5,51.4 261.7,51.4 262.8,51.4 262.8,51.4 263.3,44.9 263.4,44.9 263.5,44.9 263.6,44.9 264.5,44.9 264.5,44.9 269.1,44.9 275.9,43.6 280.5,43.6 284.0,43.6 286.3,43.6 288.5,43.6 288.6,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,129.3 36.0,129.3 36.5,129.3 36.6,129.3 37.1,129.3 37.2,129.3 37.4,129.3 37.5,129.3 38.5,129.3 43.4,129.3 103.9,129.6 261.5,126.6 261.5,126.6 261.7,126.6 262.8,126.6 262.8,126.6 263.3,133.1 263.4,133.1 263.5,133.1 263.6,133.1 264.5,133.1 264.5,133.1 269.1,133.1 275.9,134.4 280.5,134.4 284.0,134.4 286.3,134.4 288.5,134.4 288.6,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Aliev 61%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Davis ~ 39%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -11289,7 +11422,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Islam Makhachev vs Ian Machado Garry probability over time (one side implied)"><line x1="36" y1="136.8" x2="290" y2="136.8" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="139.8" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="112.9" x2="290" y2="112.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="115.9" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="65.1" x2="290" y2="65.1" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="68.1" font-size="9" fill="#8a8f9a" text-anchor="end">65%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,43.6 36.0,46.4 36.5,43.6 36.5,46.4 40.6,43.6 40.6,46.4 41.5,43.6 41.5,46.4 42.7,43.6 42.7,46.4 43.7,43.6 43.7,46.4 52.4,43.6 52.4,46.4 52.8,43.6 52.8,46.4 98.3,43.6 98.3,46.4 165.0,43.6 165.0,46.4 210.7,43.6 210.7,46.4 244.9,43.6 244.9,46.4 267.9,43.6 267.9,46.4 289.2,43.6 289.2,46.4 290.0,43.6 290.0,46.4" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="46.4" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="46.4" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,134.4 36.0,131.6 36.5,134.4 36.5,131.6 40.6,134.4 40.6,131.6 41.5,134.4 41.5,131.6 42.7,134.4 42.7,131.6 43.7,134.4 43.7,131.6 52.4,134.4 52.4,131.6 52.8,134.4 52.8,131.6 98.3,134.4 98.3,131.6 165.0,134.4 165.0,131.6 210.7,134.4 210.7,131.6 244.9,134.4 244.9,131.6 267.9,134.4 267.9,131.6 289.2,134.4 289.2,131.6 290.0,134.4 290.0,131.6" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="131.6" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="131.6" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Makhachev 77%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Garry ~ 23%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 19</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Islam Makhachev vs Ian Machado Garry probability over time (one side implied)"><line x1="36" y1="136.8" x2="290" y2="136.8" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="139.8" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="112.9" x2="290" y2="112.9" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="115.9" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="65.1" x2="290" y2="65.1" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="68.1" font-size="9" fill="#8a8f9a" text-anchor="end">65%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,43.6 36.0,46.4 39.9,43.6 39.9,46.4 40.7,43.6 40.7,46.4 41.9,43.6 41.9,46.4 42.8,43.6 42.8,46.4 51.1,43.6 51.1,46.4 51.5,43.6 51.5,46.4 94.7,43.6 94.7,46.4 158.0,43.6 158.0,46.4 201.3,43.6 201.3,46.4 233.7,43.6 233.7,46.4 255.6,43.6 255.6,46.4 275.8,43.6 275.8,46.4 276.6,43.6 276.6,46.4 290.0,45.2 290.0,46.4" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="46.4" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="46.4" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,134.4 36.0,131.6 39.9,134.4 39.9,131.6 40.7,134.4 40.7,131.6 41.9,134.4 41.9,131.6 42.8,134.4 42.8,131.6 51.1,134.4 51.1,131.6 51.5,134.4 51.5,131.6 94.7,134.4 94.7,131.6 158.0,134.4 158.0,131.6 201.3,134.4 201.3,131.6 233.7,134.4 233.7,131.6 255.6,134.4 255.6,131.6 275.8,134.4 275.8,131.6 276.6,134.4 276.6,131.6 290.0,132.8 290.0,131.6" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="131.6" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="131.6" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Makhachev 77%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Garry ~ 23%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 19</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -11520,7 +11653,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Mackenzie Dern vs Gillian Robertson probability over time (one side implied)"><line x1="36" y1="147.3" x2="290" y2="147.3" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="150.3" font-size="9" fill="#8a8f9a" text-anchor="end">25%</text><line x1="36" y1="124.0" x2="290" y2="124.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="127.0" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="65.7" x2="290" y2="65.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="68.7" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,43.6 36.5,43.6 36.5,43.6 37.0,43.6 37.1,43.6 37.6,43.6 37.7,43.6 37.9,43.6 38.0,43.6 39.0,43.6 44.0,43.6 104.7,43.6 262.8,43.6 262.9,43.6 263.0,43.6 264.1,43.6 264.2,43.6 264.6,43.6 264.7,43.6 264.8,43.6 264.9,43.6 265.8,43.6 265.8,43.6 270.5,43.6 277.3,43.6 281.9,43.6 285.4,43.6 287.8,43.6 289.9,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,134.4 36.5,134.4 36.5,134.4 37.0,134.4 37.1,134.4 37.6,134.4 37.7,134.4 37.9,134.4 38.0,134.4 39.0,134.4 44.0,134.4 104.7,134.4 262.8,134.4 262.9,134.4 263.0,134.4 264.1,134.4 264.2,134.4 264.6,134.4 264.7,134.4 264.8,134.4 264.9,134.4 265.8,134.4 265.8,134.4 270.5,134.4 277.3,134.4 281.9,134.4 285.4,134.4 287.8,134.4 289.9,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Dern 69%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Robertson ~ 31%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Mackenzie Dern vs Gillian Robertson probability over time (one side implied)"><line x1="36" y1="147.3" x2="290" y2="147.3" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="150.3" font-size="9" fill="#8a8f9a" text-anchor="end">25%</text><line x1="36" y1="124.0" x2="290" y2="124.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="127.0" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="65.7" x2="290" y2="65.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="68.7" font-size="9" fill="#8a8f9a" text-anchor="end">60%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,43.6 36.0,43.6 36.5,43.6 36.6,43.6 37.1,43.6 37.2,43.6 37.4,43.6 37.5,43.6 38.5,43.6 43.4,43.6 103.9,43.6 261.5,43.6 261.5,43.6 261.7,43.6 262.8,43.6 262.8,43.6 263.3,43.6 263.4,43.6 263.5,43.6 263.6,43.6 264.5,43.6 264.5,43.6 269.1,43.6 275.9,43.6 280.5,43.6 284.0,43.6 286.3,43.6 288.5,43.6 288.6,43.6 290.0,44.2" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="44.2" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="44.2" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,134.4 36.0,134.4 36.5,134.4 36.6,134.4 37.1,134.4 37.2,134.4 37.4,134.4 37.5,134.4 38.5,134.4 43.4,134.4 103.9,134.4 261.5,134.4 261.5,134.4 261.7,134.4 262.8,134.4 262.8,134.4 263.3,134.4 263.4,134.4 263.5,134.4 263.6,134.4 264.5,134.4 264.5,134.4 269.1,134.4 275.9,134.4 280.5,134.4 284.0,134.4 286.3,134.4 288.5,134.4 288.6,134.4 290.0,133.8" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="133.8" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="133.8" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Dern 69%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Robertson ~ 31%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -11536,20 +11669,20 @@
         <tr class="edge-heat-2">
           <td>Gillian Robertson<span class="dog-badge-sm dog">🐶</span></td>
           <td>Moneyline</td>
-          <td><span class="live-odds">+180</span></td>
+          <td><span class="live-odds">+172</span><span class="movement-tag shortening">📈2.9%</span></td>
           <td>0.519</td>
-          <td>0.34</td>
-          <td class="edge-pos">17.9%</td>
-          <td>0.56%</td>
+          <td>0.347</td>
+          <td class="edge-pos">17.17%</td>
+          <td>0.49%</td>
         </tr>
         
         <tr class="edge-heat-2">
           <td>Mackenzie Dern<span class="dog-badge-sm fav">⭐</span></td>
           <td>Moneyline</td>
-          <td><span class="live-odds">-228</span></td>
+          <td><span class="live-odds">-225</span><span class="movement-tag drifting">📉0.3%</span></td>
           <td>0.481</td>
-          <td>0.66</td>
-          <td class="edge-neg">-17.9%</td>
+          <td>0.653</td>
+          <td class="edge-neg">-17.17%</td>
           <td>0.0%</td>
         </tr>
         
@@ -11557,13 +11690,13 @@
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Gillian Robertson — Moneyline:</span> The model puts Gillian Robertson's win probability at 52%, higher than the market's 34% implied probability at +180 (+17.9% edge). That's built on a 17-8 record (68% win rate) and a 71% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+        <span class="preview-label">Gillian Robertson — Moneyline:</span> The model puts Gillian Robertson's win probability at 52%, higher than the market's 35% implied probability at +172 (+17.2% edge). That's built on a 17-8 record (68% win rate) and a 71% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
       </div>
       
       
       
       <div class="model-preview edge-rationale">
-        <span class="preview-label">Mackenzie Dern — Moneyline:</span> The model puts Mackenzie Dern's win probability at 48%, lower than the market's 66% implied probability at -228 (-17.9% edge). That's built on a 16-5 record (76% win rate) and a 62% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
+        <span class="preview-label">Mackenzie Dern — Moneyline:</span> The model puts Mackenzie Dern's win probability at 48%, lower than the market's 65% implied probability at -225 (-17.2% edge). That's built on a 16-5 record (76% win rate) and a 62% finish rate, with no major style, durability, or layoff mismatch pulling the number further.
       </div>
       
       
@@ -13399,7 +13532,7 @@
       
       <div class="chart-block">
         <div class="market-group-label">📈 Moneyline Movement</div>
-        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Umar Nurmagomedov vs Song Yadong probability over time (one side implied)"><line x1="36" y1="134.4" x2="290" y2="134.4" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="137.4" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="111.7" x2="290" y2="111.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="114.7" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="66.3" x2="290" y2="66.3" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="69.3" font-size="9" fill="#8a8f9a" text-anchor="end">65%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,43.6 36.5,43.6 36.5,43.6 37.0,43.6 37.1,43.6 37.6,43.6 37.7,43.6 37.9,43.6 38.0,43.6 39.0,43.6 44.0,43.6 104.7,43.6 262.8,43.6 262.9,43.6 263.0,43.6 264.1,43.6 264.2,43.6 264.6,43.6 264.7,43.6 264.8,43.6 264.9,43.6 265.8,43.6 265.8,43.6 270.5,43.6 277.3,43.6 281.9,43.6 285.4,43.6 287.8,43.6 289.9,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,134.4 36.5,134.4 36.5,134.4 37.0,134.4 37.1,134.4 37.6,134.4 37.7,134.4 37.9,134.4 38.0,134.4 39.0,134.4 44.0,134.4 104.7,134.4 262.8,134.4 262.9,134.4 263.0,134.4 264.1,134.4 264.2,134.4 264.6,134.4 264.7,134.4 264.8,134.4 264.9,134.4 265.8,134.4 265.8,134.4 270.5,134.4 277.3,134.4 281.9,134.4 285.4,134.4 287.8,134.4 289.9,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Nurmagomedov 80%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Yadong ~ 20%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
+        <svg width="300" height="170" viewBox="0 0 300 170" class="dual-chart" role="img" aria-label="Umar Nurmagomedov vs Song Yadong probability over time (one side implied)"><line x1="36" y1="134.4" x2="290" y2="134.4" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="137.4" font-size="9" fill="#8a8f9a" text-anchor="end">20%</text><line x1="36" y1="111.7" x2="290" y2="111.7" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="114.7" font-size="9" fill="#8a8f9a" text-anchor="end">35%</text><line x1="36" y1="89.0" x2="290" y2="89.0" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="92.0" font-size="9" fill="#8a8f9a" text-anchor="end">50%</text><line x1="36" y1="66.3" x2="290" y2="66.3" stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/><text x="30" y="69.3" font-size="9" fill="#8a8f9a" text-anchor="end">65%</text><line x1="36" y1="30" x2="36" y2="148" stroke="#3a3f4a" stroke-width="1"/><line x1="36" y1="148" x2="290" y2="148" stroke="#3a3f4a" stroke-width="1"/><polyline points="36.0,43.6 36.0,43.6 36.5,43.6 36.6,43.6 37.1,43.6 37.2,43.6 37.4,43.6 37.5,43.6 38.5,43.6 43.4,43.6 103.9,43.6 261.5,43.6 261.5,43.6 261.7,43.6 262.8,43.6 262.8,43.6 263.3,43.6 263.4,43.6 263.5,43.6 263.6,43.6 264.5,43.6 264.5,43.6 269.1,43.6 275.9,43.6 280.5,43.6 284.0,43.6 286.3,43.6 288.5,43.6 288.6,43.6 290.0,43.6" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="43.6" r="3.5" fill="#d4af37" class="chart-draw-endpoint"/><polyline points="36.0,134.4 36.0,134.4 36.5,134.4 36.6,134.4 37.1,134.4 37.2,134.4 37.4,134.4 37.5,134.4 38.5,134.4 43.4,134.4 103.9,134.4 261.5,134.4 261.5,134.4 261.7,134.4 262.8,134.4 262.8,134.4 263.3,134.4 263.4,134.4 263.5,134.4 263.6,134.4 264.5,134.4 264.5,134.4 269.1,134.4 275.9,134.4 280.5,134.4 284.0,134.4 286.3,134.4 288.5,134.4 288.6,134.4 290.0,134.4" fill="none" stroke="#8a8f9a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/><circle cx="290.0" cy="134.4" r="3.5" fill="#8a8f9a" class="chart-draw-endpoint"/><circle cx="292" cy="10" r="3" fill="#d4af37"/><text x="286" y="13" font-size="9" font-weight="700" fill="#d4af37" text-anchor="end">Nurmagomedov 80%</text><circle cx="292" cy="23" r="3" fill="#8a8f9a"/><text x="286" y="26" font-size="9" font-weight="700" fill="#8a8f9a" text-anchor="end">Yadong ~ 20%</text><text x="36" y="166" font-size="9" fill="#8a8f9a" text-anchor="start">Jul 15</text><text x="290" y="166" font-size="9" fill="#8a8f9a" text-anchor="end">Jul 19</text><rect x="36" y="30" width="254" height="118" fill="#1a1e28" class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/></svg>
         
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
         
@@ -14900,7 +15033,7 @@
     // What's new since your last visit
     (function() {
       const STORAGE_KEY = 'ufc-edge-finder-last-snapshot';
-      const current = {"standout": [{"key": "Damian Rzepecki|Moneyline", "label": "Damian Rzepecki Moneyline", "edge_pct": 34.27}, {"key": "Tyrell Fortune|Moneyline", "label": "Tyrell Fortune Moneyline", "edge_pct": 30.12}, {"key": "Bogdan Guskov|Moneyline", "label": "Bogdan Guskov Moneyline", "edge_pct": 24.53}, {"key": "Brendson Ribeiro|Moneyline", "label": "Brendson Ribeiro Moneyline", "edge_pct": 21.55}, {"key": "Santiago Ponzinibbio|Moneyline", "label": "Santiago Ponzinibbio Moneyline", "edge_pct": 18.32}], "movements": [], "results": [{"key": "Austin Bashi|Jose Delgado", "label": "Austin Bashi vs. Jose Delgado"}, {"key": "Jean-Paul Lebosnoyani|Seokhyeon Ko", "label": "Jean-Paul Lebosnoyani vs. Seokhyeon Ko"}, {"key": "Felipe Franco|Levi Rodrigues Jr.", "label": "Felipe Franco vs. Levi Rodrigues Jr."}, {"key": "Ezra Elliott|Damien Anderson", "label": "Ezra Elliott vs. Damien Anderson"}, {"key": "Alden Coria|Stewart Nicoll", "label": "Alden Coria vs. Stewart Nicoll"}, {"key": "RJ Harris|Alvin Hines", "label": "RJ Harris vs. Alvin Hines"}, {"key": "Dione Barbosa|Anna Melisano", "label": "Dione Barbosa vs. Anna Melisano"}, {"key": "Dricus Du Plessis|Kamaru Usman", "label": "Dricus Du Plessis vs. Kamaru Usman"}, {"key": "Jared Cannonier|Christian Leroy Duncan", "label": "Jared Cannonier vs. Christian Leroy Duncan"}, {"key": "Chase Hooper|Mitch Ramirez", "label": "Chase Hooper vs. Mitch Ramirez"}, {"key": "Tabatha Ricci|Fatima Kline", "label": "Tabatha Ricci vs. Fatima Kline"}, {"key": "Tommy McMillen|Alberto Montes", "label": "Tommy McMillen vs. Alberto Montes"}, {"key": "Conor McGregor|Max Holloway", "label": "Conor McGregor vs. Max Holloway"}, {"key": "Benoit Saint-Denis|Paddy Pimblett", "label": "Benoit Saint-Denis vs. Paddy Pimblett"}, {"key": "Cory Sandhagen|Mario Bautista", "label": "Cory Sandhagen vs. Mario Bautista"}, {"key": "Brandon Royval|Lone'er Kavanagh", "label": "Brandon Royval vs. Lone'er Kavanagh"}, {"key": "Terrance McKinney|King Green", "label": "Terrance McKinney vs. King Green"}, {"key": "Nikita Krylov|Robert Whittaker", "label": "Nikita Krylov vs. Robert Whittaker"}, {"key": "Gable Steveson|Elisha Ellison", "label": "Gable Steveson vs. Elisha Ellison"}, {"key": "Cody Garbrandt|Adrian Yanez", "label": "Cody Garbrandt vs. Adrian Yanez"}, {"key": "Luke Riley|Kai Kamaka III", "label": "Luke Riley vs. Kai Kamaka III"}, {"key": "Tracy Cortez|Cong Wang", "label": "Tracy Cortez vs. Cong Wang"}, {"key": "Cesar Almeida|Damian Pinas", "label": "Cesar Almeida vs. Damian Pinas"}, {"key": "Farid Basharat|John Garza", "label": "Farid Basharat vs. John Garza"}, {"key": "Ryan Gandra|Zach Reese", "label": "Ryan Gandra vs. Zach Reese"}, {"key": "Alessandro Costa|Cody Durden", "label": "Alessandro Costa vs. Cody Durden"}]};
+      const current = {"standout": [{"key": "Islam Dulatov vs Wellington Turman|Total Rounds Over 1.5", "label": "Islam Dulatov vs Wellington Turman Total Rounds Over 1.5", "edge_pct": 58.5}, {"key": "Damian Rzepecki|Moneyline", "label": "Damian Rzepecki Moneyline", "edge_pct": 34.27}, {"key": "Tyrell Fortune|Moneyline", "label": "Tyrell Fortune Moneyline", "edge_pct": 29.97}, {"key": "Magomed Zaynukov vs Damian Rzepecki|Total Rounds Over 1.5", "label": "Magomed Zaynukov vs Damian Rzepecki Total Rounds Over 1.5", "edge_pct": 26.25}, {"key": "Bogdan Guskov|Moneyline", "label": "Bogdan Guskov Moneyline", "edge_pct": 24.58}], "movements": [], "results": [{"key": "Austin Bashi|Jose Delgado", "label": "Austin Bashi vs. Jose Delgado"}, {"key": "Jean-Paul Lebosnoyani|Seokhyeon Ko", "label": "Jean-Paul Lebosnoyani vs. Seokhyeon Ko"}, {"key": "Felipe Franco|Levi Rodrigues Jr.", "label": "Felipe Franco vs. Levi Rodrigues Jr."}, {"key": "Ezra Elliott|Damien Anderson", "label": "Ezra Elliott vs. Damien Anderson"}, {"key": "Alden Coria|Stewart Nicoll", "label": "Alden Coria vs. Stewart Nicoll"}, {"key": "RJ Harris|Alvin Hines", "label": "RJ Harris vs. Alvin Hines"}, {"key": "Dione Barbosa|Anna Melisano", "label": "Dione Barbosa vs. Anna Melisano"}, {"key": "Dricus Du Plessis|Kamaru Usman", "label": "Dricus Du Plessis vs. Kamaru Usman"}, {"key": "Jared Cannonier|Christian Leroy Duncan", "label": "Jared Cannonier vs. Christian Leroy Duncan"}, {"key": "Chase Hooper|Mitch Ramirez", "label": "Chase Hooper vs. Mitch Ramirez"}, {"key": "Tabatha Ricci|Fatima Kline", "label": "Tabatha Ricci vs. Fatima Kline"}, {"key": "Tommy McMillen|Alberto Montes", "label": "Tommy McMillen vs. Alberto Montes"}, {"key": "Conor McGregor|Max Holloway", "label": "Conor McGregor vs. Max Holloway"}, {"key": "Benoit Saint-Denis|Paddy Pimblett", "label": "Benoit Saint-Denis vs. Paddy Pimblett"}, {"key": "Cory Sandhagen|Mario Bautista", "label": "Cory Sandhagen vs. Mario Bautista"}, {"key": "Brandon Royval|Lone'er Kavanagh", "label": "Brandon Royval vs. Lone'er Kavanagh"}, {"key": "Terrance McKinney|King Green", "label": "Terrance McKinney vs. King Green"}, {"key": "Nikita Krylov|Robert Whittaker", "label": "Nikita Krylov vs. Robert Whittaker"}, {"key": "Gable Steveson|Elisha Ellison", "label": "Gable Steveson vs. Elisha Ellison"}, {"key": "Cody Garbrandt|Adrian Yanez", "label": "Cody Garbrandt vs. Adrian Yanez"}, {"key": "Luke Riley|Kai Kamaka III", "label": "Luke Riley vs. Kai Kamaka III"}, {"key": "Tracy Cortez|Cong Wang", "label": "Tracy Cortez vs. Cong Wang"}, {"key": "Cesar Almeida|Damian Pinas", "label": "Cesar Almeida vs. Damian Pinas"}, {"key": "Farid Basharat|John Garza", "label": "Farid Basharat vs. John Garza"}, {"key": "Ryan Gandra|Zach Reese", "label": "Ryan Gandra vs. Zach Reese"}, {"key": "Alessandro Costa|Cody Durden", "label": "Alessandro Costa vs. Cody Durden"}]};
 
       let previous = null;
       try {
