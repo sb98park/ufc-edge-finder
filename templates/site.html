@@ -364,6 +364,28 @@
   .lock-of-week-vs { color: var(--muted); font-size: 11px; }
   .event-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .event-summary-stat { text-align: center; }
+  .underdog-block {
+    margin: 0 0 16px; padding: 12px 14px; border-radius: 10px;
+    background: linear-gradient(135deg, rgba(240,149,74,0.1), var(--panel2) 70%);
+    border: 1px solid rgba(240,149,74,0.3);
+  }
+  .underdog-title {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+    font-size: 12.5px; font-weight: 800; color: #f0954a; margin-bottom: 10px;
+  }
+  .underdog-alltime { font-size: 10px; font-weight: 600; color: var(--muted); }
+  .underdog-biggest-label { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
+  .underdog-biggest-pick { font-size: 16px; font-weight: 800; color: var(--text); margin-top: 2px; }
+  .underdog-biggest-odds { color: #f0954a; }
+  .underdog-biggest-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .underdog-list { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .underdog-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; }
+  .underdog-icon {
+    flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%; background: rgba(61,220,132,0.15); color: var(--green);
+    display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800;
+  }
+  .underdog-pick { font-weight: 700; color: var(--text); flex: 1; }
+  .underdog-odds { color: #f0954a; font-weight: 700; font-size: 11px; }
   .event-summary-value { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.1; }
   .event-summary-value.positive { color: var(--green); }
   .event-summary-value.negative { color: var(--red); }
@@ -1429,6 +1451,28 @@
         <div class="baseline-bar-track"><div class="baseline-bar-fill market" style="width:{{ track_record.market_baseline.favorite_win_pct }}%;"></div></div>
         <div class="baseline-value">{{ track_record.market_baseline.favorite_win_pct }}%</div>
       </div>
+    </div>
+    {% endif %}
+    {% if track_record.underdog_record %}
+    <div class="underdog-block">
+      <div class="underdog-title">🐕 Underdog Calls <span class="underdog-alltime">{{ track_record.underdog_record.count }} correct all-time</span></div>
+      {% set biggest = track_record.underdog_record.biggest %}
+      <div class="underdog-biggest">
+        <div class="underdog-biggest-label">Biggest underdog called correctly</div>
+        <div class="underdog-biggest-pick">{{ biggest.predicted_favorite }} <span class="underdog-biggest-odds">{{ '+' if biggest.pick_odds >= 0 else '' }}{{ biggest.pick_odds|int }}</span></div>
+        <div class="underdog-biggest-sub">beat {{ biggest.fighter_a if biggest.fighter_a != biggest.predicted_favorite else biggest.fighter_b }} — {{ biggest.event_name }}</div>
+      </div>
+      {% if track_record.underdog_record.hits|length > 1 %}
+      <div class="underdog-list">
+        {% for h in track_record.underdog_record.hits[1:] %}
+        <div class="underdog-row">
+          <span class="underdog-icon">✓</span>
+          <span class="underdog-pick">{{ h.predicted_favorite }}</span>
+          <span class="underdog-odds">{{ '+' if h.pick_odds >= 0 else '' }}{{ h.pick_odds|int }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
     {% endif %}
     {% if track_record.latest_event_summary %}

@@ -29,7 +29,7 @@ from src.card_matcher import _normalize_name
 PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
 FIELDNAMES = [
     "event_name", "fighter_a", "fighter_b", "favorite", "favorite_prob",
-    "confidence_label", "likely_method", "pick_odds", "closing_odds",
+    "confidence_label", "likely_method", "pick_odds", "closing_odds", "opponent_odds",
     "favorite_prob_history", "last_updated", "is_lock_of_week",
 ]
 MOMENTUM_HISTORY_CAP = 10
@@ -126,6 +126,8 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
             if fighter_key in decided_keys:
                 continue  # locked in -- don't let post-result model changes rewrite history
             current_odds = _favorite_moneyline_odds(fight, preview["favorite"])
+            opponent_name = fight["fighter_b"] if preview["favorite"] == fight["fighter_a"] else fight["fighter_a"]
+            current_opponent_odds = _favorite_moneyline_odds(fight, opponent_name)
             prior = existing.get(key)
 
             # pick_odds is set ONCE -- the first time we see a live price for
@@ -135,6 +137,15 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
             pick_odds = prior.get("pick_odds") if prior and prior.get("pick_odds") not in (None, "") else None
             if pick_odds is None and current_odds is not None:
                 pick_odds = current_odds
+
+            # opponent_odds follows the identical set-once timing as pick_odds
+            # -- captured at the same moment, so the two prices are a fair,
+            # honest comparison of "how the market saw both sides right when
+            # we made this call," not one fresh number paired against a
+            # stale one.
+            opponent_odds = prior.get("opponent_odds") if prior and prior.get("opponent_odds") not in (None, "") else None
+            if opponent_odds is None and current_opponent_odds is not None:
+                opponent_odds = current_opponent_odds
 
             # closing_odds updates every run a live price is available,
             # so whatever it holds when the fight actually happens is
@@ -166,6 +177,7 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
                 "likely_method": preview["likely_method"],
                 "pick_odds": pick_odds if pick_odds is not None else "",
                 "closing_odds": closing_odds if closing_odds is not None else "",
+                "opponent_odds": opponent_odds if opponent_odds is not None else "",
                 "favorite_prob_history": json.dumps(new_history),
                 "last_updated": generated_at,
                 "is_lock_of_week": (prior.get("is_lock_of_week", "") if prior else ""),
@@ -382,6 +394,42 @@ def _method_matches(predicted_method, actual_method) -> bool | None:
     return _bucket(predicted_method) == _bucket(actual_method)
 
 
+def _is_underdog(pick_odds, opponent_odds) -> bool | None:
+    """
+    Relative definition, per explicit user instruction: a pick is the
+    underdog if their own price implies a LOWER win probability than
+    their opponent's price does -- not simply "positive American odds."
+    This distinction is real, not theoretical: confirmed directly in
+    this project's own data that King Green was priced -105 against
+    Terrance McKinney's -115 -- both negative, but Green was still the
+    relative underdog, priced worse than his opponent even though
+    neither number was positive. A simple ">0" check would have missed
+    this entirely.
+
+    Falls back to the simple sign check when opponent_odds genuinely
+    isn't known (e.g. an older tracked fight where only pick_odds was
+    ever captured) -- a reasonable approximation, since exactly one side
+    of a real moneyline is negative in the large majority of cases; it
+    just can't catch the rarer both-negative case without knowing the
+    other side.
+
+    Returns None when pick_odds itself is missing -- "unknown" and
+    "confirmed not an underdog" are different claims, and a caller
+    filtering for correct underdog picks should treat them differently
+    (exclude, not count as False).
+    """
+    if pick_odds is None:
+        return None
+    if opponent_odds is None:
+        return pick_odds > 0
+    try:
+        pick_prob = 1 / american_to_decimal(float(pick_odds))
+        opp_prob = 1 / american_to_decimal(float(opponent_odds))
+    except (ValueError, ZeroDivisionError, TypeError):
+        return pick_odds > 0
+    return pick_prob < opp_prob
+
+
 def _favorite_won(pick_odds, correct: bool) -> bool | None:
     """
     Derives whether the MARKET's favorite won this fight, independent of
@@ -455,6 +503,8 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "correct": correct,
             "clv": clv,
             "favorite_won": _favorite_won(pred.get("pick_odds"), correct),
+            "pick_odds": float(pred["pick_odds"]) if pred.get("pick_odds") not in (None, "") else None,
+            "opponent_odds": float(pred["opponent_odds"]) if pred.get("opponent_odds") not in (None, "") else None,
             "units_result": units_result,
             "unit_size": UNITS_BY_CONFIDENCE.get(pred["confidence_label"]),
             "is_lock_of_week": pred.get("is_lock_of_week") is True or str(pred.get("is_lock_of_week")).strip().lower() == "true",
@@ -521,6 +571,26 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "correct": lock_correct,
             "total": len(lock_picks),
             "accuracy_pct": round(lock_correct / len(lock_picks) * 100, 1),
+        }
+
+    # Correct underdog calls: arguably a more impressive claim than raw
+    # accuracy, since it's specifically "the model saw something the
+    # market itself didn't." Sorting by raw pick_odds descending puts
+    # the biggest underdog first -- American odds order continuously
+    # from biggest favorite (most negative) to biggest underdog (most
+    # positive) straight through the -100/+100 boundary, so this holds
+    # correctly for both a genuine positive-odds underdog and the
+    # both-sides-negative case (e.g. -105 vs. -115) alike.
+    underdog_hits = sorted(
+        [m for m in matched if m["correct"] and m.get("pick_odds") is not None and _is_underdog(m["pick_odds"], m.get("opponent_odds"))],
+        key=lambda m: m["pick_odds"], reverse=True,
+    )
+    underdog_record = None
+    if underdog_hits:
+        underdog_record = {
+            "count": len(underdog_hits),
+            "biggest": underdog_hits[0],
+            "hits": underdog_hits,
         }
 
     # Units/ROI tracking: sized by confidence tier, priced with the real
@@ -602,6 +672,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         "units_stats": units_stats,
         "latest_event_summary": latest_event_summary,
         "lock_record": lock_record,
+        "underdog_record": underdog_record,
         "accuracy_sparkline": sparkline,
     }
 
