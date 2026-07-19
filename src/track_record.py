@@ -12,10 +12,10 @@ side by closing (shortened), the model beat the closing line -- a real,
 outcome-independent signal that the model saw value before the market
 caught up, not just "got lucky" on a coinflip result.
 
-There's no live results API for this -- results have to be added manually
-to data/fight_results.csv after a card happens (event_name, fighter_a,
-fighter_b, winner, method). Until then, the track record section stays
-honestly empty rather than faking a number.
+Results are fetched automatically (see results_fetcher.py, ESPN-first);
+this file only reads whatever's already in data/fight_results.csv, so if
+that's empty the track record section stays honestly empty rather than
+faking a number.
 """
 
 import csv
@@ -24,6 +24,7 @@ import json
 import os
 
 from src.odds_utils import american_to_decimal
+from src.card_matcher import _normalize_name
 
 PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
 FIELDNAMES = [
@@ -36,10 +37,55 @@ MOMENTUM_THRESHOLD = 0.03  # 3 percentage points -- below this, treat as noise/s
 LOCK_OF_WEEK_MAX = 3  # cap, not a target -- a card with only one real standout gets one lock, not three padded-out picks
 
 
+def _loose_name(name: str) -> tuple:
+    parts = _normalize_name(name).split()
+    return (parts[0], parts[-1]) if parts else (_normalize_name(name),)
+
+
 def _favorite_moneyline_odds(fight: dict, favorite: str) -> float | None:
-    for edge in fight.get("edges", []):
-        if edge.get("market") == "Moneyline" and edge.get("fighter") == favorite:
+    """
+    Confirmed real gap in production (July 2026): 11 of 12 fights on one
+    card never got pick_odds/closing_odds logged despite Polymarket
+    genuinely having moneyline markets for all of them (confirmed by the
+    user, not assumed) -- exact-string matching here is a strong
+    suspect, since the exact same class of mismatch (a live source's
+    fighter-name spelling not exactly matching this project's own
+    canonical name -- middle names, accents, hyphenation) has already
+    been confirmed multiple times elsewhere in this codebase for
+    different data sources. Tries progressively looser matching only
+    as needed: exact string first (cheapest, zero false-positive risk),
+    then accent/punctuation-normalized (reuses the same normalization
+    already proven for Polymarket name variance in line_movement.py),
+    then a narrow first+last-word match for a present/missing middle
+    name specifically -- not full fuzzy matching, to avoid conflating
+    two different real people who happen to share a first or last name.
+
+    Logs the real, raw fighter names actually present in this fight's
+    Moneyline edges when even the loose match fails, so if this
+    hypothesis turns out wrong, the next run's logs show the real
+    mismatch instead of this staying an unexplained silent gap again.
+    """
+    ml_edges = [e for e in fight.get("edges", []) if e.get("market") == "Moneyline"]
+
+    for edge in ml_edges:
+        if edge.get("fighter") == favorite:
             return edge.get("odds_american")
+
+    norm_favorite = _normalize_name(favorite)
+    for edge in ml_edges:
+        if _normalize_name(str(edge.get("fighter", ""))) == norm_favorite:
+            return edge.get("odds_american")
+
+    loose_favorite = _loose_name(favorite)
+    for edge in ml_edges:
+        if _loose_name(str(edge.get("fighter", ""))) == loose_favorite:
+            return edge.get("odds_american")
+
+    if ml_edges:
+        print(f"[track_record] no Moneyline odds match for favorite {favorite!r} in "
+              f"{fight.get('fighter_a')!r} vs {fight.get('fighter_b')!r} even after "
+              f"exact/normalized/loose matching -- raw fighter names on this fight's "
+              f"Moneyline edges: {[e.get('fighter') for e in ml_edges]!r}")
     return None
 
 
@@ -404,6 +450,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "unit_size": UNITS_BY_CONFIDENCE.get(pred["confidence_label"]),
             "is_lock_of_week": pred.get("is_lock_of_week") == "true",
             "date_added": result.get("date_added", ""),
+            "card_position": result.get("card_position"),
         })
 
     # Most recent first -- what someone checking in on the site actually
@@ -508,51 +555,14 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "running_total": running,
         }
 
-    # Event Summary: an at-a-glance digest for the most recent event
-    # specifically (not the all-time total, which happens to be the same
-    # thing right now with only one event tracked, but won't be once more
-    # accumulate) -- this is what someone actually wants two seconds after
-    # opening Track Record: "how did the card that just happened go."
-    latest_event_summary = None
-    if results_by_event:
-        latest = results_by_event[0]
-        latest_results = latest["results"]
-        latest_correct = sum(1 for m in latest_results if m["correct"])
-        latest_units_eligible = [m for m in latest_results if m["units_result"] is not None]
-
-        # The overall record includes Low Confidence picks, which are
-        # near-coinflips by design and DILUTE how the model actually did
-        # on the calls it was actually confident about -- surfaced
-        # separately since "perfect on every real conviction pick" is a
-        # genuinely different (and more meaningful) claim than the blended
-        # record, not just a more flattering way to say the same thing.
-        high_medium = [m for m in latest_results if m["confidence_label"] in ("High Confidence", "Medium Confidence")]
-        high_medium_correct = sum(1 for m in high_medium if m["correct"])
-
-        # Tiered and conditional on purpose -- a headline this site can't
-        # back up with the actual numbers is worse than no headline at
-        # all, so this only fires when the data genuinely earns it, and
-        # says less (or nothing) when it doesn't.
-        brag_headline = None
-        if len(high_medium) >= 2 and high_medium_correct == len(high_medium):
-            brag_headline = {"text": f"Perfect on every Medium & High Confidence pick ({high_medium_correct}/{len(high_medium)})", "tier": "gold"}
-        elif latest_correct / len(latest_results) >= 0.75 if latest_results else False:
-            brag_headline = {"text": f"Strong card — {latest_correct}/{len(latest_results)} correct", "tier": "green"}
-
-        latest_event_summary = {
-            "event_name": latest["event_name"],
-            "correct": latest_correct,
-            "incorrect": len(latest_results) - latest_correct,
-            "total": len(latest_results),
-            "accuracy_pct": round(latest_correct / len(latest_results) * 100, 1) if latest_results else 0,
-            "perfect_prop_count": sum(1 for m in latest_results if m["correct"] and m["method_correct"]),
-            "units": round(sum(m["units_result"] for m in latest_units_eligible), 2) if latest_units_eligible else None,
-            "units_eligible": len(latest_units_eligible),
-            "high_medium_correct": high_medium_correct,
-            "high_medium_total": len(high_medium),
-            "brag_headline": brag_headline,
-            "lock_picks": [m for m in latest_results if m.get("is_lock_of_week")],
-        }
+    # Event Summary: an at-a-glance digest per event -- built once per
+    # event group and reused both for the latest event (top-level,
+    # unchanged shape for template compatibility) and for every past
+    # event too, so "how did this card go" isn't something only the
+    # most recent event gets to show.
+    for group in results_by_event:
+        group["summary"] = _build_event_summary(group)
+    latest_event_summary = results_by_event[0]["summary"] if results_by_event else None
 
     # Model vs. market baseline: is the model's accuracy actually beating
     # the "just pick every favorite" strategy, or is it riding a card full
@@ -593,9 +603,10 @@ def _group_results_by_event(matched: list[dict]) -> list[dict]:
     date sort putting same-event entries adjacent to each other --
     entries logged at different times of the same night could plausibly
     carry slightly different date_added values, which would silently
-    break a groupby that assumes adjacency. Both the event groups
-    themselves and the entries within each group are ordered
-    most-recent-first, matching the flat list's own ordering.
+    break a groupby that assumes adjacency. Event groups themselves are
+    ordered most-recent-first; fights WITHIN each group are ordered by
+    real billing rank (Main Event first, working down to Early Prelims)
+    rather than insertion order, which had no real meaning.
     """
     groups: dict[str, list[dict]] = {}
     for m in matched:
@@ -604,8 +615,67 @@ def _group_results_by_event(matched: list[dict]) -> list[dict]:
     def _latest_date(entries: list[dict]) -> str:
         return max((e["date_added"] for e in entries), default="")
 
+    billing_rank = {"Main Event": 0, "Co-Main Event": 1, "Main Card": 2, "Prelims": 3, "Early Prelims": 4}
+
+    def _sort_within_event(entries: list[dict]) -> list[dict]:
+        # Missing card_position (e.g. an older result logged before this
+        # field existed) falls back to keeping its original relative
+        # position rather than being scattered to an arbitrary spot --
+        # stable sort with a rank that doesn't discriminate among unknowns.
+        return sorted(entries, key=lambda e: billing_rank.get(e.get("card_position"), 99))
+
     ordered_event_names = sorted(groups.keys(), key=lambda name: _latest_date(groups[name]), reverse=True)
-    return [{"event_name": name, "results": groups[name]} for name in ordered_event_names]
+    return [{"event_name": name, "results": _sort_within_event(groups[name])} for name in ordered_event_names]
+
+
+def _build_event_summary(group: dict) -> dict:
+    """
+    At-a-glance digest for one tracked event: record, accuracy, units,
+    perfect-prop count, and a conditional brag headline. Built per-event
+    (not just for the single most recent one) so every past event, once
+    expanded, shows the same summary it would have shown when it WAS the
+    latest event -- otherwise a real, earned "Perfect on every Medium &
+    High Confidence pick" headline would silently vanish the moment a
+    newer event took over as "latest," which is exactly what happened
+    before this was generalized.
+    """
+    results = group["results"]
+    correct = sum(1 for m in results if m["correct"])
+    units_eligible = [m for m in results if m["units_result"] is not None]
+
+    # The overall record includes Low Confidence picks, which are
+    # near-coinflips by design and DILUTE how the model actually did
+    # on the calls it was actually confident about -- surfaced
+    # separately since "perfect on every real conviction pick" is a
+    # genuinely different (and more meaningful) claim than the blended
+    # record, not just a more flattering way to say the same thing.
+    high_medium = [m for m in results if m["confidence_label"] in ("High Confidence", "Medium Confidence")]
+    high_medium_correct = sum(1 for m in high_medium if m["correct"])
+
+    # Tiered and conditional on purpose -- a headline this site can't
+    # back up with the actual numbers is worse than no headline at
+    # all, so this only fires when the data genuinely earns it, and
+    # says less (or nothing) when it doesn't.
+    brag_headline = None
+    if len(high_medium) >= 2 and high_medium_correct == len(high_medium):
+        brag_headline = {"text": f"Perfect on every Medium & High Confidence pick ({high_medium_correct}/{len(high_medium)})", "tier": "gold"}
+    elif results and correct / len(results) >= 0.75:
+        brag_headline = {"text": f"Strong card — {correct}/{len(results)} correct", "tier": "green"}
+
+    return {
+        "event_name": group["event_name"],
+        "correct": correct,
+        "incorrect": len(results) - correct,
+        "total": len(results),
+        "accuracy_pct": round(correct / len(results) * 100, 1) if results else 0,
+        "perfect_prop_count": sum(1 for m in results if m["correct"] and m["method_correct"]),
+        "units": round(sum(m["units_result"] for m in units_eligible), 2) if units_eligible else None,
+        "units_eligible": len(units_eligible),
+        "high_medium_correct": high_medium_correct,
+        "high_medium_total": len(high_medium),
+        "brag_headline": brag_headline,
+        "lock_picks": [m for m in results if m.get("is_lock_of_week")],
+    }
 
 
 ACCURACY_HISTORY_PATH = "data/accuracy_history.csv"

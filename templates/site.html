@@ -1523,8 +1523,31 @@
     <details class="past-event-card">
       <summary class="past-event-summary">
         <span class="track-result-event-header" style="margin:0;">{{ group.event_name }}</span>
-        <span class="past-event-record">{{ group.results|selectattr('correct')|list|length }}/{{ group.results|length }}</span>
+        <span class="past-event-record">{{ group.summary.correct }}/{{ group.summary.total }}</span>
       </summary>
+      {% if group.summary.brag_headline %}
+      <div class="brag-headline {{ group.summary.brag_headline.tier }}" style="margin: 0 14px 10px;">{{ '🔥' if group.summary.brag_headline.tier == 'gold' else '💪' }} {{ group.summary.brag_headline.text }}</div>
+      {% endif %}
+      <div class="event-summary-grid" style="padding: 0 14px 12px;">
+        <div class="event-summary-stat">
+          <div class="event-summary-value">{{ group.summary.correct }}-{{ group.summary.incorrect }}</div>
+          <div class="event-summary-label">Record</div>
+        </div>
+        <div class="event-summary-stat">
+          <div class="event-summary-value">{{ group.summary.accuracy_pct }}%</div>
+          <div class="event-summary-label">Accuracy</div>
+        </div>
+        {% if group.summary.units is not none %}
+        <div class="event-summary-stat">
+          <div class="event-summary-value {{ 'positive' if group.summary.units >= 0 else 'negative' }}">{{ '+' if group.summary.units >= 0 else '' }}{{ group.summary.units }}U</div>
+          <div class="event-summary-label">Units</div>
+        </div>
+        {% endif %}
+        <div class="event-summary-stat">
+          <div class="event-summary-value gold">🎯 {{ group.summary.perfect_prop_count }}</div>
+          <div class="event-summary-label">Perfect Props</div>
+        </div>
+      </div>
       <div class="fight-strip">
         {% for r in group.results|reverse %}
         <div class="fight-strip-block {{ 'hit' if r.correct else 'miss' }}" title="{{ r.fighter_a }} vs. {{ r.fighter_b }} — {{ 'model got it right' if r.correct else 'model missed' }}"></div>

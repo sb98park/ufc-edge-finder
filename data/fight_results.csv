@@ -1,27 +1,27 @@
-event_name,fighter_a,fighter_b,winner,method,end_round,end_time,date_added,fa_sig_landed,fa_sig_att,fb_sig_landed,fb_sig_att,fa_total_landed,fa_total_att,fb_total_landed,fb_total_att,fa_td_landed,fa_td_att,fb_td_landed,fb_td_att,fa_kd,fb_kd,fa_head,fa_body,fa_leg,fb_head,fb_body,fb_leg
-UFC 329: McGregor vs. Holloway 2,Terrance McKinney,King Green,King Green,KO/TKO,1,4:59,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Nikita Krylov,Robert Whittaker,Robert Whittaker,KO/TKO,3,1:01,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Gable Steveson,Elisha Ellison,Gable Steveson,KO/TKO,1,2:31,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Cody Garbrandt,Adrian Yanez,Adrian Yanez,KO/TKO,1,2:47,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Luke Riley,Kai Kamaka III,Luke Riley,KO/TKO,1,3:03,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Tracy Cortez,Cong Wang,Cong Wang,Decision - Unanimous,3,,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Cesar Almeida,Damian Pinas,Damian Pinas,KO/TKO,1,4:44,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Farid Basharat,John Garza,Farid Basharat,Decision - Unanimous,3,,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Ryan Gandra,Zach Reese,Ryan Gandra,KO/TKO,1,1:15,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Alessandro Costa,Cody Durden,Alessandro Costa,Submission,2,2:19,2026-07-11,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Conor McGregor,Max Holloway,Max Holloway,KO/TKO,1,1:09,2026-07-12,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Benoit Saint-Denis,Paddy Pimblett,Paddy Pimblett,Submission,1,0:52,2026-07-12,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Cory Sandhagen,Mario Bautista,Mario Bautista,Decision - Unanimous,3,,2026-07-12,,,,,,,,,,,,,,,,,,,,
-UFC 329: McGregor vs. Holloway 2,Brandon Royval,Lone'er Kavanagh,Brandon Royval,Submission,3,3:40,2026-07-12,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Austin Bashi,Jose Delgado,Jose Delgado,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Jean-Paul Lebosnoyani,Seokhyeon Ko,Jean-Paul Lebosnoyani,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Felipe Franco,Levi Rodrigues Jr.,Felipe Franco,KO/TKO,2,1:40,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Ezra Elliott,Damien Anderson,Ezra Elliott,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Alden Coria,Stewart Nicoll,Alden Coria,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,RJ Harris,Alvin Hines,RJ Harris,KO/TKO,1,1:40,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Dione Barbosa,Anna Melisano,Dione Barbosa,Submission,1,4:04,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Dricus Du Plessis,Kamaru Usman,Dricus Du Plessis,Decision - Unanimous,5,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Jared Cannonier,Christian Leroy Duncan,Christian Leroy Duncan,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Chase Hooper,Mitch Ramirez,Chase Hooper,Submission,1,2:15,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Tabatha Ricci,Fatima Kline,Fatima Kline,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,
-UFC Fight Night: Du Plessis vs. Usman,Tommy McMillen,Alberto Montes,Tommy McMillen,KO/TKO,3,3:29,2026-07-18,,,,,,,,,,,,,,,,,,,,
+event_name,fighter_a,fighter_b,winner,method,end_round,end_time,date_added,fa_sig_landed,fa_sig_att,fb_sig_landed,fb_sig_att,fa_total_landed,fa_total_att,fb_total_landed,fb_total_att,fa_td_landed,fa_td_att,fb_td_landed,fb_td_att,fa_kd,fb_kd,fa_head,fa_body,fa_leg,fb_head,fb_body,fb_leg,card_position
+UFC 329: McGregor vs. Holloway 2,Terrance McKinney,King Green,King Green,KO/TKO,1,4:59,2026-07-11,,,,,,,,,,,,,,,,,,,,,Main Card
+UFC 329: McGregor vs. Holloway 2,Nikita Krylov,Robert Whittaker,Robert Whittaker,KO/TKO,3,1:01,2026-07-11,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC 329: McGregor vs. Holloway 2,Gable Steveson,Elisha Ellison,Gable Steveson,KO/TKO,1,2:31,2026-07-11,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC 329: McGregor vs. Holloway 2,Cody Garbrandt,Adrian Yanez,Adrian Yanez,KO/TKO,1,2:47,2026-07-11,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC 329: McGregor vs. Holloway 2,Luke Riley,Kai Kamaka III,Luke Riley,KO/TKO,1,3:03,2026-07-11,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC 329: McGregor vs. Holloway 2,Tracy Cortez,Cong Wang,Cong Wang,Decision - Unanimous,3,,2026-07-11,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC 329: McGregor vs. Holloway 2,Cesar Almeida,Damian Pinas,Damian Pinas,KO/TKO,1,4:44,2026-07-11,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC 329: McGregor vs. Holloway 2,Farid Basharat,John Garza,Farid Basharat,Decision - Unanimous,3,,2026-07-11,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC 329: McGregor vs. Holloway 2,Ryan Gandra,Zach Reese,Ryan Gandra,KO/TKO,1,1:15,2026-07-11,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC 329: McGregor vs. Holloway 2,Alessandro Costa,Cody Durden,Alessandro Costa,Submission,2,2:19,2026-07-11,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC 329: McGregor vs. Holloway 2,Conor McGregor,Max Holloway,Max Holloway,KO/TKO,1,1:09,2026-07-12,,,,,,,,,,,,,,,,,,,,,Main Event
+UFC 329: McGregor vs. Holloway 2,Benoit Saint-Denis,Paddy Pimblett,Paddy Pimblett,Submission,1,0:52,2026-07-12,,,,,,,,,,,,,,,,,,,,,Co-Main Event
+UFC 329: McGregor vs. Holloway 2,Cory Sandhagen,Mario Bautista,Mario Bautista,Decision - Unanimous,3,,2026-07-12,,,,,,,,,,,,,,,,,,,,,Main Card
+UFC 329: McGregor vs. Holloway 2,Brandon Royval,Lone'er Kavanagh,Brandon Royval,Submission,3,3:40,2026-07-12,,,,,,,,,,,,,,,,,,,,,Main Card
+UFC Fight Night: Du Plessis vs. Usman,Austin Bashi,Jose Delgado,Jose Delgado,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC Fight Night: Du Plessis vs. Usman,Jean-Paul Lebosnoyani,Seokhyeon Ko,Jean-Paul Lebosnoyani,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC Fight Night: Du Plessis vs. Usman,Felipe Franco,Levi Rodrigues Jr.,Felipe Franco,KO/TKO,2,1:40,2026-07-18,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC Fight Night: Du Plessis vs. Usman,Ezra Elliott,Damien Anderson,Ezra Elliott,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC Fight Night: Du Plessis vs. Usman,Alden Coria,Stewart Nicoll,Alden Coria,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC Fight Night: Du Plessis vs. Usman,RJ Harris,Alvin Hines,RJ Harris,KO/TKO,1,1:40,2026-07-18,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC Fight Night: Du Plessis vs. Usman,Dione Barbosa,Anna Melisano,Dione Barbosa,Submission,1,4:04,2026-07-18,,,,,,,,,,,,,,,,,,,,,Prelims
+UFC Fight Night: Du Plessis vs. Usman,Dricus Du Plessis,Kamaru Usman,Dricus Du Plessis,Decision - Unanimous,5,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,,Main Event
+UFC Fight Night: Du Plessis vs. Usman,Jared Cannonier,Christian Leroy Duncan,Christian Leroy Duncan,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,,Co-Main Event
+UFC Fight Night: Du Plessis vs. Usman,Chase Hooper,Mitch Ramirez,Chase Hooper,Submission,1,2:15,2026-07-18,,,,,,,,,,,,,,,,,,,,,Main Card
+UFC Fight Night: Du Plessis vs. Usman,Tabatha Ricci,Fatima Kline,Fatima Kline,Decision - Unanimous,3,5:00,2026-07-18,,,,,,,,,,,,,,,,,,,,,Main Card
+UFC Fight Night: Du Plessis vs. Usman,Tommy McMillen,Alberto Montes,Tommy McMillen,KO/TKO,3,3:29,2026-07-18,,,,,,,,,,,,,,,,,,,,,Main Card

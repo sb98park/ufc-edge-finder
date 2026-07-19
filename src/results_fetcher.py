@@ -768,7 +768,7 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     try:
         existing = pd.read_csv(results_path)
     except (FileNotFoundError, pd.errors.EmptyDataError):
-        existing = pd.DataFrame(columns=["event_name", "fighter_a", "fighter_b", "winner", "method", "end_round", "end_time", "date_added"] + STAT_COLS)
+        existing = pd.DataFrame(columns=["event_name", "fighter_a", "fighter_b", "winner", "method", "end_round", "end_time", "date_added", "card_position"] + STAT_COLS)
 
     def _key(a, b):
         return frozenset({str(a).strip().lower(), str(b).strip().lower()})
@@ -832,9 +832,12 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
         print(f"[results_fetcher] could not read {fighters_path} -- roster sync will be skipped this run: {e}")
 
     weight_class_by_key = {}
+    card_position_by_key = {}
     if "weight_class" in fight_cards_df.columns:
         for c in fight_cards_df.to_dict("records"):
-            weight_class_by_key[_key(c["fighter_a"], c["fighter_b"])] = c.get("weight_class")
+            fight_key = _key(c["fighter_a"], c["fighter_b"])
+            weight_class_by_key[fight_key] = c.get("weight_class")
+            card_position_by_key[fight_key] = c.get("card_position")
     new_rows = []
     updated_count = 0
     fighters_synced = 0
@@ -858,6 +861,7 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
                 "winner": r["winner"], "method": r["method"],
                 "end_round": r["end_round"], "end_time": r["end_time"],
                 "date_added": pd.Timestamp.now().strftime("%Y-%m-%d"),
+                "card_position": card_position_by_key.get(key),
             })
             new_rows.append(row)
             print(f"[results_fetcher] found new result: {r['fighter_a']} vs {r['fighter_b']} -> {r['winner']} by {r['method']}" + (" (with stats)" if stats else " (no stats yet)"))
