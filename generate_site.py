@@ -80,6 +80,49 @@ def main():
     except Exception as e:
         print(f"[generate_site] card order resync against ESPN failed unexpectedly, continuing without it: {e}")
 
+    # The active card gets NONE of the above once promoted out of
+    # future_cards.csv -- confirmed this was a real, total gap, not a
+    # partial one: no self-healing function ever targeted fight_cards.csv
+    # at all, so a real fighter replacement on the CURRENT event (the
+    # exact scenario this project's own code already anticipated in a
+    # comment: "Rountree Jr." replaced by "Guskov") could never be picked
+    # up, no matter how many runs passed. Same functions, same ESPN-is-
+    # ground-truth resync, just also pointed at the currently-active card.
+    try:
+        deduplicate_tracked_fights(f"{DATA_DIR}/fight_cards.csv")
+    except Exception as e:
+        print(f"[generate_site] active-card deduplication failed unexpectedly, continuing without it: {e}")
+
+    try:
+        resync_tracked_card_order(f"{DATA_DIR}/fight_cards.csv")
+    except Exception as e:
+        print(f"[generate_site] active-card resync against ESPN failed unexpectedly, continuing without it: {e}")
+
+    # fight_cards.csv is meant to hold exactly ONE active event, unlike
+    # future_cards.csv where several legitimately coexist -- so unlike
+    # that file, the resync above finding more than one distinct
+    # event_name here means a real fighter replacement just got detected
+    # (the old name's rows kept conservatively as "maybe just a transient
+    # ESPN gap," appended after the fresh ones rather than removed).
+    # resync_tracked_card_order always places freshly-confirmed ESPN
+    # matches first and appends orphaned/stale rows last, so the first
+    # event_name present is the one just confirmed live -- verified this
+    # ordering directly rather than assumed it. Keep only that one, drop
+    # the stale leftover entirely rather than leave the active card
+    # representing two different events at once.
+    try:
+        active_df = pd.read_csv(f"{DATA_DIR}/fight_cards.csv")
+        distinct_names = active_df["event_name"].unique()
+        if len(distinct_names) > 1:
+            keep_name = active_df["event_name"].iloc[0]
+            print(f"[generate_site] active card had {len(distinct_names)} distinct event names after resync "
+                  f"({list(distinct_names)}) -- keeping only '{keep_name}', dropping the rest")
+            active_df[active_df["event_name"] == keep_name].to_csv(f"{DATA_DIR}/fight_cards.csv", index=False)
+    except Exception as e:
+        print(f"[generate_site] active-card single-event cleanup failed unexpectedly, continuing without it: {e}")
+
+    cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
+
     try:
         normalize_existing_card_order(f"{DATA_DIR}/future_cards.csv")
     except Exception as e:
@@ -141,7 +184,8 @@ def main():
         if edges_df.empty:
             live_error = f"No usable live odds returned right now (source: {source})."
     except Exception as exc:
-        live_error = f"Couldn't fetch live odds: {exc}"
+        print(f"[generate_site] live odds fetch failed: {exc}")
+        live_error = "Couldn't fetch live odds right now — will retry on the next update."
 
     events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings, weight_class_history_df)
     future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings, weight_class_history_df)
