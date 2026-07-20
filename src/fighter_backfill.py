@@ -445,7 +445,17 @@ def _fetch_method_breakdown_from_wikipedia(name: str) -> dict | None:
               f"but none of the known KO/SUB/DEC field name variants matched -- template naming may have "
               f"changed, worth checking a live wikitext sample directly")
         return None
-    print(f"[fighter_backfill] wikipedia method-breakdown: {page_title!r} -> {parsed_count}/6 fields parsed")
+    # Once the infobox genuinely carries method data (confirmed by at least
+    # one field parsing), a sibling field that didn't parse is a real,
+    # confirmed zero, not still-unknown -- Wikipedia's own editing
+    # convention omits a genuinely-zero category's parameter entirely
+    # rather than writing it as 0 (directly confirmed: a fighter's
+    # rendered Losses section skips "By submission" entirely rather than
+    # showing "By submission: 0" when that category is truly zero).
+    zero_filled = [field for field, v in breakdown.items() if v is None]
+    breakdown = {field: (v if v is not None else 0) for field, v in breakdown.items()}
+    print(f"[fighter_backfill] wikipedia method-breakdown: {page_title!r} -> {parsed_count}/6 fields parsed"
+          f"{f', {len(zero_filled)} inferred as zero (omitted from infobox)' if zero_filled else ''}")
     return breakdown
 
 
@@ -469,6 +479,13 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
         if col not in fighters.columns:
             fighters[col] = False
         fighters[col] = fighters[col].fillna(False).astype(bool)
+    method_cols_for_migration = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
+    stuck_on_old_bug = fighters["wikipedia_checked"] & fighters[method_cols_for_migration].isna().any(axis=1)
+    if stuck_on_old_bug.any():
+        print(f"[fighter_backfill] one-time migration: resetting wikipedia_checked for "
+              f"{int(stuck_on_old_bug.sum())} fighter(s) checked under the pre-fix zero-inference bug, "
+              f"so they get one fresh, now-correct re-check: {sorted(fighters.loc[stuck_on_old_bug, 'name'])}")
+        fighters.loc[stuck_on_old_bug, "wikipedia_checked"] = False
     try:
         future = pd.read_csv(future_cards_path)
     except (FileNotFoundError, pd.errors.EmptyDataError):
