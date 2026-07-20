@@ -253,21 +253,99 @@ def _safe_set_cell(df: pd.DataFrame, row_idx, col: str, val):
         return df
 
 
+def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
+    """
+    Career-wide KO/submission/decision win-and-loss breakdown, via
+    Combat Edge -- tried before the Wikipedia fallback below since it
+    has two real advantages, both verified directly rather than assumed:
+    (1) a plain-HTTP, JS-free A-Z fighter directory (unlike Sherdog,
+    FightMatrix, or ufcstats.com, none of which exposed a working
+    plain-GET search this session), so name-to-URL discovery doesn't
+    depend on Wikipedia's search working or covering this fighter at
+    all; (2) each profile directly labels "N Wins by knockout" etc. as
+    plain text, not a template parameter name that has to be guessed
+    correctly -- confirmed this closes a real, specific Wikipedia gap
+    (a fighter with no Wikipedia article at all still had a full,
+    correct breakdown here).
+
+    Returns None, not a guessed zero, if the fighter isn't listed on
+    the matching A-Z page, the profile page doesn't have this section,
+    or any request fails -- same "don't guess" principle as the
+    Wikipedia path.
+    """
+    first_letter = name.strip()[:1].lower()
+    if not first_letter.isalpha():
+        return None
+
+    try:
+        directory_resp = requests.get(
+            f"https://combat-edge.com/fighters/a-z/{first_letter}/",
+            headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT,
+        )
+        directory_resp.raise_for_status()
+        directory_html = directory_resp.text
+    except Exception as e:
+        print(f"[fighter_backfill] combat-edge directory fetch failed for {name!r} (letter {first_letter!r}): {e}")
+        return None
+
+    # Directory entries link fighter name text directly to their profile
+    # URL: <a href="/fighter/luke-riley-9437/">Luke Riley</a>. Match the
+    # exact name (case-insensitive) to its href.
+    link_match = re.search(
+        rf'href="(/fighter/[^"]+)"[^>]*>\s*{re.escape(name.strip())}\s*<',
+        directory_html, re.IGNORECASE,
+    )
+    if not link_match:
+        print(f"[fighter_backfill] combat-edge: {name!r} not found on the {first_letter!r} directory page")
+        return None
+    profile_url = "https://combat-edge.com" + link_match.group(1)
+
+    try:
+        profile_resp = requests.get(profile_url, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        profile_resp.raise_for_status()
+        profile_html = profile_resp.text
+    except Exception as e:
+        print(f"[fighter_backfill] combat-edge profile fetch failed for {name!r} ({profile_url}): {e}")
+        return None
+
+    def _extract(label: str) -> int | None:
+        match = re.search(rf"(\d+)\s*{label}", profile_html, re.IGNORECASE)
+        return int(match.group(1)) if match else None
+
+    breakdown = {
+        "ko_wins": _extract("Wins by knockout"), "sub_wins": _extract("Wins by submission"), "dec_wins": _extract("Wins by decision"),
+        "ko_losses": _extract("Loss by knockout"), "sub_losses": _extract("Loss by submission"), "dec_losses": _extract("Loss by decision"),
+    }
+    parsed_count = sum(1 for v in breakdown.values() if v is not None)
+    if parsed_count == 0:
+        print(f"[fighter_backfill] combat-edge: {profile_url} found but no win/loss-by-method fields matched")
+        return None
+    print(f"[fighter_backfill] combat-edge method-breakdown: {name!r} -> {parsed_count}/6 fields parsed")
+    return breakdown
+
+
 def _fetch_method_breakdown_from_wikipedia(name: str) -> dict | None:
     """
     Career-wide KO/submission/decision win-and-loss breakdown, via
     Wikipedia -- since ESPN has no method-of-victory data at all
     (confirmed elsewhere in this codebase: its records array only ever
     has a single "overall" entry, no breakdown by method exists in that
-    source). Wikipedia's {{Infobox martial artist}} template reliably
-    carries this as named, structured fields (mma_kowin, mma_subwin,
-    mma_decwin, mma_koloss, mma_subloss, mma_decloss), consistently
-    sourced from Sherdog across the fighters checked while building this.
+    source). Wikipedia's {{Infobox martial artist}} template carries
+    this as named, structured fields, consistently sourced from Sherdog
+    across the fighters checked while building this.
 
     Fetches the page's raw wikitext (not rendered HTML) specifically so
     parsing relies on named template parameters, not on inferring which
     number means what from visual position -- far more robust against
     the page's exact layout/wording varying between fighters.
+
+    Tries multiple plausible parameter-name variants per field (e.g.
+    "mma_kowin" and "mmakowins") -- different mirrors of this template's
+    own documentation disagree on exact naming, so a single hardcoded
+    name risks silently matching nothing on a real page. Also tolerates
+    an inline HTML comment sitting between the pipe and the parameter
+    name, since real wikitext sometimes has editor annotations there
+    that a plain-whitespace-only regex would fail to skip past.
 
     Returns None, not a guessed zero, when no Wikipedia page exists for
     this name or the page doesn't use this template -- many real,
@@ -275,12 +353,14 @@ def _fetch_method_breakdown_from_wikipedia(name: str) -> dict | None:
     don't have their own Wikipedia article even though Sherdog tracks
     them, and that's a real "we don't know," not an error to paper over.
     """
+    wiki_headers = {**BASE_HEADERS, "User-Agent": "OctaneAlpha/1.0 (personal MMA analytics project; contact via GitHub repo) fighter-backfill"}
     try:
         search_params = {"action": "opensearch", "search": name, "namespace": "0", "limit": "1", "format": "json"}
-        resp = requests.get(WIKIPEDIA_OPENSEARCH_URL, params=search_params, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp = requests.get(WIKIPEDIA_OPENSEARCH_URL, params=search_params, headers=wiki_headers, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
         results = resp.json()
         if len(results) < 4 or not results[3]:
+            print(f"[fighter_backfill] wikipedia method-breakdown: no page match for {name!r}")
             return None
         page_title = results[3][0].rsplit("/", 1)[-1]
     except Exception as e:
@@ -291,31 +371,45 @@ def _fetch_method_breakdown_from_wikipedia(name: str) -> dict | None:
         raw_resp = requests.get(
             "https://en.wikipedia.org/w/index.php",
             params={"title": page_title, "action": "raw"},
-            headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT,
+            headers=wiki_headers, timeout=REQUEST_TIMEOUT,
         )
         raw_resp.raise_for_status()
         wikitext = raw_resp.text
     except Exception as e:
-        print(f"[fighter_backfill] wikipedia method-breakdown fetch failed for {name!r}: {e}")
+        print(f"[fighter_backfill] wikipedia method-breakdown fetch failed for {name!r} ({page_title!r}): {e}")
         return None
 
     if "infobox martial artist" not in wikitext.lower():
+        print(f"[fighter_backfill] wikipedia method-breakdown: {page_title!r} has no martial artist infobox")
         return None  # not an MMA fighter page, or doesn't use this template
 
-    def _extract(param: str) -> int | None:
-        match = re.search(rf"\|\s*{param}\s*=\s*(\d+)", wikitext, re.IGNORECASE)
-        return int(match.group(1)) if match else None
-
-    breakdown = {
-        "ko_wins": _extract("mma_kowin"), "sub_wins": _extract("mma_subwin"), "dec_wins": _extract("mma_decwin"),
-        "ko_losses": _extract("mma_koloss"), "sub_losses": _extract("mma_subloss"), "dec_losses": _extract("mma_decloss"),
+    # Comment-tolerant, multi-variant field extraction. \|(?:<!--.*?-->)?\s*
+    # lets an inline editor comment sit between the pipe and the param
+    # name; each field tries several real-world naming variants in turn.
+    variant_groups = {
+        "ko_wins": ["mma_kowin", "mmakowins", "mma_ko_win"],
+        "sub_wins": ["mma_subwin", "mmasubwins", "mma_sub_win"],
+        "dec_wins": ["mma_decwin", "mmadecwins", "mma_dec_win"],
+        "ko_losses": ["mma_koloss", "mmakolosses", "mma_ko_loss"],
+        "sub_losses": ["mma_subloss", "mmasublosses", "mma_sub_loss"],
+        "dec_losses": ["mma_decloss", "mmadeclosses", "mma_dec_loss"],
     }
-    # Only worth keeping if at least one field genuinely parsed -- an
-    # infobox with the template present but none of these specific
-    # fields filled in (rare, but possible) shouldn't produce a dict of
-    # all-None values that looks like real data downstream.
-    if not any(v is not None for v in breakdown.values()):
+
+    def _extract(variants: list[str]) -> int | None:
+        for param in variants:
+            match = re.search(rf"\|(?:<!--.*?-->)?\s*{param}\s*=\s*(\d+)", wikitext, re.IGNORECASE | re.DOTALL)
+            if match:
+                return int(match.group(1))
         return None
+
+    breakdown = {field: _extract(variants) for field, variants in variant_groups.items()}
+    parsed_count = sum(1 for v in breakdown.values() if v is not None)
+    if parsed_count == 0:
+        print(f"[fighter_backfill] wikipedia method-breakdown: {page_title!r} has the infobox template "
+              f"but none of the known KO/SUB/DEC field name variants matched -- template naming may have "
+              f"changed, worth checking a live wikitext sample directly")
+        return None
+    print(f"[fighter_backfill] wikipedia method-breakdown: {page_title!r} -> {parsed_count}/6 fields parsed")
     return breakdown
 
 
@@ -419,7 +513,9 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                     not existing_row.empty and existing_row[method_cols].isna().any(axis=1).iloc[0]
                 )
                 if needs_method_data:
-                    breakdown = _fetch_method_breakdown_from_wikipedia(name)
+                    breakdown = _fetch_method_breakdown_from_combat_edge(name)
+                    if not breakdown:
+                        breakdown = _fetch_method_breakdown_from_wikipedia(name)
                     if breakdown:
                         physical.update(breakdown)
 
