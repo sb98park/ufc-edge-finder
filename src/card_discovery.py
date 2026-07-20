@@ -363,10 +363,54 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
                 new_order.append(fresh)
 
         orphaned = [r for k, r in existing_by_key.items() if k not in matched_keys]
+        for matched_row in new_order:
+            matched_row.pop("_orphan_streak", None)  # successfully matched this run -- no longer orphaned
         if orphaned:
-            print(f"[card_discovery] {len(orphaned)} previously-tracked fight(s) for {event_name!r} "
-                  f"not found in ESPN's current card -- keeping them, appended, rather than dropping "
-                  f"data that might just be a transient gap")
+            # A fighter from an orphaned row appearing anywhere in the FRESH
+            # data (with a different opponent, necessarily, since it didn't
+            # match this row's own pairing) is definitive: a real fighter
+            # can't have two opponents on the same card at once, so ESPN's
+            # current lineup confirms this specific pairing is genuinely
+            # gone -- a fighter replacement (e.g. an opponent pulling out
+            # and being replaced), not a transient gap in this one fetch.
+            fresh_fighter_names = {str(n).strip().lower() for fresh in fresh_rows for n in (fresh["fighter_a"], fresh["fighter_b"])}
+            confirmed_replaced = [
+                r for r in orphaned
+                if str(r["fighter_a"]).strip().lower() in fresh_fighter_names
+                or str(r["fighter_b"]).strip().lower() in fresh_fighter_names
+            ]
+            genuinely_orphaned = [r for r in orphaned if r not in confirmed_replaced]
+            if confirmed_replaced:
+                print(f"[card_discovery] {len(confirmed_replaced)} previously-tracked fight(s) for {event_name!r} "
+                      f"confirmed replaced (a fighter from each now appears against a different opponent in "
+                      f"ESPN's current card) -- dropping: "
+                      f"{[(r['fighter_a'], r['fighter_b']) for r in confirmed_replaced]}")
+
+            # Neither fighter shows up anywhere in this run's fresh data --
+            # genuinely no direct evidence either way from this fetch alone.
+            # But since fresh_rows here was a real, successful fetch (a
+            # failed one already bailed out above via "not fresh_rows"),
+            # repeated absence across several such successful fetches in a
+            # row stops looking like one bad fetch and starts looking like
+            # a real, confirmed removal from the card -- so track how many
+            # consecutive successful resyncs each row has been missing for,
+            # and only keep extending the conservative benefit of the
+            # doubt up to a real threshold.
+            ORPHAN_STREAK_LIMIT = 3
+            still_within_grace, exceeded_grace = [], []
+            for r in genuinely_orphaned:
+                r["_orphan_streak"] = int(r.get("_orphan_streak", 0)) + 1
+                (exceeded_grace if r["_orphan_streak"] > ORPHAN_STREAK_LIMIT else still_within_grace).append(r)
+            if exceeded_grace:
+                print(f"[card_discovery] {len(exceeded_grace)} previously-tracked fight(s) for {event_name!r} "
+                      f"missing from ESPN's current card across {ORPHAN_STREAK_LIMIT}+ consecutive successful "
+                      f"resyncs now -- no longer treating as a transient gap, dropping: "
+                      f"{[(r['fighter_a'], r['fighter_b']) for r in exceeded_grace]}")
+            if still_within_grace:
+                print(f"[card_discovery] {len(still_within_grace)} previously-tracked fight(s) for {event_name!r} "
+                      f"not found in ESPN's current card -- keeping them, appended, rather than dropping "
+                      f"data that might just be a transient gap")
+            orphaned = still_within_grace
         new_order.extend(orphaned)
 
         if [(_key(r), r["card_position"]) for r in new_order] != before_snapshot:
