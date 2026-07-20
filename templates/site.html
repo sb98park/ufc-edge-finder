@@ -421,6 +421,12 @@
     cursor: pointer; font-family: inherit; letter-spacing: 0.2px; transition: color 0.15s, border-color 0.15s;
   }
   .seg-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .track-tabs {
+    display: flex; flex-wrap: nowrap; overflow-x: auto; border-bottom: 1px solid var(--border);
+    margin: 4px 0 14px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .track-tabs::-webkit-scrollbar { display: none; }
+  .track-tabs .seg-tab { flex: 0 0 auto; white-space: nowrap; padding: 11px 12px; }
   .seg-pane { display: none; }
   .seg-pane.active { display: block; }
   #live-header { cursor: pointer; }
@@ -1400,6 +1406,13 @@
   <div class="track-record-card" id="section-trackrecord">
     <div class="track-record-title">{{ icon_track() }} Model Track Record</div>
     {% if track_record %}
+    <div class="track-tabs">
+      <button class="seg-tab active" data-seg-target="tr-overall" onclick="switchSegTab(this)">Overall</button>
+      {% for group in track_record.results_by_event %}
+      <button class="seg-tab" data-seg-target="tr-event-{{ loop.index0 }}" onclick="switchSegTab(this)">{{ group.event_name }}</button>
+      {% endfor %}
+    </div>
+    <div class="seg-pane active" id="tr-overall">
     <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span class="countup">({{ track_record.accuracy_pct }}%)</span></div>
     {% if track_record.by_confidence %}
     <div class="donut-row confidence-donut-row">
@@ -1502,119 +1515,52 @@
       {% endif %}
     </div>
     {% endif %}
-    {% if track_record.latest_event_summary %}
-    <div class="event-summary-card">
-      <div class="event-summary-name">{{ track_record.latest_event_summary.event_name }}</div>
-      {% if track_record.latest_event_summary.brag_headline %}
-      <div class="brag-headline {{ track_record.latest_event_summary.brag_headline.tier }}">{{ '🔥' if track_record.latest_event_summary.brag_headline.tier == 'gold' else '💪' }} {{ track_record.latest_event_summary.brag_headline.text }}</div>
+    {% if calibration_svg %}
+    <div class="calibration-block">
+      <div class="calibration-title">📐 Calibration — does "70% confident" actually win ~70%?</div>
+      {% if track_record.calibration.summary %}
+      <div class="calibration-summary">{{ track_record.calibration.summary }}</div>
       {% endif %}
-      <div class="event-summary-grid">
-        <div class="event-summary-stat">
-          <div class="event-summary-value">{{ track_record.latest_event_summary.correct }}-{{ track_record.latest_event_summary.incorrect }}</div>
-          <div class="event-summary-label">Record</div>
-        </div>
-        <div class="event-summary-stat">
-          <div class="event-summary-value">{{ track_record.latest_event_summary.accuracy_pct }}%</div>
-          <div class="event-summary-label">Accuracy</div>
-        </div>
-        {% if track_record.latest_event_summary.units is not none %}
-        <div class="event-summary-stat">
-          <div class="event-summary-value {{ 'positive' if track_record.latest_event_summary.units >= 0 else 'negative' }}">{{ '+' if track_record.latest_event_summary.units >= 0 else '' }}{{ track_record.latest_event_summary.units }}U</div>
-          <div class="event-summary-label">Units</div>
-        </div>
-        {% endif %}
-        <div class="event-summary-stat">
-          <div class="event-summary-value gold">🎯 {{ track_record.latest_event_summary.perfect_prop_count }}</div>
-          <div class="event-summary-label">Perfect Props</div>
-        </div>
-      </div>
+      {{ calibration_svg | safe }}
+      <div class="chart-caption">Each row: a confidence level we've used, gold bar = how confident we said we were, colored bar = how often that pick actually won. The closer the two bars, the better-calibrated that confidence level is.</div>
     </div>
-    {% if track_record.latest_event_summary.lock_picks %}
-    <div class="lock-of-week-block">
-      <div class="lock-of-week-title">
-        🔒 Lock{{ 's' if track_record.latest_event_summary.lock_picks|length > 1 }} of the Week
-        {% if track_record.lock_record %}<span class="lock-of-week-alltime">All-time: {{ track_record.lock_record.correct }}/{{ track_record.lock_record.total }} ({{ track_record.lock_record.accuracy_pct }}%)</span>{% endif %}
-      </div>
-      {% for lock in track_record.latest_event_summary.lock_picks %}
-      <div class="lock-of-week-row">
-        <span class="lock-of-week-icon {{ 'correct' if lock.correct else 'incorrect' }}">{{ '✓' if lock.correct else '✗' }}</span>
-        <span class="lock-of-week-pick">{{ lock.predicted_favorite }}</span>
-        <span class="lock-of-week-vs">vs. {{ lock.fighter_a if lock.fighter_a != lock.predicted_favorite else lock.fighter_b }}</span>
-      </div>
-      {% endfor %}
+    {% elif track_record.calibration and not track_record.calibration.ready %}
+    <div class="calibration-block calibration-pending">
+      <div class="calibration-title">📐 Calibration</div>
+      <div class="chart-caption">Needs {{ track_record.calibration.needed }} recorded results to show a meaningful curve — {{ track_record.calibration.total }} so far. A curve from a handful of picks would be noise, not signal.</div>
     </div>
     {% endif %}
-    {% endif %}
-    {% if track_record.results_by_event %}
-    {% set latest_group = track_record.results_by_event[0] %}
-    <div class="track-result-title">📋 {{ latest_group.event_name }} — Every Pick</div>
-    <div class="fight-strip">
-      {% for r in latest_group.results|reverse %}
-      <div class="fight-strip-block {{ 'hit' if r.correct else 'miss' }}" title="{{ r.fighter_a }} vs. {{ r.fighter_b }} — {{ 'model got it right' if r.correct else 'model missed' }}"></div>
-      {% endfor %}
     </div>
-    <div class="track-result-list">
-      {% for r in latest_group.results %}
-      <div class="track-result-row" data-key="{{ r.fighter_a }}|{{ r.fighter_b }}">
-        <div class="track-result-icon {{ 'correct' if r.correct else 'incorrect' }}">{{ '✓' if r.correct else '✗' }}</div>
-        <div class="track-result-info">
-          <div class="track-result-fight">
-            {{ r.fighter_a }} vs. {{ r.fighter_b }}
-            {% if r.confidence_label %}<span class="conf-badge {{ r.confidence_label|lower|replace(' confidence','')|replace(' ','-') }}">{{ r.confidence_label|replace(' Confidence','') }}</span>{% endif %}
-            {% if r.unit_size %}
-            <span class="unit-pips" title="{{ r.unit_size|int }}U stake size">
-              {% for _ in range(r.unit_size|int) %}<span class="unit-pip"></span>{% endfor %}
-            </span>
-            {% endif %}
-            {% if r.correct and r.method_correct %}<span class="perfect-prop-badge">🎯 Method + Winner</span>{% endif %}
-            {% if r.is_lock_of_week %}<span class="lock-badge{{ ' celebratable' if r.correct }}">🔒 Lock of the Week</span>{% endif %}
-          </div>
-          <div class="track-result-picks">
-            <span class="track-result-label">Model picked</span> <span class="track-result-name pick">{{ r.predicted_favorite }}</span>{% if r.favorite_prob is not none %} <span class="track-result-conf">({{ (r.favorite_prob * 100) | round | int }}% confident)</span>{% endif %}{% if r.predicted_method %} <span class="track-result-conf">by {{ r.predicted_method }}</span>{% endif %}
-          </div>
-          <div class="track-result-picks">
-            <span class="track-result-label">{{ 'Actual' if r.correct else 'Winner' }}</span> <span class="track-result-name {{ 'pick' if r.correct else 'actual' }}">{{ r.actual_winner }}</span>{% if r.actual_method %} <span class="track-result-name actual">by {{ r.actual_method }}</span>{% endif %}{% if r.method_correct is not none %} <span class="method-match {{ 'yes' if r.method_correct else 'no' }}">{{ '✓ method' if r.method_correct else '✗ method' }}</span>{% endif %}
-          </div>
-        </div>
-        {% if r.units_result is not none %}
-        <div class="units-pick-badge {{ 'positive' if r.units_result >= 0 else 'negative' }}">{{ '+' if r.units_result >= 0 else '' }}{{ r.units_result }}U</div>
+    {% for group in track_record.results_by_event %}
+    <div class="seg-pane" id="tr-event-{{ loop.index0 }}">
+      <div class="event-summary-card">
+        <div class="event-summary-name">{{ group.event_name }}</div>
+        {% if group.summary.brag_headline %}
+        <div class="brag-headline {{ group.summary.brag_headline.tier }}">{{ '🔥' if group.summary.brag_headline.tier == 'gold' else '💪' }} {{ group.summary.brag_headline.text }}</div>
         {% endif %}
-      </div>
-      {% endfor %}
-    </div>
-    {% if track_record.results_by_event|length > 1 %}
-    <div class="track-result-title">📚 Past Events</div>
-    {% for group in track_record.results_by_event[1:] %}
-    <details class="past-event-card">
-      <summary class="past-event-summary">
-        <span class="track-result-event-header" style="margin:0;">{{ group.event_name }}</span>
-        <span class="past-event-record">{{ group.summary.correct }}/{{ group.summary.total }}</span>
-      </summary>
-      {% if group.summary.brag_headline %}
-      <div class="brag-headline {{ group.summary.brag_headline.tier }}" style="margin: 0 14px 10px;">{{ '🔥' if group.summary.brag_headline.tier == 'gold' else '💪' }} {{ group.summary.brag_headline.text }}</div>
-      {% endif %}
-      <div class="event-summary-grid" style="padding: 0 14px 12px;">
-        <div class="event-summary-stat">
-          <div class="event-summary-value">{{ group.summary.correct }}-{{ group.summary.incorrect }}</div>
-          <div class="event-summary-label">Record</div>
-        </div>
-        <div class="event-summary-stat">
-          <div class="event-summary-value">{{ group.summary.accuracy_pct }}%</div>
-          <div class="event-summary-label">Accuracy</div>
-        </div>
-        {% if group.summary.units is not none %}
-        <div class="event-summary-stat">
-          <div class="event-summary-value {{ 'positive' if group.summary.units >= 0 else 'negative' }}">{{ '+' if group.summary.units >= 0 else '' }}{{ group.summary.units }}U</div>
-          <div class="event-summary-label">Units</div>
-        </div>
-        {% endif %}
-        <div class="event-summary-stat">
-          <div class="event-summary-value gold">🎯 {{ group.summary.perfect_prop_count }}</div>
-          <div class="event-summary-label">Perfect Props</div>
+        <div class="event-summary-grid">
+          <div class="event-summary-stat">
+            <div class="event-summary-value">{{ group.summary.correct }}-{{ group.summary.incorrect }}</div>
+            <div class="event-summary-label">Record</div>
+          </div>
+          <div class="event-summary-stat">
+            <div class="event-summary-value">{{ group.summary.accuracy_pct }}%</div>
+            <div class="event-summary-label">Accuracy</div>
+          </div>
+          {% if group.summary.units is not none %}
+          <div class="event-summary-stat">
+            <div class="event-summary-value {{ 'positive' if group.summary.units >= 0 else 'negative' }}">{{ '+' if group.summary.units >= 0 else '' }}{{ group.summary.units }}U</div>
+            <div class="event-summary-label">Units</div>
+          </div>
+          {% endif %}
+          <div class="event-summary-stat">
+            <div class="event-summary-value gold">🎯 {{ group.summary.perfect_prop_count }}</div>
+            <div class="event-summary-label">Perfect Props</div>
+          </div>
         </div>
       </div>
       {% if group.summary.lock_picks %}
-      <div class="lock-of-week-block" style="margin: 0 14px 10px;">
+      <div class="lock-of-week-block">
         <div class="lock-of-week-title">
           🔒 Lock{{ 's' if group.summary.lock_picks|length > 1 }} of the Week
           <span class="lock-of-week-alltime">{{ group.summary.lock_picks|selectattr('correct')|list|length }}/{{ group.summary.lock_picks|length }} this card</span>
@@ -1628,6 +1574,7 @@
         {% endfor %}
       </div>
       {% endif %}
+      <div class="track-result-title">📋 Every Pick</div>
       <div class="fight-strip">
         {% for r in group.results|reverse %}
         <div class="fight-strip-block {{ 'hit' if r.correct else 'miss' }}" title="{{ r.fighter_a }} vs. {{ r.fighter_b }} — {{ 'model got it right' if r.correct else 'model missed' }}"></div>
@@ -1662,25 +1609,8 @@
         </div>
         {% endfor %}
       </div>
-    </details>
+    </div>
     {% endfor %}
-    {% endif %}
-    {% endif %}
-    {% if calibration_svg %}
-    <div class="calibration-block">
-      <div class="calibration-title">📐 Calibration — does "70% confident" actually win ~70%?</div>
-      {% if track_record.calibration.summary %}
-      <div class="calibration-summary">{{ track_record.calibration.summary }}</div>
-      {% endif %}
-      {{ calibration_svg | safe }}
-      <div class="chart-caption">Each row: a confidence level we've used, gold bar = how confident we said we were, colored bar = how often that pick actually won. The closer the two bars, the better-calibrated that confidence level is.</div>
-    </div>
-    {% elif track_record.calibration and not track_record.calibration.ready %}
-    <div class="calibration-block calibration-pending">
-      <div class="calibration-title">📐 Calibration</div>
-      <div class="chart-caption">Needs {{ track_record.calibration.needed }} recorded results to show a meaningful curve — {{ track_record.calibration.total }} so far. A curve from a handful of picks would be noise, not signal.</div>
-    </div>
-    {% endif %}
     {% else %}
     {{ empty_state(icon_track(), "No results yet", "This fills in after cards happen — tracking every prediction now so results are honest, not retroactive.") }}
     {% endif %}
@@ -2545,7 +2475,15 @@
     function switchSegTab(btn) {
       const targetId = btn.dataset.segTarget;
       btn.parentElement.querySelectorAll('.seg-tab').forEach(t => t.classList.toggle('active', t === btn));
-      document.querySelectorAll('.seg-pane').forEach(p => p.classList.toggle('active', p.id === targetId));
+      // Scoped to the enclosing detail-section, not the whole document --
+      // more than one independent tab group can exist on the page at
+      // once (e.g. This Weekend's Main Card/Prelims tabs, and Track
+      // Record's per-event tabs), and a global toggle would deactivate
+      // EVERY group's panes on every click, not just the one actually
+      // being interacted with, since none of another group's panes
+      // would ever match this click's targetId.
+      const scope = btn.closest('.detail-section') || document;
+      scope.querySelectorAll('.seg-pane').forEach(p => p.classList.toggle('active', p.id === targetId));
       const pane = document.getElementById(targetId);
       if (!pane) return;
       pane.querySelectorAll('.reveal-target:not(.revealed)').forEach((el, i) => {
