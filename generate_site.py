@@ -95,7 +95,27 @@ def main():
     elo_ratings = build_ratings(fighters_df, history_df)
 
     future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")
+    pre_promotion_event_name = cards_df["event_name"].iloc[0] if not cards_df.empty else None
     cards_df, future_cards_df, days_since_event = promote_card_if_stale(cards_df, future_cards_df)
+
+    if not cards_df.empty and cards_df["event_name"].iloc[0] != pre_promotion_event_name:
+        # A promotion actually happened this run -- persist it. Without
+        # this, fight_cards.csv's on-disk "current" event never advances
+        # past whatever it was the very first time this ever fired, since
+        # nothing else writes the result back -- every future run would
+        # silently re-derive the same stale promotion from the same
+        # frozen starting point forever, never able to progress to
+        # whatever's genuinely next. Confirmed this was already happening
+        # live: fight_cards.csv still held the very first card this
+        # project ever tracked, even after the site had already moved on
+        # (in-memory only, every run) to a later one.
+        try:
+            cards_df.to_csv(f"{DATA_DIR}/fight_cards.csv", index=False)
+            future_cards_df.to_csv(f"{DATA_DIR}/future_cards.csv", index=False)
+            print(f"[generate_site] promoted '{pre_promotion_event_name}' -> '{cards_df['event_name'].iloc[0]}', persisted to disk")
+        except Exception as e:
+            print(f"[generate_site] promotion persistence failed unexpectedly, this run's HTML is still correct "
+                  f"but the promotion may need to re-happen next run: {e}")
 
     try:
         weight_class_history_df = pd.read_csv(f"{DATA_DIR}/fighter_weight_class_history.csv")
