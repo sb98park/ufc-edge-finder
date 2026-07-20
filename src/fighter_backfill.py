@@ -54,7 +54,7 @@ import re
 import pandas as pd
 import requests
 
-from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, is_placeholder_fighter_name
+from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, WIKIPEDIA_OPENSEARCH_URL, is_placeholder_fighter_name
 
 FIGHTERS_COLUMNS_MINIMAL = ["name", "weight_class", "country", "wins", "losses"]
 
@@ -253,6 +253,72 @@ def _safe_set_cell(df: pd.DataFrame, row_idx, col: str, val):
         return df
 
 
+def _fetch_method_breakdown_from_wikipedia(name: str) -> dict | None:
+    """
+    Career-wide KO/submission/decision win-and-loss breakdown, via
+    Wikipedia -- since ESPN has no method-of-victory data at all
+    (confirmed elsewhere in this codebase: its records array only ever
+    has a single "overall" entry, no breakdown by method exists in that
+    source). Wikipedia's {{Infobox martial artist}} template reliably
+    carries this as named, structured fields (mma_kowin, mma_subwin,
+    mma_decwin, mma_koloss, mma_subloss, mma_decloss), consistently
+    sourced from Sherdog across the fighters checked while building this.
+
+    Fetches the page's raw wikitext (not rendered HTML) specifically so
+    parsing relies on named template parameters, not on inferring which
+    number means what from visual position -- far more robust against
+    the page's exact layout/wording varying between fighters.
+
+    Returns None, not a guessed zero, when no Wikipedia page exists for
+    this name or the page doesn't use this template -- many real,
+    active fighters (especially newer/lesser-known ones) genuinely
+    don't have their own Wikipedia article even though Sherdog tracks
+    them, and that's a real "we don't know," not an error to paper over.
+    """
+    try:
+        search_params = {"action": "opensearch", "search": name, "namespace": "0", "limit": "1", "format": "json"}
+        resp = requests.get(WIKIPEDIA_OPENSEARCH_URL, params=search_params, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        results = resp.json()
+        if len(results) < 4 or not results[3]:
+            return None
+        page_title = results[3][0].rsplit("/", 1)[-1]
+    except Exception as e:
+        print(f"[fighter_backfill] wikipedia method-breakdown search failed for {name!r}: {e}")
+        return None
+
+    try:
+        raw_resp = requests.get(
+            "https://en.wikipedia.org/w/index.php",
+            params={"title": page_title, "action": "raw"},
+            headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT,
+        )
+        raw_resp.raise_for_status()
+        wikitext = raw_resp.text
+    except Exception as e:
+        print(f"[fighter_backfill] wikipedia method-breakdown fetch failed for {name!r}: {e}")
+        return None
+
+    if "infobox martial artist" not in wikitext.lower():
+        return None  # not an MMA fighter page, or doesn't use this template
+
+    def _extract(param: str) -> int | None:
+        match = re.search(rf"\|\s*{param}\s*=\s*(\d+)", wikitext, re.IGNORECASE)
+        return int(match.group(1)) if match else None
+
+    breakdown = {
+        "ko_wins": _extract("mma_kowin"), "sub_wins": _extract("mma_subwin"), "dec_wins": _extract("mma_decwin"),
+        "ko_losses": _extract("mma_koloss"), "sub_losses": _extract("mma_subloss"), "dec_losses": _extract("mma_decloss"),
+    }
+    # Only worth keeping if at least one field genuinely parsed -- an
+    # infobox with the template present but none of these specific
+    # fields filled in (rare, but possible) shouldn't produce a dict of
+    # all-None values that looks like real data downstream.
+    if not any(v is not None for v in breakdown.values()):
+        return None
+    return breakdown
+
+
 def backfill_fighters(fighters_path: str = "data/fighters.csv",
                        future_cards_path: str = "data/future_cards.csv",
                        attempt_athlete_detail: bool = True) -> int:
@@ -279,7 +345,8 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
     roster_names = set(fighters["name"])
     future_fighters = {n for n in (set(future["fighter_a"]) | set(future["fighter_b"])) if not is_placeholder_fighter_name(n)}
     needs_basic = future_fighters - roster_names
-    gap_cols = ["stance", "country", "reach_in", "height_in", "age", "last_fight_date"]
+    gap_cols = ["stance", "country", "reach_in", "height_in", "age", "last_fight_date",
+                "ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
     needs_gap_fill = set(
         fighters[fighters["name"].isin(future_fighters) & fighters[gap_cols].isna().any(axis=1)]["name"]
     )
@@ -345,6 +412,16 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
 
                 if attempt_athlete_detail and eventlog_ref:
                     physical.update(_fetch_espn_last_fight_info(eventlog_ref))
+
+                existing_row = fighters[fighters["name"] == name]
+                method_cols = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
+                needs_method_data = name in needs_basic or (
+                    not existing_row.empty and existing_row[method_cols].isna().any(axis=1).iloc[0]
+                )
+                if needs_method_data:
+                    breakdown = _fetch_method_breakdown_from_wikipedia(name)
+                    if breakdown:
+                        physical.update(breakdown)
 
                 if name in needs_basic:
                     row = {col: None for col in fighters.columns}

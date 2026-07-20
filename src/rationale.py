@@ -35,9 +35,13 @@ def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
     total_wins = max(int(r["wins"]), 1)
     total_losses = max(int(r["losses"]), 1) if r["losses"] else 0
     total_fights = max(int(r["wins"]) + int(r["losses"]), 1)
+    method_data_known = any(
+        col in r and pd.notna(r[col]) for col in ("ko_wins", "sub_wins", "dec_wins")
+    )
     return {
         "win_pct": r["wins"] / total_fights,
         "finish_rate": (_get(r, "ko_wins", 0) + _get(r, "sub_wins", 0)) / total_wins,
+        "method_data_known": method_data_known,
         "ko_rate": _get(r, "ko_wins", 0) / total_wins,
         "sub_rate": _get(r, "sub_wins", 0) / total_wins,
         "dec_rate": _get(r, "dec_wins", 0) / total_wins,
@@ -92,18 +96,29 @@ def explain_moneyline(row: dict, fighters_df: pd.DataFrame) -> str:
 
             if drivers:
                 base += f" Biggest factors in that number: {', '.join(drivers)}."
-            elif stats:
+            elif stats and stats["method_data_known"]:
                 base += (
                     f" That's built on a {stats['wins']}-{stats['losses']} record "
                     f"({stats['win_pct']*100:.0f}% win rate) and a {stats['finish_rate']*100:.0f}% finish rate, "
                     f"with no major style, durability, or layoff mismatch pulling the number further."
                 )
+            elif stats:
+                base += (
+                    f" That's built on a {stats['wins']}-{stats['losses']} record "
+                    f"({stats['win_pct']*100:.0f}% win rate) -- no tracked method-of-victory breakdown yet for a "
+                    f"finish-rate read, with no major style, durability, or layoff mismatch pulling the number further."
+                )
             return base
 
-    if stats:
+    if stats and stats["method_data_known"]:
         base += (
             f" That's built on a {stats['wins']}-{stats['losses']} record "
             f"({stats['win_pct']*100:.0f}% win rate) and a {stats['finish_rate']*100:.0f}% finish rate."
+        )
+    elif stats:
+        base += (
+            f" That's built on a {stats['wins']}-{stats['losses']} record "
+            f"({stats['win_pct']*100:.0f}% win rate) -- no tracked method-of-victory breakdown yet for a finish-rate read."
         )
     return base
 
@@ -116,7 +131,7 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
         f"({row['book_fair_prob']*100:.0f}% implied), while the model estimates {row['model_prob']*100:.0f}% "
         f"({row['edge_pct']:+.1f}% edge)."
     )
-    if not stats:
+    if not stats or not stats["method_data_known"]:
         return base
 
     rate_key = {"KO/TKO": "ko_rate", "SUB": "sub_rate", "DEC": "dec_rate"}.get(method)
@@ -128,7 +143,7 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
 
     opponent = row.get("opponent")
     opp_stats = _fighter_stats(fighters_df, opponent) if opponent else None
-    opp_vulnerability = opp_stats[loss_key] if opp_stats else None
+    opp_vulnerability = opp_stats[loss_key] if opp_stats and opp_stats["method_data_known"] else None
 
     weight_class = stats.get("weight_class")
     divisional_rate = own_rate
@@ -209,83 +224,92 @@ def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
 
     if len(fighter_stats) == 2:
         (name_a, s_a), (name_b, s_b) = fighter_stats
-        rate_a, rate_b = s_a["finish_rate"], s_b["finish_rate"]
-        avg_finish = (rate_a + rate_b) / 2
-        gap = abs(rate_a - rate_b)
-
-        if gap >= 0.30:
-            higher_name, higher_rate = (name_a, rate_a) if rate_a > rate_b else (name_b, rate_b)
-            lower_name, lower_rate = (name_b, rate_b) if rate_a > rate_b else (name_a, rate_a)
-            hi_pct, lo_pct = f"{higher_rate*100:.0f}%", f"{lower_rate*100:.0f}%"
-            if is_over:
-                variants = [
-                    f" This one's lopsided on paper -- {higher_name} finishes {hi_pct} of wins, while {lower_name} "
-                    f"sits at just {lo_pct}. For the Over, the hope is {lower_name} gets the win, or {higher_name} "
-                    f"wins in a way that isn't their usual game.",
-                    f" {higher_name} finishes {hi_pct} of career wins against {lower_name}'s {lo_pct} -- a real gap. "
-                    f"Backing the Over here means betting against {higher_name}'s own history if they're the one who wins.",
-                    f" The finish-rate split is stark: {hi_pct} for {higher_name}, {lo_pct} for {lower_name}. "
-                    f"The Over needs either {lower_name} in the winner's circle, or {higher_name} to go off-script.",
-                ]
-            else:
-                variants = [
-                    f" This one's lopsided on paper -- {higher_name} finishes {hi_pct} of wins, while {lower_name} "
-                    f"sits at just {lo_pct}. The Under really just needs {higher_name}'s normal finishing instinct "
-                    f"to show up if they're the one who wins.",
-                    f" {higher_name} closes the show {hi_pct} of the time, well clear of {lower_name}'s {lo_pct}. "
-                    f"That gap is exactly what the Under is leaning on -- {higher_name} doing what {higher_name} usually does.",
-                    f" A wide finish-rate gap here: {hi_pct} for {higher_name} vs. {lo_pct} for {lower_name}. "
-                    f"If {higher_name} wins, history says this doesn't see the judges.",
-                ]
-            base += _pick_variant(variant_key, variants)
-        elif avg_finish >= 0.65:
-            a_pct, b_pct = f"{rate_a*100:.0f}%", f"{rate_b*100:.0f}%"
-            if is_over:
-                variants = [
-                    f" Both fighters finish often ({a_pct} and {b_pct} of their wins) -- real risk for anyone leaning Over here.",
-                    f" {a_pct} and {b_pct} finish rates between them -- two fighters who both like to end things early, "
-                    f"which cuts hard against the Over.",
-                    f" Neither side is shy about finishing -- {a_pct} and {b_pct} of career wins by stoppage. "
-                    f"That's not a great backdrop for betting this one goes long.",
-                ]
-            else:
-                variants = [
-                    f" Both fighters finish often ({a_pct} and {b_pct} of their wins), which is exactly what the Under is pricing in.",
-                    f" {a_pct} and {b_pct} finish rates -- two natural finishers in the same cage. "
-                    f"The Under is the side that matches how these two usually fight.",
-                    f" This is a finisher-vs-finisher matchup on paper ({a_pct} and {b_pct}), and that combination "
-                    f"tends to end before the cards matter.",
-                ]
-            base += _pick_variant(variant_key, variants)
-        elif avg_finish <= 0.30:
-            a_pct, b_pct = f"{rate_a*100:.0f}%", f"{rate_b*100:.0f}%"
-            if is_over:
-                variants = [
-                    f" Neither fighter finishes much ({a_pct} and {b_pct} of wins) -- this leans toward distance "
-                    f"almost by default, favoring the Over.",
-                    f" Low finish rates across the board here ({a_pct} and {b_pct}) -- there's no obvious source "
-                    f"of an early stoppage, which is the Over's whole case.",
-                    f" {a_pct} and {b_pct} -- neither fighter has much of a finishing history. Absent that, "
-                    f"distance is the default outcome, and the Over is built for exactly that.",
-                ]
-            else:
-                variants = [
-                    f" Neither fighter finishes much ({a_pct} and {b_pct} of wins) -- the Under is fighting the tape here.",
-                    f" Low finish rates on both sides ({a_pct} and {b_pct}) make the Under a tougher sell -- "
-                    f"there's little history suggesting an early ending.",
-                    f" {a_pct} and {b_pct} finish rates aren't promising for an early stoppage, which is exactly "
-                    f"the case the Under needs to make.",
-                ]
-            base += _pick_variant(variant_key, variants)
-        else:
-            avg_pct = f"{avg_finish*100:.0f}%"
+        if not (s_a["method_data_known"] and s_b["method_data_known"]):
             variants = [
-                f" A fairly even {avg_pct} combined finish rate between the two, nothing lopsided pushing this line either way.",
-                f" {avg_pct} combined finish rate, roughly split down the middle -- no clear stylistic push toward either side of this line.",
-                f" Nothing dramatic in the finish-rate profile here ({avg_pct} combined) -- this line comes down "
-                f"to the fight itself more than either fighter's general tendencies.",
+                " Not enough tracked method-of-victory history for one or both fighters here to say much "
+                "about finish tendencies -- this one leans on the line itself more than either fighter's profile.",
+                " Method-of-victory data is thin for at least one side of this matchup, so there's not a real "
+                "finish-rate read to lean on here.",
             ]
             base += _pick_variant(variant_key, variants)
+        else:
+            rate_a, rate_b = s_a["finish_rate"], s_b["finish_rate"]
+            avg_finish = (rate_a + rate_b) / 2
+            gap = abs(rate_a - rate_b)
+
+            if gap >= 0.30:
+                higher_name, higher_rate = (name_a, rate_a) if rate_a > rate_b else (name_b, rate_b)
+                lower_name, lower_rate = (name_b, rate_b) if rate_a > rate_b else (name_a, rate_a)
+                hi_pct, lo_pct = f"{higher_rate*100:.0f}%", f"{lower_rate*100:.0f}%"
+                if is_over:
+                    variants = [
+                        f" This one's lopsided on paper -- {higher_name} finishes {hi_pct} of wins, while {lower_name} "
+                        f"sits at just {lo_pct}. For the Over, the hope is {lower_name} gets the win, or {higher_name} "
+                        f"wins in a way that isn't their usual game.",
+                        f" {higher_name} finishes {hi_pct} of career wins against {lower_name}'s {lo_pct} -- a real gap. "
+                        f"Backing the Over here means betting against {higher_name}'s own history if they're the one who wins.",
+                        f" The finish-rate split is stark: {hi_pct} for {higher_name}, {lo_pct} for {lower_name}. "
+                        f"The Over needs either {lower_name} in the winner's circle, or {higher_name} to go off-script.",
+                    ]
+                else:
+                    variants = [
+                        f" This one's lopsided on paper -- {higher_name} finishes {hi_pct} of wins, while {lower_name} "
+                        f"sits at just {lo_pct}. The Under really just needs {higher_name}'s normal finishing instinct "
+                        f"to show up if they're the one who wins.",
+                        f" {higher_name} closes the show {hi_pct} of the time, well clear of {lower_name}'s {lo_pct}. "
+                        f"That gap is exactly what the Under is leaning on -- {higher_name} doing what {higher_name} usually does.",
+                        f" A wide finish-rate gap here: {hi_pct} for {higher_name} vs. {lo_pct} for {lower_name}. "
+                        f"If {higher_name} wins, history says this doesn't see the judges.",
+                    ]
+                base += _pick_variant(variant_key, variants)
+            elif avg_finish >= 0.65:
+                a_pct, b_pct = f"{rate_a*100:.0f}%", f"{rate_b*100:.0f}%"
+                if is_over:
+                    variants = [
+                        f" Both fighters finish often ({a_pct} and {b_pct} of their wins) -- real risk for anyone leaning Over here.",
+                        f" {a_pct} and {b_pct} finish rates between them -- two fighters who both like to end things early, "
+                        f"which cuts hard against the Over.",
+                        f" Neither side is shy about finishing -- {a_pct} and {b_pct} of career wins by stoppage. "
+                        f"That's not a great backdrop for betting this one goes long.",
+                    ]
+                else:
+                    variants = [
+                        f" Both fighters finish often ({a_pct} and {b_pct} of their wins), which is exactly what the Under is pricing in.",
+                        f" {a_pct} and {b_pct} finish rates -- two natural finishers in the same cage. "
+                        f"The Under is the side that matches how these two usually fight.",
+                        f" This is a finisher-vs-finisher matchup on paper ({a_pct} and {b_pct}), and that combination "
+                        f"tends to end before the cards matter.",
+                    ]
+                base += _pick_variant(variant_key, variants)
+            elif avg_finish <= 0.30:
+                a_pct, b_pct = f"{rate_a*100:.0f}%", f"{rate_b*100:.0f}%"
+                if is_over:
+                    variants = [
+                        f" Neither fighter finishes much ({a_pct} and {b_pct} of wins) -- this leans toward distance "
+                        f"almost by default, favoring the Over.",
+                        f" Low finish rates across the board here ({a_pct} and {b_pct}) -- there's no obvious source "
+                        f"of an early stoppage, which is the Over's whole case.",
+                        f" {a_pct} and {b_pct} -- neither fighter has much of a finishing history. Absent that, "
+                        f"distance is the default outcome, and the Over is built for exactly that.",
+                    ]
+                else:
+                    variants = [
+                        f" Neither fighter finishes much ({a_pct} and {b_pct} of wins) -- the Under is fighting the tape here.",
+                        f" Low finish rates on both sides ({a_pct} and {b_pct}) make the Under a tougher sell -- "
+                        f"there's little history suggesting an early ending.",
+                        f" {a_pct} and {b_pct} finish rates aren't promising for an early stoppage, which is exactly "
+                        f"the case the Under needs to make.",
+                    ]
+                base += _pick_variant(variant_key, variants)
+            else:
+                avg_pct = f"{avg_finish*100:.0f}%"
+                variants = [
+                    f" A fairly even {avg_pct} combined finish rate between the two, nothing lopsided pushing this line either way.",
+                    f" {avg_pct} combined finish rate, roughly split down the middle -- no clear stylistic push toward either side of this line.",
+                    f" Nothing dramatic in the finish-rate profile here ({avg_pct} combined) -- this line comes down "
+                    f"to the fight itself more than either fighter's general tendencies.",
+                ]
+                base += _pick_variant(variant_key, variants)
 
     if fast_finishers:
         at_the_line = line_value is not None and line_value <= 1.5
@@ -313,10 +337,14 @@ def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
 def explain_goes_the_distance(row: dict, fighters_df: pd.DataFrame) -> str:
     names = row["fighter"].split(" vs ")
     fighter_dec_info = []
+    unknown_count = 0
     for name in names:
         s = _fighter_stats(fighters_df, name.strip())
         if s:
-            fighter_dec_info.append((name.strip(), s["dec_rate"]))
+            if s["method_data_known"]:
+                fighter_dec_info.append((name.strip(), s["dec_rate"]))
+            else:
+                unknown_count += 1
 
     base = (
         f"{row['market']} at {format_american_odds(row['odds_american'])} implies {row['book_fair_prob']*100:.0f}%, "
@@ -325,7 +353,15 @@ def explain_goes_the_distance(row: dict, fighters_df: pd.DataFrame) -> str:
     is_distance = "Goes The Distance" in row["market"]
     variant_key = f"{row['fighter']}|{row['market']}"
 
-    if fighter_dec_info:
+    if unknown_count > 0:
+        variants = [
+            " Not enough tracked method-of-victory history for one or both fighters here to say much "
+            "about decision tendencies -- this one leans on the line itself more than either fighter's profile.",
+            " Method-of-victory data is thin for at least one side of this matchup, so there's not a real "
+            "decision-rate read to lean on here.",
+        ]
+        base += _pick_variant(variant_key, variants)
+    elif fighter_dec_info:
         avg_dec = sum(r for _, r in fighter_dec_info) / len(fighter_dec_info)
         gap = abs(fighter_dec_info[0][1] - fighter_dec_info[1][1]) if len(fighter_dec_info) == 2 else 0
         avg_pct = f"{avg_dec*100:.0f}%"
