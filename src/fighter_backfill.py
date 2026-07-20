@@ -508,7 +508,10 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
 
     filled_count = 0
     new_rows = []
-    for event_name, event_date in future[["event_name", "event_date"]].drop_duplicates().itertuples(index=False):
+    event_order = future[["event_name", "event_date"]].drop_duplicates().copy()
+    event_order["_sort_date"] = pd.to_datetime(event_order["event_date"], errors="coerce")
+    event_order = event_order.sort_values("_sort_date", na_position="last")
+    for event_name, event_date in event_order[["event_name", "event_date"]].itertuples(index=False):
         target_names = {n for n in (needs_basic | needs_gap_fill)
                          if n in set(future[future["event_name"] == event_name]["fighter_a"])
                          or n in set(future[future["event_name"] == event_name]["fighter_b"])}
@@ -588,6 +591,9 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                 if needs_method_data:
                     method_breakdown_attempts_this_run += 1
                     breakdown = None
+                    if combat_edge_rate_limited and wikipedia_rate_limited:
+                        print(f"[fighter_backfill] {name}: both method-breakdown sources already rate-limited "
+                              f"this run -- skipped, will retry next run")
                     if not combat_edge_rate_limited:
                         breakdown = _fetch_method_breakdown_from_combat_edge(name)
                         if breakdown == RATE_LIMITED:
