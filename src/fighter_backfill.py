@@ -465,6 +465,10 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
     except (FileNotFoundError, pd.errors.EmptyDataError):
         print(f"[fighter_backfill] could not read {fighters_path} -- skipping this run")
         return 0
+    for col in ("combat_edge_checked", "wikipedia_checked"):
+        if col not in fighters.columns:
+            fighters[col] = False
+        fighters[col] = fighters[col].fillna(False).astype(bool)
     try:
         future = pd.read_csv(future_cards_path)
     except (FileNotFoundError, pd.errors.EmptyDataError):
@@ -519,6 +523,7 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
         weight_class_by_fighter.setdefault(r["fighter_b"], r.get("weight_class"))
 
     filled_count = 0
+    any_checked_flag_changed = False
     new_rows = []
     event_order = future[["event_name", "event_date"]].drop_duplicates().copy()
     event_order["_sort_date"] = pd.to_datetime(event_order["event_date"], errors="coerce")
@@ -595,8 +600,15 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
 
                 existing_row = fighters[fighters["name"] == name]
                 method_cols = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
-                needs_method_data = name in needs_basic or (
-                    not existing_row.empty and existing_row[method_cols].isna().any(axis=1).iloc[0]
+                already_exhausted = (
+                    not existing_row.empty
+                    and bool(existing_row["combat_edge_checked"].iloc[0])
+                    and bool(existing_row["wikipedia_checked"].iloc[0])
+                )
+                needs_method_data = not already_exhausted and (
+                    name in needs_basic or (
+                        not existing_row.empty and existing_row[method_cols].isna().any(axis=1).iloc[0]
+                    )
                 )
                 if needs_method_data and method_breakdown_attempts_this_run >= METHOD_BREAKDOWN_CAP_PER_RUN:
                     if not cap_reached_logged:
@@ -604,22 +616,30 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                               f"for this run at {name!r} -- remaining fighters needing this will retry next run")
                         cap_reached_logged = True
                     needs_method_data = False  # cap reached -- leave for a later run rather than risk worsening a rate limit
+                already_checked = {
+                    "combat_edge": not existing_row.empty and bool(existing_row["combat_edge_checked"].iloc[0]),
+                    "wikipedia": not existing_row.empty and bool(existing_row["wikipedia_checked"].iloc[0]),
+                }
                 if needs_method_data:
                     method_breakdown_attempts_this_run += 1
                     breakdown = None
                     if combat_edge_rate_limited and wikipedia_rate_limited:
                         print(f"[fighter_backfill] {name}: both method-breakdown sources already rate-limited "
                               f"this run -- skipped, will retry next run")
-                    if not combat_edge_rate_limited:
+                    if not combat_edge_rate_limited and not already_checked["combat_edge"]:
                         breakdown = _fetch_method_breakdown_from_combat_edge(name)
                         if breakdown == RATE_LIMITED:
                             combat_edge_rate_limited = True
                             breakdown = None
-                    if not breakdown and not wikipedia_rate_limited:
+                        else:
+                            physical["combat_edge_checked"] = True  # genuine attempt happened, regardless of outcome
+                    if not breakdown and not wikipedia_rate_limited and not already_checked["wikipedia"]:
                         breakdown = _fetch_method_breakdown_from_wikipedia(name)
                         if breakdown == RATE_LIMITED:
                             wikipedia_rate_limited = True
                             breakdown = None
+                        else:
+                            physical["wikipedia_checked"] = True  # genuine attempt happened, regardless of outcome
                     if breakdown:
                         physical.update(breakdown)
 
@@ -644,7 +664,11 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                         fighters = _safe_set_cell(fighters, i, "country", country)
                         updated_fields.append("country")
                     for col, val in physical.items():
-                        if pd.isna(fighters.at[i, col]):
+                        if col in ("combat_edge_checked", "wikipedia_checked"):
+                            if not bool(fighters.at[i, col]):  # only a genuine False->True change is worth writing
+                                fighters = _safe_set_cell(fighters, i, col, val)
+                                any_checked_flag_changed = True
+                        elif pd.isna(fighters.at[i, col]):
                             fighters = _safe_set_cell(fighters, i, col, val)
                             updated_fields.append(col)
                     if updated_fields:
@@ -658,6 +682,6 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
 
     if new_rows:
         fighters = pd.concat([fighters, pd.DataFrame(new_rows)], ignore_index=True)
-    if filled_count:
+    if filled_count or any_checked_flag_changed:
         fighters.to_csv(fighters_path, index=False)
     return filled_count
