@@ -57,6 +57,13 @@ import requests
 from src.card_matcher import _normalize_name
 from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, WIKIPEDIA_OPENSEARCH_URL, is_placeholder_fighter_name
 
+# Sentinel distinguishing "this source rate-limited us" from a genuine
+# "no data here" (None) or "here's the data" (dict) result -- lets the
+# caller trip a per-source circuit breaker specifically on 429s rather
+# than on every ordinary miss, which would be both wrong (a miss isn't
+# a rate-limit signal) and pointless (there'd be nothing to break).
+RATE_LIMITED = "RATE_LIMITED"
+
 FIGHTERS_COLUMNS_MINIMAL = ["name", "weight_class", "country", "wins", "losses"]
 
 # Only accepted if a parsed value falls in this range -- guards against
@@ -285,6 +292,13 @@ def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
         )
         directory_resp.raise_for_status()
         directory_html = directory_resp.text
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 429:
+            print(f"[fighter_backfill] combat-edge rate-limited (429) fetching directory for {name!r} -- "
+                  f"backing off this source for the rest of this run")
+            return RATE_LIMITED
+        print(f"[fighter_backfill] combat-edge directory fetch failed for {name!r} (letter {first_letter!r}): {e}")
+        return None
     except Exception as e:
         print(f"[fighter_backfill] combat-edge directory fetch failed for {name!r} (letter {first_letter!r}): {e}")
         return None
@@ -305,6 +319,13 @@ def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
         profile_resp = requests.get(profile_url, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
         profile_resp.raise_for_status()
         profile_html = profile_resp.text
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 429:
+            print(f"[fighter_backfill] combat-edge rate-limited (429) fetching profile for {name!r} -- "
+                  f"backing off this source for the rest of this run")
+            return RATE_LIMITED
+        print(f"[fighter_backfill] combat-edge profile fetch failed for {name!r} ({profile_url}): {e}")
+        return None
     except Exception as e:
         print(f"[fighter_backfill] combat-edge profile fetch failed for {name!r} ({profile_url}): {e}")
         return None
@@ -364,6 +385,13 @@ def _fetch_method_breakdown_from_wikipedia(name: str) -> dict | None:
             print(f"[fighter_backfill] wikipedia method-breakdown: no page match for {name!r}")
             return None
         page_title = results[3][0].rsplit("/", 1)[-1]
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 429:
+            print(f"[fighter_backfill] wikipedia rate-limited (429) searching for {name!r} -- "
+                  f"backing off this source for the rest of this run")
+            return RATE_LIMITED
+        print(f"[fighter_backfill] wikipedia method-breakdown search failed for {name!r}: {e}")
+        return None
     except Exception as e:
         print(f"[fighter_backfill] wikipedia method-breakdown search failed for {name!r}: {e}")
         return None
@@ -376,6 +404,13 @@ def _fetch_method_breakdown_from_wikipedia(name: str) -> dict | None:
         )
         raw_resp.raise_for_status()
         wikitext = raw_resp.text
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 429:
+            print(f"[fighter_backfill] wikipedia rate-limited (429) fetching {page_title!r} for {name!r} -- "
+                  f"backing off this source for the rest of this run")
+            return RATE_LIMITED
+        print(f"[fighter_backfill] wikipedia method-breakdown fetch failed for {name!r} ({page_title!r}): {e}")
+        return None
     except Exception as e:
         print(f"[fighter_backfill] wikipedia method-breakdown fetch failed for {name!r} ({page_title!r}): {e}")
         return None
@@ -447,6 +482,24 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
     )
     if not needs_basic and not needs_gap_fill:
         return 0
+
+    # Circuit breakers, tripped for the rest of THIS run the first time
+    # a source returns a 429 -- retrying a source that just told us to
+    # back off only makes the block worse, and every other fighter in
+    # this same run would almost certainly hit the same wall anyway.
+    combat_edge_rate_limited = False
+    wikipedia_rate_limited = False
+    # Real production logs (July 2026) showed this backlog crossing 80+
+    # fighters in one run (a one-time bootstrap after gap_cols grew to
+    # include the 6 method-breakdown columns, which instantly made
+    # nearly the whole pre-existing roster eligible for gap-fill at
+    # once) -- both Combat Edge and Wikipedia hit real rate limits well
+    # before the run finished. Capping new method-breakdown lookups per
+    # run spreads that one-time backlog across several 5-minute-interval
+    # runs instead of bursting through it all at once; going forward,
+    # only newly-discovered fighters need this, a much smaller volume.
+    METHOD_BREAKDOWN_CAP_PER_RUN = 15
+    method_breakdown_attempts_this_run = 0
 
     weight_class_by_fighter = {}
     for _, r in future.iterrows():
@@ -530,10 +583,21 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                 needs_method_data = name in needs_basic or (
                     not existing_row.empty and existing_row[method_cols].isna().any(axis=1).iloc[0]
                 )
+                if needs_method_data and method_breakdown_attempts_this_run >= METHOD_BREAKDOWN_CAP_PER_RUN:
+                    needs_method_data = False  # cap reached -- leave for a later run rather than risk worsening a rate limit
                 if needs_method_data:
-                    breakdown = _fetch_method_breakdown_from_combat_edge(name)
-                    if not breakdown:
+                    method_breakdown_attempts_this_run += 1
+                    breakdown = None
+                    if not combat_edge_rate_limited:
+                        breakdown = _fetch_method_breakdown_from_combat_edge(name)
+                        if breakdown == RATE_LIMITED:
+                            combat_edge_rate_limited = True
+                            breakdown = None
+                    if not breakdown and not wikipedia_rate_limited:
                         breakdown = _fetch_method_breakdown_from_wikipedia(name)
+                        if breakdown == RATE_LIMITED:
+                            wikipedia_rate_limited = True
+                            breakdown = None
                     if breakdown:
                         physical.update(breakdown)
 
