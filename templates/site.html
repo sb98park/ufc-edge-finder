@@ -2253,6 +2253,7 @@
     <button class="seg-tab" data-seg-target="hiw-2" onclick="switchSegTab(this)">Prop Predictions</button>
     <button class="seg-tab" data-seg-target="hiw-3" onclick="switchSegTab(this)">Market & Betting Math</button>
     <button class="seg-tab" data-seg-target="hiw-4" onclick="switchSegTab(this)">Validation</button>
+    <button class="seg-tab" data-seg-target="hiw-5" onclick="switchSegTab(this)">Honest Data Limitations</button>
   </div>
   <div class="track-record-card">
     <div class="seg-pane active" id="hiw-0">
@@ -2396,9 +2397,11 @@
       </div>
 
     </div>
+    <div class="seg-pane" id="hiw-5">
       <div class="model-limitations-notice">
-        ⚠️ <strong>Honest data limitations:</strong> strike-volume (SLpM/SApM), control-time percentage, and missed-weight history are new schema fields the model is built to use, but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather than guess) until real data backs them. Everything else above is live and active.
+        ⚠️ <strong>Honest data limitations:</strong> strike-volume (SLpM/SApM), control-time percentage, and missed-weight history are new schema fields the model is built to use, but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather than guess) until real data backs them. Everything else covered in this section is live and active.
       </div>
+    </div>
   </div>
   </div>
 
