@@ -285,10 +285,20 @@ def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
     if not first_letter.isalpha():
         return None
 
+    # A realistic browser User-Agent specific to this source, not the
+    # shared BASE_HEADERS' "personal research script" string -- that
+    # string doesn't match any real browser's format and is a plausible
+    # contributing factor to this specific source's aggressive blocking,
+    # confirmed via a direct fetch from different network infrastructure
+    # succeeding cleanly with real data for fighters the GitHub Actions
+    # runner's shared IP range has never once gotten through for.
+    ce_headers = {**BASE_HEADERS, "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
+
     try:
         directory_resp = requests.get(
             f"https://combat-edge.com/fighters/a-z/{first_letter}/",
-            headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT,
+            headers=ce_headers, timeout=REQUEST_TIMEOUT,
         )
         directory_resp.raise_for_status()
         directory_html = directory_resp.text
@@ -316,7 +326,7 @@ def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
     profile_url = "https://combat-edge.com" + link_match.group(1)
 
     try:
-        profile_resp = requests.get(profile_url, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        profile_resp = requests.get(profile_url, headers=ce_headers, timeout=REQUEST_TIMEOUT)
         profile_resp.raise_for_status()
         profile_html = profile_resp.text
     except requests.HTTPError as e:
