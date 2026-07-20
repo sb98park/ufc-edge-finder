@@ -494,12 +494,24 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
     # include the 6 method-breakdown columns, which instantly made
     # nearly the whole pre-existing roster eligible for gap-fill at
     # once) -- both Combat Edge and Wikipedia hit real rate limits well
-    # before the run finished. Capping new method-breakdown lookups per
+    # before the run finished. A cap on new method-breakdown lookups per
     # run spreads that one-time backlog across several 5-minute-interval
-    # runs instead of bursting through it all at once; going forward,
-    # only newly-discovered fighters need this, a much smaller volume.
-    METHOD_BREAKDOWN_CAP_PER_RUN = 15
+    # runs instead of bursting through it all at once.
+    #
+    # The circuit breakers above are what actually protect against
+    # rate-limit abuse (confirmed directly: Combat Edge correctly
+    # stopped after exactly 1 request once it 429'd) -- this cap only
+    # needs to be a generous safety net against a source misbehaving in
+    # a way that doesn't trip RATE_LIMITED (e.g. 200 with garbage data),
+    # not the primary defense. A follow-up production log showed 15 was
+    # too tight for that role: it cut off mid-card, exactly 15 fighters
+    # into a single event's own competitor list, well before reaching
+    # fighters later in that same card's billing order who still
+    # genuinely needed backfill and whose sources were never even
+    # attempted as a result. A full UFC card can run 24-28 fighters.
+    METHOD_BREAKDOWN_CAP_PER_RUN = 60
     method_breakdown_attempts_this_run = 0
+    cap_reached_logged = False
 
     weight_class_by_fighter = {}
     for _, r in future.iterrows():
@@ -587,6 +599,10 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                     not existing_row.empty and existing_row[method_cols].isna().any(axis=1).iloc[0]
                 )
                 if needs_method_data and method_breakdown_attempts_this_run >= METHOD_BREAKDOWN_CAP_PER_RUN:
+                    if not cap_reached_logged:
+                        print(f"[fighter_backfill] method-breakdown cap ({METHOD_BREAKDOWN_CAP_PER_RUN}) reached "
+                              f"for this run at {name!r} -- remaining fighters needing this will retry next run")
+                        cap_reached_logged = True
                     needs_method_data = False  # cap reached -- leave for a later run rather than risk worsening a rate limit
                 if needs_method_data:
                     method_breakdown_attempts_this_run += 1
