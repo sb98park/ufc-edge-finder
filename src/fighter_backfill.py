@@ -54,6 +54,7 @@ import re
 import pandas as pd
 import requests
 
+from src.card_matcher import _normalize_name
 from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, WIKIPEDIA_OPENSEARCH_URL, is_placeholder_fighter_name
 
 FIGHTERS_COLUMNS_MINIMAL = ["name", "weight_class", "country", "wins", "losses"]
@@ -460,6 +461,17 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                          or n in set(future[future["event_name"] == event_name]["fighter_b"])}
         if not target_names:
             continue
+        # Match ESPN's spelling against ours by normalized form, not exact
+        # string equality -- accents, punctuation, and transliteration
+        # differences between ESPN and whatever originally populated
+        # fighters.csv/future_cards.csv otherwise cause this whole block
+        # to silently skip a real, tracked fighter (same category of bug
+        # already fixed elsewhere in this codebase for cross-source
+        # matching). Canonical (our) spelling wins, per that same
+        # established precedent, so target_names_by_normalized maps back
+        # to the name already on record rather than ESPN's variant.
+        target_names_by_normalized = {_normalize_name(n): n for n in target_names}
+        matched_target_names = set()
 
         try:
             date_param = pd.Timestamp(event_date).strftime("%Y%m%d")
@@ -475,13 +487,19 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
             events = data.get("events", [])
             matched = events[0] if len(events) == 1 else None
         if matched is None:
+            espn_event_names = [ev.get("name") for ev in data.get("events", [])]
+            print(f"[fighter_backfill] event name mismatch for {event_name!r} on {date_param} -- "
+                  f"ESPN returned {espn_event_names!r}, {len(target_names)} tracked name(s) for this "
+                  f"event will not be backfilled this run: {sorted(target_names)}")
             continue
 
         for comp in matched.get("competitions", []):
             for c in comp.get("competitors", []):
-                name = c.get("athlete", {}).get("fullName")
-                if name not in target_names:
+                espn_name = c.get("athlete", {}).get("fullName")
+                name = target_names_by_normalized.get(_normalize_name(espn_name or ""))
+                if name is None:
                     continue
+                matched_target_names.add(name)
 
                 country = c.get("athlete", {}).get("flag", {}).get("alt")
                 wins, losses = None, None
@@ -546,6 +564,11 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                     if updated_fields:
                         filled_count += 1
                         print(f"[fighter_backfill] filled gap(s) for {name}: {', '.join(updated_fields)}")
+
+        unmatched = target_names - matched_target_names
+        if unmatched:
+            print(f"[fighter_backfill] {event_name!r}: {len(unmatched)} tracked name(s) never matched an "
+                  f"ESPN competitor even with normalized comparison, still unbackfilled: {sorted(unmatched)}")
 
     if new_rows:
         fighters = pd.concat([fighters, pd.DataFrame(new_rows)], ignore_index=True)
