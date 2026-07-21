@@ -54,6 +54,15 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # .gitattributes points docs/* and data/* at a custom "ours"
+          # merge driver, but git doesn't ship one under that name --
+          # it has to be registered locally before git will honor it.
+          # Each Actions run gets a fresh, empty checkout with no config
+          # carried over from previous runs, so without this line every
+          # run silently falls back to a real content-level merge on
+          # these files and fails with a genuine conflict the moment
+          # the remote has moved (a manual push, or a prior queued run).
+          git config merge.ours.driver true
           # Directory-scoped, not an explicit file list -- an explicit
           # list silently misses any new output file a future change
           # adds (this is exactly what broke: data/future_cards.csv and
