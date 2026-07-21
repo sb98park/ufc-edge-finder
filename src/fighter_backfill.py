@@ -222,10 +222,64 @@ def _fetch_espn_last_fight_info(eventlog_ref: str) -> dict:
         return {}
 
     most_recent = items[0]
+
+    # If the most-recent item is a bare {"$ref": ...} link (the shape every
+    # production log has shown so far), follow it exactly ONE level deeper.
+    # This is the diagnostic step agreed on (July 2026): we have never seen
+    # what's behind this link, so rather than guess at its schema and ship a
+    # speculative parser (the pattern that misfired repeatedly earlier this
+    # saga), we fetch it once and LOG THE RAW JSON. A real production log of
+    # this output is what the actual date/opponent/result/method parser will
+    # then be written against -- correct on first real try instead of blind.
+    #
+    # Bounded: at most one extra request per fighter, and only for the single
+    # most-recent bout, never the whole history. Any failure or unexpected
+    # shape returns {} and logs, exactly like every other pass here.
     if set(most_recent.keys()) == {"$ref"}:
-        print(f"[fighter_backfill] eventLog items are themselves bare $ref links needing another fetch each "
-              f"-- not cascading further this run. Sample item: {most_recent}")
-        return {}
+        deeper_ref = most_recent["$ref"]
+        try:
+            resp2 = requests.get(deeper_ref, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+            resp2.raise_for_status()
+            event_data = resp2.json()
+        except (requests.RequestException, ValueError) as e:
+            print(f"[fighter_backfill] eventLog deeper-$ref fetch failed for {deeper_ref}: {e}")
+            return {}
+
+        if isinstance(event_data, dict):
+            top_keys = sorted(event_data.keys())
+            print(f"[fighter_backfill] DIAGNOSTIC: followed most-recent eventLog $ref one level deeper. "
+                  f"Top-level keys: {top_keys}")
+            # Surface a bounded, readable slice of the actual structure so the
+            # real parser can be written against observed reality. Kept compact
+            # to stay useful in a log without dumping an unbounded payload.
+            for k in top_keys:
+                v = event_data[k]
+                if isinstance(v, (str, int, float, bool)) or v is None:
+                    print(f"[fighter_backfill] DIAGNOSTIC:   {k!r}: {v!r}")
+                elif isinstance(v, dict):
+                    print(f"[fighter_backfill] DIAGNOSTIC:   {k!r}: dict with keys {sorted(v.keys())}")
+                elif isinstance(v, list):
+                    sample = v[0] if v else None
+                    sample_keys = sorted(sample.keys()) if isinstance(sample, dict) else type(sample).__name__
+                    print(f"[fighter_backfill] DIAGNOSTIC:   {k!r}: list(len={len(v)}), first item: {sample_keys}")
+                else:
+                    print(f"[fighter_backfill] DIAGNOSTIC:   {k!r}: {type(v).__name__}")
+        else:
+            print(f"[fighter_backfill] DIAGNOSTIC: deeper eventLog $ref returned non-dict "
+                  f"{type(event_data).__name__}; raw (truncated): {str(event_data)[:500]}")
+            return {}
+
+        # Opportunistic, SAFE extraction: only a top-level 'date' string, which
+        # is the one field name already confirmed elsewhere in ESPN's schema.
+        # Everything else (opponent/result/method) deliberately waits for the
+        # real logged structure -- no guessing here.
+        result = {}
+        date_val = event_data.get("date")
+        if isinstance(date_val, str) and len(date_val) >= 10:
+            result["last_fight_date"] = date_val[:10]
+            print(f"[fighter_backfill] DIAGNOSTIC: extracted last_fight_date={result['last_fight_date']} "
+                  f"from deeper event; opponent/result/method still pending real-schema parser.")
+        return result
 
     result = {}
     date_val = most_recent.get("date")
