@@ -184,7 +184,10 @@ def _fetch_espn_athlete_detail(athlete_id: str) -> tuple[dict, str | None]:
     return result, eventlog_ref
 
 
-def _fetch_espn_last_fight_info(eventlog_ref: str) -> dict:
+_LAST_FIGHT_METHOD_LOGGED = 0
+
+
+def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None) -> dict:
     """
     Pass 4 -- the most experimental piece in this module. 'eventLog' was
     seen exactly once, as an unexplored field name, in a real
@@ -216,79 +219,138 @@ def _fetch_espn_last_fight_info(eventlog_ref: str) -> dict:
     items = data.get("events") if isinstance(data, dict) and "events" in data else (
         data.get("items") if isinstance(data, dict) else (data if isinstance(data, list) else None)
     )
-    if not items or not isinstance(items, list) or not isinstance(items[0], dict):
-        print(f"[fighter_backfill] eventLog response wasn't a recognizable list of events. "
-              f"Top-level shape for diagnosis: {sorted(data.keys()) if isinstance(data, dict) else type(data).__name__}")
+
+    # REAL PARSER (July 2026), written against a fully-confirmed schema from 4
+    # rounds of production diagnostics. Confirmed structure:
+    #   eventLog -> {'$ref','events'}
+    #   events -> {count, items:[...], pageCount, pageIndex, pageSize}  (container)
+    #   events.items[N] -> {competition:{$ref}, competitor:{$ref}, event:{$ref}, played:bool}
+    #   item.event   -> {date, name, ...}                (date lives here)
+    #   item.competition -> {competitors:[2], status:{$ref}, type:{...}, date, ...}
+    #     competition.competitors[i] -> {athlete:{$ref}, winner:bool, order, id, ...}
+    #     competition.type.text = WEIGHT CLASS (e.g. 'Lightweight') -- NOT the method
+    #     competition.status -> {$ref} -> {type:{completed, description, detail, name, ...}}
+    # Confirmed ORDERING: items[0] is the fighter's UPCOMING (played=False) bout;
+    # all later items are played=True history. So we must filter played=True and
+    # pick the most recent by event date -- never items[0] blindly.
+    if isinstance(items, dict):
+        inner = items.get("items")
+        items = inner if isinstance(inner, list) else None
+
+    if not items or not isinstance(items, list):
+        print(f"[fighter_backfill] eventLog: no usable events list; skipping last-fight for this fighter.")
         return {}
 
-    most_recent = items[0]
+    # Keep only completed bouts. 'played' is embedded on each item (no fetch).
+    played_items = [it for it in items if isinstance(it, dict) and it.get("played") is True]
+    if not played_items:
+        print(f"[fighter_backfill] eventLog: no played bouts found (only scheduled) -- nothing to fill.")
+        return {}
 
-    # If the most-recent item is a bare {"$ref": ...} link (the shape every
-    # production log has shown so far), follow it exactly ONE level deeper.
-    # This is the diagnostic step agreed on (July 2026): we have never seen
-    # what's behind this link, so rather than guess at its schema and ship a
-    # speculative parser (the pattern that misfired repeatedly earlier this
-    # saga), we fetch it once and LOG THE RAW JSON. A real production log of
-    # this output is what the actual date/opponent/result/method parser will
-    # then be written against -- correct on first real try instead of blind.
-    #
-    # Bounded: at most one extra request per fighter, and only for the single
-    # most-recent bout, never the whole history. Any failure or unexpected
-    # shape returns {} and logs, exactly like every other pass here.
-    if set(most_recent.keys()) == {"$ref"}:
-        deeper_ref = most_recent["$ref"]
+    # We only have this one page of items (pageIndex 1). That's fine: the most
+    # recent completed bout is what we want, and page 1 holds the newest slice.
+    # We still don't KNOW the page ordering for certain, so rather than trust
+    # position we fetch each played item's event date and take the true max --
+    # but bounded: cap at the first 6 played items to avoid a request storm,
+    # since the most-recent bout is near the top of page 1 regardless of
+    # asc/desc (page 1 can't exclude it when this fighter has >0 completed).
+    BOUNDED = played_items[:6]
+
+    def _get(ref):
         try:
-            resp2 = requests.get(deeper_ref, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
-            resp2.raise_for_status()
-            event_data = resp2.json()
-        except (requests.RequestException, ValueError) as e:
-            print(f"[fighter_backfill] eventLog deeper-$ref fetch failed for {deeper_ref}: {e}")
-            return {}
+            r = requests.get(ref, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+            r.raise_for_status()
+            return r.json()
+        except (requests.RequestException, ValueError):
+            return None
 
-        if isinstance(event_data, dict):
-            top_keys = sorted(event_data.keys())
-            print(f"[fighter_backfill] DIAGNOSTIC: followed most-recent eventLog $ref one level deeper. "
-                  f"Top-level keys: {top_keys}")
-            # Surface a bounded, readable slice of the actual structure so the
-            # real parser can be written against observed reality. Kept compact
-            # to stay useful in a log without dumping an unbounded payload.
-            for k in top_keys:
-                v = event_data[k]
-                if isinstance(v, (str, int, float, bool)) or v is None:
-                    print(f"[fighter_backfill] DIAGNOSTIC:   {k!r}: {v!r}")
-                elif isinstance(v, dict):
-                    print(f"[fighter_backfill] DIAGNOSTIC:   {k!r}: dict with keys {sorted(v.keys())}")
-                elif isinstance(v, list):
-                    sample = v[0] if v else None
-                    sample_keys = sorted(sample.keys()) if isinstance(sample, dict) else type(sample).__name__
-                    print(f"[fighter_backfill] DIAGNOSTIC:   {k!r}: list(len={len(v)}), first item: {sample_keys}")
-                else:
-                    print(f"[fighter_backfill] DIAGNOSTIC:   {k!r}: {type(v).__name__}")
-        else:
-            print(f"[fighter_backfill] DIAGNOSTIC: deeper eventLog $ref returned non-dict "
-                  f"{type(event_data).__name__}; raw (truncated): {str(event_data)[:500]}")
-            return {}
+    # Resolve (event_date, item) for each bounded played item, then pick latest.
+    dated = []
+    for it in BOUNDED:
+        ev = it.get("event")
+        ev_ref = ev.get("$ref") if isinstance(ev, dict) else None
+        ev_obj = _get(ev_ref) if ev_ref else None
+        d = ev_obj.get("date") if isinstance(ev_obj, dict) else None
+        if isinstance(d, str) and len(d) >= 10:
+            dated.append((d[:10], it))
+    if not dated:
+        print(f"[fighter_backfill] eventLog: couldn't resolve any event dates -- skipping last-fight.")
+        return {}
+    dated.sort(key=lambda t: t[0], reverse=True)
+    last_date, last_item = dated[0]
 
-        # Opportunistic, SAFE extraction: only a top-level 'date' string, which
-        # is the one field name already confirmed elsewhere in ESPN's schema.
-        # Everything else (opponent/result/method) deliberately waits for the
-        # real logged structure -- no guessing here.
-        result = {}
-        date_val = event_data.get("date")
-        if isinstance(date_val, str) and len(date_val) >= 10:
-            result["last_fight_date"] = date_val[:10]
-            print(f"[fighter_backfill] DIAGNOSTIC: extracted last_fight_date={result['last_fight_date']} "
-                  f"from deeper event; opponent/result/method still pending real-schema parser.")
+    result = {"last_fight_date": last_date}
+
+    # Follow this bout's competition for opponent + result + method.
+    comp = last_item.get("competition")
+    comp_ref = comp.get("$ref") if isinstance(comp, dict) else None
+    comp_obj = _get(comp_ref) if comp_ref else None
+    if not isinstance(comp_obj, dict):
+        # Date alone is still worth returning.
         return result
 
-    result = {}
-    date_val = most_recent.get("date")
-    if isinstance(date_val, str) and len(date_val) >= 10:
-        result["last_fight_date"] = date_val[:10]
+    competitors = comp_obj.get("competitors")
+    if isinstance(competitors, list) and len(competitors) == 2:
+        # Identify which competitor is OUR fighter via athlete_id (passed in).
+        def _athlete_id(c):
+            ath = c.get("athlete") if isinstance(c, dict) else None
+            # athlete is a {$ref}; the id is in the ref URL's last path segment,
+            # or we can match by following it. Cheapest: parse the ref URL.
+            ref = ath.get("$ref") if isinstance(ath, dict) else None
+            if isinstance(ref, str):
+                # .../athletes/NNNN?lang=... -> grab the digits after /athletes/
+                m = re.search(r"/athletes/(\d+)", ref)
+                if m:
+                    return m.group(1)
+            return None
 
-    if not result:
-        print(f"[fighter_backfill] eventLog's most recent item had no recognizable date field. "
-              f"Raw item, for diagnosing the real schema: {most_recent}")
+        ours = them = None
+        for c in competitors:
+            aid = _athlete_id(c)
+            if athlete_id and aid == str(athlete_id):
+                ours = c
+            else:
+                them = c
+        # Fallback: if id-matching failed, we can't safely tell who's who --
+        # leave result/opponent out rather than guess and risk inverting them.
+        if ours is not None and them is not None:
+            # RESULT: our fighter's winner boolean.
+            won = ours.get("winner")
+            if won is True:
+                result["last_fight_result"] = "W"
+            elif won is False:
+                result["last_fight_result"] = "L"
+            # OPPONENT: follow the other competitor's athlete for displayName.
+            them_ath = them.get("athlete")
+            them_ref = them_ath.get("$ref") if isinstance(them_ath, dict) else None
+            them_obj = _get(them_ref) if them_ref else None
+            if isinstance(them_obj, dict):
+                opp_name = them_obj.get("displayName") or them_obj.get("fullName")
+                if opp_name:
+                    result["last_fight_opponent"] = opp_name
+
+    # METHOD: from competition.status -> type. The exact value field for a
+    # COMPLETED bout hasn't been directly observed yet (every diagnostic landed
+    # on the scheduled items[0]), so read the most specific available field and
+    # LOG the raw status.type the first few times so the mapping is verifiable
+    # rather than blind. 'detail'/'shortDetail' typically read like "Decision -
+    # Unanimous" or "KO/TKO"; 'description' is the human label.
+    status = comp_obj.get("status")
+    status_ref = status.get("$ref") if isinstance(status, dict) else None
+    status_obj = _get(status_ref) if status_ref else None
+    if isinstance(status_obj, dict):
+        stype = status_obj.get("type")
+        if isinstance(stype, dict):
+            # Log raw values once per run (bounded via module-level flag) so the
+            # real method-string mapping can be confirmed from a live log.
+            global _LAST_FIGHT_METHOD_LOGGED
+            if _LAST_FIGHT_METHOD_LOGGED < 5:
+                print(f"[fighter_backfill] last-fight method raw status.type: "
+                      f"{ {k: stype.get(k) for k in ('name','description','detail','shortDetail','completed')} }")
+                _LAST_FIGHT_METHOD_LOGGED += 1
+            method = stype.get("detail") or stype.get("shortDetail") or stype.get("description")
+            if isinstance(method, str) and method.strip():
+                result["last_fight_method"] = method.strip()
 
     return result
 
@@ -677,7 +739,7 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                 # bug to fix; a confirmed absence in the source itself.
 
                 if attempt_athlete_detail and eventlog_ref:
-                    physical.update(_fetch_espn_last_fight_info(eventlog_ref))
+                    physical.update(_fetch_espn_last_fight_info(eventlog_ref, athlete_id))
 
                 existing_row = fighters[fighters["name"] == name]
                 method_cols = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
