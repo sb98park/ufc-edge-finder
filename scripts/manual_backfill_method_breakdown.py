@@ -39,6 +39,11 @@ MANUAL_DATA = {
     "Mike Davis":       (8, 2, 2, 0, 1, 2),    # 12-3
     "Abdul Hussein":    (5, 9, 1, 0, 1, 1),    # 15-2
     "Thomas Petersen":  (7, 1, 3, 3, 0, 1),    # 11-4
+    "Abubakar Vagaev":      (4, 1, 19, 3, 0, 1),  # 24-4
+    "Saygid Izagakhmaev":   (3, 13, 6, 0, 1, 2),  # 22-3
+    "Muhammad Said":        (6, 2, 1, 0, 0, 0),   # 9-0
+    "Ismael Bonfim":        (9, 4, 7, 2, 4, 0),   # 20-6
+    "Axel Sola":            (6, 1, 4, 0, 0, 1),   # 11-1-1
 }
 
 METHOD_COLS = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
