@@ -23,11 +23,17 @@ Then regenerate + push as usual (generate_site.py, commit, pull --no-rebase,
 push).
 
 Each tuple: (result, method, opponent, date)
-  result  : "W" or "L" (from this fighter's perspective)
+  result  : "W", "L", or "D" (from this fighter's perspective; "D" added this
+            round for Guskov's majority-draw result -- previously only W/L
+            existed anywhere in this codebase's last_fight_result convention,
+            but the template displays whatever string is here, so "D" renders
+            fine as "D by Decision (Majority)")
   method  : short human label matching results_fetcher's convention
   opponent: full name
   date    : ISO YYYY-MM-DD
-All nine verified directly against each fighter's Sherdog fight-history page.
+All 16 verified directly against Sherdog and cross-checked against multiple
+independent sources (UFC.com, ESPN, ufcstats.com, Tapology, Wikipedia, news
+coverage) given some conflicting third-party data encountered along the way.
 """
 import pandas as pd
 
@@ -44,6 +50,20 @@ MANUAL_LAST_FIGHT = {
     "Thomas Petersen":    ("W", "Decision (Majority)",  "Guilherme Pat",    "2026-04-04"),
     "Steve Erceg":        ("W", "Decision (Unanimous)", "Tim Elliott",      "2026-05-02"),
     "Rizvan Kuniev":      ("W", "Decision (Unanimous)", "Jailton Almeida",  "2026-02-07"),
+    # Added this round -- the 7 remaining fighters with blank last-fight data.
+    # Temirov note: third-party aggregators showed a Feb 2026 non-UFC "draw"
+    # vs Azat Maksum, but that fight does NOT appear anywhere in Sherdog's own
+    # fight-history table for him -- trusted Sherdog (the consistent source
+    # for every other fighter here) over the conflicting aggregator instead.
+    "Tyrell Fortune":     ("W", "Decision (Unanimous)", "Marcin Tybura",         "2026-03-28"),
+    "Ramazan Temirov":    ("W", "Decision (Unanimous)", "Charles Johnson",       "2025-03-01"),
+    "Brendson Ribeiro":   ("L", "Submission",           "Abdul Rakhman Yakhyaev","2026-04-04"),
+    "Magomed Tuchalov":   ("W", "KO (Punch)",           "Caio Machado",          "2026-03-28"),
+    "Islam Dulatov":      ("W", "KO (Punches)",         "Adam Fugitt",           "2025-07-19"),
+    # Turman: hasn't fought since 2023 (2+ year layoff) -- genuinely his most
+    # recent bout, not a data gap.
+    "Wellington Turman":  ("L", "Submission (Rear Naked Choke)", "Jared Gooden", "2023-12-02"),
+    "Bogdan Guskov":      ("D", "Decision (Majority)",  "Jan Blachowicz",        "2025-12-06"),
 }
 
 LAST_FIGHT_COLS = ["last_fight_result", "last_fight_method", "last_fight_opponent", "last_fight_date"]

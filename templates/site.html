@@ -1709,7 +1709,7 @@
     <tr><td>{{ comparison.a.sub_wins if comparison.a.sub_wins is not none else "—" }}-{{ comparison.a.sub_losses if comparison.a.sub_losses is not none else "—" }}</td><td>Sub</td><td>{{ comparison.b.sub_wins if comparison.b.sub_wins is not none else "—" }}-{{ comparison.b.sub_losses if comparison.b.sub_losses is not none else "—" }}</td></tr>
     <tr><td>{{ comparison.a.dec_wins if comparison.a.dec_wins is not none else "—" }}-{{ comparison.a.dec_losses if comparison.a.dec_losses is not none else "—" }}</td><td>Decision</td><td>{{ comparison.b.dec_wins if comparison.b.dec_wins is not none else "—" }}-{{ comparison.b.dec_losses if comparison.b.dec_losses is not none else "—" }}</td></tr>
     <tr><td>{{ comparison.a.age or "—" }}</td><td>Age</td><td>{{ comparison.b.age or "—" }}</td></tr>
-    <tr><td>{{ (comparison.a.height_in ~ '"') if comparison.a.height_in is not none else "—" }}</td><td>Height</td><td>{{ (comparison.b.height_in ~ '"') if comparison.b.height_in is not none else "—" }}</td></tr>
+    <tr><td>{{ comparison.a.height_display if comparison.a.height_display is not none else "—" }}</td><td>Height</td><td>{{ comparison.b.height_display if comparison.b.height_display is not none else "—" }}</td></tr>
     <tr><td>{{ (comparison.a.reach_in ~ '"') if comparison.a.reach_in is not none else "—" }}</td><td>Reach</td><td>{{ (comparison.b.reach_in ~ '"') if comparison.b.reach_in is not none else "—" }}</td></tr>
     <tr><td>{{ comparison.a.stance or "—" }}</td><td>Stance</td><td>{{ comparison.b.stance or "—" }}</td></tr>
     <tr><td>{{ comparison.a.style or "—" }}</td><td>Style</td><td>{{ comparison.b.style or "—" }}</td></tr>

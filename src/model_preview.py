@@ -258,11 +258,23 @@ def build_fight_preview(
             "factor pile would suggest."
         )
 
+    def _format_height(height_in):
+        """72.0 -> '6\\'0\"' ; 75.0 -> '6\\'3\"'. Rounds to the nearest inch since
+        ESPN's height field is whole inches in practice; None stays None so the
+        template's existing '—' fallback keeps working unchanged."""
+        if height_in is None:
+            return None
+        total_inches = round(height_in)
+        feet, inches = divmod(total_inches, 12)
+        return f"{feet}'{inches}\""
+
     def _fighter_card(name: str, row: pd.Series) -> dict:
+        height_in_val = float(row["height_in"]) if pd.notna(row.get("height_in")) else None
         return {
             "name": name,
             "age": int(row["age"]) if pd.notna(row.get("age")) else None,
-            "height_in": float(row["height_in"]) if pd.notna(row.get("height_in")) else None,
+            "height_in": height_in_val,
+            "height_display": _format_height(height_in_val),
             "reach_in": float(row["reach_in"]) if pd.notna(row.get("reach_in")) else None,
             "stance": row.get("stance") if pd.notna(row.get("stance")) else None,
             "style": classify_style(row),

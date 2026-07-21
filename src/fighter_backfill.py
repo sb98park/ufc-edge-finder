@@ -156,6 +156,23 @@ def _fetch_espn_athlete_detail(athlete_id: str) -> tuple[dict, str | None]:
             result["stance"] = c.strip().title()
             break
 
+    # DIAGNOSTIC (July 2026): user reported reach_in displaying identical to
+    # height_in for multiple fighters (e.g. both showing 75.0). Height and
+    # reach are extracted independently above from separate ESPN field names
+    # ('height'/'displayHeight' vs 'reach'/'displayReach') -- there is no
+    # fallback in this code that copies one into the other. So if they come
+    # out exactly equal, it's either a real coincidence, or ESPN's own API is
+    # returning matching values for both fields (a known pattern on sites
+    # that don't track reach separately and mirror height as a placeholder).
+    # Log the raw source values whenever this happens so it's confirmed one
+    # way or the other from a live run, rather than guessing at which.
+    if (result.get("height_in") is not None and result.get("reach_in") is not None
+            and result["height_in"] == result["reach_in"]):
+        print(f"[fighter_backfill] DIAGNOSTIC: height_in == reach_in ({result['height_in']}) for "
+              f"athlete_id={athlete_id}. Raw ESPN fields -- height={data.get('height')!r}, "
+              f"displayHeight={data.get('displayHeight')!r}, reach={data.get('reach')!r}, "
+              f"displayReach={data.get('displayReach')!r}")
+
     # Age: unconfirmed field names, tried against the same already-fetched response.
     age_val = data.get("age")
     if isinstance(age_val, int) and _PLAUSIBLE_AGE[0] <= age_val <= _PLAUSIBLE_AGE[1]:
@@ -187,7 +204,7 @@ def _fetch_espn_athlete_detail(athlete_id: str) -> tuple[dict, str | None]:
 _LAST_FIGHT_METHOD_LOGGED = 0
 
 
-def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None) -> dict:
+def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None, fighter_name=None) -> dict:
     """
     Pass 4 -- the most experimental piece in this module. 'eventLog' was
     seen exactly once, as an unexplored field name, in a real
@@ -208,7 +225,7 @@ def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None) -> dict:
         resp.raise_for_status()
         data = resp.json()
     except (requests.RequestException, ValueError) as e:
-        print(f"[fighter_backfill] eventLog fetch failed: {e}")
+        print(f"[fighter_backfill] eventLog fetch failed for {fighter_name or athlete_id}: {e}")
         return {}
 
     # Confirmed via real production logs (July 2026): the actual field
@@ -238,13 +255,13 @@ def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None) -> dict:
         items = inner if isinstance(inner, list) else None
 
     if not items or not isinstance(items, list):
-        print(f"[fighter_backfill] eventLog: no usable events list; skipping last-fight for this fighter.")
+        print(f"[fighter_backfill] eventLog: no usable events list for {fighter_name or athlete_id}; skipping last-fight.")
         return {}
 
     # Keep only completed bouts. 'played' is embedded on each item (no fetch).
     played_items = [it for it in items if isinstance(it, dict) and it.get("played") is True]
     if not played_items:
-        print(f"[fighter_backfill] eventLog: no played bouts found (only scheduled) -- nothing to fill.")
+        print(f"[fighter_backfill] eventLog: no played bouts found for {fighter_name or athlete_id} (only scheduled) -- likely a UFC debut with no prior UFC-tracked history; nothing to fill.")
         return {}
 
     # We only have this one page of items (pageIndex 1). That's fine: the most
@@ -274,7 +291,7 @@ def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None) -> dict:
         if isinstance(d, str) and len(d) >= 10:
             dated.append((d[:10], it))
     if not dated:
-        print(f"[fighter_backfill] eventLog: couldn't resolve any event dates -- skipping last-fight.")
+        print(f"[fighter_backfill] eventLog: couldn't resolve any event dates for {fighter_name or athlete_id} -- skipping last-fight.")
         return {}
     dated.sort(key=lambda t: t[0], reverse=True)
     last_date, last_item = dated[0]
@@ -739,7 +756,7 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                 # bug to fix; a confirmed absence in the source itself.
 
                 if attempt_athlete_detail and eventlog_ref:
-                    physical.update(_fetch_espn_last_fight_info(eventlog_ref, athlete_id))
+                    physical.update(_fetch_espn_last_fight_info(eventlog_ref, athlete_id, name))
 
                 existing_row = fighters[fighters["name"] == name]
                 method_cols = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
