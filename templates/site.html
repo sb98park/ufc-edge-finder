@@ -391,8 +391,12 @@
   .event-summary-value.negative { color: var(--red); }
   .event-summary-value.gold { color: #f0d97a; font-size: 17px; }
   .event-summary-label { font-size: 8.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
-  .track-record-headline { font-size: 24px; font-weight: 800; font-family: var(--font-display); }
+  .track-record-headline { font-size: 24px; font-weight: 800; font-family: var(--font-display); margin-bottom: 6px; }
   .track-record-headline span { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .track-record-kicker {
+    font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.6px; margin-bottom: 3px;
+  }
   .sparkline-svg { display: block; }
   .track-record-breakdown { margin-top: 8px; }
   .track-record-conf-row {
@@ -437,6 +441,7 @@
   .result-stats-block { margin: 4px 0 16px; padding: 14px; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; }
   .result-stats-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 10px; }
   .donut-row { display: flex; justify-content: space-around; margin-bottom: 14px; }
+  .donut-row.confidence-donut-row { margin-top: 8px; margin-bottom: 22px; }
   .donut-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .donut-name { font-size: 11px; font-weight: 700; color: var(--text); }
   .donut-caption { font-size: 10px; color: var(--muted); }
@@ -485,7 +490,7 @@
   }
   .lock-record-badge .clv-badge-label { color: #d4af37; }
   .lock-record-value { color: #f0d97a; }
-  .accuracy-split-row-3 { flex-wrap: wrap; gap: 10px; row-gap: 12px; }
+  .accuracy-split-row-3 { flex-wrap: wrap; gap: 10px; row-gap: 12px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--border); }
   .accuracy-split-row-3 .clv-badge { flex: 1 1 28%; min-width: 100px; padding: 12px 10px; }
   .accuracy-split-row-3 .clv-badge-label { font-size: 9.5px; }
   .accuracy-split-row-3 .clv-badge-value { font-size: 22px; }
@@ -1442,8 +1447,11 @@
   <div class="track-record-card">
     {% if track_record %}
     <div class="seg-pane active" id="tr-overall">
+      <div class="track-record-kicker">Overall Record</div>
       <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span class="countup">({{ track_record.accuracy_pct }}%)</span></div>
     {% if track_record.by_confidence %}
+    <div class="baseline-title" style="margin-top: 14px;">Accuracy by Pick Confidence</div>
+    <div class="baseline-caption" style="margin-bottom: 6px;">How often the model's own stated conviction level (High/Medium/Low) matched the actual result.</div>
     <div class="donut-row confidence-donut-row">
       {% for label, stats in track_record.by_confidence.items() %}
       {% set tier_color = {'High Confidence': '#3ddc84', 'Medium Confidence': '#e8c766', 'Low Confidence': '#8a8f9a'}[label] %}
