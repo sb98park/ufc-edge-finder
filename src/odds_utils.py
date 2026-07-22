@@ -65,31 +65,71 @@ def remove_vig_two_way(prob_a: float, prob_b: float) -> tuple[float, float]:
 
 
 # Typical UFC moneyline overround on DraftKings/FanDuel. This is a rough,
-# named ESTIMATE, not a per-book/per-fight measurement -- real books don't
-# split their margin evenly or proportionally (favorite-longshot bias means
-# they usually shade favorites more than dogs), so this deliberately simple
-# proportional model won't reproduce any specific book's exact posted line.
-# It's the user's explicit choice to show book-style (vig-included) odds
-# instead of Polymarket's near-vig-free raw probability -- this constant is
-# what makes that conversion look like a typical book line rather than a
-# no-vig "fair" price. Reverse-engineered from one real DK moneyline as a
-# sanity check (implied a ~4.3% overround) -- tune this if better data on
-# actual UFC moneyline vig shows up later.
+# named ESTIMATE, not a per-book/per-fight measurement -- real books use
+# some discretionary/round-number pricing on top of any formula, especially
+# for very short favorites, so this won't reproduce any specific book's
+# exact posted line. It's the user's explicit choice to show book-style
+# (vig-included) odds instead of Polymarket's near-vig-free raw probability
+# -- this constant is the TOTAL vig budget the power-method split (below)
+# allocates asymmetrically between favorite and underdog. Reverse-engineered
+# from real DK moneylines as a sanity check (~4.3% overround, consistent
+# across both a moderate 62/38 fight and a lopsided 90.5/9.5 one) -- tune
+# this if better data on actual UFC moneyline vig shows up later.
 DEFAULT_BOOK_OVERROUND = 0.045
 
 
 def add_estimated_vig(prob_a: float, prob_b: float, overround: float = DEFAULT_BOOK_OVERROUND) -> tuple[float, float]:
     """
     Inverse of remove_vig_two_way: takes a fair pair (should sum to ~1) and
-    proportionally inflates both sides so they sum to (1 + overround),
-    approximating what a real sportsbook's vig-inclusive prices would look
-    like. Normalizes the input first (in case it doesn't sum to exactly 1
-    due to snapshot staleness/noise), so the output always sums to exactly
-    (1 + overround) regardless of minor input drift.
+    inflates both sides so they sum to (1 + overround), approximating what a
+    real sportsbook's vig-inclusive prices would look like.
+
+    Uses the POWER METHOD, not simple proportional scaling: raises each
+    probability to a shared exponent m < 1 (solved per-pair via bisection so
+    the pair sums to exactly the target), rather than multiplying both by
+    the same factor. This matters because of a real bug found in production:
+    proportional scaling multiplies BOTH sides by the same factor, but the
+    American-odds formula (-100*p/(1-p)) has a 1/(1-p) term that blows up
+    non-linearly as p->1 -- so a fixed proportional bump to an already-huge
+    favorite (e.g. 90%) shrinks its (1-p) denominator by a much larger
+    RELATIVE amount than it does for a moderate favorite, producing wildly
+    exaggerated odds (a real 90.5% favorite came out -1742 instead of a
+    realistic ~-900). Real sportsbooks don't actually split vig this way --
+    they exhibit "favorite-longshot bias": heavy favorites get barely any
+    extra juice (nobody wants to bet a -1700 favorite, so books keep it
+    near its fair price), while underdogs absorb almost all of the margin.
+    x^m for m<1 is concave, so it inflates SMALL probabilities proportionally
+    more than large ones -- which reproduces this real asymmetry naturally,
+    without needing separate rules for "close" vs. "lopsided" fights.
+
+    Verified against 2 real DraftKings lines: a moderate 62/38 fight landed
+    within a couple points of the real -180/+150 line; a lopsided 90.5/9.5
+    fight came out far closer to the real -900/+600 line than the old
+    proportional model's wildly-inflated -1742/+907. Not exact for extreme
+    favorites -- real books also use some discretionary/round-number pricing
+    on very short prices that no smooth formula fully replicates -- but the
+    right shape and much closer in magnitude.
     """
     fair_a, fair_b = remove_vig_two_way(prob_a, prob_b)
-    factor = 1.0 + overround
-    return fair_a * factor, fair_b * factor
+    target = 1.0 + overround
+    # Degenerate edge cases: a probability already at/near 0 or 1 can't be
+    # meaningfully exponentiated toward a higher sum (0^m stays 0 for any
+    # m>0, and there's no valid solution) -- fall back to proportional
+    # scaling for just that pair rather than looping forever or dividing by
+    # zero. Vanishingly rare for real fight probabilities.
+    if fair_a <= 0.0 or fair_a >= 1.0 or fair_b <= 0.0 or fair_b >= 1.0:
+        factor = target
+        return fair_a * factor, fair_b * factor
+    lo, hi = 0.01, 1.0
+    for _ in range(60):  # bisection converges to far more precision than needed well within 60 steps
+        mid = (lo + hi) / 2.0
+        total = fair_a ** mid + fair_b ** mid
+        if total > target:
+            lo = mid
+        else:
+            hi = mid
+    m = (lo + hi) / 2.0
+    return fair_a ** m, fair_b ** m
 
 
 def format_american_odds(value) -> str:
