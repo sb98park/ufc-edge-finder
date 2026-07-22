@@ -576,6 +576,8 @@ def main():
             return market
         if market.startswith("Method: "):
             return f"{fighter} by {market[len('Method: '):]}"
+        if market.startswith("Round Betting: "):
+            return f"{fighter} — {market[len('Round Betting: '):]}"
         return market
 
     def short_market_label(market):
@@ -588,7 +590,7 @@ def main():
         """
         if not market:
             return market
-        for prefix in ("Method: ", "Fight Outcome: "):
+        for prefix in ("Method: ", "Fight Outcome: ", "Round Betting: "):
             if market.startswith(prefix):
                 return market[len(prefix):]
         return market

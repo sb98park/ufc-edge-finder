@@ -86,37 +86,61 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
 
     method_loss_col = {"KO/TKO": "ko_losses", "SUB": "sub_losses", "DEC": "dec_losses"}
 
-    for _, row in props.iterrows():
-        stats = fighters_df[fighters_df["name"] == row["selection"]]
-        if stats.empty:
-            continue
-        f = stats.iloc[0]
+    def _blended_method_prob(f, opp_stats, method: str) -> float:
+        """
+        One method's blended probability (divisional prior -> own career
+        rate -> this specific opponent's vulnerability to that method),
+        pulled out of the main loop so FINISH can call it twice (once for
+        KO/TKO, once for SUB) and sum the results, rather than duplicating
+        the blend logic inline.
+        """
         total_wins = max(int(f["wins"]), 1)
-
         rate_map = {
             "KO/TKO": _get(f, "ko_wins", 0) / total_wins,
             "SUB": _get(f, "sub_wins", 0) / total_wins,
             "DEC": _get(f, "dec_wins", 0) / total_wins,
         }
-        own_rate = rate_map.get(row["selection_method"])
-        if own_rate is None:
+        own_rate = rate_map[method]
+        divisional_prior = divisional_priors.get(f["weight_class"], {}).get(method, own_rate)
+        opp_vulnerability = own_rate  # fallback if opponent data is missing
+        if opp_stats is not None and not opp_stats.empty:
+            opp = opp_stats.iloc[0]
+            opp_losses = max(int(opp["losses"]), 1) if opp["losses"] else 0
+            if opp_losses:
+                opp_vulnerability = opp[method_loss_col[method]] / opp_losses
+        return blend_method_probability(divisional_prior, own_rate, opp_vulnerability, total_wins)
+
+    for _, row in props.iterrows():
+        stats = fighters_df[fighters_df["name"] == row["selection"]]
+        if stats.empty:
             continue
+        f = stats.iloc[0]
 
         # find the opponent to factor in their specific vulnerability
         opponent_name = row["fighter_b"] if row["selection"] == row["fighter_a"] else row["fighter_a"]
         opp_stats = fighters_df[fighters_df["name"] == opponent_name]
 
-        divisional_prior = divisional_priors.get(f["weight_class"], {}).get(row["selection_method"], own_rate)
-
-        opp_vulnerability = own_rate  # fallback if opponent data is missing
-        if not opp_stats.empty:
-            opp = opp_stats.iloc[0]
-            opp_losses = max(int(opp["losses"]), 1) if opp["losses"] else 0
-            if opp_losses:
-                col = method_loss_col[row["selection_method"]]
-                opp_vulnerability = opp[col] / opp_losses
-
-        model_p = blend_method_probability(divisional_prior, own_rate, opp_vulnerability, total_wins)
+        if row["selection_method"] == "FINISH":
+            # "Wins by finish" = KO/TKO or SUB -- these are mutually
+            # exclusive outcomes for a single fight, so the combined
+            # probability is a straight sum of the two independently-
+            # blended method probabilities, not a new model. Reuses 100%
+            # of the same prior-informed blend already trusted for the
+            # individual KO/SUB props, rather than inventing a separate
+            # "finish" prior from scratch.
+            model_p = _blended_method_prob(f, opp_stats, "KO/TKO") + _blended_method_prob(f, opp_stats, "SUB")
+            model_p = min(0.97, model_p)  # same sanity ceiling style used elsewhere in this module
+        else:
+            total_wins = max(int(f["wins"]), 1)
+            rate_map = {
+                "KO/TKO": _get(f, "ko_wins", 0) / total_wins,
+                "SUB": _get(f, "sub_wins", 0) / total_wins,
+                "DEC": _get(f, "dec_wins", 0) / total_wins,
+            }
+            own_rate = rate_map.get(row["selection_method"])
+            if own_rate is None:
+                continue
+            model_p = _blended_method_prob(f, opp_stats, row["selection_method"])
 
         imp = american_to_implied_prob(row["odds_american"])
 
@@ -125,6 +149,63 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
             "fighter": row["selection"],
             "opponent": opponent_name,
             "market": f"Method: {row['selection_method']}",
+            "odds_american": row["odds_american"],
+            "model_prob": round(model_p, 3),
+            "book_fair_prob": round(imp, 3),  # not devigged (single-sided prop)
+            "edge_pct": round(edge_percent(model_p, imp), 2),
+            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
+            "clob_token_id": row.get("clob_token_id"),
+        })
+
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).sort_values("edge_pct", ascending=False).reset_index(drop=True)
+
+
+def compute_round_betting_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Fighter-specific "wins in round N" props. Deliberately scoped to Round 1
+    ONLY, and deliberately simpler than compute_method_edges above -- there
+    is real backfilled data for first_round_finish_pct (career rate of a
+    fighter's wins ending specifically in round 1), but no equivalent
+    divisional prior or opponent-vulnerability-to-early-finish signal exists
+    anywhere in this dataset. Rather than invent one to make the blend look
+    as rich as the Method market's, this uses the one real signal directly
+    and skips (no edge produced -- not a guess) whenever it's missing for a
+    fighter. Round 2+ selections are skipped entirely for the same reason:
+    no real per-round data exists to back a Round 2 or Round 3 estimate,
+    and fabricating one would misrepresent how much the model actually
+    knows. If per-round career data becomes available later, this is the
+    function to extend -- not to replace.
+    """
+    rows = []
+    props = upcoming_df[upcoming_df["market"] == "RoundBetting"]
+
+    for _, row in props.iterrows():
+        if str(row["selection_method"]) != "1":
+            continue  # Round 2+ -- no real data to back an estimate, see docstring
+
+        # selection is "<Fighter> Round 1" -- match against whichever of
+        # fighter_a/fighter_b the selection text actually starts with,
+        # rather than assuming position, since DK's outcome ordering isn't
+        # guaranteed to put fighter_a first.
+        fighter_name = row["fighter_a"] if str(row["selection"]).startswith(str(row["fighter_a"])) else row["fighter_b"]
+        stats = fighters_df[fighters_df["name"] == fighter_name]
+        if stats.empty:
+            continue
+        f = stats.iloc[0]
+        if "first_round_finish_pct" not in f or pd.isna(f["first_round_finish_pct"]):
+            continue  # no real signal for this fighter -- skip rather than guess
+
+        model_p = float(f["first_round_finish_pct"])
+        opponent_name = row["fighter_b"] if fighter_name == row["fighter_a"] else row["fighter_a"]
+        imp = american_to_implied_prob(row["odds_american"])
+
+        rows.append({
+            "fight_id": row["fight_id"],
+            "fighter": fighter_name,
+            "opponent": opponent_name,
+            "market": "Round Betting: Round 1",
             "odds_american": row["odds_american"],
             "model_prob": round(model_p, 3),
             "book_fair_prob": round(imp, 3),  # not devigged (single-sided prop)
@@ -307,6 +388,7 @@ def find_all_edges(
         compute_method_edges(upcoming_df, fighters_df),
         compute_total_rounds_edges(upcoming_df, fighters_df),
         compute_goes_the_distance_edges(upcoming_df, fighters_df),
+        compute_round_betting_edges(upcoming_df, fighters_df),
     ]
     frames = [f for f in frames if not f.empty]
     if not frames:

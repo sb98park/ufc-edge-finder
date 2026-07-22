@@ -68,10 +68,26 @@ CATEGORY_MAP = {
     "fight result": "Moneyline",
     "method of victory": "Method",
     "how will the fight end": "Method",
+    # "Wins by finish" reuses the Method pipeline below -- structurally it's
+    # the same shape as KO/TKO, SUB, DEC (a fighter + an outcome), just a
+    # 4th outcome value ("FINISH" = KO/TKO or SUB combined). DK's exact
+    # title for this market varies; these are reasonable guesses based on
+    # common industry naming, not a verified live scrape. See the
+    # DIAGNOSTIC print below for what to check if a real run reports zero
+    # Finish props.
+    "wins inside the distance": "Method",
+    "wins by finish": "Method",
+    "inside the distance": "Method",
     "total rounds": "TotalRounds",
     "round total": "TotalRounds",
     "go the distance": "GoesTheDistance",
     "fight to a decision": "GoesTheDistance",
+    # Round betting: fighter-specific "wins in round N". Same caveat as
+    # above -- guessed keywords, needs live confirmation.
+    "round betting": "RoundBetting",
+    "method of victory & round": "RoundBetting",
+    "method & round": "RoundBetting",
+    "which round": "RoundBetting",
 }
 
 METHOD_LABEL_MAP = {
@@ -80,7 +96,23 @@ METHOD_LABEL_MAP = {
     "submission": "SUB",
     "decision": "DEC",
     "points": "DEC",
+    # Finish-market outcomes: DK labels this market's two sides something
+    # like "<Fighter> Inside the Distance" / "<Fighter> by Decision" -- the
+    # "decision" side already matches the DEC key above, so it's correctly
+    # excluded here (that side is redundant with the existing DEC prop and
+    # not something compute_method_edges needs to see twice).
+    "inside the distance": "FINISH",
+    "wins by finish": "FINISH",
+    "by finish": "FINISH",
 }
+
+# Bounded, deduped diagnostic: logs any offerCategory name that didn't match
+# CATEGORY_MAP, once per unique name per run. If a live scrape reports zero
+# Method:FINISH or RoundBetting props, check this log for DK's actual
+# category title text and add it to CATEGORY_MAP above -- same
+# diagnostic-first approach used for the ESPN eventLog schema discovery
+# (never guess at an unseen structure twice when a real log can confirm it).
+_unmatched_categories_logged = set()
 
 
 def _normalize_method_label(label: str) -> str | None:
@@ -103,12 +135,21 @@ def parse_eventgroup(eventgroup_json: dict) -> list[dict]:
 
     for category in event_group.get("offerCategories", []):
         category_name = category.get("name", "")
-        market_key = None
-        for keyword, mapped in CATEGORY_MAP.items():
-            if keyword in category_name.lower():
-                market_key = mapped
-                break
+        # Pick the LONGEST matching keyword, not the first one found in dict
+        # order -- "method of victory" is a substring of "method of victory
+        # & round", so first-match-wins would always resolve the more
+        # specific Round Betting category to the shorter Method keyword
+        # instead (a real bug caught in testing). Longest-match is specific-
+        # match here since every CATEGORY_MAP keyword is a literal phrase,
+        # not a pattern with independent wildcards.
+        matches = [(keyword, mapped) for keyword, mapped in CATEGORY_MAP.items() if keyword in category_name.lower()]
+        market_key = max(matches, key=lambda kv: len(kv[0]))[1] if matches else None
         if market_key is None:
+            if category_name and category_name not in _unmatched_categories_logged:
+                _unmatched_categories_logged.add(category_name)
+                print(f"[draftkings_scraper] DIAGNOSTIC: uncategorized offer category "
+                      f"{category_name!r} -- not in CATEGORY_MAP, skipped. If this is actually "
+                      f"Wins-by-Finish or Round Betting, add its real title text to CATEGORY_MAP.")
             continue  # a category we're not modeling yet (futures, parlays, etc.)
 
         for subcat_desc in category.get("offerSubcategoryDescriptors", []):
@@ -144,8 +185,20 @@ def parse_eventgroup(eventgroup_json: dict) -> list[dict]:
                             if method is None:
                                 continue
                             selection_method = method
-                            # label is usually "<Fighter> by <Method>"
-                            selection = label.split(" by ")[0].strip()
+                            # DK's exact label format varies: KO/SUB/DEC outcomes
+                            # are usually "<Fighter> by <Method>", but the
+                            # Finish-market outcome is more often "<Fighter>
+                            # Inside the Distance" (no "by"). Try both splits
+                            # rather than assuming one -- falls back to the
+                            # whole label if neither separator is present,
+                            # same as the pre-existing behavior.
+                            if " by " in label:
+                                selection = label.split(" by ")[0].strip()
+                            elif method == "FINISH":
+                                for sep in (" Inside the Distance", " Wins by Finish", " Inside Distance"):
+                                    if sep.lower() in label.lower():
+                                        selection = label[:label.lower().index(sep.lower())].strip()
+                                        break
                         elif market_key == "TotalRounds":
                             # Capture the specific line (e.g. "Over 2.5") so multiple
                             # round lines on the same fight (1.5, 2.5, 3.5) don't collide
@@ -156,6 +209,20 @@ def parse_eventgroup(eventgroup_json: dict) -> list[dict]:
                             selection_method = line  # stash the numeric line for grouping downstream
                         elif market_key == "GoesTheDistance":
                             selection = "Goes The Distance" if "yes" in label.lower() or "distance" in label.lower() else "Ends In Finish"
+                        elif market_key == "RoundBetting":
+                            # Expected label shape: "<Fighter> - Round N" or
+                            # "<Fighter> Round N" (fighter-specific, unlike
+                            # TotalRounds which is a fight-level over/under).
+                            # Guessed separators, same caveat as the Finish
+                            # market above -- verify against a real DIAGNOSTIC
+                            # log if this comes back empty on a live scrape.
+                            round_match = re.search(r"round\s*(\d+)", label.lower())
+                            if round_match is None:
+                                continue  # can't identify a round number -- skip rather than guess
+                            round_num = round_match.group(1)
+                            fighter_part = re.split(r"\s*-\s*round|\s+round", label, flags=re.IGNORECASE)[0].strip()
+                            selection = f"{fighter_part} Round {round_num}"
+                            selection_method = round_num  # numeric round, mirrors TotalRounds' line stash
 
                         rows.append({
                             "fight_id": event_id,

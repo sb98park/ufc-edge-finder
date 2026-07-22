@@ -134,6 +134,42 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
     if not stats or not stats["method_data_known"]:
         return base
 
+    if method == "FINISH":
+        # "Wins by finish" = KO/TKO or SUB combined -- own_rate here is the
+        # SAME finish_rate _fighter_stats already computes elsewhere (used
+        # for the moneyline write-up too), not a new stat. Written
+        # separately from the KO/SUB/DEC branch below since neither
+        # rate_key/loss_key/win_col has a FINISH entry -- this is a genuine
+        # different shape of prop (combined method), not just a 4th value
+        # slotting into the same per-method lookup tables.
+        own_rate = stats["finish_rate"]
+        opponent = row.get("opponent")
+        opp_stats = _fighter_stats(fighters_df, opponent) if opponent else None
+        opp_vulnerability = (
+            opp_stats["ko_loss_rate"] + opp_stats["sub_loss_rate"]
+            if opp_stats and opp_stats["method_data_known"] else None
+        )
+        if opp_vulnerability is not None and opp_vulnerability >= 0.6:
+            detail = (
+                f" {opponent} has been finished (by any method) in {opp_vulnerability*100:.0f}% of "
+                f"career losses -- combined with {row['fighter']}'s own {own_rate*100:.0f}% career "
+                f"finish rate, this is a matchup where the fight ending early is the more likely shape, "
+                f"not the exception."
+            )
+        elif own_rate >= 0.7:
+            detail = (
+                f" {row['fighter']} finishes {own_rate*100:.0f}% of career wins -- a genuine finisher, "
+                f"which is what a safer 'wins by finish' pick leans on instead of betting a single "
+                f"method (KO or Sub alone) and being wrong about which one."
+            )
+        else:
+            detail = (
+                f" A blend of {row['fighter']}'s {own_rate*100:.0f}% career finish rate and "
+                f"{f'{opponent}' if opponent else 'the opponent'}'s own durability -- covering both "
+                f"finish methods here is the safer read than picking KO or Submission alone."
+            )
+        return base + detail
+
     rate_key = {"KO/TKO": "ko_rate", "SUB": "sub_rate", "DEC": "dec_rate"}.get(method)
     loss_key = {"KO/TKO": "ko_loss_rate", "SUB": "sub_loss_rate", "DEC": "dec_loss_rate"}.get(method)
     win_col = {"KO/TKO": "ko_wins", "SUB": "sub_wins", "DEC": "dec_wins"}.get(method)
@@ -198,6 +234,49 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
             f"has historically fared against that specific type of finish."
         )
 
+    return base + detail
+
+
+def explain_round_betting(row: dict, fighters_df: pd.DataFrame) -> str:
+    """
+    Round 1 only (see compute_round_betting_edges' docstring for why) --
+    built on the one real signal available, first_round_finish_pct, rather
+    than a full multi-factor blend like explain_method has. Explicitly
+    frames the case this prop exists for: a heavy favorite whose moneyline
+    price offers no real value, but who has a genuine fast-finish tendency
+    worth a separate look.
+    """
+    stats = _fighter_stats(fighters_df, row["fighter"])
+    base = (
+        f"{row['fighter']} to win in Round 1 is priced at {format_american_odds(row['odds_american'])} "
+        f"({row['book_fair_prob']*100:.0f}% implied), while the model estimates {row['model_prob']*100:.0f}% "
+        f"({row['edge_pct']:+.1f}% edge)."
+    )
+    if not stats or stats["first_round_finish_pct"] is None:
+        return base
+
+    rate = stats["first_round_finish_pct"]
+    # NOTE: deliberately NOT trying to detect "is this fighter a heavy
+    # moneyline favorite" here -- row["book_fair_prob"] is this ROUND-1
+    # PROP's own implied probability (always long odds, since winning
+    # specifically in round 1 is inherently rarer than winning at all), not
+    # the fighter's overall fight-win probability. This function doesn't
+    # have clean access to that separate number without threading extra
+    # context through explain_edge's otherwise-uniform (row, fighters_df)
+    # dispatcher signature, so rather than guess with the wrong number,
+    # this sticks to the one real signal that's actually available.
+    if rate >= 0.5:
+        detail = (
+            f" {row['fighter']} has ended {rate*100:.0f}% of career wins in round 1 -- a genuine "
+            f"fast-finish tendency worth a look here, especially for a fighter whose moneyline price "
+            f"alone may not offer much value."
+        )
+    else:
+        detail = (
+            f" {row['fighter']}'s {rate*100:.0f}% career rate of round-1 finishes is the only real "
+            f"signal behind this one -- no opponent-specific early-finish vulnerability is tracked yet, "
+            f"so treat this as a lighter-conviction read than the method-of-victory props."
+        )
     return base + detail
 
 
@@ -519,4 +598,6 @@ def explain_edge(row: dict, fighters_df: pd.DataFrame) -> str:
         return explain_total_rounds(row, fighters_df)
     elif row["market"].startswith("Fight Outcome"):
         return explain_goes_the_distance(row, fighters_df)
+    elif row["market"].startswith("Round Betting"):
+        return explain_round_betting(row, fighters_df)
     return f"{row['fighter']} — {row['market']}: {row['edge_pct']:+.1f}% edge vs. the market."
