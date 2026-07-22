@@ -43,6 +43,18 @@ MANUAL_DATA = {
     "Muhammad Said":        (6, 2, 1, 0, 0, 0),   # 9-0
     "Ismael Bonfim":        (9, 4, 7, 2, 4, 0),   # 20-6
     "Axel Sola":            (6, 1, 4, 0, 0, 1),   # 11-1-1
+    # STUCK-bucket fighters researched July 2026 (both Combat Edge and
+    # Wikipedia had been exhausted by the automated pipeline before this;
+    # these were found via manual web research and cross-checked against
+    # Wikipedia's own infobox, each verified to sum exactly).
+    "Mateusz Rębecki":   (9, 7, 4, 2, 1, 2),    # 20-5
+    "Aleksandar Rakic":  (9, 1, 4, 3, 1, 2),    # 14-6
+    "Jan Blachowicz":    (9, 9, 11, 2, 2, 7),   # 29-11
+    "Ludovit Klein":     (9, 8, 7, 1, 2, 2),    # 24-5
+    "Diego Ferreira":    (5, 7, 7, 4, 0, 3),    # 19-7
+    "Daniel Rodriguez":  (9, 4, 7, 1, 1, 3),    # 20-5
+    "Alex Perez":        (7, 7, 12, 2, 6, 2),   # 26-10
+    "Uroš Medić":        (11, 2, 0, 1, 2, 0),   # 13-3 (perfect finish rate - never gone to a decision either way)
 }
 
 METHOD_COLS = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]

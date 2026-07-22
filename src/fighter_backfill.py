@@ -49,6 +49,7 @@ project's ESPN integration. Never raises.
 """
 
 import datetime as dt
+import os
 import re
 
 import pandas as pd
@@ -394,6 +395,28 @@ def _safe_set_cell(df: pd.DataFrame, row_idx, col: str, val):
         return df
 
 
+def _combat_edge_get(url: str, headers: dict, timeout: float):
+    """
+    Fetches a combat-edge.com URL, optionally routed through a Cloudflare
+    Worker relay (see cloudflare-worker/combat-edge-relay.js) instead of
+    hitting combat-edge.com directly. Only routes through the relay when
+    BOTH COMBAT_EDGE_RELAY_URL and COMBAT_EDGE_RELAY_TOKEN environment
+    variables are set (e.g. as GitHub Actions repo secrets) -- with
+    neither set, this behaves exactly like a plain requests.get() call,
+    so existing behavior is completely unchanged until the relay is
+    actually deployed and configured. This is a genuinely unverified
+    attempt at working around the GitHub-Actions-IP-range block (see the
+    Worker file's own docstring for the full reasoning) -- not a
+    guaranteed fix, just the most promising lead found so far.
+    """
+    relay_url = os.environ.get("COMBAT_EDGE_RELAY_URL")
+    relay_token = os.environ.get("COMBAT_EDGE_RELAY_TOKEN")
+    if relay_url and relay_token:
+        relayed = f"{relay_url}?token={requests.utils.quote(relay_token)}&url={requests.utils.quote(url, safe='')}"
+        return requests.get(relayed, timeout=timeout)
+    return requests.get(url, headers=headers, timeout=timeout)
+
+
 def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
     """
     Career-wide KO/submission/decision win-and-loss breakdown, via
@@ -429,7 +452,7 @@ def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
                   "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
 
     try:
-        directory_resp = requests.get(
+        directory_resp = _combat_edge_get(
             f"https://combat-edge.com/fighters/a-z/{first_letter}/",
             headers=ce_headers, timeout=REQUEST_TIMEOUT,
         )
@@ -459,7 +482,7 @@ def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
     profile_url = "https://combat-edge.com" + link_match.group(1)
 
     try:
-        profile_resp = requests.get(profile_url, headers=ce_headers, timeout=REQUEST_TIMEOUT)
+        profile_resp = _combat_edge_get(profile_url, headers=ce_headers, timeout=REQUEST_TIMEOUT)
         profile_resp.raise_for_status()
         profile_html = profile_resp.text
     except requests.HTTPError as e:

@@ -48,6 +48,12 @@ jobs:
       - name: Generate site
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          # Both optional -- unset until the Cloudflare Worker relay
+          # (cloudflare-worker/combat-edge-relay.js) is deployed and these
+          # two repo secrets are added. Until then, Combat Edge requests
+          # behave exactly as before (direct, unrelayed).
+          COMBAT_EDGE_RELAY_URL: ${{ secrets.COMBAT_EDGE_RELAY_URL }}
+          COMBAT_EDGE_RELAY_TOKEN: ${{ secrets.COMBAT_EDGE_RELAY_TOKEN }}
         run: python generate_site.py
 
       - name: Commit and push if changed
