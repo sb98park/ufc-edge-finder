@@ -119,6 +119,19 @@ _METHOD_TO_PREFIX = {
     "Decision - Unanimous": "dec",
     "Decision - Split": "dec",
     "Decision - Majority": "dec",
+    # Disqualification results don't fit KO/Sub/Dec, but folding them into
+    # "dec" (closest bucket -- ends by ruling, not a finish) keeps the
+    # invariant that ko_wins+sub_wins+dec_wins always equals wins intact.
+    # Added after a real audit found this exact gap: wins/losses increment
+    # unconditionally below regardless of whether the method string maps to
+    # anything, but the {prefix}_wins/{prefix}_losses increment only fires
+    # when it does -- a DQ result (or any future unrecognized method string)
+    # would silently increment the total while leaving the method breakdown
+    # one short, with no error and no diagnostic. Confirmed via a real
+    # roster audit: Dustin Stoltzfus and Song Yadong both had exactly this
+    # 1-off gap, both traced to a DQ result in their real fight history.
+    "Disqualification": "dec",
+    "DQ": "dec",
 }
 _PREFIX_TO_LAST_FIGHT_METHOD = {"ko": "KO/TKO", "sub": "SUB", "dec": "DEC"}
 
@@ -147,6 +160,13 @@ def sync_fighter_records(fighters_df: pd.DataFrame, fighter_a: str, fighter_b: s
     """
     loser = fighter_b if winner == fighter_a else fighter_a
     prefix = _METHOD_TO_PREFIX.get(method)
+    if prefix is None:
+        print(f"[results_fetcher] DIAGNOSTIC: method {method!r} doesn't map to ko/sub/dec -- "
+              f"wins/losses will still increment correctly below, but the method breakdown for "
+              f"{winner} and {loser} will silently fall 1 behind their real win/loss count unless "
+              f"this method string gets added to _METHOD_TO_PREFIX. Add it there rather than let "
+              f"this drift accumulate (this is exactly the bug a real roster audit found and fixed "
+              f"for Disqualification results).")
     last_fight_method = _PREFIX_TO_LAST_FIGHT_METHOD.get(prefix, method)
 
     for fighter, opponent, result in [(winner, loser, "W"), (loser, winner, "L")]:

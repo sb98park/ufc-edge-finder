@@ -2444,6 +2444,9 @@
       <div class="model-limitations-notice">
         ⚠️ <strong>Honest data limitations:</strong> strike-volume (SLpM/SApM), control-time percentage, and missed-weight history are new schema fields the model is built to use, but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather than guess) until real data backs them. Everything else covered in this section is live and active.
       </div>
+      <div class="model-limitations-notice" style="margin-top:10px;">
+        📏 <strong>Reach sometimes matches height exactly.</strong> For roughly 1 in 7 tracked fighters, our source data lists reach identical to height down to the inch. We checked our own pipeline carefully — height and reach are pulled and validated completely independently, with no code path that copies one into the other — so this looks like a real quirk in the upstream data (some fighters' true reach genuinely isn't tracked, and it gets mirrored from height as a placeholder) rather than something we can correct on our end. Shown as-is rather than silently adjusted.
+      </div>
     </div>
   </div>
   </div>

@@ -35,7 +35,6 @@ MANUAL_DATA = {
     "Ramazan Temirov":  (11, 1, 7, 0, 1, 2),   # 19-3
     "Sam Patterson":    (6, 7, 1, 2, 0, 1),    # 14-3
     "Brendson Ribeiro": (9, 7, 1, 5, 3, 2),    # 17-10
-    "Magomed Tuchalov": (4, 1, 0, 0, 0, 0),    # 5-0
     "Mike Davis":       (8, 2, 2, 0, 1, 2),    # 12-3
     "Abdul Hussein":    (5, 9, 1, 0, 1, 1),    # 15-2
     "Thomas Petersen":  (7, 1, 3, 3, 0, 1),    # 11-4
