@@ -64,6 +64,34 @@ def remove_vig_two_way(prob_a: float, prob_b: float) -> tuple[float, float]:
     return prob_a / total, prob_b / total
 
 
+# Typical UFC moneyline overround on DraftKings/FanDuel. This is a rough,
+# named ESTIMATE, not a per-book/per-fight measurement -- real books don't
+# split their margin evenly or proportionally (favorite-longshot bias means
+# they usually shade favorites more than dogs), so this deliberately simple
+# proportional model won't reproduce any specific book's exact posted line.
+# It's the user's explicit choice to show book-style (vig-included) odds
+# instead of Polymarket's near-vig-free raw probability -- this constant is
+# what makes that conversion look like a typical book line rather than a
+# no-vig "fair" price. Reverse-engineered from one real DK moneyline as a
+# sanity check (implied a ~4.3% overround) -- tune this if better data on
+# actual UFC moneyline vig shows up later.
+DEFAULT_BOOK_OVERROUND = 0.045
+
+
+def add_estimated_vig(prob_a: float, prob_b: float, overround: float = DEFAULT_BOOK_OVERROUND) -> tuple[float, float]:
+    """
+    Inverse of remove_vig_two_way: takes a fair pair (should sum to ~1) and
+    proportionally inflates both sides so they sum to (1 + overround),
+    approximating what a real sportsbook's vig-inclusive prices would look
+    like. Normalizes the input first (in case it doesn't sum to exactly 1
+    due to snapshot staleness/noise), so the output always sums to exactly
+    (1 + overround) regardless of minor input drift.
+    """
+    fair_a, fair_b = remove_vig_two_way(prob_a, prob_b)
+    factor = 1.0 + overround
+    return fair_a * factor, fair_b * factor
+
+
 def format_american_odds(value) -> str:
     """+230 for underdogs, -280 for favorites -- never a bare decimal."""
     v = int(round(float(value)))

@@ -492,7 +492,7 @@
   .lock-record-value { color: #f0d97a; }
   .accuracy-split-row-3 { flex-wrap: wrap; gap: 10px; row-gap: 12px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--border); }
   .accuracy-split-row-3 .clv-badge { flex: 1 1 28%; min-width: 100px; padding: 12px 10px; }
-  .accuracy-split-row-3 .clv-badge-label { font-size: 9.5px; }
+  .accuracy-split-row-3 .clv-badge-label { font-size: 8.5px; letter-spacing: 0.15px; white-space: nowrap; }
   .accuracy-split-row-3 .clv-badge-value { font-size: 22px; }
   .track-result-title { font-size: 13px; font-weight: 700; color: var(--accent); margin: 18px 0 8px; }
   .track-result-event-header {
@@ -977,6 +977,21 @@
   .chart-caption { font-size: 9.5px; color: #5a5f6a; margin-top: 5px; line-height: 1.4; }
   .chart-placeholder-text { font-size: 11.5px; color: var(--muted); text-align: left; padding: 8px 0; }
   .sparkline, .dual-chart { display: block; max-width: 100%; height: auto; }
+  /* Moneyline chart labels: American odds shown by default, raw % hidden;
+     body.pct-mode flips it. Class-based (not JS-recomputed) so it works
+     correctly even for charts inside not-yet-opened <details> accordions. */
+  .dual-chart .label-pct { display: none; }
+  .dual-chart .label-odds { display: inline; }
+  body.pct-mode .dual-chart .label-pct { display: inline; }
+  body.pct-mode .dual-chart .label-odds { display: none; }
+  .odds-format-toggle { display: flex; align-items: center; gap: 8px; margin: 2px 0 16px; flex-wrap: wrap; }
+  .odds-format-toggle-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .odds-format-pills { display: inline-flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 20px; padding: 2px; }
+  .odds-format-btn {
+    font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 18px; border: none;
+    background: transparent; color: var(--muted); cursor: pointer; font-family: inherit;
+  }
+  .odds-format-btn.active { background: var(--accent); color: #0a0c10; }
   details.chart-toggle {
     background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
     margin: 8px 0; overflow: hidden;
@@ -2205,6 +2220,13 @@
     <div class="event-name">{{ event.event_name }}</div>
     <div class="event-date">{{ event.event_date|friendly_date }}</div>
   </div>
+  <div class="odds-format-toggle">
+    <span class="odds-format-toggle-label">Moneyline movement:</span>
+    <div class="odds-format-pills" role="group" aria-label="Odds display format">
+      <button type="button" class="odds-format-btn active" data-format="odds" onclick="setOddsFormat('odds')">Odds</button>
+      <button type="button" class="odds-format-btn" data-format="pct" onclick="setOddsFormat('pct')">%</button>
+    </div>
+  </div>
   {%- set segs = [] -%}
   {%- for f in event.fights %}{% if f.segment_label not in segs %}{% set _ = segs.append(f.segment_label) %}{% endif %}{% endfor -%}
   {% if segs|length > 1 %}
@@ -3018,6 +3040,27 @@
           try { localStorage.setItem(storageKey, el.open ? 'open' : 'closed'); } catch (e) {}
         });
       });
+    })();
+
+    // Moneyline chart display format: American odds (default) vs raw %.
+    // A single global toggle controls every chart on the page at once via
+    // a body class -- CSS handles the actual show/hide (see .label-pct /
+    // .label-odds rules), so this only needs to flip the class, sync the
+    // pill buttons' active state, and remember the choice for next visit.
+    const ODDS_FORMAT_KEY = 'ufc-edge-finder-odds-format';
+
+    function setOddsFormat(format) {
+      document.body.classList.toggle('pct-mode', format === 'pct');
+      document.querySelectorAll('.odds-format-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.format === format);
+      });
+      try { localStorage.setItem(ODDS_FORMAT_KEY, format); } catch (e) {}
+    }
+
+    (function() {
+      let saved = null;
+      try { saved = localStorage.getItem(ODDS_FORMAT_KEY); } catch (e) {}
+      if (saved === 'pct') setOddsFormat('pct');
     })();
 
     // Scroll-triggered reveal: cards fade in as they enter view (not just

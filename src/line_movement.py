@@ -20,7 +20,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from src.odds_utils import american_to_decimal
+from src.odds_utils import american_to_decimal, add_estimated_vig, implied_prob_to_american, format_american_odds
 from src.polymarket_source import fetch_price_history
 from src.card_matcher import _normalize_name
 
@@ -216,14 +216,34 @@ def build_dual_line_chart_svg(
         if len(shown_gridlines) >= MAX_GRIDLINES:
             break
 
+    def _book_odds_label(pct_frac: float, complement_frac: float) -> str | None:
+        """
+        Safe book-style American odds label for a probability, given its
+        paired complement (real value for a legend endpoint, or 1-pct for a
+        gridline where no specific opponent probability applies). Returns
+        None on any edge case (0%, 100%, NaN) rather than raising -- a
+        missing odds label for one row is far better than breaking the
+        whole chart's generation over an edge value.
+        """
+        try:
+            vig_p, _ = add_estimated_vig(pct_frac, complement_frac)
+            return format_american_odds(implied_prob_to_american(min(0.995, vig_p)))
+        except (ValueError, ZeroDivisionError):
+            return None
+
     grid_svg = ""
     for pct in shown_gridlines:
         y = y_at(pct)
+        odds_label = _book_odds_label(pct, 1 - pct)
         grid_svg += (
             f'<line x1="{left_pad}" y1="{y:.1f}" x2="{left_pad + plot_w}" y2="{y:.1f}" '
             f'stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/>'
-            f'<text x="{left_pad - 6}" y="{y + 3:.1f}" font-size="9" fill="#8a8f9a" text-anchor="end">{round(pct*100)}%</text>'
+            f'<text class="label-pct" x="{left_pad - 6}" y="{y + 3:.1f}" font-size="9" fill="#8a8f9a" text-anchor="end">{round(pct*100)}%</text>'
         )
+        if odds_label:
+            grid_svg += (
+                f'<text class="label-odds" x="{left_pad - 6}" y="{y + 3:.1f}" font-size="9" fill="#8a8f9a" text-anchor="end">{odds_label}</text>'
+            )
 
     axis_svg = (
         f'<line x1="{left_pad}" y1="{top_pad}" x2="{left_pad}" y2="{top_pad + plot_h}" stroke="#3a3f4a" stroke-width="1"/>'
@@ -239,7 +259,7 @@ def build_dual_line_chart_svg(
 
     def render_line(points, color):
         if len(points) < 2:
-            return "", None
+            return "", None, None
         pts_sorted = sorted(points, key=lambda p: p[0])
         coords = " ".join(f"{x_at(t):.1f},{y_at(p):.1f}" for t, p in pts_sorted)
         last_t, last_p = pts_sorted[-1]
@@ -251,26 +271,43 @@ def build_dual_line_chart_svg(
             f'class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>'
             f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" class="chart-draw-endpoint"/>'
         )
-        return svg, round(last_p * 100)
+        return svg, round(last_p * 100), last_p
 
-    line_a_svg, pct_a = render_line(points_a, LINE_COLOR_A)
-    line_b_svg, pct_b = render_line(points_b, LINE_COLOR_B)
+    line_a_svg, pct_a, raw_a = render_line(points_a, LINE_COLOR_A)
+    line_b_svg, pct_b, raw_b = render_line(points_b, LINE_COLOR_B)
+
+    # Pair each side's raw probability with a real complement when both
+    # lines exist, falling back to 1-pct (matching the gridline treatment)
+    # when only one side has data -- same assumption already used elsewhere
+    # in this pipeline for implied/derived sides.
+    complement_a = raw_b if raw_b is not None else (1 - raw_a if raw_a is not None else None)
+    complement_b = raw_a if raw_a is not None else (1 - raw_b if raw_b is not None else None)
 
     legend_svg = ""
     ly = 10
     if pct_a is not None:
         short_name_a = name_a.split()[-1] + (" ~" if implied_a else "")
+        odds_a = _book_odds_label(raw_a, complement_a) if complement_a is not None else None
         legend_svg += (
             f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{LINE_COLOR_A}"/>'
-            f'<text x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_A}" text-anchor="end">{short_name_a} {pct_a}%</text>'
+            f'<text class="label-pct" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_A}" text-anchor="end">{short_name_a} {pct_a}%</text>'
         )
+        if odds_a:
+            legend_svg += (
+                f'<text class="label-odds" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_A}" text-anchor="end">{short_name_a} {odds_a}</text>'
+            )
         ly += 13
     if pct_b is not None:
         short_name_b = name_b.split()[-1] + (" ~" if implied_b else "")
+        odds_b = _book_odds_label(raw_b, complement_b) if complement_b is not None else None
         legend_svg += (
             f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{LINE_COLOR_B}"/>'
-            f'<text x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {pct_b}%</text>'
+            f'<text class="label-pct" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {pct_b}%</text>'
         )
+        if odds_b:
+            legend_svg += (
+                f'<text class="label-odds" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {odds_b}</text>'
+            )
 
     # Reveal mask: a rect covering the plot area that shrinks away via
     # transform:scaleX (anchored to the right edge, so it uncovers left to
