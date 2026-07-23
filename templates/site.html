@@ -1151,6 +1151,57 @@
     .account-role { font-size: 10px; padding: 3px 8px; }
     .account-logout { font-size: 10px; }
   }
+
+  /* ============================================================
+     DESKTOP LAYOUT (1024px+) -- left nav rail + persistent content
+     pane, replacing the mobile hub-card-grid/slide-to-detail pattern
+     with both always visible side by side. Everything above this
+     point in the stylesheet is the mobile-first baseline and stays
+     completely unchanged below 1024px -- this block only ADDS
+     desktop-specific rules, never overrides anything a narrower
+     viewport would see. Deliberately the low-risk version discussed
+     with the user: individual section content keeps its existing
+     width/design untouched, the only change is that the page no
+     longer wastes ~25%+ of a laptop screen on empty side margins.
+     ============================================================ */
+  @media (min-width: 1024px) {
+    body { max-width: 1400px; padding: 24px 32px; }
+    #app-shell { display: flex; align-items: flex-start; gap: 28px; }
+
+    /* Rail: same .hub-card elements as mobile, just restyled compact
+       and always visible (never slid away) in a fixed-width column
+       instead of a full-width stacked grid. */
+    #hub-view {
+      flex: 0 0 248px; display: flex !important; flex-direction: column; gap: 6px;
+      position: sticky; top: 24px;
+    }
+    .hub-card { padding: 10px 12px; gap: 10px; border-radius: 10px; }
+    .hub-card.featured { padding: 10px 12px; }
+    .hub-card-icon, .hub-card.featured .hub-card-icon { font-size: 18px; width: 20px; }
+    .hub-card-icon svg, .hub-card.featured .hub-card-icon svg { width: 18px; height: 18px; }
+    .hub-card-title { font-size: 13px; }
+    /* The big stat/matchup/location lines make sense as a large mobile
+       card but are too much detail for a slim rail item -- hide them
+       here rather than try to compress text that's meant to be read at
+       a glance from across a card grid. The label/title/count-badge
+       alone is enough context for a nav item you'll click into anyway. */
+    .hub-card-stat, .hub-card-matchup, .hub-card-location, .hub-card-sub { display: none; }
+    .hub-card-arrow { display: none; } /* no slide-forward affordance needed when the content is already visible beside it */
+    /* Active-section highlight -- only meaningful on desktop, where the
+       rail and its content are visible at the same time (on mobile you
+       navigate AWAY from the hub-card grid entirely, so highlighting
+       one item there would never be seen). */
+    .hub-card.rail-active { background: linear-gradient(145deg, #23283a, #1a1e28 65%); }
+    .hub-card.rail-active::before { width: 4px; }
+
+    /* Content pane: always visible (mobile JS toggles this via inline
+       style, but this media query wins regardless of that inline
+       value), same internal section width/design as mobile -- just no
+       longer squeezed into a centered 720px column on its own. */
+    #detail-view { flex: 1; min-width: 0; display: block !important; }
+    .detail-section { display: none; }
+    .detail-section.desktop-active { display: block !important; }
+  }
 </style>
 </head>
 <body>
@@ -1295,7 +1346,7 @@
         <div class="countdown-box-label">Sec</div>
       </div>
     </div>
-    <div class="live-header" id="live-header" style="display:none;" onclick="showSection('thisweekend')" role="button" tabindex="0" aria-label="View the live fight card">
+    <div class="live-header" id="live-header" style="display:none;" onclick="showSection('thisweekend')" data-section-nav="thisweekend" role="button" tabindex="0" aria-label="View the live fight card">
       <div class="live-header-macro">
         <span class="live-dot"></span> <span id="live-macro-text">LIVE NOW</span><span class="live-cta">view card →</span>
       </div>
@@ -1317,10 +1368,11 @@
   <div class="notice">{{ live_error }}</div>
   {% endif %}
 
+  <div id="app-shell">
   <div id="hub-view">
     <div class="hub-grid">
       {% if events %}
-      <div class="hub-card featured" style="--card-accent:#e10909" onclick="showSection('thisweekend')">
+      <div class="hub-card featured" style="--card-accent:#e10909" onclick="showSection('thisweekend')" data-section-nav="thisweekend">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Octagon cage">
             <defs><linearGradient id="icon-weekend" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1338,7 +1390,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       {% endif %}
-      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('track')">
+      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('track')" data-section-nav="track">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart">
             <defs><linearGradient id="icon-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1352,7 +1404,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('standout')">
+      <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('standout')" data-section-nav="standout">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame">
             <defs><linearGradient id="icon-standout" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1366,7 +1418,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('favorites')">
+      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('favorites')" data-section-nav="favorites">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond">
             <defs><linearGradient id="icon-favorites" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1380,7 +1432,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#8b5cf6" onclick="showSection('locks')">
+      <div class="hub-card" style="--card-accent:#8b5cf6" onclick="showSection('locks')" data-section-nav="locks">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Padlock">
             <defs><linearGradient id="icon-locks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
@@ -1395,7 +1447,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#1d7ace" onclick="showSection('parlays')">
+      <div class="hub-card" style="--card-accent:#1d7ace" onclick="showSection('parlays')" data-section-nav="parlays">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins">
             <defs><linearGradient id="icon-parlays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1412,7 +1464,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#b93187" onclick="showSection('coming')">
+      <div class="hub-card" style="--card-accent:#b93187" onclick="showSection('coming')" data-section-nav="coming">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar">
             <defs><linearGradient id="icon-coming" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -1429,7 +1481,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('howitworks')">
+      <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('howitworks')" data-section-nav="howitworks">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Sigma summation symbol">
             <defs><linearGradient id="icon-howitworks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2453,6 +2505,7 @@
 
 
   </div>
+  </div>
 
   <div class="footer-disclaimer">
     For analysis and education only, not betting advice. A flagged edge means the model disagrees
@@ -2473,6 +2526,13 @@
     // already open), since that's a narrower edge case better left on its
     // existing, already-tested instant-swap behavior than risking it on
     // a second, less-exercised code path.
+    // Shared refs -- declared once so showSection, showHub, and the
+    // desktop init/resize logic below all reference the same elements,
+    // rather than each re-querying (or worse, only some of them being
+    // able to see a locally-scoped copy).
+    const hubView = document.getElementById('hub-view');
+    const detailView = document.getElementById('detail-view');
+
     function transitionViews(oldEl, newEl, direction, onShown) {
       const outClass = direction === 'forward' ? 'view-slide-out-left' : 'view-slide-out-right';
       const inStartClass = direction === 'forward' ? 'view-slide-in-right-start' : 'view-slide-in-left-start';
@@ -2489,14 +2549,33 @@
       }, 220);
     }
 
+    // Desktop layout (left rail + persistent content pane) kicks in at
+    // the same breakpoint as the CSS media query -- kept in one place so
+    // JS and CSS can never disagree about where the line is.
+    function isDesktopLayout() {
+      return window.matchMedia('(min-width: 1024px)').matches;
+    }
+
     function showSection(id) {
-      const hubView = document.getElementById('hub-view');
-      const detailView = document.getElementById('detail-view');
       const alreadyInDetail = detailView.style.display === 'block';
 
       function activateAndReveal() {
         document.querySelectorAll('.detail-section').forEach(el => {
-          el.style.display = (el.dataset.section === id) ? 'block' : 'none';
+          const isMatch = el.dataset.section === id;
+          el.style.display = isMatch ? 'block' : 'none';
+          // The desktop media query hides every .detail-section by
+          // default (so switching sections doesn't show two at once in
+          // the persistent content pane) and only the one with this
+          // class back on -- mobile never reads this class at all, so
+          // toggling it here is a no-op there.
+          el.classList.toggle('desktop-active', isMatch);
+        });
+        // Highlight which rail item is active -- only visible/meaningful
+        // on desktop (mobile navigates away from the hub-card grid
+        // entirely, so nothing here is ever seen there), matched via the
+        // data-section-nav attribute rather than parsing onclick strings.
+        document.querySelectorAll('#hub-view .hub-card[data-section-nav]').forEach(card => {
+          card.classList.toggle('rail-active', card.dataset.sectionNav === id);
         });
         // Every fresh visit to a section should start with its fight cards
         // collapsed, not however they were left from a previous visit --
@@ -2539,7 +2618,11 @@
         });
       }
 
-      if (alreadyInDetail) {
+      if (isDesktopLayout() || alreadyInDetail) {
+        // Desktop: the rail and content pane are both always visible, so
+        // there's never a hub<->detail transition to animate -- just swap
+        // which section shows in the persistent pane. Also covers the
+        // existing mobile "already past the hub" case unchanged.
         activateAndReveal();
         window.scrollTo(0, 0);
       } else {
@@ -2547,10 +2630,42 @@
       }
     }
     function showHub() {
-      const hubView = document.getElementById('hub-view');
-      const detailView = document.getElementById('detail-view');
+      if (isDesktopLayout()) return; // no hub to return to -- the rail is always visible there
       transitionViews(detailView, hubView, 'backward');
     }
+
+    // On desktop, the content pane needs *something* showing on first
+    // load rather than sitting empty until a rail item is clicked --
+    // default to This Weekend, matching the featured/first hub card.
+    // Guarded so this only ever fires once even if resize toggles it
+    // in and out of desktop width before a section's ever been picked.
+    let __desktopInitialized = false;
+    function initDesktopLayoutIfNeeded() {
+      if (isDesktopLayout() && !__desktopInitialized) {
+        __desktopInitialized = true;
+        showSection('thisweekend');
+      }
+    }
+    initDesktopLayoutIfNeeded();
+    // Re-check on resize (debounced) so dragging a window across the
+    // breakpoint doesn't leave the page in a broken state -- e.g.
+    // shrinking from desktop to mobile width should return to seeing
+    // just the hub-card grid, not a content pane with no way back.
+    let __resizeDebounce;
+    window.addEventListener('resize', () => {
+      clearTimeout(__resizeDebounce);
+      __resizeDebounce = setTimeout(() => {
+        if (isDesktopLayout()) {
+          initDesktopLayoutIfNeeded();
+        } else if (detailView.style.display === 'block') {
+          // Crossed back below the breakpoint while a section was open --
+          // mobile expects hub-view OR detail-view, never an in-between
+          // state, so land back on the hub rather than a half-desktop view.
+          detailView.style.display = 'none';
+          hubView.style.display = 'block';
+        }
+      }, 150);
+    });
 
     // Segment tabs (Main Card / Preliminary Card / Early Prelims). Cards
     // inside a hidden pane are never seen by the reveal observer, so on
