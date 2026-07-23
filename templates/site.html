@@ -1209,37 +1209,6 @@
        itself is already a no-op on desktop (see JS), this just removes
        the now-pointless affordance rather than leaving dead UI visible. */
     .back-btn { display: none; }
-
-    /* The countdown card used to live in the top page header (see the
-       relocateCountdownForDesktop() JS function) -- moved into the This
-       Weekend section's own event-header instead, right under the event
-       it's actually counting down to, for better contextual coherence
-       than a disconnected top banner. brand-header's own default flex
-       layout (logo left, account badge right via margin-left:auto)
-       already works correctly at every width without any override now
-       that the countdown isn't being squeezed into that row. */
-
-    /* This was the real remaining gap in the "same width, just freed
-       from centering" decision from the first round of this layout work
-       -- only the outer shell (body, rail, content pane) actually got
-       widened; individual content inside the pane (fight cards, this
-       event-header) had no width cap of its own, so it was silently
-       stretching to fill the full ~1000px+ pane this whole time instead
-       of staying at its original design width. Capping .detail-section
-       itself is the actual fix -- roughly matches the old effective
-       mobile content width (720px body max-width minus padding). */
-    .detail-section { max-width: 720px; }
-
-    /* Countdown, now inside .event-header: event-name/event-date are
-       left-aligned there already, so a left-aligned countdown reads as
-       one coherent stacked group (name -> date -> countdown) rather than
-       a separately-centered element interrupting that flow. Still capped
-       compact rather than stretching to the full 720px column -- it's a
-       small "hero stat" attached to the event, not a wide banner. */
-    .event-header .countdown-card {
-      max-width: 380px; margin: 12px 0 0; text-align: left;
-    }
-    .event-header .countdown-boxes { justify-content: flex-start; }
   }
 </style>
 </head>
@@ -2675,39 +2644,6 @@
       transitionViews(detailView, hubView, 'backward');
     }
 
-    // Countdown relocation (desktop only): moves the countdown card out of
-    // the generic top header and into the This Weekend section's own
-    // event-header, right under the event name/date it's actually counting
-    // down to -- better contextual coherence than a disconnected banner.
-    // This needs real DOM manipulation, not a CSS trick, because the
-    // destination (.event-header, inside a specific .detail-section) is a
-    // completely different part of the page tree, not a nearby sibling any
-    // grid-area/order approach could reach. Saves the card's original
-    // parent+next-sibling before moving so a resize back to mobile width
-    // can put it back exactly where it started, rather than leaving mobile
-    // permanently altered by a desktop-only interaction.
-    let __countdownOriginalParent = null;
-    let __countdownOriginalNextSibling = null;
-    let __countdownRelocated = false;
-    function relocateCountdownForDesktop() {
-      if (__countdownRelocated) return;
-      const card = document.querySelector('.countdown-card');
-      const eventHeader = document.querySelector('.detail-section[data-section="thisweekend"] .event-header');
-      if (!card || !eventHeader) return; // no countdown target right now, or no event rendered -- nothing to move
-      __countdownOriginalParent = card.parentElement;
-      __countdownOriginalNextSibling = card.nextElementSibling;
-      eventHeader.appendChild(card);
-      __countdownRelocated = true;
-    }
-    function restoreCountdownForMobile() {
-      if (!__countdownRelocated) return;
-      const card = document.querySelector('.countdown-card');
-      if (card && __countdownOriginalParent) {
-        __countdownOriginalParent.insertBefore(card, __countdownOriginalNextSibling);
-      }
-      __countdownRelocated = false;
-    }
-
     // On desktop, the content pane needs *something* showing on first
     // load rather than sitting empty until a rail item is clicked --
     // default to This Weekend, matching the featured/first hub card.
@@ -2719,7 +2655,6 @@
         __desktopInitialized = true;
         showSection('thisweekend');
       }
-      if (isDesktopLayout()) relocateCountdownForDesktop();
     }
     initDesktopLayoutIfNeeded();
     // Re-check on resize (debounced) so dragging a window across the
@@ -2732,15 +2667,12 @@
       __resizeDebounce = setTimeout(() => {
         if (isDesktopLayout()) {
           initDesktopLayoutIfNeeded();
-        } else {
-          restoreCountdownForMobile();
-          if (detailView.style.display === 'block') {
-            // Crossed back below the breakpoint while a section was open --
-            // mobile expects hub-view OR detail-view, never an in-between
-            // state, so land back on the hub rather than a half-desktop view.
-            detailView.style.display = 'none';
-            hubView.style.display = 'block';
-          }
+        } else if (detailView.style.display === 'block') {
+          // Crossed back below the breakpoint while a section was open --
+          // mobile expects hub-view OR detail-view, never an in-between
+          // state, so land back on the hub rather than a half-desktop view.
+          detailView.style.display = 'none';
+          hubView.style.display = 'block';
         }
       }, 150);
     });
