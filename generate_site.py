@@ -538,6 +538,14 @@ def main():
     # that exists yet for a distant future card, so those three stay None
     # rather than fabricate a number for something not actually computed.
     countdown_location = next_event.get("event_location") if next_event else None
+    # Short form for the simplified countdown-banner display: venue + city
+    # only, dropping the trailing state/country segment. event_location is
+    # already built as "Venue, City, State/Country" (see card_discovery.py) --
+    # taking the first two comma-separated parts is a safe way to get this
+    # without needing a second, separately-plumbed field.
+    countdown_location_short = (
+        " · ".join(countdown_location.split(", ")[:2]) if countdown_location else None
+    )
     countdown_weight_class = None
     if next_event:
         main_event_fight = next(
@@ -680,6 +688,7 @@ def main():
         analytics_source_event=analytics_source_event,
         countdown_label=countdown_label,
         countdown_location=countdown_location,
+        countdown_location_short=countdown_location_short,
         countdown_weight_class=countdown_weight_class,
         countdown_main_card_time=countdown_main_card_time,
         countdown_edge_count=countdown_edge_count,

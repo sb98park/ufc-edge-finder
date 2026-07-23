@@ -165,6 +165,26 @@
      Revealed and laid out in the desktop media query below. */
   .countdown-info { display: none; }
   .countdown-info-line { font-size: 12px; color: var(--muted); line-height: 1.7; white-space: nowrap; }
+  /* Confidence hero badge -- a single, clearly-labeled stat instead of a
+     bare "5 High · 4 Med · 3 Low" line with no context for what the
+     numbers mean. Colors reused directly from the existing pick-badge
+     confidence styling elsewhere on the site (search .model-pick-badge)
+     rather than invented fresh, so "High/Medium/Low" reads consistently
+     everywhere it appears. */
+  .confidence-hero-badge {
+    display: inline-block; border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 14px; background: var(--panel2);
+  }
+  .confidence-hero-label {
+    font-size: 9.5px; color: var(--muted); font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.4px; margin-bottom: 4px; white-space: nowrap;
+  }
+  .confidence-hero-stats { display: flex; gap: 10px; white-space: nowrap; }
+  .confidence-hero-stat { font-size: 14px; font-weight: 800; font-family: var(--font-display); }
+  .confidence-hero-stat em { font-size: 9.5px; font-weight: 700; font-style: normal; text-transform: uppercase; margin-left: 2px; opacity: 0.85; }
+  .confidence-hero-stat.high { color: var(--green); }
+  .confidence-hero-stat.medium { color: var(--accent2); }
+  .confidence-hero-stat.low { color: var(--red); }
 
   .live-header { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; }
   .live-header-macro {
@@ -1353,9 +1373,8 @@
   {% if countdown_target_iso %}
   <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}" data-espn-live-key="{{ espn_live_fight_key_json | e }}">
     <div class="countdown-info countdown-info-left">
-      {% if countdown_location %}<div class="countdown-info-line">📍 {{ countdown_location }}</div>{% endif %}
-      {% if countdown_main_card_time %}<div class="countdown-info-line">📺 Main Card {{ countdown_main_card_time }}</div>{% endif %}
-      {% if countdown_weight_class %}<div class="countdown-info-line">⚖️ {{ countdown_weight_class }}</div>{% endif %}
+      {% if countdown_location_short %}<div class="countdown-info-line">{{ countdown_location_short }}</div>{% endif %}
+      {% if countdown_main_card_time %}<div class="countdown-info-line">Main Card · {{ countdown_main_card_time }}</div>{% endif %}
     </div>
     <div class="countdown-center">
     <div class="countdown-label" id="countdown-label">⏱ {{ countdown_label }}</div>
@@ -1388,8 +1407,16 @@
     </div>
     </div>
     <div class="countdown-info countdown-info-right">
-      {% if countdown_edge_count is not none %}<div class="countdown-info-line">🎯 {{ countdown_edge_count }} standout edge{{ 's' if countdown_edge_count != 1 else '' }} flagged</div>{% endif %}
-      {% if countdown_confidence_counts %}<div class="countdown-info-line">📊 {{ countdown_confidence_counts['High Confidence'] }} High · {{ countdown_confidence_counts['Medium Confidence'] }} Med · {{ countdown_confidence_counts['Low Confidence'] }} Low</div>{% endif %}
+      {% if countdown_confidence_counts %}
+      <div class="confidence-hero-badge">
+        <div class="confidence-hero-label">Pick Confidence, This Card</div>
+        <div class="confidence-hero-stats">
+          <span class="confidence-hero-stat high">{{ countdown_confidence_counts['High Confidence'] }} <em>High</em></span>
+          <span class="confidence-hero-stat medium">{{ countdown_confidence_counts['Medium Confidence'] }} <em>Med</em></span>
+          <span class="confidence-hero-stat low">{{ countdown_confidence_counts['Low Confidence'] }} <em>Low</em></span>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
   {% endif %}
