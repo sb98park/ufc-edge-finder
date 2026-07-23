@@ -1201,6 +1201,23 @@
     #detail-view { flex: 1; min-width: 0; display: block !important; }
     .detail-section { display: none; }
     .detail-section.desktop-active { display: block !important; }
+
+    /* The "back to overview" button only makes sense when the hub is a
+       separate view you navigate away from and need a way back to -- on
+       desktop the rail is always visible right there, so clicking any
+       other rail item already accomplishes the same thing. showHub()
+       itself is already a no-op on desktop (see JS), this just removes
+       the now-pointless affordance rather than leaving dead UI visible. */
+    .back-btn { display: none; }
+
+    /* Countdown card has no width cap of its own by design (mobile's
+       narrow single-column parent already constrained it naturally) --
+       on desktop's much wider content pane it was stretching to fill
+       that full width, leaving the small fixed-size day/hour/min/sec
+       boxes looking lost in a lot of empty card background. Capping and
+       centering restores the same compact, proportional look mobile
+       already has, regardless of how wide the surrounding pane is. */
+    .countdown-card { max-width: 420px; margin-inline: auto; }
   }
 </style>
 </head>
