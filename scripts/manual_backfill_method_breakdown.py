@@ -55,6 +55,8 @@ MANUAL_DATA = {
     "Daniel Rodriguez":  (9, 4, 7, 1, 1, 3),    # 20-5
     "Alex Perez":        (7, 7, 12, 2, 6, 2),   # 26-10
     "Uroš Medić":        (11, 2, 0, 1, 2, 0),   # 13-3 (perfect finish rate - never gone to a decision either way)
+    "Duško Todorović":   (8, 4, 1, 4, 0, 2),    # 13-6
+    "Steven Asplund":    (6, 0, 1, 0, 1, 1),    # 7-2
 }
 
 METHOD_COLS = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
