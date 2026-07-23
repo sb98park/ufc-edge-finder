@@ -38,6 +38,7 @@ from src.sparkline_chart import build_sparkline_svg
 from src.units_chart import build_units_timeseries_svg
 from src.donut_chart import build_donut_svg
 from src.damage_silhouette import build_damage_silhouette_svg
+from src.model_preview import _confidence_label
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -527,6 +528,50 @@ def main():
         if just_concluded:
             just_concluded["last_confirmed_at"] = last_confirmed_at
 
+    # Countdown banner flanking info (desktop only, see templates/site.html).
+    # Location and main-event weight class work off next_event directly, so
+    # they're available whether we're counting down to this weekend's fully-
+    # analyzed card or a further-out future one. Main Card start time, edge
+    # count, and confidence breakdown all specifically need data that only
+    # exists for the CURRENTLY TRACKED event (fight_schedule with real
+    # estimated times, tracked_edges, per-fight model previews) -- none of
+    # that exists yet for a distant future card, so those three stay None
+    # rather than fabricate a number for something not actually computed.
+    countdown_location = next_event.get("event_location") if next_event else None
+    countdown_weight_class = None
+    if next_event:
+        main_event_fight = next(
+            (f for f in next_event.get("fights", []) if f.get("card_position") == "Main Event"), None
+        )
+        countdown_weight_class = main_event_fight.get("weight_class") if main_event_fight else None
+
+    countdown_main_card_time = None
+    countdown_edge_count = None
+    countdown_confidence_counts = None
+    if events and next_event is events[0]:
+        main_card_starts = [
+            f["estimated_start_iso"] for f in fight_schedule
+            if f.get("card_position") == "Main Card" and f.get("estimated_start_iso")
+        ]
+        if main_card_starts:
+            earliest = min(main_card_starts)
+            # estimated_start_iso carries the -04:00 ET offset already
+            # baked in (see schedule.py) -- parse just the wall-clock time
+            # portion rather than re-deriving timezone math here.
+            hh, mm = int(earliest[11:13]), int(earliest[14:16])
+            period = "AM" if hh < 12 else "PM"
+            hh12 = hh % 12 or 12
+            countdown_main_card_time = f"{hh12}:{mm:02d} {period} ET"
+        countdown_edge_count = len(standout_props)
+        confidence_tally = {"High Confidence": 0, "Medium Confidence": 0, "Low Confidence": 0}
+        for fight in next_event.get("fights", []):
+            preview = fight.get("preview")
+            if preview and preview.get("favorite_prob") is not None:
+                confidence_tally[_confidence_label(preview["favorite_prob"])] += 1
+        if sum(confidence_tally.values()) > 0:
+            countdown_confidence_counts = confidence_tally
+
+
     # ESPN's live-fight signal is only meaningful on the actual event day --
     # deliberately checking the event's own date directly rather than
     # days_since_event, which has different semantics (0 for the entire
@@ -634,6 +679,11 @@ def main():
         results_coverage=results_coverage,
         analytics_source_event=analytics_source_event,
         countdown_label=countdown_label,
+        countdown_location=countdown_location,
+        countdown_weight_class=countdown_weight_class,
+        countdown_main_card_time=countdown_main_card_time,
+        countdown_edge_count=countdown_edge_count,
+        countdown_confidence_counts=countdown_confidence_counts,
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,
         calibration_svg=calibration_svg,

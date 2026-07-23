@@ -159,6 +159,12 @@
     animation: sepPulse 2.6s ease-in-out infinite;
   }
   @keyframes sepPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  /* Hidden by default (mobile) -- these flanking info blocks only exist
+     to fill the empty side margins that appear on wide desktop screens
+     once the countdown card is no longer squeezed into a narrow column.
+     Revealed and laid out in the desktop media query below. */
+  .countdown-info { display: none; }
+  .countdown-info-line { font-size: 12px; color: var(--muted); line-height: 1.7; white-space: nowrap; }
 
   .live-header { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; }
   .live-header-macro {
@@ -1209,6 +1215,19 @@
        itself is already a no-op on desktop (see JS), this just removes
        the now-pointless affordance rather than leaving dead UI visible. */
     .back-btn { display: none; }
+
+    /* Countdown card stays exactly where it's always been (full-width,
+       top of page) and the timer itself doesn't move or resize -- this
+       just fills the empty space that used to sit on either side of it
+       with real context about the card it's counting down to (location,
+       broadcast time, weight class) and a quick model snapshot (edge
+       count, confidence split). Each line only renders if the
+       corresponding data actually exists (see generate_site.py) rather
+       than showing a placeholder or guessed value. */
+    .countdown-card { display: flex; align-items: center; justify-content: space-between; text-align: left; gap: 20px; }
+    .countdown-info { display: block; flex: 1; min-width: 0; }
+    .countdown-info-right { text-align: right; }
+    .countdown-center { flex-shrink: 0; text-align: center; }
   }
 </style>
 </head>
@@ -1333,6 +1352,12 @@
 
   {% if countdown_target_iso %}
   <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}" data-espn-live-key="{{ espn_live_fight_key_json | e }}">
+    <div class="countdown-info countdown-info-left">
+      {% if countdown_location %}<div class="countdown-info-line">📍 {{ countdown_location }}</div>{% endif %}
+      {% if countdown_main_card_time %}<div class="countdown-info-line">📺 Main Card {{ countdown_main_card_time }}</div>{% endif %}
+      {% if countdown_weight_class %}<div class="countdown-info-line">⚖️ {{ countdown_weight_class }}</div>{% endif %}
+    </div>
+    <div class="countdown-center">
     <div class="countdown-label" id="countdown-label">⏱ {{ countdown_label }}</div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
@@ -1360,6 +1385,11 @@
         <span class="live-dot"></span> <span id="live-macro-text">LIVE NOW</span><span class="live-cta">view card →</span>
       </div>
       <div class="live-header-micro" id="live-header-micro">—</div>
+    </div>
+    </div>
+    <div class="countdown-info countdown-info-right">
+      {% if countdown_edge_count is not none %}<div class="countdown-info-line">🎯 {{ countdown_edge_count }} standout edge{{ 's' if countdown_edge_count != 1 else '' }} flagged</div>{% endif %}
+      {% if countdown_confidence_counts %}<div class="countdown-info-line">📊 {{ countdown_confidence_counts['High Confidence'] }} High · {{ countdown_confidence_counts['Medium Confidence'] }} Med · {{ countdown_confidence_counts['Low Confidence'] }} Low</div>{% endif %}
     </div>
   </div>
   {% endif %}
