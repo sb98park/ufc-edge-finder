@@ -1210,14 +1210,33 @@
        the now-pointless affordance rather than leaving dead UI visible. */
     .back-btn { display: none; }
 
-    /* Countdown card has no width cap of its own by design (mobile's
-       narrow single-column parent already constrained it naturally) --
-       on desktop's much wider content pane it was stretching to fill
-       that full width, leaving the small fixed-size day/hour/min/sec
-       boxes looking lost in a lot of empty card background. Capping and
-       centering restores the same compact, proportional look mobile
-       already has, regardless of how wide the surrounding pane is. */
-    .countdown-card { max-width: 420px; margin-inline: auto; }
+    /* Header row restructure: on mobile, brand-header (logo + account
+       badge), the subtitle tagline, and the countdown card stack as 3
+       separate blocks top to bottom -- that's a lot of vertical space
+       on desktop, and the countdown card was centered in a sea of empty
+       side margin once freed from the old 720px-wide column. CSS Grid
+       lets these get visually rearranged into one compact row (logo |
+       countdown | account badge) with the subtitle as a second full-
+       width row below, WITHOUT moving anything in the actual DOM -- so
+       mobile (no grid applied) renders in the exact same document order
+       it always has, completely unaffected by any of this.
+       display:contents on .brand-header "unwraps" its own flex-row
+       grouping so its two children (.brand-left, .account-badge) become
+       independent grid items placed by the areas below, rather than
+       staying grouped together as one combined grid cell. */
+    .page-header {
+      display: grid; grid-template-columns: auto 1fr auto;
+      grid-template-areas: "logo countdown badge" "subtitle subtitle subtitle";
+      align-items: center; column-gap: 24px; row-gap: 6px;
+    }
+    .brand-header { display: contents; }
+    .brand-left { grid-area: logo; }
+    .account-badge { grid-area: badge; margin-left: 0; }
+    .countdown-card {
+      grid-area: countdown; justify-self: center;
+      max-width: 420px; width: 100%; margin-bottom: 0;
+    }
+    .subtitle { grid-area: subtitle; margin-top: 0; }
   }
 </style>
 </head>
@@ -1292,6 +1311,7 @@
   <div class="ember" style="left:91%; animation-duration:17s; animation-delay:6s; --drift:15px;"></div>
   <div class="ember" style="left:35%; animation-duration:21s; animation-delay:11s; --drift:-18px;"></div>
 </div>
+  <div class="page-header">
   <div class="brand-header">
     <div class="brand-left">
     <svg width="46" height="46" viewBox="0 0 44 44" class="brand-logo" role="img" aria-label="Octane Alpha logo">
@@ -1371,6 +1391,7 @@
     </div>
   </div>
   {% endif %}
+  </div>
 
   <div id="whats-new-banner" class="whats-new-banner" style="display:none; cursor:pointer;" onclick="window.__goToWhatsNew();">
     <div class="whats-new-text" id="whats-new-text"></div>
