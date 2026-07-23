@@ -42,7 +42,7 @@ export default {
     const token = url.searchParams.get("token");
     const target = url.searchParams.get("url");
 
-    if (!env.RELAY_TOKEN || token !== env.RELAY_TOKEN) {
+    if (!env.RELAY_TOKEN || token.trim() !== env.RELAY_TOKEN.trim()) {
       return new Response("Forbidden", { status: 403 });
     }
     if (!target) {

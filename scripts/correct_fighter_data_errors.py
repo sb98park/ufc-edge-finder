@@ -59,6 +59,15 @@ METHOD_BREAKDOWN_CORRECTIONS = {
     # consistency (ends by ruling, not a finish, same as a decision).
     "Dustin Stoltzfus":  (3, 6, 7, 2, 2, 4),     # 16-8 (dec_wins includes the 1 DQ win)
     "Song Yadong":       (9, 4, 10, 2, 0, 7),    # 23-9 (dec_losses includes the 1 DQ loss)
+    # Caught via a real audit run + the new Combat Edge cross-check (July
+    # 2026): Robert Valentin's Combat Edge win-sentence (11) disagreed with
+    # our recorded wins (12) - researched his full career fight-by-fight
+    # history (18 fights across Tapology/ESPN/Combat Edge, all agreeing on
+    # 11-6-0 plus 1 no-contest that doesn't count either way) and confirmed
+    # OUR number was the stale/wrong one, not Combat Edge's. See
+    # RECORD_CORRECTIONS below for the matching wins-field fix.
+    "Robert Valentin":   (3, 7, 1, 3, 1, 2),     # 11-6 (corrected from stale 12-6)
+    "Tresean Gore":      (2, 4, 1, 2, 0, 2),     # 7-4, reconstructed from a real ESPN fight-by-fight table
 }
 
 # Fighters whose WINS or LOSSES field itself was wrong (their method
@@ -73,6 +82,7 @@ RECORD_CORRECTIONS = {
     "Cody Gibson":           (21, 12),
     "Santiago Ponzinibbio":  (30, 9),
     "Neil Magny":            (31, 14),
+    "Robert Valentin":       (11, 6),   # 12->11 wins, real record is 11-6-0 (+1 NC)
 }
 
 

@@ -409,15 +409,15 @@ def _combat_edge_get(url: str, headers: dict, timeout: float):
     Worker file's own docstring for the full reasoning) -- not a
     guaranteed fix, just the most promising lead found so far.
     """
-    relay_url = os.environ.get("COMBAT_EDGE_RELAY_URL")
-    relay_token = os.environ.get("COMBAT_EDGE_RELAY_TOKEN")
+    relay_url = os.environ.get("COMBAT_EDGE_RELAY_URL", "").strip()
+    relay_token = os.environ.get("COMBAT_EDGE_RELAY_TOKEN", "").strip()
     if relay_url and relay_token:
         relayed = f"{relay_url}?token={requests.utils.quote(relay_token)}&url={requests.utils.quote(url, safe='')}"
         return requests.get(relayed, timeout=timeout)
     return requests.get(url, headers=headers, timeout=timeout)
 
 
-def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
+def _fetch_method_breakdown_from_combat_edge(name: str, known_wins: int | None = None) -> dict | None:
     """
     Career-wide KO/submission/decision win-and-loss breakdown, via
     Combat Edge -- tried before the Wikipedia fallback below since it
@@ -500,15 +500,78 @@ def _fetch_method_breakdown_from_combat_edge(name: str) -> dict | None:
         match = re.search(rf"(\d+)\s*{label}", profile_html, re.IGNORECASE)
         return int(match.group(1)) if match else None
 
+    # Confirmed via real production diagnostics (July 2026): Combat Edge's
+    # current template includes a sentence under a "How does X usually win?"
+    # heading reading "X's N recorded wins include A knockouts, B
+    # submissions, and C decisions, with P% ending before the final bell."
+    # -- digit-based (not word-numbers like "seven"), verified against 2 real
+    # fighters where A+B+C == N exactly. This is now the PRIMARY win-side
+    # extractor; the old _extract() label regexes stay as a fallback in case
+    # some pages still use the pre-redesign wording. Sums are sanity-checked
+    # before being trusted -- a mismatch means don't guess, fall through.
+    win_sentence = re.search(
+        r"(\d+)\s*recorded wins include\s*(\d+)\s*knockouts?,?\s*(\d+)\s*submissions?,?\s*and\s*(\d+)\s*decisions?",
+        profile_html, re.IGNORECASE,
+    )
+    ko_wins = sub_wins = dec_wins = None
+    if win_sentence:
+        total, ko, sub, dec = (int(x) for x in win_sentence.groups())
+        if ko + sub + dec != total:
+            print(f"[fighter_backfill] combat-edge: {name!r} win-sentence internally inconsistent "
+                  f"({ko}+{sub}+{dec} != {total}) -- not trusting it, falling through to old extractor")
+        elif known_wins is not None and total != known_wins:
+            # Caught via a real audit run (July 2026): internal consistency
+            # alone isn't enough -- Combat Edge's own stated total can
+            # genuinely disagree with our already-recorded wins count (a
+            # real cross-source discrepancy, not a parsing bug -- e.g. one
+            # source not yet updated after a recent fight). Don't silently
+            # write method data that would contradict our own wins field
+            # and reintroduce exactly the kind of mismatch the audit tool
+            # exists to catch.
+            print(f"[fighter_backfill] combat-edge: {name!r} win-sentence total ({total}) disagrees with "
+                  f"our recorded wins ({known_wins}) -- real cross-source discrepancy, not trusting it")
+        else:
+            ko_wins, sub_wins, dec_wins = ko, sub, dec
+
     breakdown = {
-        "ko_wins": _extract("Wins by knockout"), "sub_wins": _extract("Wins by submission"), "dec_wins": _extract("Wins by decision"),
+        "ko_wins": ko_wins if ko_wins is not None else _extract("Wins by knockout"),
+        "sub_wins": sub_wins if sub_wins is not None else _extract("Wins by submission"),
+        "dec_wins": dec_wins if dec_wins is not None else _extract("Wins by decision"),
         "ko_losses": _extract("Loss by knockout"), "sub_losses": _extract("Loss by submission"), "dec_losses": _extract("Loss by decision"),
     }
     parsed_count = sum(1 for v in breakdown.values() if v is not None)
+
     if parsed_count == 0:
         print(f"[fighter_backfill] combat-edge: {profile_url} found but no win/loss-by-method fields matched")
+    else:
+        print(f"[fighter_backfill] combat-edge method-breakdown: {name!r} -> {parsed_count}/6 fields parsed")
+
+    # Loss-side diagnostic: fires whenever any loss field is still missing,
+    # independent of whether the win side just succeeded via the confirmed
+    # sentence pattern above -- Campbell and Pinto's real pages (round 2)
+    # only ever showed a win-side "How does X usually win?" sentence, never
+    # a parallel loss-side one, so we genuinely don't know yet whether one
+    # exists (low-loss-count fighters might just not get that paragraph at
+    # all) or uses different wording. Search broadly for "recorded loss" AND
+    # any "usually lose"/"how does...lose" heading, uncapped-enough windows,
+    # so a real occurrence can't be missed by a shared cap with win-side hits.
+    if breakdown["ko_losses"] is None and breakdown["sub_losses"] is None and breakdown["dec_losses"] is None:
+        loss_hits = 0
+        for i, m in enumerate(re.finditer(r"recorded loss|usually lose|typically lose", profile_html, re.IGNORECASE)):
+            if i >= 4:
+                break
+            loss_hits += 1
+            start = max(0, m.start() - 150)
+            end = min(len(profile_html), m.end() + 150)
+            snippet = re.sub(r"\s+", " ", profile_html[start:end]).strip()
+            print(f"[fighter_backfill] DIAGNOSTIC: {name!r} loss-side context #{i+1}: ...{snippet}...")
+        if loss_hits == 0:
+            print(f"[fighter_backfill] DIAGNOSTIC: {name!r} -- no loss-side breakdown language found at all "
+                  f"(page length {len(profile_html)} chars). May genuinely not exist for this fighter "
+                  f"(low loss count), or uses wording this search doesn't cover yet.")
+
+    if parsed_count == 0:
         return None
-    print(f"[fighter_backfill] combat-edge method-breakdown: {name!r} -> {parsed_count}/6 fields parsed")
     return breakdown
 
 
@@ -645,13 +708,16 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
         if col not in fighters.columns:
             fighters[col] = False
         fighters[col] = fighters[col].fillna(False).astype(bool)
-    method_cols_for_migration = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
-    stuck_on_old_bug = fighters["wikipedia_checked"] & fighters[method_cols_for_migration].isna().any(axis=1)
-    if stuck_on_old_bug.any():
-        print(f"[fighter_backfill] one-time migration: resetting wikipedia_checked for "
-              f"{int(stuck_on_old_bug.sum())} fighter(s) checked under the pre-fix zero-inference bug, "
-              f"so they get one fresh, now-correct re-check: {sorted(fighters.loc[stuck_on_old_bug, 'name'])}")
-        fighters.loc[stuck_on_old_bug, "wikipedia_checked"] = False
+    # NOTE: a one-time migration used to live here, resetting wikipedia_checked
+    # for any fighter where (checked=True AND still has a method-data gap).
+    # That was a real, correctly-scoped fix for a specific bug (the Wikipedia
+    # zero-inference parsing bug), confirmed resolved and working via a real
+    # production log earlier this session. Removed because its trigger
+    # condition can't distinguish "affected by that old, fixed bug" from "has
+    # a permanent, genuinely unfillable gap" (no Wikipedia page exists at
+    # all) -- so it kept re-firing every single run on any such fighter
+    # forever, wastefully re-attempting Wikipedia for names it will never
+    # find a page for, defeating the whole point of the checked-flags system.
     try:
         future = pd.read_csv(future_cards_path)
     except (FileNotFoundError, pd.errors.EmptyDataError):
@@ -803,6 +869,11 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                     "combat_edge": not existing_row.empty and bool(existing_row["combat_edge_checked"].iloc[0]),
                     "wikipedia": not existing_row.empty and bool(existing_row["wikipedia_checked"].iloc[0]),
                 }
+                METHOD_FIELDS = ["ko_wins", "sub_wins", "dec_wins", "ko_losses", "sub_losses", "dec_losses"]
+
+                def _is_complete(bd):
+                    return bool(bd) and all(bd.get(f) is not None for f in METHOD_FIELDS)
+
                 if needs_method_data:
                     method_breakdown_attempts_this_run += 1
                     breakdown = None
@@ -810,19 +881,35 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                         print(f"[fighter_backfill] {name}: both method-breakdown sources already rate-limited "
                               f"this run -- skipped, will retry next run")
                     if not combat_edge_rate_limited and not already_checked["combat_edge"]:
-                        breakdown = _fetch_method_breakdown_from_combat_edge(name)
+                        known_wins = int(existing_row["wins"].iloc[0]) if not existing_row.empty and pd.notna(existing_row["wins"].iloc[0]) else None
+                        breakdown = _fetch_method_breakdown_from_combat_edge(name, known_wins=known_wins)
                         if breakdown == RATE_LIMITED:
                             combat_edge_rate_limited = True
                             breakdown = None
                         else:
                             physical["combat_edge_checked"] = True  # genuine attempt happened, regardless of outcome
-                    if not breakdown and not wikipedia_rate_limited and not already_checked["wikipedia"]:
-                        breakdown = _fetch_method_breakdown_from_wikipedia(name)
-                        if breakdown == RATE_LIMITED:
+                    # Was "if not breakdown" -- a real bug once Combat Edge could return
+                    # a PARTIAL dict (some fields real, some None): a non-empty dict is
+                    # truthy in Python regardless of what its values are, so any partial
+                    # Combat Edge success was permanently blocking Wikipedia from ever
+                    # being tried for the still-missing fields (the loss side, in
+                    # practice, since the confirmed win-sentence pattern only covers
+                    # wins). Now checks genuine completeness instead, and merges both
+                    # sources' fields rather than letting one replace the other -- keeps
+                    # Combat Edge's real win values even if Wikipedia's own dict has
+                    # None for those same fields.
+                    if not _is_complete(breakdown) and not wikipedia_rate_limited and not already_checked["wikipedia"]:
+                        wiki_breakdown = _fetch_method_breakdown_from_wikipedia(name)
+                        if wiki_breakdown == RATE_LIMITED:
                             wikipedia_rate_limited = True
-                            breakdown = None
                         else:
                             physical["wikipedia_checked"] = True  # genuine attempt happened, regardless of outcome
+                            if wiki_breakdown:
+                                merged = dict(breakdown) if breakdown else {}
+                                for f in METHOD_FIELDS:
+                                    if merged.get(f) is None and wiki_breakdown.get(f) is not None:
+                                        merged[f] = wiki_breakdown[f]
+                                breakdown = merged
                     if breakdown:
                         physical.update(breakdown)
 
@@ -851,7 +938,16 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                             if not bool(fighters.at[i, col]):  # only a genuine False->True change is worth writing
                                 fighters = _safe_set_cell(fighters, i, col, val)
                                 any_checked_flag_changed = True
-                        elif pd.isna(fighters.at[i, col]):
+                        # Was missing "and val is not None" -- a merged partial
+                        # breakdown (e.g. wins found, losses not) still has
+                        # None entries for the still-missing fields. Without
+                        # this check, writing None over an already-empty cell
+                        # is a genuine no-op (pandas treats it as NaN either
+                        # way) but was being reported as "filled" -- a real,
+                        # confusing log inaccuracy caught from a live run
+                        # where every "filled ko_losses/sub_losses/dec_losses"
+                        # message was actually reporting nothing happening.
+                        elif pd.isna(fighters.at[i, col]) and val is not None:
                             fighters = _safe_set_cell(fighters, i, col, val)
                             updated_fields.append(col)
                     if updated_fields:
