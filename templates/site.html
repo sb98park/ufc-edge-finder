@@ -2718,19 +2718,30 @@
     // breakpoint doesn't leave the page in a broken state -- e.g.
     // shrinking from desktop to mobile width should return to seeing
     // just the hub-card grid, not a content pane with no way back.
+    // Tracks the PREVIOUS layout mode and only acts on a genuine
+    // desktop->mobile CROSSING, not just "currently not desktop" -- a
+    // real bug caught from a live mobile report: showSection() already
+    // dispatches a synthetic resize event on every section navigation
+    // (unrelated pre-existing code, nudges the scroll-reveal observers),
+    // which fired on phones too. The original "else if detailView is
+    // showing" check couldn't tell that synthetic event apart from a
+    // real resize, so tapping into any section on mobile immediately
+    // triggered this handler and reverted straight back to the hub --
+    // this crossing-based check can never fire on an actual phone, since
+    // its viewport is never desktop-width to begin with.
+    let __wasDesktopLayout = isDesktopLayout();
     let __resizeDebounce;
     window.addEventListener('resize', () => {
       clearTimeout(__resizeDebounce);
       __resizeDebounce = setTimeout(() => {
-        if (isDesktopLayout()) {
+        const isDesktopNow = isDesktopLayout();
+        if (isDesktopNow) {
           initDesktopLayoutIfNeeded();
-        } else if (detailView.style.display === 'block') {
-          // Crossed back below the breakpoint while a section was open --
-          // mobile expects hub-view OR detail-view, never an in-between
-          // state, so land back on the hub rather than a half-desktop view.
+        } else if (__wasDesktopLayout && detailView.style.display === 'block') {
           detailView.style.display = 'none';
           hubView.style.display = 'block';
         }
+        __wasDesktopLayout = isDesktopNow;
       }, 150);
     });
 
