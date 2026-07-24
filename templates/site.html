@@ -1248,6 +1248,25 @@
     .countdown-info { display: block; flex: 1; min-width: 0; }
     .countdown-info-right { text-align: right; }
     .countdown-center { flex-shrink: 0; text-align: center; }
+
+    /* Real reported bug: several sections' content started noticeably
+       lower than others when switching rail items - This Weekend,
+       Standout Props, Parlays, and Coming Up all sat visibly below
+       Track Record/Favorite Picks/Locks/How the Model Works instead of
+       lining up with the rail. Root cause: each section's opening
+       heading uses a DIFFERENT CSS class (.event-header, .standout-title,
+       .parlay-section-title, .section-title, etc.), and only some of
+       those happened to carry a top margin (26-28px) while others had
+       none - not a deliberate design choice, just an inconsistency that
+       only became visible once sections started rendering side-by-side
+       against a fixed rail instead of one at a time on mobile. Rather
+       than hunt down and zero every individual heading class (fragile -
+       misses any not yet found, breaks again if a new section is added
+       later with its own differently-margined heading), this resets
+       whatever element actually ends up first in ANY section uniformly -
+       correct regardless of which class it happens to carry, including
+       conditionally-rendered notices that sometimes take the first slot. */
+    .detail-section > *:first-child { margin-top: 0 !important; }
   }
 </style>
 </head>
