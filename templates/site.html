@@ -577,8 +577,22 @@
      (fighter_a's chip hugs the left edge, fighter_b's the right). */
   @media (max-width: 640px) {
     .fun-fact-chip-row { flex-direction: column; gap: 4px; }
-    .fun-fact-chip-row > div { max-width: 100%; }
-    .fun-fact-chip-row > div:last-child { align-self: flex-end; text-align: right; }
+    /* Real bug (user-reported, prior fix did not actually resolve it):
+       .fun-fact-chip is inline-flex, which sizes to its own content by
+       default. Combined with align-self:flex-end on this wrapper (which
+       also shrinks the wrapper to its content), the two created a
+       circular sizing dependency -- the wrapper's shrink-to-fit width
+       was computed from the chip's UNWRAPPED text width before wrapping
+       ever had a chance to apply, so long text just extended sideways
+       instead of wrapping. Fixed by giving the wrapper a width the
+       browser can compute independently of its content (100%, not
+       shrink-to-fit) -- now the chip has a fixed box to wrap inside,
+       full stop, regardless of how long the fact text is. */
+    .fun-fact-chip-row > div { width: 100%; max-width: 100%; }
+    .fun-fact-chip-row > div:last-child { text-align: right; }
+    .fun-fact-chip-row .fun-fact-chip {
+      display: inline-block; max-width: 100%; box-sizing: border-box; text-align: left;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     .fun-fact-card { animation: none; opacity: 1; transform: none; }
