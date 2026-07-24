@@ -101,12 +101,9 @@ def detect_facts_for_fighter(name: str, history: pd.DataFrame, fighter_row, move
             label = METHOD_LABEL[m]
             n = len(recent_wins)
             text = f"Last {n} wins all by {label}"
-            tier = "hot"
-            # Enrichment: same specific move across the whole streak?
-            # Submissions only -- sub DETAILS are real named techniques
-            # ("Heel Hook", "Rear Naked Choke"), while KO DETAILS are
-            # strike descriptions ("Punch to Head At Distance") that read
-            # as awkward pseudo-facts rather than cool ones.
+            # Tier ladder: hot -> gold (specific move) -> legendary (long
+            # streaks: 6+ same coarse method, or 5+ by one SPECIFIC move)
+            tier = "legendary" if n >= 6 else "hot"
             if m == "SUB" and move_lookup:
                 moves = set()
                 for f in recent_wins:
@@ -114,10 +111,10 @@ def detect_facts_for_fighter(name: str, history: pd.DataFrame, fighter_row, move
                     moves.add(move_lookup.get(key))
                 if len(moves) == 1 and (mv := moves.pop()):
                     text = f"Last {n} wins all by {mv.lower()}"
-                    tier = "gold"  # a specific-move streak is genuinely rare
+                    tier = "legendary" if n >= 5 else "gold"
             candidates.append({
                 "text": text, "number": n, "tier": tier,
-                "score": n * 10 + (25 if tier == "gold" else 0),
+                "score": n * 10 + (25 if tier == "gold" else 0) + (60 if tier == "legendary" else 0),
             })
 
     # --- Overall win streak (method-agnostic)
@@ -130,7 +127,8 @@ def detect_facts_for_fighter(name: str, history: pd.DataFrame, fighter_row, move
     if streak >= MIN_WIN_STREAK:
         candidates.append({
             "text": f"Riding a {streak}-fight win streak", "number": streak,
-            "tier": "hot", "score": streak * 6,
+            "tier": "legendary" if streak >= 12 else "hot",
+            "score": streak * 6 + (60 if streak >= 12 else 0),
         })
 
     # --- Career purity from the method breakdown (covers pre-UFC too)
@@ -140,16 +138,20 @@ def detect_facts_for_fighter(name: str, history: pd.DataFrame, fighter_row, move
             ko, sub, dec = int(ko), int(sub), int(dec)
             total = ko + sub + dec
             if total >= MIN_WINS_FOR_PURITY:
+                # 14+ wins of pure finishing (or one pure method) is a
+                # career-defining anomaly, not just a rarity -- own tier.
+                purity_tier = "legendary" if total >= 14 else "gold"
+                bonus = 70 if purity_tier == "legendary" else 20
                 if dec == 0:
                     candidates.append({
                         "text": f"Has never won by decision — {total} finishes in {total} wins",
-                        "number": total, "tier": "gold", "score": total * 8 + 20,
+                        "number": total, "tier": purity_tier, "score": total * 8 + bonus,
                     })
                 elif ko == total or sub == total:
                     label = METHOD_LABEL["KO/TKO" if ko == total else "SUB"]
                     candidates.append({
                         "text": f"All {total} career wins by {label}",
-                        "number": total, "tier": "gold", "score": total * 9 + 25,
+                        "number": total, "tier": purity_tier, "score": total * 9 + bonus + 5,
                     })
         kol, subl, decl = (fighter_row.get(k) for k in ("ko_losses", "sub_losses", "dec_losses"))
         if all(pd.notna(v) for v in (kol, subl, decl)):
