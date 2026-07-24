@@ -581,10 +581,18 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
     lock_record = None
     if lock_picks:
         lock_correct = sum(1 for m in lock_picks if m["correct"])
+        # "Perfect calls": both the winner AND the method called correctly
+        # in advance -- the strongest claim a pick can make, counted here
+        # so the template can headline it without recomputing.
+        perfect_calls = sum(1 for m in lock_picks if m["correct"] and m.get("method_correct") is True)
         lock_record = {
             "correct": lock_correct,
             "total": len(lock_picks),
             "accuracy_pct": round(lock_correct / len(lock_picks) * 100, 1),
+            "perfect_calls": perfect_calls,
+            # Full history for the scrollable Track Record card -- matched
+            # is already sorted most-recent-first, so this inherits that.
+            "picks": lock_picks,
         }
 
     # Correct underdog calls: arguably a more impressive claim than raw

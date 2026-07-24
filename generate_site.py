@@ -39,6 +39,7 @@ from src.units_chart import build_units_timeseries_svg
 from src.donut_chart import build_donut_svg
 from src.damage_silhouette import build_damage_silhouette_svg
 from src.model_preview import _confidence_label
+from src.fun_facts import compute_fun_facts
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
@@ -232,6 +233,18 @@ def main():
         events_for_model_only = events
 
     standout_props = top_standout_props(tracked_edges, fighters_df, n=5, min_edge=5.0)
+
+    # Fun facts: genuinely notable patterns for fighters on the current
+    # card (active method streaks, career purity, win streaks) -- gated
+    # in src/fun_facts.py so an empty list on a quiet week is the
+    # correct outcome, and the whole hub card/section simply doesn't
+    # render then (see template).
+    card_fighter_names = sorted({
+        n for event in events for fight in event["fights"]
+        for n in (fight.get("fighter_a"), fight.get("fighter_b")) if n
+    })
+    fun_facts = compute_fun_facts(card_fighter_names, f"{DATA_DIR}/fight_history.csv", fighters_df)
+    fun_facts_by_fighter = {f["fighter"]: f for f in fun_facts}
     favorite_picks = top_favorite_picks(tracked_edges, fighters_df, n=5)
 
     tracked_edges_list = tracked_edges.to_dict("records") if not tracked_edges.empty else []
@@ -676,6 +689,8 @@ def main():
         future_events=future_events,
         unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
         standout_props=standout_props,
+        fun_facts=fun_facts,
+        fun_facts_by_fighter=fun_facts_by_fighter,
         favorite_picks=favorite_picks,
         lock_picks=lock_picks,
         event_short_name=event_short_name,

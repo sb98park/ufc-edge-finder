@@ -426,6 +426,113 @@
     display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800;
   }
   .underdog-pick { font-weight: 700; color: var(--text); flex: 1; }
+  /* Lock of the Week full-history card -- same visual family as
+     .underdog-block directly above it, in the site's established lock
+     purple (rgba(139,92,246,...), matching .lock-pick-card elsewhere)
+     instead of underdog orange. Interior scrolls (capped height) so the
+     card stays a fixed size as the list grows week over week. */
+  .lock-history-block {
+    margin: 0 0 16px; padding: 12px 14px; border-radius: 10px;
+    background: linear-gradient(135deg, rgba(139,92,246,0.1), var(--panel2) 70%);
+    border: 1px solid rgba(139,92,246,0.3);
+  }
+  .lock-history-title {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+    font-size: 12.5px; font-weight: 800; color: #a78bfa; margin-bottom: 10px;
+  }
+  .lock-history-alltime { font-size: 10px; font-weight: 600; color: var(--muted); }
+  .lock-history-scroll {
+    max-height: 300px; overflow-y: auto; padding-right: 6px;
+    scrollbar-width: thin; scrollbar-color: rgba(139,92,246,0.4) transparent;
+  }
+  .lock-history-scroll::-webkit-scrollbar { width: 5px; }
+  .lock-history-scroll::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.4); border-radius: 3px; }
+  .lock-history-row { padding: 7px 8px; border-radius: 8px; margin-bottom: 4px; }
+  .lock-history-row:last-child { margin-bottom: 0; }
+  /* The special treatment: winner AND method both called in advance.
+     Gold border + soft glow + badge -- deliberately the loudest thing in
+     this card, since it's the strongest claim a pick can make. */
+  .lock-history-row.perfect {
+    background: linear-gradient(135deg, rgba(212,175,55,0.14), rgba(139,92,246,0.06) 70%);
+    border: 1px solid rgba(212,175,55,0.55);
+    box-shadow: 0 0 10px rgba(212,175,55,0.12);
+  }
+  .lock-history-main { display: flex; align-items: center; gap: 8px; }
+  .lock-history-result {
+    flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800;
+  }
+  .lock-history-result.hit { background: rgba(61,220,132,0.15); color: var(--green); }
+  .lock-history-result.miss { background: rgba(255,92,92,0.15); color: var(--red); }
+  .lock-history-pick { font-weight: 700; color: var(--text); font-size: 12.5px; }
+  .lock-history-perfect-badge {
+    font-size: 8.5px; font-weight: 800; letter-spacing: 0.5px; color: #14171f;
+    background: linear-gradient(135deg, var(--accent), #e8c766); border-radius: 4px;
+    padding: 2px 6px; white-space: nowrap;
+  }
+  .lock-history-sub { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 3px 0 0 24px; font-size: 10px; color: var(--muted); }
+  .lock-history-method.hit { color: var(--green); font-weight: 700; }
+  .lock-history-method.miss { color: var(--red); }
+  /* Fun-fact cards -- teal family, distinct from every existing section
+     accent. Staggered slide-in on reveal (--fact-delay set per card),
+     with a one-time gradient sheen sweeping across after landing. Gold
+     tier (career purity / specific-move streaks) gets the site's
+     established gold treatment, consistent with ★ PERFECT elsewhere. */
+  .fun-fact-card {
+    display: flex; align-items: center; gap: 14px; margin: 0 0 10px; padding: 14px 16px;
+    border-radius: 12px; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, rgba(45,212,191,0.08), var(--panel2) 65%);
+    border: 1px solid rgba(45,212,191,0.3);
+    opacity: 0; transform: translateY(12px);
+    animation: factReveal 0.45s ease-out forwards;
+    animation-delay: var(--fact-delay, 0s);
+  }
+  @keyframes factReveal { to { opacity: 1; transform: translateY(0); } }
+  .fun-fact-card::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.07) 50%, transparent 65%);
+    background-size: 250% 100%; background-position: 180% 0;
+    animation: factSheen 1.1s ease-out forwards;
+    animation-delay: calc(var(--fact-delay, 0s) + 0.5s);
+    pointer-events: none;
+  }
+  @keyframes factSheen { to { background-position: -80% 0; } }
+  .fun-fact-card.gold {
+    background: linear-gradient(135deg, rgba(212,175,55,0.12), var(--panel2) 65%);
+    border-color: rgba(212,175,55,0.5);
+    box-shadow: 0 0 12px rgba(212,175,55,0.1);
+  }
+  .fun-fact-number {
+    flex-shrink: 0; min-width: 52px; text-align: center;
+    font-size: 34px; font-weight: 800; font-family: var(--font-display); line-height: 1;
+    color: #2dd4bf;
+  }
+  .fun-fact-card.gold .fun-fact-number { color: var(--accent); }
+  .fun-fact-fighter { font-size: 14px; font-weight: 800; color: var(--text); }
+  .fun-fact-text { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .fun-fact-tier-badge {
+    position: absolute; top: 8px; right: 10px; font-size: 8px; font-weight: 800;
+    letter-spacing: 0.6px; color: #14171f; padding: 2px 6px; border-radius: 4px;
+    background: linear-gradient(135deg, var(--accent), #e8c766);
+  }
+  /* Small chip variant, shown on the fighter's own fight card in This
+     Weekend -- same fact, glanceable in context. */
+  .fun-fact-chip {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 4px;
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    background: rgba(45,212,191,0.12); color: #2dd4bf; border: 1px solid rgba(45,212,191,0.3);
+  }
+  .fun-fact-chip.gold { background: rgba(212,175,55,0.12); color: var(--accent); border-color: rgba(212,175,55,0.4); }
+  .fun-fact-chip-row {
+    display: flex; justify-content: space-between; gap: 8px; margin-top: 6px;
+  }
+  .fun-fact-chip-row > div { min-width: 0; }
+  .fun-fact-chip-row .fun-fact-chip { max-width: 100%; }
+  .fun-fact-chip-row .fun-fact-chip { white-space: normal; text-align: left; }
+  @media (prefers-reduced-motion: reduce) {
+    .fun-fact-card { animation: none; opacity: 1; transform: none; }
+    .fun-fact-card::after { animation: none; }
+  }
   .underdog-odds { color: #f0954a; font-weight: 700; font-size: 11px; }
   .event-summary-value { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.1; }
   .event-summary-value.positive { color: var(--green); }
@@ -1519,6 +1626,16 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
+      {% if fun_facts %}
+      <div class="hub-card" style="--card-accent:#2dd4bf" onclick="showSection('funfacts')" data-section-nav="funfacts">
+        <div class="hub-card-icon">⚡</div>
+        <div class="hub-card-text">
+          <div class="hub-card-title">Fight Facts <span class="count-badge">{{ fun_facts|length }}</span></div>
+          <div class="hub-card-sub">streaks &amp; patterns worth knowing</div>
+        </div>
+        <span class="hub-card-arrow">→</span>
+      </div>
+      {% endif %}
       <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('favorites')" data-section-nav="favorites">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond">
@@ -1739,6 +1856,33 @@
         {% endfor %}
       </div>
       {% endif %}
+    </div>
+    {% endif %}
+    {% if track_record.lock_record and track_record.lock_record.picks %}
+    <div class="lock-history-block">
+      <div class="lock-history-title">🔒 Locks of the Week — Full History
+        <span class="lock-history-alltime">{{ track_record.lock_record.correct }}/{{ track_record.lock_record.total }} correct{% if track_record.lock_record.perfect_calls > 0 %} · {{ track_record.lock_record.perfect_calls }} perfect{% endif %}</span>
+      </div>
+      <div class="lock-history-scroll">
+        {% for p in track_record.lock_record.picks %}
+        {% set perfect = p.correct and p.method_correct == true %}
+        <div class="lock-history-row{{ ' perfect' if perfect }}">
+          <div class="lock-history-main">
+            <span class="lock-history-result {{ 'hit' if p.correct else 'miss' }}">{{ '✓' if p.correct else '✗' }}</span>
+            <span class="lock-history-pick">{{ p.predicted_favorite }}</span>
+            {% if perfect %}<span class="lock-history-perfect-badge">★ PERFECT</span>{% endif %}
+          </div>
+          <div class="lock-history-sub">
+            <span class="lock-history-event">{{ p.event_name }}</span>
+            {% if p.predicted_method %}
+            <span class="lock-history-method {{ 'hit' if p.method_correct == true else ('miss' if p.method_correct == false else '') }}">
+              {{ 'Method ✓' if p.method_correct == true else ('Method ✗' if p.method_correct == false else 'Method —') }} {{ p.predicted_method }}{% if p.method_correct == false and p.actual_method %} (was {{ p.actual_method }}){% endif %}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
     </div>
     {% endif %}
     {% if calibration_svg %}
@@ -2003,6 +2147,14 @@
           {{ fighter_avatar(fight.fighter_b, is_winner=(fight.winner == fight.fighter_b)) }}
         </div>
       </div>
+      {% set fact_a = fun_facts_by_fighter.get(fight.fighter_a) %}
+      {% set fact_b = fun_facts_by_fighter.get(fight.fighter_b) %}
+      {% if fact_a or fact_b %}
+      <div class="fun-fact-chip-row">
+        <div>{% if fact_a %}<span class="fun-fact-chip {{ fact_a.tier }}">⚡ {{ fact_a.text }}</span>{% endif %}</div>
+        <div>{% if fact_b %}<span class="fun-fact-chip {{ fact_b.tier }}">⚡ {{ fact_b.text }}</span>{% endif %}</div>
+      </div>
+      {% endif %}
       <div class="matchup-divider-row">
         <div class="divider-line"></div>
         <span class="chevron">▶</span>
@@ -2214,6 +2366,21 @@
   {% else %}
   {{ empty_state(icon_flame(), "No standout props right now", "The model isn't seeing a meaningful disagreement with the market on this card yet — check back as odds update.") }}
   {% endif %}
+  </div>
+
+  <div class="detail-section" data-section="funfacts">
+  <div class="standout-title" id="section-funfacts">⚡ Fight Facts</div>
+  <div class="parlay-subtitle">Genuinely notable patterns for fighters on this card — active streaks and career-long tendencies, straight from real fight history. Nothing filler: quiet weeks just have fewer of these.</div>
+  {% for f in fun_facts %}
+  <div class="fun-fact-card {{ f.tier }}" style="--fact-delay: {{ loop.index0 * 0.12 }}s">
+    <div class="fun-fact-number" data-countup="{{ f.number }}">{{ f.number }}</div>
+    <div class="fun-fact-body">
+      <div class="fun-fact-fighter">{{ f.fighter }}</div>
+      <div class="fun-fact-text">{{ f.text }}</div>
+    </div>
+    {% if f.tier == 'gold' %}<div class="fun-fact-tier-badge">RARE</div>{% endif %}
+  </div>
+  {% endfor %}
   </div>
 
   <div class="detail-section" data-section="favorites">
@@ -2717,6 +2884,27 @@
           void el.offsetWidth;
           el.classList.add('new-item-glow');
         });
+        // Fun-fact count-up: each time the facts section opens, roll the
+        // big streak numbers from 0 up to their value. Skipped entirely
+        // under prefers-reduced-motion (the static number is already in
+        // the markup, so no-JS/reduced-motion users just see it as-is).
+        if (id === 'funfacts' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.querySelectorAll('.fun-fact-number[data-countup]').forEach(el => {
+            const target = parseInt(el.dataset.countup, 10);
+            if (!target || target <= 0) return;
+            const durationMs = 700;
+            const start = performance.now();
+            function tick(now) {
+              const t = Math.min(1, (now - start) / durationMs);
+              // ease-out so the last few counts land slowly -- reads as
+              // "arriving at" the number rather than a slot machine
+              const eased = 1 - Math.pow(1 - t, 3);
+              el.textContent = Math.round(eased * target);
+              if (t < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+          });
+        }
       }
 
       if (isDesktopLayout() || alreadyInDetail) {
