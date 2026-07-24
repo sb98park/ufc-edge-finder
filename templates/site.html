@@ -504,30 +504,33 @@
   }
   /* LEGENDARY -- the tier above gold, for career-defining anomalies
      (18 finishes in 18 wins, a 5+ streak of one specific move, 12+
-     fight win streaks). Animated flowing gradient border via the
-     two-layer background border-box technique, plus a breathing glow --
-     unmistakably louder than gold's static treatment, reserved for the
-     facts that genuinely deserve to pop. */
+     fight win streaks). Aurora treatment: violet flowing into magenta
+     with a teal glint (echoing the section's own accent) -- deliberately
+     NOT plain purple, which is Locks of the Week's established identity.
+     The inner wash is kept very light and the detail text explicitly
+     brightened: the first (gold) version washed the whole card in gold
+     behind muted grey text and genuinely hurt readability. */
   .fun-fact-card.legendary {
     border: 1.5px solid transparent;
     background:
-      linear-gradient(135deg, rgba(212,175,55,0.14), #1a1e28 65%) padding-box,
-      linear-gradient(120deg, #d4af37, #f5e6b8, #2dd4bf, #d4af37) border-box;
+      linear-gradient(135deg, rgba(167,139,250,0.07), var(--panel2) 55%) padding-box,
+      linear-gradient(120deg, #a78bfa, #e879f9, #2dd4bf, #a78bfa) border-box;
     background-size: 100% 100%, 300% 100%;
     animation: factReveal 0.45s ease-out forwards, legendaryBorder 4s linear infinite, legendaryGlow 2.6s ease-in-out infinite;
     animation-delay: var(--fact-delay, 0s), 0s, 0s;
   }
   @keyframes legendaryBorder { to { background-position: 0 0, 300% 0; } }
   @keyframes legendaryGlow {
-    0%, 100% { box-shadow: 0 0 14px rgba(212,175,55,0.18); }
-    50% { box-shadow: 0 0 22px rgba(212,175,55,0.32); }
+    0%, 100% { box-shadow: 0 0 14px rgba(167,139,250,0.18); }
+    50% { box-shadow: 0 0 22px rgba(232,121,249,0.28); }
   }
   .fun-fact-card.legendary .fun-fact-number {
-    color: var(--accent);
-    text-shadow: 0 0 12px rgba(212,175,55,0.45);
+    color: #e879f9;
+    text-shadow: 0 0 12px rgba(232,121,249,0.4);
   }
+  .fun-fact-card.legendary .fun-fact-text { color: #c6cad4; }
   .fun-fact-tier-badge.legendary-badge {
-    background: linear-gradient(120deg, #d4af37, #f5e6b8, #2dd4bf, #d4af37);
+    background: linear-gradient(120deg, #a78bfa, #e879f9, #2dd4bf, #a78bfa);
     background-size: 300% 100%;
     animation: legendaryBorder 4s linear infinite;
   }
@@ -553,11 +556,11 @@
   }
   .fun-fact-chip.gold { background: rgba(212,175,55,0.12); color: var(--accent); border-color: rgba(212,175,55,0.4); }
   .fun-fact-chip.legendary {
-    background: rgba(212,175,55,0.16); color: var(--accent);
+    color: #e879f9;
     border: 1px solid transparent;
     background:
       linear-gradient(#20222c, #20222c) padding-box,
-      linear-gradient(120deg, #d4af37, #f5e6b8, #2dd4bf, #d4af37) border-box;
+      linear-gradient(120deg, #a78bfa, #e879f9, #2dd4bf, #a78bfa) border-box;
     background-size: 100% 100%, 300% 100%;
     animation: legendaryBorder 4s linear infinite;
   }
@@ -574,9 +577,9 @@
       animation: none;
     }
     .fun-fact-card.legendary {
-      border: 1.5px solid var(--accent);
-      background: linear-gradient(135deg, rgba(212,175,55,0.14), var(--panel2) 65%);
-      box-shadow: 0 0 16px rgba(212,175,55,0.25);
+      border: 1.5px solid #a78bfa;
+      background: linear-gradient(135deg, rgba(167,139,250,0.07), var(--panel2) 55%);
+      box-shadow: 0 0 16px rgba(167,139,250,0.25);
     }
   }
   .underdog-odds { color: #f0954a; font-weight: 700; font-size: 11px; }
