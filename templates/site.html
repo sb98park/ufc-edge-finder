@@ -567,9 +567,19 @@
   .fun-fact-chip-row {
     display: flex; justify-content: space-between; gap: 8px; margin-top: 6px;
   }
-  .fun-fact-chip-row > div { min-width: 0; }
-  .fun-fact-chip-row .fun-fact-chip { max-width: 100%; }
-  .fun-fact-chip-row .fun-fact-chip { white-space: normal; text-align: left; }
+  /* Each side capped at 48% so even a legendary-length fact can never
+     cross the midline into the other fighter's half. overflow-wrap as a
+     final guard against any single unbreakable token. */
+  .fun-fact-chip-row > div { min-width: 0; max-width: 48%; }
+  .fun-fact-chip-row .fun-fact-chip { max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
+  /* Mobile: side-by-side halves get too narrow for real fact text --
+     stack instead, full width each, keeping the spatial association
+     (fighter_a's chip hugs the left edge, fighter_b's the right). */
+  @media (max-width: 640px) {
+    .fun-fact-chip-row { flex-direction: column; gap: 4px; }
+    .fun-fact-chip-row > div { max-width: 100%; }
+    .fun-fact-chip-row > div:last-child { align-self: flex-end; text-align: right; }
+  }
   @media (prefers-reduced-motion: reduce) {
     .fun-fact-card { animation: none; opacity: 1; transform: none; }
     .fun-fact-card::after { animation: none; }
