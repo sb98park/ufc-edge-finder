@@ -296,6 +296,20 @@ def _compute_calibration(matched: list[dict]) -> dict | None:
             "actual": round(actual_rate, 3),
             "n": len(bucket),
         })
+        # Operator-facing drift warning (log only, not site copy -- the
+        # user-facing summary below already covers the aggregate story).
+        # Fires per-bin when the actual win rate lands more than 15
+        # points from the average stated confidence, with n>=10 so a
+        # couple of unlucky results in a thin bucket doesn't cry wolf.
+        # 15pp at n=10 is still within plausible binomial noise, so this
+        # is a "look at this" nudge, not a statistical verdict -- but
+        # it's exactly the early-drift signal that previously had no way
+        # to surface anywhere except manually eyeballing the chart.
+        if len(bucket) >= 10 and abs(actual_rate - predicted_avg) > 0.15:
+            direction = "OVERconfident" if actual_rate < predicted_avg else "UNDERconfident"
+            print(f"[track_record] CALIBRATION DRIFT: {lo:.0%}-{min(hi,1.0):.0%} bin is {direction} "
+                  f"-- predicted avg {predicted_avg:.1%} but actual win rate {actual_rate:.1%} "
+                  f"over n={len(bucket)} picks. Worth a look if this persists across refreshes.")
 
     total_n = sum(p["n"] for p in points)
     weighted_gap = sum((p["actual"] - p["predicted"]) * p["n"] for p in points) / total_n if total_n else 0

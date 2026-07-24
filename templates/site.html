@@ -165,6 +165,21 @@
      Revealed and laid out in the desktop media query below. */
   .countdown-info { display: none; }
   .countdown-info-line { font-size: 12px; color: var(--muted); line-height: 1.7; white-space: nowrap; }
+  /* Skeleton-pattern "updating" shimmer for live-price elements during
+     the initial client-side price fetch -- values stay fully readable
+     (they're real baked data, not placeholders), the shimmer just
+     signals a refresh is in flight. Removed by JS when the first fetch
+     concludes, success or failure. */
+  .price-updating {
+    background: linear-gradient(90deg, transparent 30%, rgba(212,175,55,0.14) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: priceShimmer 1.4s ease-in-out infinite;
+    border-radius: 4px;
+  }
+  @keyframes priceShimmer { 0% { background-position: 180% 0; } 100% { background-position: -80% 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .price-updating { animation: none; background: none; }
+  }
   /* Confidence hero badge -- a single, clearly-labeled stat instead of a
      bare "5 High · 4 Med · 3 Low" line with no context for what the
      numbers mean. Colors reused directly from the existing pick-badge
@@ -2905,8 +2920,23 @@
           }
           if (updated > 0) showChip();
         } catch (e) { /* fail silent -- baked odds remain */ }
+        finally {
+          // End the first-load shimmer whether the fetch succeeded or not
+          // -- on failure the baked values simply stay, and they should
+          // stop signaling "updating" once the attempt has concluded.
+          document.querySelectorAll('.price-updating').forEach(el => el.classList.remove('price-updating'));
+        }
       }
 
+      // Loading-state treatment for the one genuinely async surface on
+      // this otherwise fully-static site: the initial live-price fetch.
+      // A classic blank-box skeleton would be actively WORSE here (the
+      // baked prices are real, useful data -- hiding them behind grey
+      // placeholders trades information for theater), so this applies
+      // the skeleton PATTERN -- visible "this is being refreshed"
+      // feedback -- as a subtle shimmer on top of the still-readable
+      // baked values, only during the first fetch after page load.
+      document.querySelectorAll('[data-live-token]').forEach(el => el.classList.add('price-updating'));
       refresh();
       setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 90000);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });

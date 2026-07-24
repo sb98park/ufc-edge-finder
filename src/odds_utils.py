@@ -133,8 +133,21 @@ def add_estimated_vig(prob_a: float, prob_b: float, overround: float = DEFAULT_B
 
 
 def format_american_odds(value) -> str:
-    """+230 for underdogs, -280 for favorites -- never a bare decimal."""
+    """
+    +230 for underdogs, -280 for favorites -- never a bare decimal.
+
+    Capped at ±5000: stress-testing found extreme probabilities (99%+)
+    produce mathematically-correct but absurd American odds (-19900,
+    even -223304 at 99.9%) that no real sportsbook would ever quote --
+    books stop around the low thousands or delist the market entirely.
+    Since every displayed odds value in the site flows through this one
+    formatter, capping here fixes the display-realism issue everywhere
+    at once without touching any underlying probability math (edges,
+    parlays, and model internals all use the raw probabilities, never
+    this formatted string).
+    """
     v = int(round(float(value)))
+    v = max(-5000, min(5000, v))
     return f"+{v}" if v > 0 else str(v)
 
 

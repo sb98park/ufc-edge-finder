@@ -55,7 +55,18 @@ def get_live_props() -> tuple[pd.DataFrame, str]:
             if rows:
                 return pd.DataFrame(rows), "The Odds API (moneyline only)"
         except Exception as exc:
-            raise RuntimeError(f"Polymarket, DraftKings, and The Odds API all failed: {exc}")
+            # All three sources failed. This used to raise RuntimeError,
+            # which killed the ENTIRE site generation -- a transient
+            # network blip at the wrong moment meant no site update at
+            # all, including everything that doesn't depend on live odds
+            # (track record, fighter data, schedules). The empty-DataFrame
+            # path below already exists for the quieter "sources answered
+            # but had no rows" case, and everything downstream (including
+            # the template's "Couldn't fetch live odds right now" notice)
+            # already handles it correctly -- so a total outage should
+            # take that same graceful path, just with a louder log line.
+            print(f"[warn] ALL THREE odds sources failed (Polymarket, DraftKings, "
+                  f"The Odds API) -- generating site without live odds. Last error: {exc}")
         return pd.DataFrame(), "no source returned data"
 
     # Merge: Polymarket rows are kept as-is (no-vig, more trustworthy pricing).
