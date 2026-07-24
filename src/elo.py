@@ -15,16 +15,44 @@ METHOD_K_MULTIPLIER = {
     "DQ": 0.50,
 }
 
+# Experience-based adaptive K schedule (the core Glicko insight applied
+# minimally): a fighter's first few results should move their rating a
+# lot -- 1500 is a guess, not knowledge, and the fastest way out of a
+# wrong guess is a big step -- while an established fighter's rating
+# reflects a real body of evidence and should move less per result.
+# Fully point-in-time: the fight count that picks the K is the number of
+# fights ALREADY replayed for that fighter at that moment, so this is
+# exactly as lookahead-safe as the base Elo itself. Validated via
+# walkforward_backtest.py before shipping (see that script's output for
+# the honest before/after numbers).
+ADAPTIVE_K_SCHEDULE = [
+    (5, 64.0),   # fights 1-5: doubled K, escape the 1500 guess quickly
+    (10, 48.0),  # fights 6-10: still elevated while the picture firms up
+]
+# after that: the base k_factor (32.0)
+
 
 class EloRatingSystem:
-    def __init__(self, initial_rating: float = 1500.0, k_factor: float = 32.0):
+    def __init__(self, initial_rating: float = 1500.0, k_factor: float = 32.0, adaptive_k: bool = True):
         self.initial_rating = initial_rating
         self.k_factor = k_factor
+        self.adaptive_k = adaptive_k
         self.ratings: dict[str, float] = {}
+        self.fight_counts: dict[str, int] = {}
         self.history: list[dict] = []  # rating trajectory, useful for debugging/plotting
 
     def get_rating(self, fighter: str) -> float:
         return self.ratings.get(fighter, self.initial_rating)
+
+    def _k_for(self, fighter: str) -> float:
+        """Per-fighter K based on how many fights of theirs we've seen so far."""
+        if not self.adaptive_k:
+            return self.k_factor
+        count = self.fight_counts.get(fighter, 0)
+        for threshold, k in ADAPTIVE_K_SCHEDULE:
+            if count < threshold:
+                return k
+        return self.k_factor
 
     @staticmethod
     def expected_score(rating_a: float, rating_b: float) -> float:
@@ -38,13 +66,21 @@ class EloRatingSystem:
         exp_w = self.expected_score(r_w, r_l)
         exp_l = 1.0 - exp_w
 
-        k = self.k_factor * METHOD_K_MULTIPLIER.get(method, 1.0)
+        mult = METHOD_K_MULTIPLIER.get(method, 1.0)
+        # Per-fighter K: an experienced fighter's rating stays steady even
+        # when their opponent is a fast-moving newcomer, and vice versa --
+        # asymmetric K per side is standard practice (each side's update
+        # uses their own uncertainty), not a bug.
+        k_w = self._k_for(winner) * mult
+        k_l = self._k_for(loser) * mult
 
-        new_r_w = r_w + k * (1.0 - exp_w)
-        new_r_l = r_l + k * (0.0 - exp_l)
+        new_r_w = r_w + k_w * (1.0 - exp_w)
+        new_r_l = r_l + k_l * (0.0 - exp_l)
 
         self.ratings[winner] = new_r_w
         self.ratings[loser] = new_r_l
+        self.fight_counts[winner] = self.fight_counts.get(winner, 0) + 1
+        self.fight_counts[loser] = self.fight_counts.get(loser, 0) + 1
 
         self.history.append({
             "winner": winner, "loser": loser, "method": method,
