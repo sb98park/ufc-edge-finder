@@ -223,6 +223,7 @@ def group_edges_by_card(
             "weight_class": row["weight_class"],
             "weight_class_color": WEIGHT_CLASS_COLORS.get(row["weight_class"], "#8a8f9a"),
             "is_womens_division": bool(row.get("is_womens_division", False)),
+            "cancelled": str(row.get("cancelled", "")).strip().lower() == "true",
             "fighter_a": row["fighter_a"],
             "fighter_b": row["fighter_b"],
             "fighters": {row["fighter_a"], row["fighter_b"]},

@@ -463,6 +463,7 @@ def main():
         {
             "fighter_a": fight["fighter_a"], "fighter_b": fight["fighter_b"],
             "weight_class": fight.get("weight_class"), "card_position": fight.get("card_position"),
+            "cancelled": bool(fight.get("cancelled")),
             "favorite": fight["preview"]["favorite"], "favorite_prob": fight["preview"]["favorite_prob"],
             "underdog": fight["preview"]["underdog"], "likely_method": fight["preview"]["likely_method"],
             "narrative": fight["preview"]["narrative"],
@@ -586,6 +587,8 @@ def main():
         countdown_edge_count = len(standout_props)
         confidence_tally = {"High Confidence": 0, "Medium Confidence": 0, "Low Confidence": 0}
         for fight in next_event.get("fights", []):
+            if fight.get("cancelled"):
+                continue  # a cancelled fight's pick is void -- not part of this card's confidence story
             preview = fight.get("preview")
             if preview and preview.get("favorite_prob") is not None:
                 confidence_tally[_confidence_label(preview["favorite_prob"])] += 1

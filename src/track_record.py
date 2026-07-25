@@ -30,7 +30,7 @@ PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
 FIELDNAMES = [
     "event_name", "fighter_a", "fighter_b", "favorite", "favorite_prob",
     "confidence_label", "likely_method", "pick_odds", "closing_odds", "opponent_odds",
-    "favorite_prob_history", "last_updated", "is_lock_of_week",
+    "favorite_prob_history", "last_updated", "is_lock_of_week", "voided",
 ]
 MOMENTUM_HISTORY_CAP = 10
 MOMENTUM_THRESHOLD = 0.03  # 3 percentage points -- below this, treat as noise/stable
@@ -181,6 +181,7 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
                 "favorite_prob_history": json.dumps(new_history),
                 "last_updated": generated_at,
                 "is_lock_of_week": (prior.get("is_lock_of_week", "") if prior else ""),
+                "voided": (prior.get("voided", "") if prior else ""),
             }
 
     _assign_locks_of_week(existing, events, decided_keys)
@@ -484,6 +485,17 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
 
     with open(PREDICTIONS_LOG_PATH, newline="") as f:
         predictions = list(csv.DictReader(f))
+
+    # VOIDED predictions (cancelled fights, marked via
+    # scripts/mark_fight_cancelled.py) are removed before matching ever
+    # happens: a void counts as if the prediction was never made -- it
+    # must not touch accuracy, confidence tiers, locks, CLV, or units in
+    # EITHER direction. Filtering here (rather than relying on "no result
+    # ever appears for a cancelled fight") also protects against a result
+    # for the same pairing surfacing later -- e.g. the fight getting
+    # rescheduled to a future card, where the OLD pick shouldn't silently
+    # count against the NEW fight.
+    predictions = [p for p in predictions if str(p.get("voided", "")).strip().lower() != "true"]
 
     pred_by_key = {_pair_key(p["fighter_a"], p["fighter_b"]): p for p in predictions}
 

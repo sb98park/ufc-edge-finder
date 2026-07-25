@@ -365,6 +365,13 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
         orphaned = [r for k, r in existing_by_key.items() if k not in matched_keys]
         for matched_row in new_order:
             matched_row.pop("_orphan_streak", None)  # successfully matched this run -- no longer orphaned
+        # Cancelled fights are pinned: being missing from ESPN's fresh
+        # card is EXPECTED for them (ESPN removes cancelled bouts), so
+        # neither drop path below should ever touch them -- the whole
+        # point of the cancelled flag is keeping the fight visible on our
+        # card with a cancellation banner instead of silently vanishing.
+        pinned_cancelled = [r for r in orphaned if str(r.get("cancelled", "")).strip().lower() == "true"]
+        orphaned = [r for r in orphaned if r not in pinned_cancelled]
         if orphaned:
             # A fighter from an orphaned row appearing anywhere in the FRESH
             # data (with a different opponent, necessarily, since it didn't
@@ -412,6 +419,7 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
                       f"data that might just be a transient gap")
             orphaned = still_within_grace
         new_order.extend(orphaned)
+        new_order.extend(pinned_cancelled)
 
         if [(_key(r), r["card_position"]) for r in new_order] != before_snapshot:
             corrected += 1

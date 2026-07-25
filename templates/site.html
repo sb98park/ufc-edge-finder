@@ -473,6 +473,26 @@
   .lock-history-sub { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 3px 0 0 24px; font-size: 10px; color: var(--muted); }
   .lock-history-method.hit { color: var(--green); font-weight: 700; }
   .lock-history-method.miss { color: var(--red); }
+  /* Fight cancellation treatment: an unmissable red banner + the rest of
+     the card muted/desaturated. The fight deliberately STAYS visible
+     (with its model pick intact, greyed) rather than vanishing -- people
+     checking the card should see WHAT happened, not wonder where the
+     fight went. The matching prediction is voided from all stats via
+     scripts/mark_fight_cancelled.py. */
+  .cancelled-banner {
+    background: linear-gradient(135deg, rgba(255,92,92,0.18), rgba(255,92,92,0.08));
+    border: 1px solid rgba(255,92,92,0.55); color: var(--red);
+    font-size: 11px; font-weight: 800; letter-spacing: 0.8px;
+    padding: 6px 10px; border-radius: 8px; margin-bottom: 10px; text-align: center;
+  }
+  .fight-cancelled .matchup-header,
+  .fight-cancelled .matchup-badges-row,
+  .fight-cancelled .fun-fact-chip-row,
+  .fight-cancelled .fight-body,
+  .fight-cancelled .lock-pick-top,
+  .fight-cancelled .lock-pick-narrative {
+    opacity: 0.45; filter: saturate(0.35);
+  }
   /* Fun-fact cards -- teal family, distinct from every existing section
      accent. Staggered slide-in on reveal (--fact-delay set per card),
      with a one-time gradient sheen sweeping across after landing. Gold
@@ -2230,9 +2250,12 @@
   {%- endmacro %}
 
   {% macro render_fight_card(fight, card_index=none) %}
-  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label else '' }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
+  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label }}{{ ' fight-cancelled' if fight.cancelled }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
     <summary>
       <div class="matchup-content">
+      {% if fight.cancelled %}
+      <div class="cancelled-banner">✕ FIGHT CANCELLED</div>
+      {% endif %}
       <div class="matchup-header">
         <div class="matchup-fighter">
           {{ fighter_avatar(fight.fighter_a, is_winner=(fight.winner == fight.fighter_a)) }}
@@ -2546,7 +2569,10 @@
   <div class="parlay-subtitle">The model's single highest-conviction picks on this weekend's card, all in one place — previously only visible as a badge you'd have to find on each individual fight. Capped at 3 per event, so a real standout doesn't get diluted by padded-out picks.</div>
   <div class="standout-grid">
     {% for l in lock_picks %}
-    <div class="lock-pick-card reveal-target" data-key="{{ l.fighter_a }}|{{ l.fighter_b }}">
+    <div class="lock-pick-card reveal-target{{ ' fight-cancelled' if l.cancelled }}" data-key="{{ l.fighter_a }}|{{ l.fighter_b }}">
+      {% if l.cancelled %}
+      <div class="cancelled-banner">✕ FIGHT CANCELLED — this pick is void and excluded from all stats</div>
+      {% endif %}
       <div class="lock-pick-top">
         {{ confidence_ring(l.favorite_prob, 'High Confidence', size=46) }}
         <div class="lock-pick-info">
