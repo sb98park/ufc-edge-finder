@@ -572,31 +572,66 @@
      final guard against any single unbreakable token. */
   .fun-fact-chip-row > div { min-width: 0; max-width: 48%; }
   .fun-fact-chip-row .fun-fact-chip { max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
-  /* Mobile: side-by-side halves get too narrow for real fact text --
-     stack instead, full width each, keeping the spatial association
-     (fighter_a's chip hugs the left edge, fighter_b's the right). */
+  .fun-fact-chip-icon { width: 13px; height: 13px; flex-shrink: 0; }
+  /* Mobile: chips collapse to just the bolt icon (tap to expand) -- the
+     side-by-side full-text layout the earlier fixes kept trying to
+     rescue simply doesn't have room at phone widths. Desktop (with
+     plenty of space) keeps icon + full text inline, no interaction.
+     The expanded state is a full-width BLOCK: its width comes from the
+     parent, not its own content, which structurally eliminates the
+     circular shrink-to-fit sizing that caused the overflow bug. */
   @media (max-width: 640px) {
-    .fun-fact-chip-row { flex-direction: column; gap: 4px; }
-    /* Real bug (user-reported, prior fix did not actually resolve it):
-       .fun-fact-chip is inline-flex, which sizes to its own content by
-       default. Combined with align-self:flex-end on this wrapper (which
-       also shrinks the wrapper to its content), the two created a
-       circular sizing dependency -- the wrapper's shrink-to-fit width
-       was computed from the chip's UNWRAPPED text width before wrapping
-       ever had a chance to apply, so long text just extended sideways
-       instead of wrapping. Fixed by giving the wrapper a width the
-       browser can compute independently of its content (100%, not
-       shrink-to-fit) -- now the chip has a fixed box to wrap inside,
-       full stop, regardless of how long the fact text is. */
-    .fun-fact-chip-row > div { width: 100%; max-width: 100%; }
+    .fun-fact-chip-row { gap: 6px; flex-wrap: wrap; }
+    .fun-fact-chip-row > div { max-width: none; }
     .fun-fact-chip-row > div:last-child { text-align: right; }
-    .fun-fact-chip-row .fun-fact-chip {
-      display: inline-block; max-width: 100%; box-sizing: border-box; text-align: left;
+    /* Set from JS alongside .expanded on the chip: gives the wrapper a
+       DEFINITE width (full row) for the chip's width:100% to resolve
+       against -- without this, a flex item sizes from its content and
+       the circular shrink-to-fit overflow bug comes straight back. */
+    .fun-fact-chip-row > div.fact-open { flex: 0 0 100%; }
+    .fun-fact-chip {
+      cursor: pointer; position: relative; padding: 5px 7px;
+      -webkit-tap-highlight-color: transparent;
     }
+    .fun-fact-chip:not(.expanded) .fun-fact-chip-text { display: none; }
+    /* The tap affordance: a soft tier-colored ring pulsing outward from
+       the collapsed icon, looping until expanded. */
+    .fun-fact-chip:not(.expanded) { animation: factChipPulse 2.2s ease-out infinite; }
+    .fun-fact-chip.gold:not(.expanded) { animation-name: factChipPulseGold; }
+    .fun-fact-chip.legendary:not(.expanded) { animation: legendaryBorder 4s linear infinite, factChipPulseLegendary 2.2s ease-out infinite; }
+    .fun-fact-chip.expanded {
+      display: block; width: 100%; box-sizing: border-box; text-align: left;
+      padding: 6px 9px;
+    }
+    .fun-fact-chip.expanded .fun-fact-chip-icon { vertical-align: -2px; margin-right: 4px; }
+    .fun-fact-chip.expanded .fun-fact-chip-text {
+      display: inline; animation: factTextExpand 0.28s ease-out;
+    }
+  }
+  @keyframes factChipPulse {
+    0% { box-shadow: 0 0 0 0 rgba(45,212,191,0.35); }
+    70% { box-shadow: 0 0 0 7px rgba(45,212,191,0); }
+    100% { box-shadow: 0 0 0 0 rgba(45,212,191,0); }
+  }
+  @keyframes factChipPulseGold {
+    0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.35); }
+    70% { box-shadow: 0 0 0 7px rgba(212,175,55,0); }
+    100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
+  }
+  @keyframes factChipPulseLegendary {
+    0% { box-shadow: 0 0 0 0 rgba(232,121,249,0.35); }
+    70% { box-shadow: 0 0 0 7px rgba(232,121,249,0); }
+    100% { box-shadow: 0 0 0 0 rgba(232,121,249,0); }
+  }
+  @keyframes factTextExpand {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   @media (prefers-reduced-motion: reduce) {
     .fun-fact-card { animation: none; opacity: 1; transform: none; }
     .fun-fact-card::after { animation: none; }
+    .fun-fact-chip:not(.expanded), .fun-fact-chip.gold:not(.expanded), .fun-fact-chip.legendary:not(.expanded) { animation: none; }
+    .fun-fact-chip.expanded .fun-fact-chip-text { animation: none; }
     .fun-fact-card.legendary, .fun-fact-chip.legendary, .fun-fact-tier-badge.legendary-badge {
       animation: none;
     }
@@ -2230,9 +2265,15 @@
       {% set fact_a = fun_facts_by_fighter.get(fight.fighter_a) %}
       {% set fact_b = fun_facts_by_fighter.get(fight.fighter_b) %}
       {% if fact_a or fact_b %}
+      {% macro fact_chip(fact, fighter) -%}
+      <span class="fun-fact-chip {{ fact.tier }}" data-fact-toggle role="button" tabindex="0" aria-expanded="false" aria-label="Fight fact for {{ fighter }}: {{ fact.text }}">
+        <svg class="fun-fact-chip-icon" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M14 2 L5.5 15 H11.5 L10.5 24 L20.5 10.5 H14 Z" fill="currentColor" opacity="0.2" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="20.5" cy="4.5" r="1.5" fill="currentColor"/></svg>
+        <span class="fun-fact-chip-text">{{ fact.text }}</span>
+      </span>
+      {%- endmacro %}
       <div class="fun-fact-chip-row">
-        <div>{% if fact_a %}<span class="fun-fact-chip {{ fact_a.tier }}">⚡ {{ fact_a.text }}</span>{% endif %}</div>
-        <div>{% if fact_b %}<span class="fun-fact-chip {{ fact_b.tier }}">⚡ {{ fact_b.text }}</span>{% endif %}</div>
+        <div>{% if fact_a %}{{ fact_chip(fact_a, fight.fighter_a) }}{% endif %}</div>
+        <div>{% if fact_b %}{{ fact_chip(fact_b, fight.fighter_b) }}{% endif %}</div>
       </div>
       {% endif %}
       <div class="matchup-divider-row">
@@ -2449,7 +2490,7 @@
   </div>
 
   <div class="detail-section" data-section="funfacts">
-  <div class="standout-title" id="section-funfacts">⚡ Fight Facts</div>
+  <div class="standout-title" id="section-funfacts"><svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Lightning bolt" style="width:17px;height:17px;vertical-align:-3px;margin-right:2px;"><defs><linearGradient id="icon-funfacts-sec" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#99f6e4"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient></defs><path d="M14 2 L5.5 15 H11.5 L10.5 24 L20.5 10.5 H14 Z" fill="url(#icon-funfacts-sec)" opacity="0.15" stroke="url(#icon-funfacts-sec)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="20.5" cy="4.5" r="1.3" fill="url(#icon-funfacts-sec)"/></svg> Fight Facts</div>
   <div class="parlay-subtitle">Genuinely notable patterns for fighters on this card — active streaks and career-long tendencies, straight from real fight history. Nothing filler: quiet weeks just have fewer of these.</div>
   {% for f in fun_facts %}
   <div class="fun-fact-card {{ f.tier }}" style="--fact-delay: {{ loop.index0 * 0.12 }}s">
@@ -3017,6 +3058,36 @@
       }
     }
     initDesktopLayoutIfNeeded();
+    // Fight-fact chip tap-to-expand (mobile only). The chip lives inside
+    // the fight card's <summary>, so an unguarded click would ALSO toggle
+    // the whole card open/closed -- preventDefault stops the summary
+    // activation, stopPropagation keeps it tidy. Desktop clicks fall
+    // through untouched (full text is already visible there, and the
+    // chip shouldn't swallow the card-open click). The wrapper div gets
+    // .fact-open alongside the chip's .expanded so it takes the full row
+    // (a definite width for the expanded chip to size against -- see CSS).
+    function toggleFactChip(chip) {
+      const open = chip.classList.toggle('expanded');
+      chip.setAttribute('aria-expanded', open);
+      const wrap = chip.parentElement;
+      if (wrap) wrap.classList.toggle('fact-open', open);
+    }
+    document.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-fact-toggle]');
+      if (!chip) return;
+      if (!window.matchMedia('(max-width: 640px)').matches) return;
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFactChip(chip);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const chip = e.target.closest('[data-fact-toggle]');
+      if (!chip) return;
+      if (!window.matchMedia('(max-width: 640px)').matches) return;
+      e.preventDefault();
+      toggleFactChip(chip);
+    });
     // Re-check on resize (debounced) so dragging a window across the
     // breakpoint doesn't leave the page in a broken state -- e.g.
     // shrinking from desktop to mobile width should return to seeing
