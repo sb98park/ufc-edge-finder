@@ -723,6 +723,28 @@
   .donut-caption { font-size: 10px; color: var(--muted); }
   .donut-center-value { font-size: 15px; font-weight: 800; fill: var(--text); font-family: var(--font-display); }
   .donut-center-pct { font-size: 10px; fill: var(--muted); }
+  /* Donut fill-in reveal: the ring sweeps from empty to its real
+     percentage rather than just appearing. Symmetric dasharray
+     (circumference/circumference) + a dashoffset animation from fully
+     hidden to exactly the real percentage -- the standard, off-by-one-
+     safe technique (an asymmetric dash/gap pair is easy to get subtly
+     wrong at the seam). --donut-circ/--donut-end are set per-donut
+     inline by build_donut_svg since each ring's circumference and real
+     percentage differ. */
+  .donut-fill-ring {
+    stroke-dasharray: var(--donut-circ) var(--donut-circ);
+    animation: donutFill 1.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes donutFill {
+    from { stroke-dashoffset: var(--donut-circ); }
+    to { stroke-dashoffset: var(--donut-end); }
+  }
+  .confidence-donut-row .donut-col { animation: donutColIn 0.5s ease-out both; }
+  @keyframes donutColIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) {
+    .donut-fill-ring, .confidence-donut-row .donut-col { animation: none; }
+    .donut-fill-ring { stroke-dashoffset: var(--donut-end); }
+  }
   .stat-compare-row { display: flex; align-items: baseline; justify-content: space-between; margin-top: 10px; margin-bottom: 3px; font-size: 12px; }
   .stat-compare-val { font-weight: 800; font-family: var(--font-display); min-width: 30px; }
   .stat-compare-val.right { text-align: right; }
@@ -762,10 +784,10 @@
   .underdog-accuracy-badge .clv-badge-label { color: #f0954a; }
   .underdog-accuracy-value { color: #f0954a; }
   .lock-record-badge {
-    background: linear-gradient(135deg, rgba(212,175,55,0.16), #14171f 70%); border: 1px solid rgba(212,175,55,0.4);
+    background: linear-gradient(135deg, rgba(139,92,246,0.16), #14171f 70%); border: 1px solid rgba(139,92,246,0.4);
   }
-  .lock-record-badge .clv-badge-label { color: #d4af37; }
-  .lock-record-value { color: #f0d97a; }
+  .lock-record-badge .clv-badge-label { color: #a78bfa; }
+  .lock-record-value { color: #c4b5fd; }
   .accuracy-split-row-3 { flex-wrap: wrap; gap: 10px; row-gap: 12px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--border); }
   .accuracy-split-row-3 .clv-badge { flex: 1 1 28%; min-width: 100px; padding: 12px 10px; }
   .accuracy-split-row-3 .clv-badge-label { font-size: 8.5px; letter-spacing: 0.15px; white-space: nowrap; }
@@ -1876,8 +1898,8 @@
     <div class="donut-row confidence-donut-row">
       {% for label, stats in track_record.by_confidence.items() %}
       {% set tier_color = {'High Confidence': '#3ddc84', 'Medium Confidence': '#e8c766', 'Low Confidence': '#8a8f9a'}[label] %}
-      <div class="donut-col">
-        {{ donut_svg(stats.correct, stats.total, tier_color, size=90) | safe }}
+      <div class="donut-col" style="animation-delay: {{ loop.index0 * 0.15 }}s;">
+        {{ donut_svg(stats.correct, stats.total, tier_color, size=90, animate=True, delay=loop.index0 * 0.15) | safe }}
         <div class="donut-caption">{{ label|replace(' Confidence', '') }}</div>
       </div>
       {% endfor %}
@@ -1938,7 +1960,7 @@
         {% for tier, stats in track_record.units_stats.by_tier.items() %}
         <div class="units-tier-row">
           <span class="units-tier-dot {{ 'lock' if tier == 'Lock of the Week' else tier|lower|replace(' confidence','') }}"></span>
-          <span class="units-tier-label">{{ '🔒 Lock of the Week' if tier == 'Lock of the Week' else tier|replace(' Confidence','') }}</span>
+          <span class="units-tier-label">{{ 'Lock of the Week' if tier == 'Lock of the Week' else tier|replace(' Confidence','') }}</span>
           <span class="units-tier-size">{{ stats.unit_size|int }}U/pick</span>
           <span class="units-tier-count">{{ stats.count }}p</span>
           <span class="units-tier-value {{ 'positive' if stats.units >= 0 else 'negative' }}">{{ '+' if stats.units >= 0 else '' }}{{ stats.units }}U</span>
