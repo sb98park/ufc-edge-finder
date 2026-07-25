@@ -284,11 +284,48 @@ def apply_live_corrections(
 
     if state.get("last_confirmed_at") and remaining:
         last_confirmed_at = dt.datetime.fromisoformat(state["last_confirmed_at"])
-        corrected_next_start = last_confirmed_at + dt.timedelta(minutes=INTER_FIGHT_GAP_MIN)
-        original_next_start = dt.datetime.fromisoformat(remaining[0]["estimated_start_iso"])
-        shift = corrected_next_start - original_next_start
-        for f in remaining:
-            f["estimated_start_iso"] = _fmt(dt.datetime.fromisoformat(f["estimated_start_iso"]) + shift)
-            f["estimated_end_iso"] = _fmt(dt.datetime.fromisoformat(f["estimated_end_iso"]) + shift)
+        # Real bug hit in production: this used to shift EVERY remaining
+        # fight by one correction derived from remaining[0], assuming
+        # "remaining" is always a clean contiguous block of not-yet-
+        # happened fights. That broke when ONE early fight's result
+        # specifically failed to get picked up (a name-match miss, a
+        # source gap -- anything results_fetcher can hit for a single
+        # pairing) while LATER fights confirmed normally: that one stuck
+        # fight stayed first in `remaining`, and the shift (anchored to
+        # the LATEST confirmation, hours later) dragged its estimated
+        # time deep into the night -- producing exactly the observed
+        # "LIVE NOW" on a fight that ended 30 minutes ago, next-fight
+        # countdown showing 200+ minutes for a fight that was actually
+        # FIRST on the card.
+        #
+        # Fix: a fight is "stuck" (results-pending, not upcoming) if a
+        # LATER fight -- by true chronological position in the original
+        # schedule -- has already confirmed. That positional gap can only
+        # happen from a results-fetch miss on this specific pairing; it
+        # can NEVER happen to a genuinely-currently-live fight (even on a
+        # card running hours behind), since nothing chronologically after
+        # the live fight could possibly have confirmed yet. Stuck fights
+        # are dropped from live/next consideration entirely rather than
+        # dragged forward into a fabricated future time.
+        chrono_index = {id(f): i for i, f in enumerate(schedule)}
+        latest_confirmed_index = max(
+            (i for i, f in enumerate(schedule)
+             if frozenset({f["fighter_a"].strip().lower(), f["fighter_b"].strip().lower()}) in finished_keys),
+            default=-1,
+        )
+        stuck = [f for f in remaining if chrono_index[id(f)] < latest_confirmed_index]
+        genuinely_upcoming = [f for f in remaining if f not in stuck]
+        if stuck:
+            print(f"[schedule] {len(stuck)} fight(s) still unconfirmed despite a later result already "
+                  f"landing -- treating as results-pending rather than upcoming (not shown as live/next): "
+                  f"{[(f['fighter_a'], f['fighter_b']) for f in stuck]}")
+        if genuinely_upcoming:
+            corrected_next_start = last_confirmed_at + dt.timedelta(minutes=INTER_FIGHT_GAP_MIN)
+            original_next_start = dt.datetime.fromisoformat(genuinely_upcoming[0]["estimated_start_iso"])
+            shift = corrected_next_start - original_next_start
+            for f in genuinely_upcoming:
+                f["estimated_start_iso"] = _fmt(dt.datetime.fromisoformat(f["estimated_start_iso"]) + shift)
+                f["estimated_end_iso"] = _fmt(dt.datetime.fromisoformat(f["estimated_end_iso"]) + shift)
+        remaining = genuinely_upcoming
 
     return remaining, state.get("last_confirmed_at")

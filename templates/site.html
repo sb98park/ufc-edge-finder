@@ -3461,9 +3461,22 @@
         // what actually fixes the case an estimate structurally can't:
         // a fight running long past its estimated window, where the guess
         // above would otherwise conclude nothing is live right now.
+        //
+        // Sanity ceiling (real bug hit in production: "LIVE NOW" stuck on
+        // a fight 30+ minutes after it actually ended): ESPN's own
+        // scoreboard signal can lag flipping a fight to "final" -- most
+        // often while a close decision's scorecards are being read out --
+        // but not indefinitely. This data is also only as fresh as the
+        // last site regeneration (~5 min cadence), so a visitor who's had
+        // the page open a while is looking at a frozen snapshot advancing
+        // against their own live clock. 20 minutes past the fight's own
+        // estimated end is generous enough to cover a real decision-
+        // reading delay without letting a stale or stuck signal persist
+        // as "live" long after the fight is unambiguously over.
+        const ESPN_LIVE_TRUST_BUFFER_MS = 20 * 60 * 1000;
         if (espnLiveKey) {
           const espnMatch = schedule.find(f => canonicalKey(f.fighter_a, f.fighter_b) === espnLiveKey);
-          if (espnMatch) {
+          if (espnMatch && now < new Date(espnMatch.estimated_end_iso).getTime() + ESPN_LIVE_TRUST_BUFFER_MS) {
             live = espnMatch;
             upcoming = schedule.find(f => f !== live && new Date(f.estimated_start_iso).getTime() > new Date(live.estimated_start_iso).getTime()) || upcoming;
           }
