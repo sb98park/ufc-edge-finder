@@ -359,12 +359,21 @@ UNITS_BY_CONFIDENCE = {
     "Medium Confidence": 3.0,
     "Low Confidence": 1.0,
 }
+# A Lock of the Week is a stronger conviction call than a regular High
+# Confidence pick (it's the single best pick on the card, not just one
+# of however many clear favorites) -- staked heavier to reflect that,
+# and routed to its OWN tier below rather than double-counted inside
+# High Confidence too.
+LOCK_OF_WEEK_UNITS = 10.0
 
 
-def _units_result(confidence_label, pick_odds, correct: bool) -> float | None:
+def _units_result(unit_size: float | None, pick_odds, correct: bool) -> float | None:
     """
-    Units won/lost on this pick, sized by confidence tier (5/3/1 for
-    High/Medium/Low) and priced using the REAL market odds at pick time
+    Units won/lost on this pick, sized by the resolved unit_size the
+    caller passes in (5/3/1 for High/Medium/Low Confidence, or
+    LOCK_OF_WEEK_UNITS for a Lock of the Week -- resolving which one
+    happens at the call site, since that's where is_lock_of_week is
+    known) and priced using the REAL market odds at pick time
     (pick_odds, from Polymarket) -- deliberately never the model's own
     probability, which would just be grading the model against itself.
     A win returns unit_size * (decimal_odds - 1) (profit only, stake not
@@ -372,7 +381,6 @@ def _units_result(confidence_label, pick_odds, correct: bool) -> float | None:
     isn't available -- excluded from the aggregate rather than guessed,
     same honesty standard as CLV and the market-baseline stat.
     """
-    unit_size = UNITS_BY_CONFIDENCE.get(confidence_label)
     if unit_size is None:
         return None
     try:
@@ -514,7 +522,9 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         # method" isn't a real signal worth scoring, so this is only
         # computed (non-None) for already-correct picks.
         method_correct = _method_matches(pred.get("likely_method"), result.get("method")) if correct else None
-        units_result = _units_result(pred["confidence_label"], pred.get("pick_odds"), correct)
+        is_lock = pred.get("is_lock_of_week") is True or str(pred.get("is_lock_of_week")).strip().lower() == "true"
+        resolved_unit_size = LOCK_OF_WEEK_UNITS if is_lock else UNITS_BY_CONFIDENCE.get(pred["confidence_label"])
+        units_result = _units_result(resolved_unit_size, pred.get("pick_odds"), correct)
         matched.append({
             "event_name": result["event_name"],
             "fighter_a": result["fighter_a"],
@@ -532,8 +542,8 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "pick_odds": float(pred["pick_odds"]) if pred.get("pick_odds") not in (None, "") else None,
             "opponent_odds": float(pred["opponent_odds"]) if pred.get("opponent_odds") not in (None, "") else None,
             "units_result": units_result,
-            "unit_size": UNITS_BY_CONFIDENCE.get(pred["confidence_label"]),
-            "is_lock_of_week": pred.get("is_lock_of_week") is True or str(pred.get("is_lock_of_week")).strip().lower() == "true",
+            "unit_size": resolved_unit_size,
+            "is_lock_of_week": is_lock,
             "date_added": result.get("date_added", ""),
             "card_position": result.get("card_position"),
         })
@@ -657,10 +667,20 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
     units_stats = None
     if units_eligible:
         total_units = round(sum(m["units_result"] for m in units_eligible), 2)
-        total_staked = sum(UNITS_BY_CONFIDENCE.get(m["confidence_label"], 0) for m in units_eligible)
+        total_staked = sum(m["unit_size"] for m in units_eligible if m["unit_size"] is not None)
         by_tier = {}
+        lock_picks_units = [m for m in units_eligible if m["is_lock_of_week"]]
+        if lock_picks_units:
+            by_tier["Lock of the Week"] = {
+                "units": round(sum(m["units_result"] for m in lock_picks_units), 2),
+                "count": len(lock_picks_units),
+                "unit_size": LOCK_OF_WEEK_UNITS,
+            }
         for tier in ("High Confidence", "Medium Confidence", "Low Confidence"):
-            tier_picks = [m for m in units_eligible if m["confidence_label"] == tier]
+            # A lock is ALWAYS High Confidence by definition, but gets its
+            # own tier above -- excluded here so it's counted once, at its
+            # real 10-unit weight, not also folded into the 5-unit tier.
+            tier_picks = [m for m in units_eligible if m["confidence_label"] == tier and not m["is_lock_of_week"]]
             if tier_picks:
                 by_tier[tier] = {
                     "units": round(sum(m["units_result"] for m in tier_picks), 2),

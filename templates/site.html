@@ -834,6 +834,7 @@
   .units-tier-dot.high { background: var(--green); box-shadow: 0 0 5px 1px rgba(61,220,132,0.6); }
   .units-tier-dot.medium { background: var(--accent2); box-shadow: 0 0 5px 1px rgba(232,199,102,0.5); }
   .units-tier-dot.low { background: var(--muted); }
+  .units-tier-dot.lock { background: #a78bfa; box-shadow: 0 0 5px 1px rgba(167,139,250,0.6); }
   .units-tier-label { font-weight: 700; color: var(--text); flex-shrink: 0; }
   .units-tier-size { color: var(--muted); font-size: 10px; flex-shrink: 0; }
   .units-tier-count { color: var(--muted); font-size: 10px; margin-left: auto; }
@@ -1936,15 +1937,15 @@
       <div class="units-tier-breakdown">
         {% for tier, stats in track_record.units_stats.by_tier.items() %}
         <div class="units-tier-row">
-          <span class="units-tier-dot {{ tier|lower|replace(' confidence','') }}"></span>
-          <span class="units-tier-label">{{ tier|replace(' Confidence','') }}</span>
+          <span class="units-tier-dot {{ 'lock' if tier == 'Lock of the Week' else tier|lower|replace(' confidence','') }}"></span>
+          <span class="units-tier-label">{{ '🔒 Lock of the Week' if tier == 'Lock of the Week' else tier|replace(' Confidence','') }}</span>
           <span class="units-tier-size">{{ stats.unit_size|int }}U/pick</span>
           <span class="units-tier-count">{{ stats.count }}p</span>
           <span class="units-tier-value {{ 'positive' if stats.units >= 0 else 'negative' }}">{{ '+' if stats.units >= 0 else '' }}{{ stats.units }}U</span>
         </div>
         {% endfor %}
       </div>
-      <div class="units-caption">Sized by confidence (5U high · 3U medium · 1U low), priced at the real market odds when picked — never the model's own probability. Only counts picks with known odds on record.</div>
+      <div class="units-caption">Sized by conviction (10U lock of the week · 5U high confidence · 3U medium · 1U low), priced at the real market odds when picked — never the model's own probability. A lock counts only once, at its own weight — not also folded into High Confidence. Only counts picks with known odds on record.</div>
     </div>
     {% endif %}
     {% if track_record.clv_stats %}
