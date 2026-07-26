@@ -8,7 +8,7 @@ clearly labeled as a projection rather than a live-market edge.
 
 import pandas as pd
 
-from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, _get
+from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg
 
 
@@ -302,6 +302,7 @@ def build_fight_preview(
     factor_badges = build_factor_badges(matchup)
     comparison["a"]["badges"] = factor_badges["a"]
     comparison["b"]["badges"] = factor_badges["b"]
+    waterfall = build_probability_waterfall(matchup)
 
     return {
         "favorite": favorite,
@@ -317,4 +318,5 @@ def build_fight_preview(
         "narrative": narrative,
         "comparison": comparison,
         "radar_svg": radar_svg,
+        "waterfall": waterfall,
     }

@@ -1264,6 +1264,63 @@
   .live-vs-badge .live-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: #ff4747; box-shadow: 0 0 6px 1px rgba(255,71,71,0.7); }
 
   .fight-body { padding: 0 16px 16px; }
+  /* Probability waterfall -- the model's own decomposition, in rating
+     points. Collapsed by default: it should deepen a fight card for anyone
+     who wants to interrogate the pick, not crowd the card for everyone
+     who doesn't. */
+  .waterfall-block {
+    margin: 10px 0 4px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--panel2); overflow: hidden;
+  }
+  .waterfall-summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 12px; cursor: pointer; list-style: none; font-size: 12px;
+  }
+  .waterfall-summary::-webkit-details-marker { display: none; }
+  .waterfall-summary-label { font-weight: 700; color: var(--text); }
+  .waterfall-summary-hint { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+  .waterfall-block[open] .waterfall-summary-hint { visibility: hidden; }
+  .waterfall-body { padding: 0 12px 12px; }
+  .waterfall-caption {
+    font-size: 10.5px; color: var(--muted); line-height: 1.55; margin-bottom: 10px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  /* Flexbox rather than CSS Grid, deliberately: the sandbox screenshot
+     renderer (wkhtmltoimage, old Qt WebKit) has NO CSS Grid support --
+     verified with a minimal grid test that rendered nothing at all -- so a
+     grid layout here would be impossible to visually verify before
+     shipping. Flexbox does the same job for a three-column row and renders
+     everywhere, including in the tooling. */
+  .waterfall-row {
+    display: flex; align-items: center; gap: 8px; padding: 5px 0;
+  }
+  .waterfall-row.base { border-bottom: 1px dashed var(--border); padding-bottom: 8px; margin-bottom: 3px; }
+  .waterfall-row.capped .wf-label { font-style: italic; }
+  .wf-label { flex: 1 1 auto; min-width: 0; font-size: 11.5px; font-weight: 600; color: var(--text); }
+  .wf-why { display: block; font-size: 9.5px; font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 1px; }
+  /* Bars grow from a shared left edge with the sign carried by color.
+     A true centered diverging axis halves the usable width, which on a
+     phone leaves the small bars indistinguishable from each other. */
+  .wf-bar-cell { flex: 0 0 34%; height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+  .wf-bar { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
+  .wf-bar.pos { background: linear-gradient(90deg, rgba(212,175,55,0.55), var(--accent)); }
+  .wf-bar.neg { background: linear-gradient(90deg, rgba(92,200,255,0.45), var(--accent-cool)); }
+  .wf-points { flex: 0 0 46px; font-size: 11.5px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .wf-points.pos { color: var(--accent); }
+  .wf-points.neg { color: var(--accent-cool); }
+  .waterfall-total {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border); font-size: 12px;
+  }
+  .wf-total-label { font-weight: 700; color: var(--text); flex: 1; }
+  .wf-total-points { font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+  .wf-total-arrow { color: var(--muted); }
+  .wf-total-prob { font-weight: 800; font-size: 15px; color: var(--accent); font-family: var(--font-display); }
+  @media (max-width: 400px) {
+    .waterfall-row { gap: 6px; }
+    .wf-bar-cell { flex-basis: 26%; }
+    .wf-points { flex-basis: 42px; }
+  }
   .model-preview {
     background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
@@ -2426,6 +2483,55 @@
       <div class="model-preview{{ ' masterpiece' if fight.result_label and fight.preview.confidence_label == 'High Confidence' and fight.winner == fight.preview.favorite else '' }}">
         <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
       </div>
+      {% if fight.preview.waterfall %}
+      {% set wf = fight.preview.waterfall %}
+      <details class="waterfall-block">
+        <summary class="waterfall-summary">
+          <span class="waterfall-summary-label">Why the model likes {{ wf.favorite }}</span>
+          <span class="waterfall-summary-hint">show the math ▾</span>
+        </summary>
+        <div class="waterfall-body">
+          <div class="waterfall-caption">
+            Every number below is in rating points, the model's own units — they add up
+            exactly to the final gap. Positive bars favor {{ wf.favorite }}, negative favor {{ wf.underdog }}.
+          </div>
+          <div class="waterfall-row base">
+            <span class="wf-label">Rating gap<span class="wf-why">career record and quality of opposition</span></span>
+            <span class="wf-bar-cell">
+              <span class="wf-bar {{ 'pos' if wf.base_points >= 0 else 'neg' }}"
+                    style="width: {{ (wf.base_points|abs / wf.scale * 100)|round(1) }}%"></span>
+            </span>
+            <span class="wf-points {{ 'pos' if wf.base_points >= 0 else 'neg' }}">{{ '+' if wf.base_points >= 0 else '' }}{{ wf.base_points }}</span>
+          </div>
+          {% for r in wf.rows %}
+          <div class="waterfall-row">
+            <span class="wf-label">{{ r.label }}<span class="wf-why">{{ r.why }}</span></span>
+            <span class="wf-bar-cell">
+              <span class="wf-bar {{ 'pos' if r.points >= 0 else 'neg' }}"
+                    style="width: {{ (r.points|abs / wf.scale * 100)|round(1) }}%"></span>
+            </span>
+            <span class="wf-points {{ 'pos' if r.points >= 0 else 'neg' }}">{{ '+' if r.points >= 0 else '' }}{{ r.points }}</span>
+          </div>
+          {% endfor %}
+          {% if wf.cap_row %}
+          <div class="waterfall-row capped">
+            <span class="wf-label">{{ wf.cap_row.label }}<span class="wf-why">{{ wf.cap_row.why }}</span></span>
+            <span class="wf-bar-cell">
+              <span class="wf-bar {{ 'pos' if wf.cap_row.points >= 0 else 'neg' }}"
+                    style="width: {{ (wf.cap_row.points|abs / wf.scale * 100)|round(1) }}%"></span>
+            </span>
+            <span class="wf-points {{ 'pos' if wf.cap_row.points >= 0 else 'neg' }}">{{ '+' if wf.cap_row.points >= 0 else '' }}{{ wf.cap_row.points }}</span>
+          </div>
+          {% endif %}
+          <div class="waterfall-total">
+            <span class="wf-total-label">Adjusted gap</span>
+            <span class="wf-total-points">{{ '+' if wf.total_points >= 0 else '' }}{{ wf.total_points }}</span>
+            <span class="wf-total-arrow">→</span>
+            <span class="wf-total-prob">{{ (wf.favorite_prob * 100)|round(1) }}%</span>
+          </div>
+        </div>
+      </details>
+      {% endif %}
       {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg) }}
       {{ fighter_compare_table(fight.preview.comparison) }}
       {% endif %}

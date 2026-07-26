@@ -291,6 +291,113 @@ def blend_method_probability(
     return 0.7 * fighter_adjusted + 0.3 * opponent_vulnerability
 
 
+def build_probability_waterfall(matchup: dict) -> dict | None:
+    """
+    Decomposes the final probability into the exact pieces that produced it,
+    so the model can be interrogated rather than taken on faith.
+
+    WHY RATING POINTS, NOT PERCENTAGES, for the per-factor bars. The model
+    is additive in rating points and only then squashed through a logistic
+    into a probability. Rating-point contributions therefore sum EXACTLY to
+    the adjusted gap and are order-independent. Per-factor PROBABILITY
+    contributions are neither: because the link is non-linear, "how much
+    did wrestling add" would depend on the order factors were applied in,
+    which is an artifact of presentation rather than a property of the
+    model. Showing points per factor and the probability once at the end
+    keeps every number on screen literally true.
+
+    ORIENTATION. predict_matchup computes everything as "positive favors
+    fighter A". A reader wants "why do we like the pick", so signs are
+    flipped when the favorite is fighter B. After this, positive always
+    means "helps the favorite".
+
+    EXACTNESS. Factors below DISPLAY_THRESHOLD are folded into a single
+    "other factors" row rather than dropped, and the cap (when it bites) is
+    shown as its own row. The rows therefore always reconcile to the real
+    adjusted gap -- a waterfall whose parts don't sum to its total would be
+    worse than no waterfall at all.
+    """
+    if not matchup:
+        return None
+
+    prob_a = matchup.get("prob_a")
+    base_a, base_b = matchup.get("base_rating_a"), matchup.get("base_rating_b")
+    if prob_a is None or base_a is None or base_b is None:
+        return None
+
+    favorite_is_a = prob_a >= 0.5
+    sign = 1.0 if favorite_is_a else -1.0
+    favorite = matchup["fighter_a"] if favorite_is_a else matchup["fighter_b"]
+    underdog = matchup["fighter_b"] if favorite_is_a else matchup["fighter_a"]
+
+    base_gap = (base_a - base_b) * sign
+    raw_layer = matchup.get("adjustment_layer_raw", 0.0) * sign
+    applied_layer = matchup.get("adjustment_layer_applied", 0.0) * sign
+
+    # (key in matchup, display label, short explanation of what it measures)
+    FACTORS = [
+        ("wrestling_adjustment", "Wrestling", "takedown offense against the other's takedown defense"),
+        ("striking_adjustment", "Striking", "significant-strike accuracy and defense"),
+        ("durability_adjustment", "Durability", "how often each has been finished"),
+        ("recent_form_adjustment", "Recent form", "results in the last three fights, decayed by age"),
+        ("submission_threat_adjustment", "Sub threat", "share of wins by submission"),
+        ("stance_adjustment", "Stance", "orthodox/southpaw matchup"),
+        ("height_adjustment", "Height", "height difference"),
+        ("layoff_adjustment", "Layoff", "time since last fight"),
+        ("quick_return_adjustment", "Quick turnaround", "unusually short rest since the last fight"),
+        ("age_cliff_adjustment", "Age", "age relative to the division's typical decline point"),
+        ("missed_weight_adjustment", "Missed weight", "history of missing weight"),
+        ("weight_class_change_adjustment", "Division change", "moving up or down in weight"),
+        ("short_notice_adjustment", "Short notice", "taking the fight on short notice"),
+    ]
+
+    DISPLAY_THRESHOLD = 2.0  # rating points -- below this it's noise, not a driver
+
+    rows, folded = [], 0.0
+    for key, label, why in FACTORS:
+        pts = matchup.get(key, 0.0) * sign
+        if abs(pts) < DISPLAY_THRESHOLD:
+            folded += pts
+            continue
+        rows.append({
+            "label": label, "why": why, "points": round(pts, 1),
+            "favors": favorite if pts > 0 else underdog,
+        })
+    rows.sort(key=lambda r: abs(r["points"]), reverse=True)
+
+    if abs(folded) >= 0.05:
+        rows.append({
+            "label": "Other factors", "why": "everything else, each too small to list on its own",
+            "points": round(folded, 1), "favors": favorite if folded > 0 else underdog,
+        })
+
+    # The cap only shows up when it actually bit -- otherwise it's noise.
+    cap_row = None
+    if matchup.get("adjustment_capped"):
+        cap_row = {
+            "label": "Adjustment cap",
+            "why": f"total adjustment limited to {ADJUSTMENT_TOTAL_CAP:.0f} points, so no pile-up of "
+                   f"factors can outweigh the rating gap itself",
+            "points": round(applied_layer - raw_layer, 1),
+            "favors": favorite if (applied_layer - raw_layer) > 0 else underdog,
+        }
+
+    favorite_prob = prob_a if favorite_is_a else 1.0 - prob_a
+    return {
+        "favorite": favorite,
+        "underdog": underdog,
+        "base_points": round(base_gap, 1),
+        "rows": rows,
+        "cap_row": cap_row,
+        "adjustment_points": round(applied_layer, 1),
+        "total_points": round(base_gap + applied_layer, 1),
+        "favorite_prob": round(favorite_prob, 3),
+        # Largest absolute bar, for scaling the bars in the template.
+        "scale": max([abs(base_gap)] + [abs(r["points"]) for r in rows]
+                     + ([abs(cap_row["points"])] if cap_row else []) + [1.0]),
+    }
+
+
 BADGE_THRESHOLD = 15.0  # rating points -- below this, a factor isn't worth calling out as a driver
 
 
