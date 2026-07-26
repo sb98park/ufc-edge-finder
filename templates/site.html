@@ -956,13 +956,20 @@
     padding: 10px 14px; border-radius: 8px; font-size: 12.5px; color: var(--muted); margin-bottom: 16px;
   }
   .notice { border-left-color: var(--red); }
-  .footer-disclaimer {
-    font-size: 10.5px; color: var(--muted); opacity: 0.7; text-align: center;
-    line-height: 1.6; padding: 20px 16px 28px; max-width: 340px; margin: 0 auto;
+  /* Disclaimer SECTION styles. Replaced the old .footer-disclaimer /
+     .footer-meta rules, which were deliberately faint (10.5px at 0.6-0.7
+     opacity) for sitting at the very bottom of the page -- reused as-is in
+     a dedicated section that just reads as unfinished, so these are sized
+     and contrasted like real section content while keeping the same
+     restrained, non-shouty tone. */
+  .disclaimer-card {
+    font-size: 12.5px; color: var(--text); line-height: 1.7;
+    background: linear-gradient(135deg, rgba(138,143,154,0.08), var(--panel2) 70%);
+    border: 1px solid var(--border); border-left: 3px solid #8a8f9a;
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 12px;
   }
-  .footer-meta {
-    font-size: 10.5px; color: var(--muted); opacity: 0.6; text-align: center;
-    margin: -18px auto 8px; max-width: 340px;
+  .disclaimer-meta {
+    font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 4px;
   }
 
   details.info-card {
@@ -1867,6 +1874,21 @@
         <div class="hub-card-text">
           <div class="hub-card-title">How the Model Works</div>
           <div class="hub-card-sub">the methodology behind every pick</div>
+        </div>
+        <span class="hub-card-arrow">→</span>
+      </div>
+      <div class="hub-card" style="--card-accent:#8a8f9a" onclick="showSection('disclaimer')" data-section-nav="disclaimer">
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Information">
+            <defs><linearGradient id="icon-disclaimer" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c6cad4"/><stop offset="100%" stop-color="#8a8f9a"/></linearGradient></defs>
+            <circle cx="13" cy="13" r="9.5" fill="url(#icon-disclaimer)" opacity="0.15" stroke="url(#icon-disclaimer)" stroke-width="1.8"/>
+            <circle cx="13" cy="8.4" r="1.3" fill="url(#icon-disclaimer)"/>
+            <path d="M13 11.8 V18.3" stroke="url(#icon-disclaimer)" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="hub-card-text">
+          <div class="hub-card-title">Disclaimer</div>
+          <div class="hub-card-sub">what this site is and isn't</div>
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
@@ -2948,19 +2970,27 @@
   </div>
   </div>
 
+  <div class="detail-section" data-section="disclaimer">
+    <div class="standout-title" id="section-disclaimer">
+      <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Information" style="width:17px;height:17px;vertical-align:-3px;margin-right:2px;">
+        <defs><linearGradient id="icon-disclaimer-sec" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c6cad4"/><stop offset="100%" stop-color="#8a8f9a"/></linearGradient></defs>
+        <circle cx="13" cy="13" r="9.5" fill="url(#icon-disclaimer-sec)" opacity="0.15" stroke="url(#icon-disclaimer-sec)" stroke-width="1.8"/>
+        <circle cx="13" cy="8.4" r="1.3" fill="url(#icon-disclaimer-sec)"/>
+        <path d="M13 11.8 V18.3" stroke="url(#icon-disclaimer-sec)" stroke-width="1.8" stroke-linecap="round"/>
+      </svg> Disclaimer
+    </div>
+    <div class="parlay-subtitle">What this site is, what it isn't, and where its numbers come from.</div>
+    <div class="disclaimer-card">
+      For analysis and education only, not betting advice. A flagged edge means the model disagrees
+      with the market — it doesn't mean it's right. Sanity-check against recent form, injuries, and
+      camp news. Please gamble responsibly.
+    </div>
+    <div class="disclaimer-meta">📊 Odds via {{ source or "unavailable" }} · 🔄 refreshes every 15 min</div>
+    <div class="made-with-love">Made with love, by yours truly, SBP 🤍</div>
+  </div>
 
   </div>
   </div>
-
-  <div class="footer-disclaimer">
-    For analysis and education only, not betting advice. A flagged edge means the model disagrees
-    with the market — it doesn't mean it's right. Sanity-check against recent form, injuries, and
-    camp news. Please gamble responsibly.
-  </div>
-
-  <div class="footer-meta">📊 Odds via {{ source or "unavailable" }} · 🔄 refreshes every 15 min</div>
-
-  <div class="made-with-love">Made with love, by yours truly, SBP 🤍</div>
 
   <script>
     // Hub / detail section navigation
