@@ -28,7 +28,7 @@ from src.line_movement import (
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
     load_token_cache, save_token_cache, update_token_cache,
 )
-from src.track_record import log_predictions, compute_track_record, load_momentum_by_key
+from src.track_record import log_predictions, compute_track_record, load_momentum_by_key, LOCK_OF_WEEK_MAX
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
 from src.card_discovery import discover_and_append_new_cards, normalize_existing_card_order, resync_tracked_card_order, deduplicate_tracked_fights
@@ -218,7 +218,28 @@ def main():
     # saying so would be confusing, not helpful.
     analytics_source_event = None
     MIN_EDGES_FOR_CURRENT_CARD = 3  # below this, the current card's pool is too thin to be a real signal
-    if len(tracked_edges) < MIN_EDGES_FOR_CURRENT_CARD and future_events:
+    # Only ever fall back once the current card has ACTUALLY happened.
+    # Thin edges alone aren't proof a card is over -- a card promoted in
+    # from future_cards.csv can legitimately have few or no odds posted
+    # yet, and falling back there would claim "this weekend's card has
+    # concluded" about a card that hasn't happened. Anchoring on the
+    # event date rather than on confirmed results is deliberate: results
+    # can genuinely fail to auto-confirm (ESPN publishes no usable
+    # method-of-victory text, see results_fetcher), and the fallback
+    # shouldn't depend on a source that might never land. This is also
+    # exactly what retires the banner on the Monday handoff: once
+    # promote_card_if_stale swaps the next card in as current, its date
+    # is in the future, so the fallback stops applying on its own.
+    current_card_has_happened = False
+    if not cards_df.empty:
+        try:
+            _current_event_date = dt.date.fromisoformat(str(cards_df["event_date"].iloc[0]))
+            current_card_has_happened = _current_event_date <= dt.datetime.now(
+                dt.timezone(dt.timedelta(hours=-4))
+            ).date()
+        except (ValueError, TypeError):
+            current_card_has_happened = False
+    if current_card_has_happened and len(tracked_edges) < MIN_EDGES_FOR_CURRENT_CARD and future_events:
         next_event = future_events[0]
         next_tracked_edges = pd.DataFrame(
             [edge for fight in next_event["fights"] for edge in fight["edges"]]
@@ -239,12 +260,27 @@ def main():
     # in src/fun_facts.py so an empty list on a quiet week is the
     # correct outcome, and the whole hub card/section simply doesn't
     # render then (see template).
-    card_fighter_names = sorted({
-        n for event in events for fight in event["fights"]
-        for n in (fight.get("fighter_a"), fight.get("fighter_b")) if n
-    })
-    fun_facts = compute_fun_facts(card_fighter_names, f"{DATA_DIR}/fight_history.csv", fighters_df)
-    fun_facts_by_fighter = {f["fighter"]: f for f in fun_facts}
+    #
+    # The SECTION follows the same event the other analytics sections
+    # follow (events_for_model_only), so it falls back to next weekend's
+    # card in step with Standout Props / Favorite Picks / Parlays rather
+    # than sitting on a concluded card alone. Facts are still computed
+    # for BOTH cards' fighters, though, so the per-fight chips keep
+    # rendering on whichever fight cards are actually on screen -- the
+    # chips live on the fight cards in This Weekend, which keeps showing
+    # the concluded card for a day after the fallback kicks in.
+    def _fighter_names(event_list):
+        return {
+            n for event in event_list for fight in event["fights"]
+            for n in (fight.get("fighter_a"), fight.get("fighter_b")) if n
+        }
+
+    section_fighter_names = _fighter_names(events_for_model_only)
+    all_fact_fighter_names = sorted(_fighter_names(events) | section_fighter_names)
+    all_fun_facts = compute_fun_facts(all_fact_fighter_names, f"{DATA_DIR}/fight_history.csv", fighters_df)
+    fun_facts_by_fighter = {f["fighter"]: f for f in all_fun_facts}
+    # compute_fun_facts returns rarity-sorted, so filtering preserves that order.
+    fun_facts = [f for f in all_fun_facts if f["fighter"] in section_fighter_names]
     favorite_picks = top_favorite_picks(tracked_edges, fighters_df, n=5)
 
     tracked_edges_list = tracked_edges.to_dict("records") if not tracked_edges.empty else []
@@ -451,6 +487,32 @@ def main():
             fkey = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
             fight["is_lock_of_week"] = fkey in lock_keys
 
+    # When the analytics sections have fallen back to next weekend's card,
+    # that card has no logged predictions yet (log_predictions only runs
+    # for the current card), so none of its fights carry a lock
+    # designation and the Locks section would sit empty -- or, worse,
+    # keep showing the concluded card's locks while every neighbouring
+    # section had already moved on. Designate them in memory here using
+    # the SAME rule log_predictions uses (top N High Confidence picks by
+    # probability), purely for display.
+    #
+    # Deliberately NOT written to predictions_log.csv: logging a pick
+    # this early would freeze its pick_odds for CLV against a market
+    # that hasn't settled yet, quietly corrupting the honesty of the
+    # track record for the sake of a display detail. These early locks
+    # get logged for real, at real odds, on the normal schedule once the
+    # card becomes current.
+    if analytics_source_event:
+        for event in events_for_model_only:
+            ranked_high_conf = sorted(
+                [f for f in event["fights"]
+                 if f.get("preview") and f["preview"].get("confidence_label") == "High Confidence"],
+                key=lambda f: f["preview"]["favorite_prob"], reverse=True,
+            )
+            early_lock_ids = {id(f) for f in ranked_high_conf[:LOCK_OF_WEEK_MAX]}
+            for fight in event["fights"]:
+                fight["is_lock_of_week"] = id(fight) in early_lock_ids
+
     # Locks of the Week, pulled out into their own flat list for a dedicated
     # section -- previously only visible as a badge on each fight card, so
     # seeing all of them meant checking every fight individually. A lock is
@@ -468,7 +530,7 @@ def main():
             "underdog": fight["preview"]["underdog"], "likely_method": fight["preview"]["likely_method"],
             "narrative": fight["preview"]["narrative"],
         }
-        for event in events for fight in event["fights"]
+        for event in events_for_model_only for fight in event["fights"]
         if fight.get("is_lock_of_week") and fight.get("preview")
     ]
 

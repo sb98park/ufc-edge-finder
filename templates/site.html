@@ -2538,6 +2538,9 @@
   <div class="detail-section" data-section="funfacts">
   <div class="standout-title" id="section-funfacts"><svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Lightning bolt" style="width:17px;height:17px;vertical-align:-3px;margin-right:2px;"><defs><linearGradient id="icon-funfacts-sec" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#99f6e4"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient></defs><path d="M14 2 L5.5 15 H11.5 L10.5 24 L20.5 10.5 H14 Z" fill="url(#icon-funfacts-sec)" opacity="0.15" stroke="url(#icon-funfacts-sec)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="20.5" cy="4.5" r="1.3" fill="url(#icon-funfacts-sec)"/></svg> Fight Facts</div>
   <div class="parlay-subtitle">Genuinely notable patterns for fighters on this card — active streaks and career-long tendencies, straight from real fight history. Nothing filler: quiet weeks just have fewer of these.</div>
+  {% if analytics_source_event %}
+  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  {% endif %}
   {% for f in fun_facts %}
   <div class="fun-fact-card {{ f.tier }}" style="--fact-delay: {{ loop.index0 * 0.12 }}s">
     <div class="fun-fact-number" data-countup="{{ f.number }}">{{ f.number }}</div>
@@ -2589,7 +2592,10 @@
   <div class="detail-section" data-section="locks">
   {% if lock_picks %}
   <div class="standout-title" id="section-locks">{{ icon_lock() }} Locks of the Week</div>
-  <div class="parlay-subtitle">The model's single highest-conviction picks on this weekend's card, all in one place — previously only visible as a badge you'd have to find on each individual fight. Capped at 3 per event, so a real standout doesn't get diluted by padded-out picks.</div>
+  {% if analytics_source_event %}
+  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  {% endif %}
+  <div class="parlay-subtitle">The model's single highest-conviction picks on {{ "that card" if analytics_source_event else "this weekend's card" }}, all in one place — previously only visible as a badge you'd have to find on each individual fight. Capped at 3 per event, so a real standout doesn't get diluted by padded-out picks.</div>
   <div class="standout-grid">
     {% for l in lock_picks %}
     <div class="lock-pick-card reveal-target{{ ' fight-cancelled' if l.cancelled }}" data-key="{{ l.fighter_a }}|{{ l.fighter_b }}">
