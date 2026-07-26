@@ -132,35 +132,46 @@ def main():
         print(f"site api: matched {matched_event.get('name')} (event {matched_event.get('id')})")
         print(f"  competition['details'] -> {str(matched_comp.get('details'))[:400]}")
 
-        # ---- 2. CORE api: the richer object + its $ref children ----
+        # ---- 2. CORE api: every competition's status.result ----
+        # This is where the method of victory actually lives. Dumping ALL
+        # competitions (not just one) captures the full taxonomy in a
+        # single run: a real card has submissions, KO/TKOs and decisions,
+        # so one pass confirms every string the parser needs to map.
         event_id = matched_event.get("id")
         if event_id:
             core_event = _get(CORE_EVENT.format(event_id=event_id))
             out["core_api"] = {"event_keys": sorted(core_event.keys()) if isinstance(core_event, dict) else None}
-
             comps = core_event.get("competitions") if isinstance(core_event, dict) else None
-            first_ref = None
-            if isinstance(comps, list) and comps:
-                first = comps[0]
-                first_ref = first.get("$ref") if isinstance(first, dict) else None
-                out["core_api"]["first_competition_inline"] = _shrink(first)
 
-            if first_ref:
-                comp_obj = _get(first_ref)
-                out["core_api"]["competition_keys"] = (
-                    sorted(comp_obj.keys()) if isinstance(comp_obj, dict) else None
-                )
-                out["core_api"]["competition_type"] = comp_obj.get("type") if isinstance(comp_obj, dict) else None
-
-                resolved = {}
-                for name in INTERESTING_REFS:
-                    node = comp_obj.get(name) if isinstance(comp_obj, dict) else None
-                    if isinstance(node, dict) and node.get("$ref"):
-                        resolved[name] = _shrink(_get(node["$ref"]))
-                    elif node is not None:
-                        resolved[name] = _shrink(node)
-                out["core_api"]["resolved"] = resolved
-                print(f"core api: resolved {list(resolved.keys())}")
+            found = []
+            if isinstance(comps, list):
+                for comp in comps:
+                    if not isinstance(comp, dict):
+                        continue
+                    status_node = comp.get("status")
+                    ref = status_node.get("$ref") if isinstance(status_node, dict) else None
+                    if not ref:
+                        continue
+                    status = _get(ref)
+                    if not isinstance(status, dict):
+                        continue
+                    found.append({
+                        "competition_id": comp.get("id"),
+                        "weight_class": (comp.get("type") or {}).get("text"),
+                        "competitor_ids": [c.get("id") for c in comp.get("competitors", []) if isinstance(c, dict)],
+                        "winner_id": next((c.get("id") for c in comp.get("competitors", [])
+                                           if isinstance(c, dict) and c.get("winner")), None),
+                        "period": status.get("period"),
+                        "displayClock": status.get("displayClock"),
+                        "result": status.get("result"),
+                    })
+            out["core_api"]["all_competition_results"] = found
+            print(f"core api: pulled result objects for {len(found)} competition(s)")
+            for f in found:
+                res = f.get("result") or {}
+                print(f"   {str(f.get('weight_class') or '?'):18} "
+                      f"name={res.get('name')!r} display={res.get('displayName')!r} "
+                      f"desc={res.get('description')!r} R{f.get('period')} {f.get('displayClock')}")
 
     with open(OUT_PATH, "w") as f:
         json.dump(_shrink(out), f, indent=2)

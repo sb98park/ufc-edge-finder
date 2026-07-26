@@ -78,6 +78,17 @@ REQUEST_DELAY_SECONDS = 1.5
 EVENTS_LIST_URL = "https://www.ufcstats.com/statistics/events/completed"
 WIKIPEDIA_OPENSEARCH_URL = "https://en.wikipedia.org/w/api.php"
 ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard"
+# The CORE api -- a different, richer ESPN API than the site scoreboard
+# above. Confirmed July 2026 via scripts/probe_espn_method.py against a
+# real completed card: each competition's status endpoint carries a
+# `result` object with the actual method of victory
+# ({"name": "submission", "displayName": "Submission",
+#   "description": "Arm Triangle", "shortDisplayName": "Sub"}) plus the
+# finishing round (`period`) and time (`displayClock`). The site
+# scoreboard's status has none of this -- its description/detail/
+# shortDetail all just say "Final", which is why results never
+# auto-confirmed and every card needed manual backfill.
+ESPN_CORE_EVENT_URL = "https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/{event_id}"
 
 # ESPN lists not-yet-confirmed fight slots with a literal placeholder
 # name instead of omitting the fight -- e.g. "TBA" or "Opponent TBA" for
@@ -266,6 +277,120 @@ def _extract_method(cell_texts: list[str]) -> str | None:
         if pattern.search(joined):
             return label
     return None
+
+
+def _decision_subtype_from_linescores(winner_comp: dict, loser_comp: dict) -> str | None:
+    """
+    Unanimous / Split / Majority, derived from the real judges' cards.
+
+    ESPN's core-api `result` for a decision identifies it as a decision
+    but doesn't always name the subtype, and downstream (_METHOD_TO_PREFIX,
+    fighters.csv breakdown columns) expects one of the three specific
+    strings. The site scoreboard's competitor objects carry per-judge
+    scores inline -- competitor["linescores"][0]["linescores"] is a list
+    of one entry per judge -- so the subtype can be READ rather than
+    guessed: 3 judges for the winner = unanimous, 2 with one draw =
+    majority, 2 with one for the loser = split.
+
+    Returns None (rather than a guess) whenever the cards aren't present
+    or don't have the expected shape -- the caller then refuses to log,
+    same standard as everywhere else in this module.
+    """
+    def judge_scores(comp):
+        ls = comp.get("linescores") or []
+        if not ls or not isinstance(ls[0], dict):
+            return None
+        inner = ls[0].get("linescores")
+        if not isinstance(inner, list):
+            return None
+        vals = [j.get("value") for j in inner if isinstance(j, dict)]
+        vals = [v for v in vals if isinstance(v, (int, float))]
+        return vals or None
+
+    w, l = judge_scores(winner_comp), judge_scores(loser_comp)
+    if not w or not l or len(w) != len(l) or len(w) < 3:
+        return None
+    for_winner = sum(1 for a, b in zip(w, l) if a > b)
+    drawn = sum(1 for a, b in zip(w, l) if a == b)
+    total = len(w)
+    if for_winner == total:
+        return "Decision - Unanimous"
+    if for_winner == total - 1 and drawn == 1:
+        return "Decision - Majority"
+    if for_winner > total - for_winner:
+        return "Decision - Split"
+    return None
+
+
+def _fetch_espn_core_results(event_id: str) -> dict:
+    """
+    Method of victory per fight, from the CORE api (see ESPN_CORE_EVENT_URL).
+
+    Returns {frozenset({athlete_id_a, athlete_id_b}): {...}} -- keyed by
+    the pair of ESPN athlete IDs rather than by names, so it joins to the
+    site-scoreboard response exactly (the site competitor's own "id" IS
+    the athlete id; confirmed against the core api's competitor ids on a
+    real card) with no name matching to go wrong.
+
+    Costs one request for the event plus one per competition. Any failure
+    at any level degrades to "no entry for that fight" -- the caller then
+    falls back to its existing behaviour rather than logging a guess.
+    """
+    methods: dict = {}
+    try:
+        resp = requests.get(ESPN_CORE_EVENT_URL.format(event_id=event_id),
+                            headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        event_data = resp.json()
+    except (requests.RequestException, ValueError) as e:
+        print(f"[results_fetcher] ESPN core api: event fetch failed for {event_id}: {e}")
+        return methods
+
+    competitions = event_data.get("competitions")
+    if not isinstance(competitions, list):
+        print(f"[results_fetcher] ESPN core api: no competitions list on event {event_id}")
+        return methods
+
+    for comp in competitions:
+        if not isinstance(comp, dict):
+            continue
+        competitors = comp.get("competitors")
+        if not isinstance(competitors, list) or len(competitors) != 2:
+            continue
+        ids = {str(c.get("id")) for c in competitors if isinstance(c, dict) and c.get("id") is not None}
+        if len(ids) != 2:
+            continue
+
+        status_node = comp.get("status")
+        status_ref = status_node.get("$ref") if isinstance(status_node, dict) else None
+        if not status_ref:
+            continue
+        try:
+            sresp = requests.get(status_ref, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+            sresp.raise_for_status()
+            status = sresp.json()
+        except (requests.RequestException, ValueError):
+            continue
+
+        result = status.get("result")
+        if not isinstance(result, dict):
+            continue  # not finished, or this fight genuinely has no result object
+
+        # Combine every descriptive field ESPN offers, then run the SAME
+        # taxonomy the rest of this module uses -- no parallel mapping to
+        # drift out of sync.
+        text = " ".join(str(result.get(k, "")) for k in
+                        ("name", "displayName", "shortDisplayName", "description", "displayDescription"))
+        methods[frozenset(ids)] = {
+            "method": _extract_method([text]),
+            "raw_result_text": text.strip(),
+            "end_round": status.get("period"),
+            "end_time": status.get("displayClock"),
+        }
+
+    if methods:
+        print(f"[results_fetcher] ESPN core api: got result objects for {len(methods)} fight(s)")
+    return methods
 
 
 def _extract_round_time(cell_texts: list[str]) -> tuple[int | None, str | None]:
@@ -560,6 +685,12 @@ def _fetch_from_espn(event_name: str, event_date: str, known_fighters_lower: set
         return []
 
     results = []
+    # Fetched lazily on the first fight that needs it: when the site
+    # response's own text is enough (it sometimes is for other orgs/feeds)
+    # this costs nothing, and it's only ever fetched once per run.
+    core_results = None
+    core_fetch_attempted = False
+
     for comp in matched_event.get("competitions", []):
         status_type = comp.get("status", {}).get("type", {})
         if not status_type.get("completed"):
@@ -583,23 +714,40 @@ def _fetch_from_espn(event_name: str, event_date: str, known_fighters_lower: set
             " ".join(n.get("headline", "") for n in comp.get("notes", []) if isinstance(n, dict)),
         ]))
         method = _extract_method([detail_text])
-        if not method:
-            print(f"[results_fetcher] ESPN: {winner_name} vs {loser_name} completed with a winner, but no "
-                  f"method could be confidently extracted from the available text -- treating as not-yet-complete. "
-                  f"Raw detail_text searched: {detail_text!r} | Raw status.type: {status_type!r} | "
-                  f"Raw notes: {comp.get('notes', [])!r} | "
-                  # Widened after status.type/notes were conclusively confirmed empty of method info
-                  # across every fight on a real, fully-concluded card (12/12, zero exceptions) -- the
-                  # two fields already checked were simply the wrong place, not under-parsed. This
-                  # captures the competition object's other top-level keys (in case method lives
-                  # somewhere neither status nor notes) and the winning competitor's full raw structure
-                  # specifically to check for an athlete id, the prerequisite for trying the same
-                  # eventLog approach fighter_backfill.py uses for last-fight-date -- never confirmed
-                  # present in this particular (scoreboard) response before now.
-                  f"Competition object's other top-level keys: {sorted(k for k in comp.keys() if k not in ('status', 'notes'))} | "
-                  f"Winning competitor's full raw structure: {winner_comp!r}")
-            continue
         end_round, end_time = _extract_round_time_from_text(detail_text)
+
+        # The site scoreboard's status text says only "Final" on real UFC
+        # cards, so this fallback is the normal path, not an edge case:
+        # the core api carries the actual method (see ESPN_CORE_EVENT_URL).
+        if not method:
+            if not core_fetch_attempted:
+                core_fetch_attempted = True
+                event_id = matched_event.get("id")
+                core_results = _fetch_espn_core_results(str(event_id)) if event_id else {}
+            key = frozenset({str(winner_comp.get("id")), str(loser_comp.get("id"))})
+            core_entry = (core_results or {}).get(key)
+            if core_entry:
+                method = core_entry.get("method")
+                # A decision the core api didn't sub-classify: read the
+                # actual judges' cards rather than guessing a subtype.
+                if not method and "decision" in core_entry.get("raw_result_text", "").lower():
+                    method = _decision_subtype_from_linescores(winner_comp, loser_comp)
+                if end_round is None and isinstance(core_entry.get("end_round"), int):
+                    end_round = core_entry["end_round"]
+                if end_time is None and core_entry.get("end_time"):
+                    end_time = core_entry["end_time"]
+
+        if not method:
+            core_note = ""
+            if core_fetch_attempted:
+                key = frozenset({str(winner_comp.get("id")), str(loser_comp.get("id"))})
+                entry = (core_results or {}).get(key)
+                core_note = (f" | CORE API raw result text: {entry.get('raw_result_text')!r}"
+                             if entry else " | CORE API had no result object for this fight")
+            print(f"[results_fetcher] ESPN: {winner_name} vs {loser_name} completed with a winner, but no "
+                  f"method could be confidently extracted -- treating as not-yet-complete. "
+                  f"Site detail_text: {detail_text!r}{core_note}")
+            continue
 
         results.append({
             "fighter_a": winner_name, "fighter_b": loser_name, "winner": winner_name,
