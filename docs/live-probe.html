@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Octane Alpha — live-mode feasibility probe</title>
+  <style>
+    body { background:#0a0c10; color:#e8eaf0; font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+           padding:20px; line-height:1.6; max-width:760px; margin:0 auto; }
+    h1 { font-size:18px; margin:0 0 4px; }
+    .sub { color:#8a8f9a; font-size:13px; margin-bottom:18px; }
+    .row { border:1px solid #262b36; border-radius:10px; padding:12px 14px; margin-bottom:10px; background:#14171f; }
+    .name { font-weight:700; font-size:13px; }
+    .url { font-size:10.5px; color:#8a8f9a; word-break:break-all; margin:2px 0 8px; }
+    .verdict { font-weight:800; font-size:13px; }
+    .ok { color:#3ddc84; } .bad { color:#ff5c5c; } .pending { color:#e8c766; }
+    .detail { font-size:11px; color:#8a8f9a; margin-top:4px; white-space:pre-wrap; }
+    .summary { margin-top:18px; padding:14px; border-radius:10px; border:1px solid #262b36; background:#14171f; font-size:13px; }
+  </style>
+</head>
+<body>
+  <h1>Live-mode feasibility probe</h1>
+  <div class="sub">
+    Answers one question: can the site's own JavaScript fetch ESPN directly from a
+    visitor's browser? If yes, true live mode is possible — results and the countdown
+    could update on their own during a card instead of waiting for a rebuild. If no,
+    live updating stays capped at the rebuild cadence.
+    <br><br>
+    <strong>This must be opened from the deployed site's origin</strong> (upload it to
+    docs/ and visit octanealpha.com/live-probe.html). Opening it from a local file gives
+    a different, misleading answer — browsers treat file:// as its own origin with its
+    own rules, and curl skips CORS entirely, which is why neither can answer this.
+  </div>
+  <div id="out"></div>
+  <div class="summary" id="summary">Running…</div>
+
+<script>
+const TESTS = [
+  { name: "ESPN site scoreboard (what results_fetcher polls today)",
+    url: "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard" },
+  { name: "ESPN core API event (where method-of-victory lives)",
+    url: "https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events" },
+];
+
+const out = document.getElementById('out');
+const results = [];
+
+function render(t, verdict, cls, detail) {
+  const d = document.createElement('div');
+  d.className = 'row';
+  d.innerHTML = `<div class="name">${t.name}</div>
+                 <div class="url">${t.url}</div>
+                 <div class="verdict ${cls}">${verdict}</div>
+                 <div class="detail">${detail}</div>`;
+  out.appendChild(d);
+}
+
+(async () => {
+  for (const t of TESTS) {
+    try {
+      const res = await fetch(t.url, { method: 'GET', mode: 'cors' });
+      const body = await res.text();
+      const ok = res.ok && body.length > 0;
+      results.push(ok);
+      render(t,
+        ok ? "READABLE — CORS allows it" : `Blocked or empty (HTTP ${res.status})`,
+        ok ? "ok" : "bad",
+        `HTTP ${res.status} · ${body.length.toLocaleString()} bytes returned`);
+    } catch (err) {
+      results.push(false);
+      render(t, "BLOCKED by CORS", "bad",
+        `${err}\n(A network/CORS failure throws before any status is available — this is the expected shape of a CORS block.)`);
+    }
+  }
+
+  const anyOk = results.some(Boolean);
+  const allOk = results.every(Boolean);
+  const s = document.getElementById('summary');
+  if (allOk) {
+    s.innerHTML = `<span class="ok"><strong>Both readable.</strong></span> True live mode is buildable:
+      the page can poll ESPN directly and update results, the countdown and "card concluded"
+      state without waiting on a rebuild.`;
+  } else if (anyOk) {
+    s.innerHTML = `<span class="pending"><strong>Partly readable.</strong></span> A limited live mode is
+      possible using whichever endpoint passed. Send this screenshot back and the design can be
+      built around what's actually reachable.`;
+  } else {
+    s.innerHTML = `<span class="bad"><strong>Both blocked.</strong></span> Direct browser polling isn't
+      possible, so live mode would need a proxy — the existing Cloudflare Worker could relay ESPN
+      and add the CORS headers itself. That's a real but well-understood piece of work.`;
+  }
+})();
+</script>
+</body>
+</html>

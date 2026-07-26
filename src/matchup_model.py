@@ -27,7 +27,11 @@ import pandas as pd
 # How many Elo-equivalent rating points a fully-realized stylistic
 # advantage is worth. Tuned to be meaningful but not dominate the base
 # rating gap entirely -- these are secondary signals, not the headline.
-WRESTLING_ADVANTAGE_SCALE = 300.0
+WRESTLING_ADVANTAGE_SCALE = 300.0  # legacy fallback path only (see wrestling_adj)
+# Rating points per 1.0 takedown-per-15-min differential. Set so the term's
+# typical magnitude matches what head_to_head_adjustment.py validated (its
+# TD-rate coefficient of 10.0 carried a tuned blend weight of 1.5).
+TD_RATE_ADVANTAGE_SCALE = 15.0
 STRIKING_ADVANTAGE_SCALE = 150.0
 DURABILITY_SCALE = 120.0
 VOLUME_DIFFERENTIAL_SCALE = 40.0  # rating points per 1.0 SLpM-SApM differential gap
@@ -344,7 +348,7 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
 
     # (key in matchup, display label, plain-language explanation)
     FACTORS = [
-        ("wrestling_adjustment", "Wrestling", "takedown offense vs the other's takedown defense"),
+        ("wrestling_adjustment", "Wrestling", "takedowns landed per 15 minutes, head to head"),
         ("striking_adjustment", "Striking", "significant-strike accuracy and defense"),
         ("durability_adjustment", "Durability", "how often each has been finished"),
         ("recent_form_adjustment", "Recent form", "last three fights, recent ones counting more"),
@@ -577,16 +581,37 @@ def style_matchup_adjustment(
     # Falls back to takedown-accuracy-vs-defense when control time isn't
     # populated yet.
     ctrl_a, ctrl_b = row_a.get("control_time_pct"), row_b.get("control_time_pct")
-    if pd.notna(ctrl_a) and pd.notna(ctrl_b):
+    td_rate_a, td_rate_b = row_a.get("td_per_15"), row_b.get("td_per_15")
+    if pd.notna(td_rate_a) and pd.notna(td_rate_b):
+        # Takedown RATE differential -- validated on a frozen 2019+ holdout in
+        # head_to_head_adjustment.py. Holding every other term fixed and
+        # swapping only this one: 57.7% / Brier 0.2365 -> 58.2% / 0.2354, and
+        # it won at every blend weight tested from 1.0 to 3.0.
+        #
+        # Why rate beats the accuracy-vs-defense form it replaces: accuracy is
+        # a percentage with no volume in it. A fighter who goes 1-for-1 reads
+        # as 100% accurate with almost no wrestling output; one who goes 6-for-12
+        # reads as half as good while actually controlling where the fight
+        # happens far more. The old form also clipped at zero (max(0, acc - def)),
+        # discarding the sign -- so being clearly WORSE at takedowns than the
+        # opponent's defence registered identically to being merely equal.
+        # Testing the clipping removal on its own made things slightly worse,
+        # so the clipping was never the real problem; the input was.
+        wrestling_adj = (float(td_rate_a) - float(td_rate_b)) * TD_RATE_ADVANTAGE_SCALE
+    elif pd.notna(ctrl_a) and pd.notna(ctrl_b):
+        # Fallback for fighters with no tracked cage time yet (debutants, and
+        # anyone the stats backfill couldn't name-match). Unchanged prior
+        # behaviour rather than a guessed rate.
         wrestling_edge_a = max(0.0, float(ctrl_a) - td_def_b) / 100.0
         wrestling_edge_b = max(0.0, float(ctrl_b) - td_def_a) / 100.0
+        wrestling_adj = (wrestling_edge_a - wrestling_edge_b) * WRESTLING_ADVANTAGE_SCALE
     else:
         # Wrestling: A's takedown accuracy vs. B's takedown defense, and vice versa.
         # Only counts as an "edge" if the attacker's accuracy actually exceeds
         # the defender's defense rate -- otherwise no stylistic advantage either way.
         wrestling_edge_a = max(0.0, td_acc_a - td_def_b) / 100.0
         wrestling_edge_b = max(0.0, td_acc_b - td_def_a) / 100.0
-    wrestling_adj = (wrestling_edge_a - wrestling_edge_b) * WRESTLING_ADVANTAGE_SCALE
+        wrestling_adj = (wrestling_edge_a - wrestling_edge_b) * WRESTLING_ADVANTAGE_SCALE
 
     # Durability: how often has each been finished before (by any method)?
     # A high finish-loss rate against someone with strong finishing tools
