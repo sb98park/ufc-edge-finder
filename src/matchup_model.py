@@ -293,29 +293,37 @@ def blend_method_probability(
 
 def build_probability_waterfall(matchup: dict) -> dict | None:
     """
-    Decomposes the final probability into the exact pieces that produced it,
-    so the model can be interrogated rather than taken on faith.
+    Decomposes the final probability into a running journey a reader can
+    follow: start from an even fight at 50%, then watch each factor move
+    the number, ending exactly on the model's real pick percentage.
 
-    WHY RATING POINTS, NOT PERCENTAGES, for the per-factor bars. The model
-    is additive in rating points and only then squashed through a logistic
-    into a probability. Rating-point contributions therefore sum EXACTLY to
-    the adjusted gap and are order-independent. Per-factor PROBABILITY
-    contributions are neither: because the link is non-linear, "how much
-    did wrestling add" would depend on the order factors were applied in,
-    which is an artifact of presentation rather than a property of the
-    model. Showing points per factor and the probability once at the end
-    keeps every number on screen literally true.
+    WHY PERCENTAGE POINTS AND A RUNNING TOTAL. The model works internally
+    in rating points, which are exactly additive -- but "+149.4" means
+    nothing at a glance, which made the first version of this panel
+    unreadable. Percentage points are the unit the reader already thinks
+    in, and showing the running probability after every step means no
+    arithmetic is required to follow it: you can see the pick move from
+    50% to its final number, one factor at a time.
+
+    The deltas still sum EXACTLY to (final - 50%), because each is
+    measured as the change in probability caused by adding that factor to
+    everything before it. The one honest caveat is that with a non-linear
+    logistic link, a factor's share depends slightly on where in the
+    order it lands. Factors are applied largest-first (after the base
+    rating gap), which is both a fixed, disclosed order and the one that
+    reads most naturally -- biggest movers at the top.
+
+    Rating points are still carried on every row as a secondary number,
+    for anyone who wants the model's native units.
 
     ORIENTATION. predict_matchup computes everything as "positive favors
-    fighter A". A reader wants "why do we like the pick", so signs are
-    flipped when the favorite is fighter B. After this, positive always
-    means "helps the favorite".
+    fighter A". A reader wants "why do we like the pick", so signs flip
+    when the favorite is fighter B. After this, positive always means
+    "helps the favorite".
 
-    EXACTNESS. Factors below DISPLAY_THRESHOLD are folded into a single
-    "other factors" row rather than dropped, and the cap (when it bites) is
-    shown as its own row. The rows therefore always reconcile to the real
-    adjusted gap -- a waterfall whose parts don't sum to its total would be
-    worse than no waterfall at all.
+    EXACTNESS. Factors below DISPLAY_THRESHOLD fold into one "other
+    factors" row rather than being dropped, and the cap gets its own row
+    when it bites, so the journey always lands on the true final number.
     """
     if not matchup:
         return None
@@ -334,67 +342,79 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
     raw_layer = matchup.get("adjustment_layer_raw", 0.0) * sign
     applied_layer = matchup.get("adjustment_layer_applied", 0.0) * sign
 
-    # (key in matchup, display label, short explanation of what it measures)
+    # (key in matchup, display label, plain-language explanation)
     FACTORS = [
-        ("wrestling_adjustment", "Wrestling", "takedown offense against the other's takedown defense"),
+        ("wrestling_adjustment", "Wrestling", "takedown offense vs the other's takedown defense"),
         ("striking_adjustment", "Striking", "significant-strike accuracy and defense"),
         ("durability_adjustment", "Durability", "how often each has been finished"),
-        ("recent_form_adjustment", "Recent form", "results in the last three fights, decayed by age"),
+        ("recent_form_adjustment", "Recent form", "last three fights, recent ones counting more"),
         ("submission_threat_adjustment", "Sub threat", "share of wins by submission"),
-        ("stance_adjustment", "Stance", "orthodox/southpaw matchup"),
+        ("stance_adjustment", "Stance", "orthodox vs southpaw matchup"),
         ("height_adjustment", "Height", "height difference"),
         ("layoff_adjustment", "Layoff", "time since last fight"),
         ("quick_return_adjustment", "Quick turnaround", "unusually short rest since the last fight"),
-        ("age_cliff_adjustment", "Age", "age relative to the division's typical decline point"),
+        ("age_cliff_adjustment", "Age", "age vs the division's typical decline point"),
         ("missed_weight_adjustment", "Missed weight", "history of missing weight"),
         ("weight_class_change_adjustment", "Division change", "moving up or down in weight"),
-        ("short_notice_adjustment", "Short notice", "taking the fight on short notice"),
+        ("short_notice_adjustment", "Short notice", "took the fight on short notice"),
     ]
 
     DISPLAY_THRESHOLD = 2.0  # rating points -- below this it's noise, not a driver
 
-    rows, folded = [], 0.0
+    def prob_at(gap):
+        return 1.0 / (1.0 + 10 ** (-gap / 400.0))
+
+    # Collect factors, fold the negligible ones together.
+    collected, folded = [], 0.0
     for key, label, why in FACTORS:
         pts = matchup.get(key, 0.0) * sign
         if abs(pts) < DISPLAY_THRESHOLD:
             folded += pts
             continue
+        collected.append({"label": label, "why": why, "points": pts})
+    collected.sort(key=lambda r: abs(r["points"]), reverse=True)
+    if abs(folded) >= 0.05:
+        collected.append({"label": "Other factors",
+                          "why": "everything else, each too small to list on its own",
+                          "points": folded})
+
+    # Walk the journey, recording the running probability after each step.
+    rows = []
+    running_gap = 0.0
+    running_prob = prob_at(running_gap)  # 50%
+
+    def step(label, why, pts, kind="factor"):
+        nonlocal running_gap, running_prob
+        before = running_prob
+        running_gap += pts
+        running_prob = prob_at(running_gap)
         rows.append({
-            "label": label, "why": why, "points": round(pts, 1),
+            "label": label, "why": why, "kind": kind,
+            "points": round(pts, 1),
+            "delta_pp": round((running_prob - before) * 100, 1),
+            "running_pct": round(running_prob * 100, 1),
             "favors": favorite if pts > 0 else underdog,
         })
-    rows.sort(key=lambda r: abs(r["points"]), reverse=True)
 
-    if abs(folded) >= 0.05:
-        rows.append({
-            "label": "Other factors", "why": "everything else, each too small to list on its own",
-            "points": round(folded, 1), "favors": favorite if folded > 0 else underdog,
-        })
-
-    # The cap only shows up when it actually bit -- otherwise it's noise.
-    cap_row = None
+    step("Rating gap", "career record and quality of opposition", base_gap, kind="base")
+    for c in collected:
+        step(c["label"], c["why"], c["points"])
     if matchup.get("adjustment_capped"):
-        cap_row = {
-            "label": "Adjustment cap",
-            "why": f"total adjustment limited to {ADJUSTMENT_TOTAL_CAP:.0f} points, so no pile-up of "
-                   f"factors can outweigh the rating gap itself",
-            "points": round(applied_layer - raw_layer, 1),
-            "favors": favorite if (applied_layer - raw_layer) > 0 else underdog,
-        }
+        step("Adjustment cap",
+             f"total adjustment held to {ADJUSTMENT_TOTAL_CAP:.0f} rating points, so no pile-up "
+             f"of factors can outweigh the rating gap itself",
+             applied_layer - raw_layer, kind="cap")
 
     favorite_prob = prob_a if favorite_is_a else 1.0 - prob_a
     return {
         "favorite": favorite,
         "underdog": underdog,
-        "base_points": round(base_gap, 1),
         "rows": rows,
-        "cap_row": cap_row,
-        "adjustment_points": round(applied_layer, 1),
+        "favorite_pct": round(favorite_prob * 100, 1),
+        "underdog_pct": round((1.0 - favorite_prob) * 100, 1),
         "total_points": round(base_gap + applied_layer, 1),
-        "favorite_prob": round(favorite_prob, 3),
-        # Largest absolute bar, for scaling the bars in the template.
-        "scale": max([abs(base_gap)] + [abs(r["points"]) for r in rows]
-                     + ([abs(cap_row["points"])] if cap_row else []) + [1.0]),
+        # Largest single move, for scaling the bars.
+        "scale": max([abs(r["delta_pp"]) for r in rows] + [1.0]),
     }
 
 
