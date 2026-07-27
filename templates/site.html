@@ -3434,7 +3434,11 @@
 
     // Bottom tab bar -> the SAME showSection/showHub the hub cards use, so
     // there's one navigation path and the two can never disagree about state.
-    (function initTabBar() {
+    // Deferred: this script executes during parsing, but the <nav> is
+    // emitted just before </body> -- so at inline-run time the element does
+    // not exist yet, getElementById returned null, and the early-return
+    // guard silently wired nothing. Buttons rendered, nothing listened.
+    function initTabBar() {
       const bar = document.getElementById('mobile-tabbar');
       if (!bar) return;
       const btns = Array.from(bar.querySelectorAll('.tabbar-btn'));
@@ -3452,6 +3456,42 @@
       // back button, deep link) -- otherwise the highlight lies about where
       // the user actually is.
       window.__syncTabBar = markActive;
+
+      // MOBILE LANDS ON CONTENT, NOT A MENU. The hub grid is a table of
+      // contents; with a tab bar present it's redundant as a landing screen,
+      // and every visit started with an extra tap. Desktop is unaffected --
+      // it has the left rail and no tab bar.
+      if (window.matchMedia('(max-width: 1023px)').matches
+          && !location.hash && detailView.style.display !== 'block') {
+        showSection('thisweekend');
+        markActive('thisweekend');
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTabBar);
+    } else {
+      initTabBar();
+    }
+
+    // FIX: pull-to-refresh. overscroll-behavior is unreliable on the root
+    // scroller in iOS Safari, so the CSS alone doesn't stop it. This blocks
+    // only the specific gesture that triggers reload -- a downward drag that
+    // STARTS at scrollTop 0 -- and leaves every other touch untouched.
+    (function blockPullToRefresh() {
+      let startY = 0;
+      document.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+      document.addEventListener('touchmove', (e) => {
+        const atTop = (window.scrollY || document.documentElement.scrollTop) <= 0;
+        const pullingDown = e.touches[0].clientY > startY;
+        // Never interfere with a scrollable element the finger is actually
+        // inside (tables, the odds carousel) -- only the page-level pull.
+        const inScrollable = e.target.closest('.table-scroll, [data-scrollable]');
+        if (atTop && pullingDown && !inScrollable && e.cancelable) {
+          e.preventDefault();
+        }
+      }, { passive: false });
     })();
 
     // Waterfall fill animations: replay them every time a panel is opened.
