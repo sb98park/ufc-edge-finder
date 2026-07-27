@@ -1,27 +1,27 @@
-event_name,event_date,card_position,weight_class,fighter_a,fighter_b,event_start_time_et,is_womens_division,event_location
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Main Event,Welterweight,Islam Makhachev,Ian Machado Garry,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Co-Main Event,Strawweight,Mackenzie Dern,Gillian Robertson,18:00,True,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Main Card,Flyweight,Erin Blanchfield,Jasmine Jasudavicius,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Main Card,Lightweight,Edson Barboza,Esteban Ribovics,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Prelims,Lightweight,Jalin Turner,Kauê Fernandes,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Prelims,Middleweight,Mansur Abdul-Malik,Dustin Stoltzfus,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Prelims,Welterweight,Geoff Neal,Chidi Njokuani,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Prelims,Welterweight,Neil Magny,Ramiz Brahimaj,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Early Prelims,Welterweight,Jeremiah Wells,Myktybek Orolbai,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC 330: Makhachev vs. Machado Garry,2026-08-15,Early Prelims,Middleweight,Vicente Luque,Tresean Gore,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA"
-UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Main Event,Lightweight,Mateusz Gamrot,Quillan Salkilld,14:00,False,"Meta APEX, Las Vegas, NV"
-UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Co-Main Event,Light Heavyweight,Diyar Nurgozhay,Bruno Lopes,14:00,False,"Meta APEX, Las Vegas, NV"
-UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Main Card,Lightweight,Diego Ferreira,Billy Quarantillo,14:00,False,"Meta APEX, Las Vegas, NV"
-UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Main Card,Heavyweight,Louie Sutherland,Henrique da Silva Lopes,14:00,False,"Meta APEX, Las Vegas, NV"
-UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Main Card,Heavyweight,Steven Asplund,Guilherme Pat,14:00,False,"Meta APEX, Las Vegas, NV"
-UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Prelims,Women's Strawweight,Amanda Lemos,Alexia Thainara,14:00,True,"Meta APEX, Las Vegas, NV"
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Event,Bantamweight,Umar Nurmagomedov,Song Yadong,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China"
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Co-Main Event,Women's Strawweight,Yan Xiaonan,Denise Gomes,03:00,True,"Shanghai Oriental Sports Center, Shanghai, China"
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Flyweight,Sumudaerji,Alex Perez,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China"
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Flyweight,Rei Tsuruya,Kevin Borjas,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China"
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Bantamweight,Aoriqileng,Kai Asakura,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China"
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Light Heavyweight,Ce Liu,Junior Tafa,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China"
-UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Main Event,Lightweight,Dan Hooker,Salahdine Parnasse,12:00,False,"Accor Arena, Paris, France"
-UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Co-Main Event,Middleweight,Michael Page,Nursulton Ruziboev,12:00,False,"Accor Arena, Paris, France"
-UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Main Card,Featherweight,Kurtis Campbell,Trevor Peek,12:00,False,"Accor Arena, Paris, France"
-UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Heavyweight,Mario Pinto,Ryan Spann,12:00,False,"Accor Arena, Paris, France"
+event_name,event_date,card_position,weight_class,fighter_a,fighter_b,event_start_time_et,is_womens_division,event_location,event_main_card_time_et,_orphan_streak
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Main Event,Welterweight,Islam Makhachev,Ian Machado Garry,17:00,False,"Xfinity Mobile Arena, Philadelphia, PA",21:00,
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Co-Main Event,Strawweight,Mackenzie Dern,Gillian Robertson,17:00,True,"Xfinity Mobile Arena, Philadelphia, PA",21:00,
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Main Card,Lightweight,Edson Barboza,Esteban Ribovics,17:00,False,"Xfinity Mobile Arena, Philadelphia, PA",21:00,
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Main Card,Flyweight,Erin Blanchfield,Jasmine Jasudavicius,18:00,False,"Xfinity Mobile Arena, Philadelphia, PA",,1.0
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Prelims,Lightweight,Jalin Turner,Kauê Fernandes,17:00,False,"Xfinity Mobile Arena, Philadelphia, PA",21:00,
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Prelims,Middleweight,Mansur Abdul-Malik,Dustin Stoltzfus,17:00,False,"Xfinity Mobile Arena, Philadelphia, PA",21:00,
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Prelims,Welterweight,Geoff Neal,Chidi Njokuani,17:00,False,"Xfinity Mobile Arena, Philadelphia, PA",21:00,
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Prelims,Welterweight,Neil Magny,Ramiz Brahimaj,17:00,False,"Xfinity Mobile Arena, Philadelphia, PA",21:00,
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Early Prelims,Welterweight,Jeremiah Wells,Myktybek Orolbai,17:00,False,"Xfinity Mobile Arena, Philadelphia, PA",21:00,
+UFC 330: Makhachev vs. Machado Garry,2026-08-15,Early Prelims,Middleweight,Vicente Luque,Tresean Gore,17:00,False,"Xfinity Mobile Arena, Philadelphia, PA",21:00,
+UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Main Event,Lightweight,Mateusz Gamrot,Quillan Salkilld,14:00,False,"Meta APEX, Las Vegas, NV",17:00,
+UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Co-Main Event,Light Heavyweight,Diyar Nurgozhay,Bruno Lopes,14:00,False,"Meta APEX, Las Vegas, NV",17:00,
+UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Main Card,Lightweight,Diego Ferreira,Billy Quarantillo,14:00,False,"Meta APEX, Las Vegas, NV",17:00,
+UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Main Card,Heavyweight,Louie Sutherland,Henrique da Silva Lopes,14:00,False,"Meta APEX, Las Vegas, NV",17:00,
+UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Main Card,Heavyweight,Steven Asplund,Guilherme Pat,14:00,False,"Meta APEX, Las Vegas, NV",17:00,
+UFC Fight Night: Gamrot vs Salkilld,2026-08-08,Prelims,Women's Strawweight,Amanda Lemos,Alexia Thainara,14:00,True,"Meta APEX, Las Vegas, NV",17:00,
+UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Event,Bantamweight,Umar Nurmagomedov,Song Yadong,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,
+UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Co-Main Event,Women's Strawweight,Yan Xiaonan,Denise Gomes,03:00,True,"Shanghai Oriental Sports Center, Shanghai, China",06:00,
+UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Flyweight,Sumudaerji,Alex Perez,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,
+UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Flyweight,Rei Tsuruya,Kevin Borjas,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,
+UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Bantamweight,Aoriqileng,Kai Asakura,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,
+UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Light Heavyweight,Ce Liu,Junior Tafa,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Main Event,Lightweight,Dan Hooker,Salahdine Parnasse,12:00,False,"Accor Arena, Paris, France",15:00,
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Co-Main Event,Middleweight,Michael Page,Nursulton Ruziboev,12:00,False,"Accor Arena, Paris, France",15:00,
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Main Card,Featherweight,Kurtis Campbell,Trevor Peek,12:00,False,"Accor Arena, Paris, France",15:00,
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Heavyweight,Mario Pinto,Ryan Spann,12:00,False,"Accor Arena, Paris, France",15:00,
