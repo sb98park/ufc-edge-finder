@@ -46,7 +46,17 @@
   ::-webkit-scrollbar-track { background: #14171f; }
   ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #e8c766, #a3801f); border-radius: 8px; }
   ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #f0d97a, #d4af37); }
+  html {
+    /* Kills the browser's pull-to-refresh. On a data site an accidental
+       downward drag at the top of a fight card reloads the whole page and
+       loses your scroll position, which reads as the app being fragile.
+       `contain` stops the gesture chaining to the browser chrome while
+       leaving normal scrolling untouched -- it is NOT `none`, which would
+       also disable overscroll effects inside the page. */
+    overscroll-behavior-y: contain;
+  }
   body {
+    overscroll-behavior-y: contain;
     background: radial-gradient(circle at top, #12151c, #0a0c10 60%);
     color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif;
     /* Tabular figures site-wide: every probability, price, record and unit
@@ -1677,6 +1687,41 @@
        correct regardless of which class it happens to carry, including
        conditionally-rendered notices that sometimes take the first slot. */
     .detail-section > *:first-child { margin-top: 0 !important; }
+  }
+
+  /* ===== Mobile bottom tab bar =====
+     Ten sections previously all required a trip back to the hub. This puts
+     the four highest-frequency destinations one thumb-tap from anywhere,
+     with "More" opening the existing hub grid so nothing is lost and there
+     is only ONE navigation system, not two. */
+  .mobile-tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    display: flex; align-items: stretch;
+    background: rgba(12,14,20,0.92);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    /* Without the safe-area inset the bar sits under the iPhone home
+       indicator and the labels get clipped. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .tabbar-btn {
+    flex: 1 1 0; min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 8px 2px 7px;
+    background: none; border: 0; cursor: pointer;
+    color: var(--muted); font-family: inherit; font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.02em; -webkit-tap-highlight-color: transparent;
+  }
+  .tabbar-btn span { display: block; line-height: 1; }
+  .tabbar-btn .inline-icon { width: 19px; height: 19px; margin: 0; opacity: 0.75; }
+  .tabbar-btn.active { color: var(--accent); }
+  .tabbar-btn.active .inline-icon { opacity: 1; }
+  .tabbar-btn:active { background: rgba(255,255,255,0.04); }
+  /* Content must clear the fixed bar or the last card is unreachable. */
+  body { padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+  @media (min-width: 1024px) {
+    .mobile-tabbar { display: none; }
+    body { padding-bottom: 0; }
   }
 </style>
 </head>
@@ -3368,6 +3413,7 @@
       }
     }
     function showHub() {
+      if (window.__syncTabBar) window.__syncTabBar("__hub");
       if (isDesktopLayout()) return; // no hub to return to -- the rail is always visible there
       transitionViews(detailView, hubView, 'backward');
     }
@@ -3385,6 +3431,29 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // Bottom tab bar -> the SAME showSection/showHub the hub cards use, so
+    // there's one navigation path and the two can never disagree about state.
+    (function initTabBar() {
+      const bar = document.getElementById('mobile-tabbar');
+      if (!bar) return;
+      const btns = Array.from(bar.querySelectorAll('.tabbar-btn'));
+      function markActive(sectionId) {
+        btns.forEach(b => b.classList.toggle('active', b.dataset.tab === sectionId));
+      }
+      btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.tab;
+          if (target === '__hub') { showHub(); markActive('__hub'); }
+          else { showSection(target); markActive(target); }
+        });
+      });
+      // Keep the bar in sync when navigation happens elsewhere (hub card tap,
+      // back button, deep link) -- otherwise the highlight lies about where
+      // the user actually is.
+      window.__syncTabBar = markActive;
+    })();
+
     // Waterfall fill animations: replay them every time a panel is opened.
     // The panel lives inside a collapsed <details>, and CSS animations do
     // not reliably advance while an ancestor is hidden -- so without this
@@ -4352,5 +4421,15 @@
       });
     })();
   </script>
+
+  <!-- Mobile-only bottom navigation. Desktop keeps the left rail, so this is
+       hidden at the 1024px breakpoint rather than existing in both places. -->
+  <nav class="mobile-tabbar" id="mobile-tabbar" aria-label="Main">
+    <button class="tabbar-btn" data-tab="thisweekend">{{ icon_calendar() }}<span>Card</span></button>
+    <button class="tabbar-btn" data-tab="standout">{{ icon_target() }}<span>Edges</span></button>
+    <button class="tabbar-btn" data-tab="locks">{{ icon_lock() }}<span>Locks</span></button>
+    <button class="tabbar-btn" data-tab="track">{{ icon_barchart() }}<span>Record</span></button>
+    <button class="tabbar-btn" data-tab="__hub">{{ icon_list() }}<span>More</span></button>
+  </nav>
 </body>
 </html>
