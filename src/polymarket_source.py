@@ -586,11 +586,34 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
         })
         return rows
 
+    # FIGHT-LEVEL method question: "Will the fight be won by KO or TKO?"
+    # names a method but NEITHER fighter. These were previously dropped --
+    # correctly at the time, because a per-fighter Method row has nowhere to
+    # put a claim that doesn't say who wins. They now have a natural home:
+    # the discrete-time hazard model (research_survival_model.py) outputs
+    # fight-level P(KO) and P(SUB) directly, which is precisely what this
+    # market prices. Confirmed live on a real card -- these appear on nearly
+    # every fight Polymarket lists.
+    #
+    # Handled BEFORE the fighter-matching check below, for the same reason
+    # the distance branch had to be: that check requires exactly one fighter
+    # to be named, so a fight-level question always falls through it.
+    if method and not _fighter_name_in_text(fighter_a, question) \
+             and not _fighter_name_in_text(fighter_b, question):
+        rows.append({
+            "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
+            "market": "FightMethod", "selection": method, "selection_method": method,
+            "odds_american": yes_odds, "clob_token_id": yes_token,
+        })
+        rows.append({
+            "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
+            "market": "FightMethod", "selection": f"Not {method}", "selection_method": method,
+            "odds_american": no_odds, "clob_token_id": no_token,
+        })
+        return rows
+
     if not method:
-        # not a method claim, not a distance claim, not a rounds claim --
-        # nothing we know how to classify (e.g. a fight-level "won by
-        # KO/TKO regardless of winner" question doesn't map to our
-        # per-fighter Method market structure; safer to skip than force-fit it)
+        # not a method claim, not a distance claim, not a rounds claim
         return []
 
     # Method-of-victory claims genuinely DO need to know which fighter --
