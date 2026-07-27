@@ -63,6 +63,24 @@ def build_ratings(fighters_df: pd.DataFrame, history_df: pd.DataFrame) -> dict[s
     return build_effective_ratings(fighters_df, elo.ratings, history_df)
 
 
+def _soonest(event_list):
+    """
+    The chronologically next event, not merely the first in the list.
+
+    future_events inherits future_cards.csv's row order, which is
+    discovery/append order -- the dedupe and resync helpers rewrite that
+    file by concatenating groups without ever sorting by date. Trusting
+    position here is what put a card 19 days out in front of one happening
+    that same weekend.
+    """
+    if not event_list:
+        return None
+    dated = [e for e in event_list if e.get("event_date")]
+    if not dated:
+        return event_list[0]
+    return min(dated, key=lambda e: str(e["event_date"]))
+
+
 def main():
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
 
@@ -240,7 +258,7 @@ def main():
         except (ValueError, TypeError):
             current_card_has_happened = False
     if current_card_has_happened and len(tracked_edges) < MIN_EDGES_FOR_CURRENT_CARD and future_events:
-        next_event = future_events[0]
+        next_event = _soonest(future_events)
         next_tracked_edges = pd.DataFrame(
             [edge for fight in next_event["fights"] for edge in fight["edges"]]
         )
@@ -375,7 +393,7 @@ def main():
     # events (July-August) -- would need adjusting for events during EST months.
     countdown_target_iso = None
     countdown_label = None
-    next_event = events[0] if events else (future_events[0] if future_events else None)
+    next_event = events[0] if events else _soonest(future_events)
     if next_event:
         countdown_target_iso = f"{next_event['event_date']}T{next_event.get('event_start_time_et', '19:00')}:00-04:00"
         countdown_label = next_event["event_name"]

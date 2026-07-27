@@ -212,7 +212,29 @@ def promote_card_if_stale(
     # framing) -- 2+ means it's been sitting stale for a full extra day,
     # time to hand off to what's next.
     if days_since >= 2 and not future_cards_df.empty:
-        next_event_name = future_cards_df["event_name"].iloc[0]
+        # Pick the SOONEST future event, not whichever happens to be in the
+        # first row. Real bug: future_cards.csv is in discovery/append order,
+        # and the dedupe/resync helpers rewrite it by concatenating groups
+        # without ever sorting by date -- so row 0 is routinely NOT the next
+        # event. In production this promoted a card 19 days out over one
+        # happening that same weekend.
+        #
+        # Prefer the earliest event still to come; if every tracked future
+        # card somehow sits in the past (stale data), fall back to the
+        # earliest overall so the choice stays chronological and
+        # deterministic rather than arbitrary.
+        dated = future_cards_df.copy()
+        dated["_d"] = pd.to_datetime(dated["event_date"], errors="coerce")
+        dated = dated.dropna(subset=["_d"])
+        if dated.empty:
+            next_event_name = future_cards_df["event_name"].iloc[0]
+        else:
+            upcoming = dated[dated["_d"].dt.date >= today]
+            pool = upcoming if not upcoming.empty else dated
+            next_event_name = pool.loc[pool["_d"].idxmin(), "event_name"]
+            if next_event_name != future_cards_df["event_name"].iloc[0]:
+                print(f"[schedule] promoting '{next_event_name}' (soonest by date) rather than "
+                      f"'{future_cards_df['event_name'].iloc[0]}' (merely first in the file)")
         new_current = future_cards_df[future_cards_df["event_name"] == next_event_name].reset_index(drop=True)
         new_future = future_cards_df[future_cards_df["event_name"] != next_event_name].reset_index(drop=True)
         return new_current, new_future, 0
