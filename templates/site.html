@@ -47,16 +47,32 @@
   ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #e8c766, #a3801f); border-radius: 8px; }
   ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #f0d97a, #d4af37); }
   html {
+    /* THE white flash on fast scrolling is not a gesture problem -- it's a
+       PAINT problem, which is why blocking touchmove couldn't fix it:
+       momentum overshoot happens after the finger has already lifted, so
+       there is no event left to cancel.
+       What's actually showing is the canvas behind the document. body's
+       background is a radial-gradient, and a gradient propagated to the
+       canvas doesn't reliably fill the rubber-band region -- so the browser
+       falls back to white. Painting an explicit solid colour on the ROOT
+       element makes that region match the page, so the overshoot still
+       happens and simply becomes invisible. */
+    background-color: #0a0c10;
     /* Kills the browser's pull-to-refresh. On a data site an accidental
        downward drag at the top of a fight card reloads the whole page and
        loses your scroll position, which reads as the app being fragile.
        `contain` stops the gesture chaining to the browser chrome while
        leaving normal scrolling untouched -- it is NOT `none`, which would
        also disable overscroll effects inside the page. */
-    overscroll-behavior-y: contain;
+    /* `none`, not `contain`. contain only stops the gesture CHAINING to
+       browser chrome (which killed pull-to-refresh); the elastic stretch
+       itself still happened, so a hard fling still exposed the area past
+       the document. `none` additionally suppresses the overscroll EFFECT,
+       so the page simply stops at its own edges. */
+    overscroll-behavior: none;
   }
   body {
-    overscroll-behavior-y: contain;
+    overscroll-behavior: none;
     background: radial-gradient(circle at top, #12151c, #0a0c10 60%);
     color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif;
     /* Tabular figures site-wide: every probability, price, record and unit
