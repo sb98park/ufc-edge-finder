@@ -34,6 +34,11 @@
     --red: #ff5c5c; --accent: #d4af37; --accent2: #e8c766;
     --accent-cool: #5fb8c9;
     --font-display: 'Space Grotesk', -apple-system, Segoe UI, Roboto, sans-serif;
+    /* Type scale. One ladder, so nothing lands on an arbitrary size --
+       every step is a deliberate rung rather than a number someone reached
+       for. Financial UIs read as precise partly because their type does. */
+    --t-micro: 9.5px; --t-caption: 10.5px; --t-small: 11.5px; --t-body: 12.5px;
+    --t-lead: 14px; --t-h3: 17px; --t-h2: 22px; --t-h1: 34px;
   }
   * { box-sizing: border-box; }
   html { scrollbar-color: var(--accent) #14171f; scrollbar-width: thin; scroll-behavior: smooth; }
@@ -44,6 +49,12 @@
   body {
     background: radial-gradient(circle at top, #12151c, #0a0c10 60%);
     color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    /* Tabular figures site-wide: every probability, price, record and unit
+       total occupies the same width, so columns align and a number doesn't
+       jitter sideways when it ticks over. This is most of why a terminal
+       reads as precise and a dashboard doesn't. */
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
     margin: 0; padding: 16px; max-width: 720px; margin-inline: auto;
     overflow-x: hidden; position: relative;
   }
@@ -1657,6 +1668,70 @@
       <div class="scroll-digit" id="sd-{{ id }}-ones"><div class="track"><div class="num">-</div></div></div>
     </div>
   {%- endmacro %}
+{% macro icon_trendup() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend up"><defs><linearGradient id="hi-trendup" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M4 18 L10 12 L14 15 L22 7" stroke="url(#hi-trendup)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 7 H22 V13" stroke="url(#hi-trendup)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_trenddown() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend down"><defs><linearGradient id="hi-trenddown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M4 8 L10 14 L14 11 L22 19" stroke="url(#hi-trenddown)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 19 H22 V13" stroke="url(#hi-trenddown)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_ruler() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Tape measure"><defs><linearGradient id="hi-ruler" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><rect x="3" y="9" width="20" height="8" rx="1.6" fill="url(#hi-ruler)" opacity="0.15" stroke="url(#hi-ruler)" stroke-width="1.8"/><path d="M8 9 V13 M13 9 V14.5 M18 9 V13" stroke="url(#hi-ruler)" stroke-width="1.6" stroke-linecap="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_scales() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Balance scales"><defs><linearGradient id="hi-scales" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 5 V21 M7 21 H19" stroke="url(#hi-scales)" stroke-width="1.8" stroke-linecap="round"/><path d="M5 9 H21" stroke="url(#hi-scales)" stroke-width="1.8" stroke-linecap="round"/><path d="M5 9 L2.5 14.5 H7.5 Z M21 9 L18.5 14.5 H23.5 Z" fill="url(#hi-scales)" opacity="0.2" stroke="url(#hi-scales)" stroke-width="1.5" stroke-linejoin="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_list() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="List"><defs><linearGradient id="hi-list" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M9 7.5 H22 M9 13 H22 M9 18.5 H22" stroke="url(#hi-list)" stroke-width="1.9" stroke-linecap="round"/><circle cx="4.6" cy="7.5" r="1.5" fill="url(#hi-list)"/><circle cx="4.6" cy="13" r="1.5" fill="url(#hi-list)"/><circle cx="4.6" cy="18.5" r="1.5" fill="url(#hi-list)"/></svg>
+{%- endmacro %}
+
+{% macro icon_star() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Star"><defs><linearGradient id="hi-star" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 3.5 L16 10 L23 10.9 L18 15.7 L19.3 22.5 L13 19.2 L6.7 22.5 L8 15.7 L3 10.9 L10 10 Z" fill="url(#hi-star)" opacity="0.18" stroke="url(#hi-star)" stroke-width="1.7" stroke-linejoin="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_underdog() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Underdog"><defs><linearGradient id="hi-underdog" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f5b982"/><stop offset="100%" stop-color="#f0954a"/></linearGradient></defs><circle cx="13" cy="13" r="9.5" fill="url(#hi-underdog)" opacity="0.14" stroke="url(#hi-underdog)" stroke-width="1.8"/><path d="M8.5 14.5 L13 9.5 L17.5 14.5" stroke="url(#hi-underdog)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 9.5 V18" stroke="url(#hi-underdog)" stroke-width="2" stroke-linecap="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_trophy() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trophy"><defs><linearGradient id="hi-trophy" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M8 4.5 H18 V11 a5 5 0 0 1 -10 0 Z" fill="url(#hi-trophy)" opacity="0.18" stroke="url(#hi-trophy)" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 6.5 H5 a3 3 0 0 0 3 3.5 M18 6.5 H21 a3 3 0 0 1 -3 3.5" stroke="url(#hi-trophy)" stroke-width="1.6" fill="none"/><path d="M13 16 V19 M9.5 21.5 H16.5" stroke="url(#hi-trophy)" stroke-width="1.9" stroke-linecap="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_clock() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Clock"><defs><linearGradient id="hi-clock" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><circle cx="13" cy="13" r="9.3" fill="url(#hi-clock)" opacity="0.12" stroke="url(#hi-clock)" stroke-width="1.8"/><path d="M13 7.5 V13.4 L17 15.6" stroke="url(#hi-clock)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_pin() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Location"><defs><linearGradient id="hi-pin" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 23 s7-7.2 7-12 a7 7 0 1 0 -14 0 c0 4.8 7 12 7 12 Z" fill="url(#hi-pin)" opacity="0.15" stroke="url(#hi-pin)" stroke-width="1.8" stroke-linejoin="round"/><circle cx="13" cy="10.7" r="2.6" fill="url(#hi-pin)"/></svg>
+{%- endmacro %}
+
+{% macro icon_warning() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Warning"><defs><linearGradient id="hi-warning" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 4 L23 21 H3 Z" fill="url(#hi-warning)" opacity="0.15" stroke="url(#hi-warning)" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 10.5 V15.5" stroke="url(#hi-warning)" stroke-width="1.9" stroke-linecap="round"/><circle cx="13" cy="18.2" r="1.25" fill="url(#hi-warning)"/></svg>
+{%- endmacro %}
+
+{% macro icon_ticket() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Ticket"><defs><linearGradient id="hi-ticket" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M3 9.5 a2 2 0 0 1 2-2 H21 a2 2 0 0 1 2 2 v1.6 a2.2 2.2 0 0 0 0 4.4 v1.6 a2 2 0 0 1 -2 2 H5 a2 2 0 0 1 -2-2 v-1.6 a2.2 2.2 0 0 0 0-4.4 Z" fill="url(#hi-ticket)" opacity="0.14" stroke="url(#hi-ticket)" stroke-width="1.7" stroke-linejoin="round"/><path d="M14.5 9 V17" stroke="url(#hi-ticket)" stroke-width="1.5" stroke-dasharray="2 2.4"/></svg>
+{%- endmacro %}
+
+{% macro icon_gauge() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Calibration gauge"><defs><linearGradient id="hi-gauge" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M4 18 a9 9 0 0 1 18 0" fill="none" stroke="url(#hi-gauge)" stroke-width="1.9" stroke-linecap="round"/><path d="M13 18 L18.5 11.5" stroke="url(#hi-gauge)" stroke-width="1.9" stroke-linecap="round"/><circle cx="13" cy="18" r="1.8" fill="url(#hi-gauge)"/></svg>
+{%- endmacro %}
+
+{% macro icon_damage() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Damage taken"><defs><linearGradient id="hi-damage" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff9d9d"/><stop offset="100%" stop-color="#ff5c5c"/></linearGradient></defs><path d="M13 3.5 L21.5 7 V13 c0 5-3.6 8.2-8.5 9.8 C8.1 21.2 4.5 18 4.5 13 V7 Z" fill="url(#hi-damage)" opacity="0.14" stroke="url(#hi-damage)" stroke-width="1.8" stroke-linejoin="round"/><path d="M14.5 8.5 L11 13.5 H14.5 L11.5 18" stroke="url(#hi-damage)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_check() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Correct"><path d="M5 13.5 L10.5 19 L21 7.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+{%- endmacro %}
+
+{% macro icon_cross() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Incorrect"><path d="M7 7 L19 19 M19 7 L7 19" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+{%- endmacro %}
+
 {% macro icon_track() -%}
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart"><defs><linearGradient id="hi-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><polyline points="3,19 9,12 14,16 22,5" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><polyline points="16,5 22,5 22,11" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
 {%- endmacro %}
@@ -1761,7 +1836,7 @@
       const badge = document.getElementById('account-badge');
       const roleEl = document.getElementById('account-role');
       if (role === 'admin' || role === 'guest') {
-        roleEl.textContent = role === 'admin' ? '👑 Admin' : '👤 Guest';
+        roleEl.textContent = role === 'admin' ? 'Admin' : 'Guest';
         roleEl.className = 'account-role ' + role;
         badge.style.display = 'flex';
       }
@@ -1823,11 +1898,11 @@
 
   <div id="whats-new-banner" class="whats-new-banner" style="display:none; cursor:pointer;" onclick="window.__goToWhatsNew();">
     <div class="whats-new-text" id="whats-new-text"></div>
-    <button class="whats-new-dismiss" onclick="event.stopPropagation(); window.__dismissToast();">✕</button>
+    <button class="whats-new-dismiss" onclick="event.stopPropagation(); window.__dismissToast();">{{ icon_cross() }}</button>
   </div>
 
   <div class="meta-row">
-    🕒 Updated {{ generated_at_short }}
+    {{ icon_clock() }} Updated {{ generated_at_short }}
   </div>
 
   {% if live_error %}
@@ -1851,7 +1926,7 @@
           <div class="hub-card-stat">{{ events[0].event_name.split(':')[0].strip() }}</div>
           <div class="hub-card-matchup">{{ events[0].event_name.split(':', 1)[1].strip() if ':' in events[0].event_name else '' }}</div>
           <div class="hub-card-sub">{{ events[0].fights|length }} fights · {{ events[0].event_date|friendly_date }}</div>
-          {% if events[0].event_location %}<div class="hub-card-location">📍 {{ events[0].event_location }}</div>{% endif %}
+          {% if events[0].event_location %}<div class="hub-card-location">{{ icon_pin() }} {{ events[0].event_location }}</div>{% endif %}
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
@@ -2032,17 +2107,17 @@
     {% if track_record.lock_record %}
     <div class="accuracy-split-row accuracy-split-row-3">
       <div class="clv-badge lock-record-badge">
-        <div class="clv-badge-label">🔒 Locks</div>
+        <div class="clv-badge-label">{{ icon_lock() }} Locks</div>
         <div class="clv-badge-value countup lock-record-value">{{ track_record.lock_record.accuracy_pct }}%</div>
         <div class="clv-badge-sub">{{ track_record.lock_record.correct }} for {{ track_record.lock_record.total }}</div>
       </div>
       <div class="clv-badge favorite-accuracy-badge">
-        <div class="clv-badge-label">⭐ Favorites</div>
+        <div class="clv-badge-label">{{ icon_star() }} Favorites</div>
         <div class="clv-badge-value countup favorite-accuracy-value">{{ mpa.favorites.accuracy_pct }}%</div>
         <div class="clv-badge-sub">{{ mpa.favorites.correct }} for {{ mpa.favorites.total }}</div>
       </div>
       <div class="clv-badge underdog-accuracy-badge">
-        <div class="clv-badge-label">🐕 Underdogs</div>
+        <div class="clv-badge-label">{{ icon_underdog() }} Underdogs</div>
         <div class="clv-badge-value countup underdog-accuracy-value">{{ mpa.underdogs.accuracy_pct }}%</div>
         <div class="clv-badge-sub">{{ mpa.underdogs.correct }} for {{ mpa.underdogs.total }}</div>
       </div>
@@ -2050,12 +2125,12 @@
     {% else %}
     <div class="accuracy-split-row">
       <div class="clv-badge favorite-accuracy-badge">
-        <div class="clv-badge-label">⭐ Favorite Accuracy</div>
+        <div class="clv-badge-label">{{ icon_star() }} Favorite Accuracy</div>
         <div class="clv-badge-value countup favorite-accuracy-value">{{ mpa.favorites.accuracy_pct }}%</div>
         <div class="clv-badge-sub">{{ mpa.favorites.correct }} for {{ mpa.favorites.total }}</div>
       </div>
       <div class="clv-badge underdog-accuracy-badge">
-        <div class="clv-badge-label">🐕 Underdog Accuracy</div>
+        <div class="clv-badge-label">{{ icon_underdog() }} Underdog Accuracy</div>
         <div class="clv-badge-value countup underdog-accuracy-value">{{ mpa.underdogs.accuracy_pct }}%</div>
         <div class="clv-badge-sub">{{ mpa.underdogs.correct }} for {{ mpa.underdogs.total }}</div>
       </div>
@@ -2065,7 +2140,7 @@
 
     {% if track_record.units_stats %}
     <div class="units-block">
-      <div class="units-title">💰 Units Tracker</div>
+      <div class="units-title">{{ icon_coins() }} Units Tracker</div>
       <div class="units-headline {{ 'positive' if track_record.units_stats.total_units >= 0 else 'negative' }}">
         {{ '+' if track_record.units_stats.total_units >= 0 else '' }}{{ track_record.units_stats.total_units }}<span class="units-suffix">U</span>
       </div>
@@ -2094,7 +2169,7 @@
     {% endif %}
     {% if track_record.clv_stats %}
     <div class="clv-badge">
-      <div class="clv-badge-label">🎯 Beat the Closing Line</div>
+      <div class="clv-badge-label">{{ icon_target() }} Beat the Closing Line</div>
       <div class="clv-badge-value countup">{{ track_record.clv_stats.beat_pct }}%</div>
       <div class="clv-badge-sub">{{ track_record.clv_stats.beat }}/{{ track_record.clv_stats.total }} picks · avg {{ '+' if track_record.clv_stats.avg_clv_pct >= 0 else '' }}{{ track_record.clv_stats.avg_clv_pct }}pp move toward the model's side</div>
       <div class="clv-explainer">When we pick a fighter, the betting market has already priced in a chance they win. "Beating the closing line" means that by fight night — after sharp bettors and late info had moved the price — the market came around <em>closer to our side</em> than it was when we made the pick. It's a sign the model saw something worth backing before the crowd fully caught on, independent of whether that fighter actually won.</div>
@@ -2102,7 +2177,7 @@
     {% endif %}
     {% if track_record.market_baseline %}
     <div class="baseline-block">
-      <div class="baseline-title">⚖️ Model vs. Market Baseline</div>
+      <div class="baseline-title">{{ icon_scales() }} Model vs. Market Baseline</div>
       <div class="baseline-caption">Both figures computed over the same {{ track_record.market_baseline.total }} picks with known odds — is the model actually beating "just bet every favorite," or riding a card of obvious winners?</div>
       <div class="baseline-row">
         <div class="baseline-label">Model</div>
@@ -2118,7 +2193,7 @@
     {% endif %}
     {% if track_record.underdog_record %}
     <div class="underdog-block">
-      <div class="underdog-title">🐕 Underdog Calls <span class="underdog-alltime">{{ track_record.underdog_record.count }} correct all-time</span></div>
+      <div class="underdog-title">{{ icon_underdog() }} Underdog Calls <span class="underdog-alltime">{{ track_record.underdog_record.count }} correct all-time</span></div>
       {% set biggest = track_record.underdog_record.biggest %}
       <div class="underdog-biggest">
         <div class="underdog-biggest-label">Biggest underdog called correctly</div>
@@ -2129,7 +2204,7 @@
       <div class="underdog-list">
         {% for h in track_record.underdog_record.hits[1:] %}
         <div class="underdog-row">
-          <span class="underdog-icon">✓</span>
+          <span class="underdog-icon">{{ icon_check() }}</span>
           <span class="underdog-pick">{{ h.predicted_favorite }}</span>
           <span class="underdog-odds">{{ '+' if h.pick_odds >= 0 else '' }}{{ h.pick_odds|int }}</span>
         </div>
@@ -2140,7 +2215,7 @@
     {% endif %}
     {% if track_record.lock_record and track_record.lock_record.picks %}
     <div class="lock-history-block">
-      <div class="lock-history-title">🔒 Locks of the Week — Full History
+      <div class="lock-history-title">{{ icon_lock() }} Locks of the Week — Full History
         <span class="lock-history-alltime">{{ track_record.lock_record.correct }}/{{ track_record.lock_record.total }} correct{% if track_record.lock_record.perfect_calls > 0 %} · {{ track_record.lock_record.perfect_calls }} perfect{% endif %}</span>
       </div>
       <div class="lock-history-scroll">
@@ -2148,15 +2223,15 @@
         {% set perfect = p.correct and p.method_correct == true %}
         <div class="lock-history-row{{ ' perfect' if perfect }}">
           <div class="lock-history-main">
-            <span class="lock-history-result {{ 'hit' if p.correct else 'miss' }}">{{ '✓' if p.correct else '✗' }}</span>
+            <span class="lock-history-result {{ 'hit' if p.correct else 'miss' }}">{{ icon_check() if p.correct else icon_cross() }}</span>
             <span class="lock-history-pick">{{ p.predicted_favorite }}</span>
-            {% if perfect %}<span class="lock-history-perfect-badge">★ PERFECT</span>{% endif %}
+            {% if perfect %}<span class="lock-history-perfect-badge">{{ icon_star() }} PERFECT</span>{% endif %}
           </div>
           <div class="lock-history-sub">
             <span class="lock-history-event">{{ p.event_name }}</span>
             {% if p.predicted_method %}
             <span class="lock-history-method {{ 'hit' if p.method_correct == true else ('miss' if p.method_correct == false else '') }}">
-              {{ 'Method ✓' if p.method_correct == true else ('Method ✗' if p.method_correct == false else 'Method —') }} {{ p.predicted_method }}{% if p.method_correct == false and p.actual_method %} (was {{ p.actual_method }}){% endif %}
+              {% if p.method_correct == true %}{{ icon_check() }} Method{% elif p.method_correct == false %}{{ icon_cross() }} Method{% else %}Method —{% endif %} {{ p.predicted_method }}{% if p.method_correct == false and p.actual_method %} (was {{ p.actual_method }}){% endif %}
             </span>
             {% endif %}
           </div>
@@ -2167,7 +2242,7 @@
     {% endif %}
     {% if calibration_svg %}
     <div class="calibration-block">
-      <div class="calibration-title">📐 Calibration — does "70% confident" actually win ~70%?</div>
+      <div class="calibration-title">{{ icon_gauge() }} Calibration — does "70% confident" actually win ~70%?</div>
       {% if track_record.calibration.summary %}
       <div class="calibration-summary">{{ track_record.calibration.summary }}</div>
       {% endif %}
@@ -2176,7 +2251,7 @@
     </div>
     {% elif track_record.calibration and not track_record.calibration.ready %}
     <div class="calibration-block calibration-pending">
-      <div class="calibration-title">📐 Calibration</div>
+      <div class="calibration-title">{{ icon_gauge() }} Calibration</div>
       <div class="chart-caption">Needs {{ track_record.calibration.needed }} recorded results to show a meaningful curve — {{ track_record.calibration.total }} so far. A curve from a handful of picks would be noise, not signal.</div>
     </div>
     {% endif %}
@@ -2186,7 +2261,7 @@
       <div class="event-summary-card">
         <div class="event-summary-name">{{ group.event_name }}</div>
         {% if group.summary.brag_headline %}
-        <div class="brag-headline {{ group.summary.brag_headline.tier }}">{{ '🔥' if group.summary.brag_headline.tier == 'gold' else '💪' }} {{ group.summary.brag_headline.text }}</div>
+        <div class="brag-headline {{ group.summary.brag_headline.tier }}">{{ icon_flame() if group.summary.brag_headline.tier == 'gold' else icon_trophy() }} {{ group.summary.brag_headline.text }}</div>
         {% endif %}
         <div class="event-summary-grid">
           <div class="event-summary-stat">
@@ -2204,7 +2279,7 @@
           </div>
           {% endif %}
           <div class="event-summary-stat">
-            <div class="event-summary-value gold">🎯 {{ group.summary.perfect_prop_count }}</div>
+            <div class="event-summary-value gold">{{ icon_target() }} {{ group.summary.perfect_prop_count }}</div>
             <div class="event-summary-label">Perfect Props</div>
           </div>
         </div>
@@ -2212,19 +2287,19 @@
       {% if group.summary.lock_picks %}
       <div class="lock-of-week-block">
         <div class="lock-of-week-title">
-          🔒 Lock{{ 's' if group.summary.lock_picks|length > 1 }} of the Week
+          {{ icon_lock() }} Lock{{ 's' if group.summary.lock_picks|length > 1 }} of the Week
           <span class="lock-of-week-alltime">{{ group.summary.lock_picks|selectattr('correct')|list|length }}/{{ group.summary.lock_picks|length }} this card</span>
         </div>
         {% for lock in group.summary.lock_picks %}
         <div class="lock-of-week-row">
-          <span class="lock-of-week-icon {{ 'correct' if lock.correct else 'incorrect' }}">{{ '✓' if lock.correct else '✗' }}</span>
+          <span class="lock-of-week-icon {{ 'correct' if lock.correct else 'incorrect' }}">{{ icon_check() if lock.correct else icon_cross() }}</span>
           <span class="lock-of-week-pick">{{ lock.predicted_favorite }}</span>
           <span class="lock-of-week-vs">vs. {{ lock.fighter_a if lock.fighter_a != lock.predicted_favorite else lock.fighter_b }}</span>
         </div>
         {% endfor %}
       </div>
       {% endif %}
-      <div class="track-result-title">📋 Every Pick</div>
+      <div class="track-result-title">{{ icon_list() }} Every Pick</div>
       <div class="fight-strip">
         {% for r in group.results|reverse %}
         <div class="fight-strip-block {{ 'hit' if r.correct else 'miss' }}" title="{{ r.fighter_a }} vs. {{ r.fighter_b }} — {{ 'model got it right' if r.correct else 'model missed' }}"></div>
@@ -2233,7 +2308,7 @@
       <div class="track-result-list">
         {% for r in group.results %}
         <div class="track-result-row" data-key="{{ r.fighter_a }}|{{ r.fighter_b }}">
-          <div class="track-result-icon {{ 'correct' if r.correct else 'incorrect' }}">{{ '✓' if r.correct else '✗' }}</div>
+          <div class="track-result-icon {{ 'correct' if r.correct else 'incorrect' }}">{{ icon_check() if r.correct else icon_cross() }}</div>
           <div class="track-result-info">
             <div class="track-result-fight">
               {{ r.fighter_a }} vs. {{ r.fighter_b }}
@@ -2243,14 +2318,14 @@
                 {% for _ in range(r.unit_size|int) %}<span class="unit-pip"></span>{% endfor %}
               </span>
               {% endif %}
-              {% if r.correct and r.method_correct %}<span class="perfect-prop-badge">🎯 Method + Winner</span>{% endif %}
-              {% if r.is_lock_of_week %}<span class="lock-badge{{ ' celebratable' if r.correct }}">🔒 Lock of the Week</span>{% endif %}
+              {% if r.correct and r.method_correct %}<span class="perfect-prop-badge">{{ icon_target() }} Method + Winner</span>{% endif %}
+              {% if r.is_lock_of_week %}<span class="lock-badge{{ ' celebratable' if r.correct }}">{{ icon_lock() }} Lock of the Week</span>{% endif %}
             </div>
             <div class="track-result-picks">
               <span class="track-result-label">Model picked</span> <span class="track-result-name pick">{{ r.predicted_favorite }}</span>{% if r.favorite_prob is not none %} <span class="track-result-conf">({{ (r.favorite_prob * 100) | round | int }}% confident)</span>{% endif %}{% if r.predicted_method %} <span class="track-result-conf">by {{ r.predicted_method }}</span>{% endif %}
             </div>
             <div class="track-result-picks">
-              <span class="track-result-label">{{ 'Actual' if r.correct else 'Winner' }}</span> <span class="track-result-name {{ 'pick' if r.correct else 'actual' }}">{{ r.actual_winner }}</span>{% if r.actual_method %} <span class="track-result-name actual">by {{ r.actual_method }}</span>{% endif %}{% if r.method_correct is not none %} <span class="method-match {{ 'yes' if r.method_correct else 'no' }}">{{ '✓ method' if r.method_correct else '✗ method' }}</span>{% endif %}
+              <span class="track-result-label">{{ 'Actual' if r.correct else 'Winner' }}</span> <span class="track-result-name {{ 'pick' if r.correct else 'actual' }}">{{ r.actual_winner }}</span>{% if r.actual_method %} <span class="track-result-name actual">by {{ r.actual_method }}</span>{% endif %}{% if r.method_correct is not none %} <span class="method-match {{ 'yes' if r.method_correct else 'no' }}">{{ icon_check() if r.method_correct else icon_cross() }} method</span>{% endif %}
             </div>
           </div>
           {% if r.units_result is not none %}
@@ -2270,8 +2345,8 @@
   {% macro odds_cell(row) -%}
     <span class="live-odds"{% if row.clob_token_id %} data-live-token="{{ row.clob_token_id }}"{% endif %}>{{ row.odds_american | american }}</span>
     {%- if row.movement %}
-      {%- if row.movement.direction == 'shortening' %}<span class="movement-tag shortening{{ ' notable' if row.movement.notable else '' }}">📈{{ row.movement.pct_change }}%</span>{% endif %}
-      {%- if row.movement.direction == 'drifting' %}<span class="movement-tag drifting{{ ' notable' if row.movement.notable else '' }}">📉{{ row.movement.pct_change }}%</span>{% endif %}
+      {%- if row.movement.direction == 'shortening' %}<span class="movement-tag shortening{{ ' notable' if row.movement.notable else '' }}">{{ icon_trendup() }}{{ row.movement.pct_change }}%</span>{% endif %}
+      {%- if row.movement.direction == 'drifting' %}<span class="movement-tag drifting{{ ' notable' if row.movement.notable else '' }}">{{ icon_trenddown() }}{{ row.movement.pct_change }}%</span>{% endif %}
     {%- endif %}
   {%- endmacro %}
 
@@ -2309,7 +2384,7 @@
 
   {% macro tale_of_the_tape(comparison, radar_svg) %}
   {% if comparison %}
-  <div class="market-group-label">📏 Tale of the Tape</div>
+  <div class="market-group-label">{{ icon_ruler() }} Tale of the Tape</div>
   {% if radar_svg %}
   <div class="radar-block">
     {{ radar_svg | safe }}
@@ -2331,7 +2406,7 @@
 
   {% macro fighter_compare_table(comparison) %}
   {% if comparison %}
-  <div class="market-group-label">⚖️ Fighter Comparison</div>
+  <div class="market-group-label">{{ icon_scales() }} Fighter Comparison</div>
   <div class="table-scroll"><table class="compare-table">
     <tr><th>{{ comparison.a.name }}</th><th></th><th>{{ comparison.b.name }}</th></tr>
     <tr><td>{{ comparison.a.record }}</td><td>Record</td><td>{{ comparison.b.record }}</td></tr>
@@ -2399,7 +2474,7 @@
     <summary>
       <div class="matchup-content">
       {% if fight.cancelled %}
-      <div class="cancelled-banner">✕ FIGHT CANCELLED</div>
+      <div class="cancelled-banner">{{ icon_cross() }} FIGHT CANCELLED</div>
       {% endif %}
       <div class="matchup-header">
         <div class="matchup-fighter">
@@ -2464,7 +2539,7 @@
       {% if fight.preview %}
       <div class="model-pick-badge {{ 'high' if fight.preview.confidence_label == 'High Confidence' else ('medium' if fight.preview.confidence_label == 'Medium Confidence' else 'low') }}">
         {{ confidence_ring(fight.preview.favorite_prob, fight.preview.confidence_label) }}
-        <span class="pick-winner">🏆 {{ fight.preview.favorite }}</span>
+        <span class="pick-winner">{{ icon_trophy() }} {{ fight.preview.favorite }}</span>
         {% if fight.momentum %}
         <span class="momentum-arrow {{ fight.momentum.direction }}" title="Model's read on {{ fight.preview.favorite }} has moved {{ fight.momentum.delta_pct }}pp {{ 'up' if fight.momentum.direction == 'up' else 'down' }} recently">
           {{ '▲' if fight.momentum.direction == 'up' else '▼' }} {{ fight.momentum.delta_pct|abs }}pp
@@ -2472,11 +2547,11 @@
         {% endif %}
         <span class="pick-method">by {{ fight.preview.likely_method }}</span>
         <span class="pick-confidence">{{ fight.preview.confidence_label }}</span>
-        {% if fight.is_lock_of_week %}<span class="lock-badge celebratable">🔒 Lock of the Week</span>{% endif %}
+        {% if fight.is_lock_of_week %}<span class="lock-badge celebratable">{{ icon_lock() }} Lock of the Week</span>{% endif %}
       </div>
       {% if fight.result_stats %}
       <div class="result-stats-block">
-        <div class="result-stats-title">📊 Fight Overview</div>
+        <div class="result-stats-title">{{ icon_barchart() }} Fight Overview</div>
         <div class="donut-row">
           <div class="donut-col">
             <div class="donut-name">{{ fight.fighter_a.split(' ')[-1] }}</div>
@@ -2507,7 +2582,7 @@
         </div>
         {% endfor %}
 
-        <div class="result-stats-title" style="margin-top:20px;">🩹 Damage Taken</div>
+        <div class="result-stats-title" style="margin-top:20px;">{{ icon_damage() }} Damage Taken</div>
         <div class="damage-row">
           <div class="damage-col">
             {{ damage_svg(fight.result_stats.a.head, fight.result_stats.a.body, fight.result_stats.a.leg, false) | safe }}
@@ -2524,7 +2599,7 @@
       </div>
       {% endif %}
       <div class="model-preview{{ ' masterpiece' if fight.result_label and fight.preview.confidence_label == 'High Confidence' and fight.winner == fight.preview.favorite else '' }}">
-        <span class="preview-label">🧠 Model Preview:</span> {{ fight.preview.narrative }}
+        <span class="preview-label">{{ icon_sigma() }} Model Preview:</span> {{ fight.preview.narrative }}
       </div>
       {% if fight.preview.waterfall %}
       {% set wf = fight.preview.waterfall %}
@@ -2580,7 +2655,7 @@
 
       {% if fight.moneyline_chart %}
       <div class="chart-block">
-        <div class="market-group-label">📈 Moneyline Movement</div>
+        <div class="market-group-label">{{ icon_trendup() }} Moneyline Movement</div>
         {{ fight.moneyline_chart | safe }}
         {% if fight.moneyline_chart_has_implied %}
         <div class="chart-caption">~ marks the side implied from the other's real line (two-way market, so one price determines the other)</div>
@@ -2588,13 +2663,13 @@
       </div>
       {% elif fight.chart_building %}
       <div class="chart-block chart-placeholder">
-        <div class="market-group-label">📈 Moneyline Movement</div>
+        <div class="market-group-label">{{ icon_trendup() }} Moneyline Movement</div>
         <div class="chart-placeholder-text">Chart building — needs one more refresh to show a trend line.</div>
       </div>
       {% endif %}
       {% if fight.other_charts %}
       <details class="chart-toggle">
-        <summary>📊 View other line movements ({{ fight.other_charts | length }})<span class="chevron">▶</span></summary>
+        <summary>{{ icon_barchart() }} View other line movements ({{ fight.other_charts | length }})<span class="chevron">▶</span></summary>
         <div class="chart-toggle-body">
           {% for chart in fight.other_charts %}
           <div class="chart-block">
@@ -2607,12 +2682,12 @@
       {% endif %}
 
       {% if fight.edges %}
-      <div class="market-group-label">📊 Live lines vs. model</div>
+      <div class="market-group-label">{{ icon_barchart() }} Live lines vs. model</div>
       <div class="table-scroll"><table>
         <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>Stake</th></tr>
         {% for row in fight.edges %}
         <tr class="edge-heat-{{ 3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0)) }}">
-          <td>{{ row.fighter }}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ '⭐' if row.odds_american < 0 else '🐶' }}</span>{% endif %}</td>
+          <td>{{ row.fighter }}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
           <td>{{ row.market }}</td>
           <td>{{ odds_cell(row) }}</td>
           <td>{{ row.model_prob }}</td>
@@ -2634,7 +2709,7 @@
       {% endif %}
 
       {% if fight.model_only_rows %}
-      <div class="market-group-label">🧮 Model projection (no live book line to compare yet)</div>
+      <div class="market-group-label">{{ icon_sigma() }} Model projection (no live book line to compare yet)</div>
       <div class="table-scroll"><table class="model-only-table">
         <tr><th>Selection</th><th>Market</th><th>Prob</th></tr>
         {% for row in fight.model_only_rows %}
@@ -2649,7 +2724,7 @@
 
   <div class="detail-section" data-section="standout">
   {% if analytics_source_event %}
-  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  <div class="analytics-fallback-notice">{{ icon_calendar() }} This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
   {% endif %}
   {% if notable_movements %}
   <div class="parlay-section-title movement" id="section-movement">{{ icon_barchart() }} Notable Line Movement</div>
@@ -2660,7 +2735,7 @@
       <div class="line-matchup">{{ row.fighter }}{% if row.opponent is real_value %} vs {{ row.opponent }}{% endif %}</div>
       <div class="line-market">{{ row.market | clear_market(row.fighter) }} · {{ row.movement.from | american }} → {{ row.movement.to | american }}</div>
     </div>
-    <div class="movement-tag {{ row.movement.direction }} notable">{{ '📈' if row.movement.direction == 'shortening' else '📉' }} {{ row.movement.pct_change }}%</div>
+    <div class="movement-tag {{ row.movement.direction }} notable">{{ icon_trendup() if row.movement.direction == 'shortening' else icon_trenddown() }} {{ row.movement.pct_change }}%</div>
   </div>
   {% endfor %}
   {% endif %}
@@ -2675,10 +2750,10 @@
           <div class="standout-main">{{ p.fighter }}<span class="standout-vs">{% if p.opponent is real_value %} (vs. {{ p.opponent }}){% endif %}</span></div>
           <div class="standout-market">{{ p.market | clear_market(p.fighter) }}
             {% if p.market == 'Moneyline' %}
-              <span class="dog-badge {{ 'fav' if p.odds_american < 0 else 'dog' }}">{{ '⭐ Favorite' if p.odds_american < 0 else '🐶 Underdog' }}</span>
+              <span class="dog-badge {{ 'fav' if p.odds_american < 0 else 'dog' }}">{{ '{{ icon_star() }} Favorite' if p.odds_american < 0 else '{{ icon_underdog() }} Underdog' }}</span>
             {% endif %}
             {% if p.low_sample %}
-              <span class="sample-badge" title="{{ p.low_sample.fighter }} has {{ p.low_sample.fights }} career fights logged -- fewer data points behind this number than usual">📊 {{ p.low_sample.fights }}-fight sample</span>
+              <span class="sample-badge" title="{{ p.low_sample.fighter }} has {{ p.low_sample.fights }} career fights logged -- fewer data points behind this number than usual">{{ icon_barchart() }} {{ p.low_sample.fights }}-fight sample</span>
             {% endif %}
           </div>
         </div>
@@ -2709,7 +2784,7 @@
   <div class="standout-title" id="section-funfacts"><svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Lightning bolt" style="width:17px;height:17px;vertical-align:-3px;margin-right:2px;"><defs><linearGradient id="icon-funfacts-sec" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#99f6e4"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient></defs><path d="M14 2 L5.5 15 H11.5 L10.5 24 L20.5 10.5 H14 Z" fill="url(#icon-funfacts-sec)" opacity="0.15" stroke="url(#icon-funfacts-sec)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="20.5" cy="4.5" r="1.3" fill="url(#icon-funfacts-sec)"/></svg> Fight Facts</div>
   <div class="parlay-subtitle">Genuinely notable patterns for fighters on this card — active streaks and career-long tendencies, straight from real fight history. Nothing filler: quiet weeks just have fewer of these.</div>
   {% if analytics_source_event %}
-  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  <div class="analytics-fallback-notice">{{ icon_calendar() }} This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
   {% endif %}
   {% for f in fun_facts %}
   <div class="fun-fact-card {{ f.tier }}" style="--fact-delay: {{ loop.index0 * 0.12 }}s">
@@ -2726,7 +2801,7 @@
 
   <div class="detail-section" data-section="favorites">
   {% if analytics_source_event %}
-  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  <div class="analytics-fallback-notice">{{ icon_calendar() }} This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
   {% endif %}
   {% if favorite_picks %}
   <div class="standout-title">{{ icon_diamond() }} Favorite Picks</div>
@@ -2739,7 +2814,7 @@
           <div class="favorite-main">{{ p.fighter }}</div>
           <div class="favorite-vs">{% if p.opponent is real_value %}vs {{ p.opponent }} · {% endif %}{{ p.market | clear_market(p.fighter) }}</div>
           {% if p.low_sample %}
-          <span class="sample-badge" title="{{ p.low_sample.fighter }} has {{ p.low_sample.fights }} career fights logged -- fewer data points behind this number than usual">📊 {{ p.low_sample.fights }}-fight sample</span>
+          <span class="sample-badge" title="{{ p.low_sample.fighter }} has {{ p.low_sample.fights }} career fights logged -- fewer data points behind this number than usual">{{ icon_barchart() }} {{ p.low_sample.fights }}-fight sample</span>
           {% endif %}
         </div>
         <div class="favorite-odds"><span class="live-odds"{% if p.clob_token_id %} data-live-token="{{ p.clob_token_id }}"{% endif %}>{{ p.odds_american | american }}</span></div>
@@ -2763,14 +2838,14 @@
   {% if lock_picks %}
   <div class="standout-title" id="section-locks">{{ icon_lock() }} Locks of the Week</div>
   {% if analytics_source_event %}
-  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  <div class="analytics-fallback-notice">{{ icon_calendar() }} This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
   {% endif %}
   <div class="parlay-subtitle">The model's single highest-conviction picks on {{ "that card" if analytics_source_event else "this weekend's card" }}, all in one place — previously only visible as a badge you'd have to find on each individual fight. A pick must clear 82% to qualify at all, and at most 3 per event make it — so "lock" means the same thing every week, and a thin card honestly returns none rather than promoting its least-weak pick.</div>
   <div class="standout-grid">
     {% for l in lock_picks %}
     <div class="lock-pick-card reveal-target{{ ' fight-cancelled' if l.cancelled }}" data-key="{{ l.fighter_a }}|{{ l.fighter_b }}">
       {% if l.cancelled %}
-      <div class="cancelled-banner">✕ FIGHT CANCELLED — this pick is void and excluded from all stats</div>
+      <div class="cancelled-banner">{{ icon_cross() }} FIGHT CANCELLED — this pick is void and excluded from all stats</div>
       {% endif %}
       <div class="lock-pick-top">
         {{ confidence_ring(l.favorite_prob, 'High Confidence', size=46) }}
@@ -2790,7 +2865,7 @@
 
   <div class="detail-section" data-section="parlays">
   {% if analytics_source_event %}
-  <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
+  <div class="analytics-fallback-notice">{{ icon_calendar() }} This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
   {% endif %}
   {% if bankroll_parlays %}
   <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
@@ -2873,7 +2948,7 @@
     </ul>
   </div>
   {% endfor %}
-  <div class="parlay-note">🎟️ This is a lottery ticket, not a strategy — buy it for the dream, not the plan. If it hits, tell everyone. If it doesn't, you knew the deal going in.</div>
+  <div class="parlay-note">{{ icon_ticket() }} This is a lottery ticket, not a strategy — buy it for the dream, not the plan. If it hits, tell everyone. If it doesn't, you knew the deal going in.</div>
   {% elif events %}
   <div class="parlay-section-title moonshot" id="section-moonshot">{{ icon_rocket() }} Moonshot</div>
   {{ empty_state(icon_rocket(), "No moonshot parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
@@ -2932,7 +3007,7 @@
           <div class="event-name">{{ event.event_name }}</div>
           <div class="event-date">{{ event.event_date|friendly_date }}</div>
         </div>
-        {% if event.event_location %}<div class="hub-card-location">📍 {{ event.event_location }}</div>{% endif %}
+        {% if event.event_location %}<div class="hub-card-location">{{ icon_pin() }} {{ event.event_location }}</div>{% endif %}
         {% if event.fights %}
         <div class="future-event-teaser">{{ event.fights[0].fighter_a }} vs. {{ event.fights[0].fighter_b }} · {{ event.fights|length }} fight{{ 's' if event.fights|length != 1 else '' }}</div>
         {% endif %}
@@ -2968,7 +3043,7 @@
   <div class="track-record-card">
     <div class="seg-pane active" id="hiw-0">
       <div class="model-factor-card group-gold">
-        <div class="model-factor-icon">📊</div>
+        <div class="model-factor-icon">{{ icon_barchart() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Elo + Stats Blend</div>
           <div class="model-factor-text">Blends Elo (built from recorded fight history, when it exists) with a stats-based rating from career win rate, finish rate, experience, and reach.</div>
@@ -2978,70 +3053,70 @@
     </div>
     <div class="seg-pane" id="hiw-1">
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">🥋</div>
+        <div class="model-factor-icon">{{ icon_underdog() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Style Matchup — "Styles Make Fights"</div>
           <div class="model-factor-text">Takedown accuracy vs. the opponent's takedown defense (or control time percentage, when populated — a fighter who goes 1-for-5 on takedowns but holds 4 minutes of control is more effective than raw accuracy implies), striking accuracy and volume differential (SLpM minus SApM, when populated), and durability all shift the base rating gap.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">📉</div>
+        <div class="model-factor-icon">{{ icon_trenddown() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Age Cliff by Weight Class</div>
           <div class="model-factor-text">The decline threshold varies a lot by division — Flyweight/Bantamweight/Featherweight/Strawweight start seeing a real decline past 35, while Heavyweight and Light Heavyweight often sustain into the late 30s. A flat age penalty across all divisions would be wrong in both directions.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">⏱️</div>
+        <div class="model-factor-icon">{{ icon_clock() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Layoff / Ring Rust vs. Quick Return</div>
           <div class="model-factor-text">Fighters back after more than a year away take a ring-rust penalty; fighters back too soon after being finished (under ~6 months) take a separate, opposite-direction penalty. The layoff weight was revised down sharply after backtesting against 30 years of fight history showed the original penalty was sized far too aggressively — the current weight is the strongest the historical evidence actually supports.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">🔥</div>
+        <div class="model-factor-icon">{{ icon_flame() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Recent Form (Backtest-Validated)</div>
           <div class="model-factor-text">Each fighter's last three results, weighted by how recent they are (a win last month counts more than a win 18 months ago). Both the three-fight window and the weight were selected on pre-2019 historical fights and confirmed on held-out 2019+ fights — one of the few adjustments fitted to evidence rather than hand-tuned.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">🤜</div>
+        <div class="model-factor-icon">{{ icon_target() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Stance Matchup</div>
           <div class="model-factor-text">Southpaw or switch fighters get a modest edge against pure-orthodox opponents — the classic "unfamiliar look" advantage. Two fighters sharing a stance (including two southpaws) is neutral, since neither has the familiarity edge.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">🐍</div>
+        <div class="model-factor-icon">{{ icon_lock() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Submission Threat</div>
           <div class="model-factor-text">A fighter's rate of finishing wins by submission, as a distinct skill from raw wrestling stats — a fighter can have modest takedown numbers but a live submission threat off scrambles and clinch entries, which takedown accuracy alone misses.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">🔀</div>
+        <div class="model-factor-icon">{{ icon_scales() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Weight Class Change</div>
           <div class="model-factor-text">Moving up a division (facing bigger opponents) carries a penalty per division jumped; moving down earns a small bonus. Detected automatically from each fighter's tracked division history against the division this specific fight is booked at.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">📏</div>
+        <div class="model-factor-icon">{{ icon_ruler() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Height Advantage</div>
           <div class="model-factor-text">A small edge per inch of height difference — deliberately small, because reach (which tracks height closely) already carries weight in the base rating, and counting the same physical edge twice would overstate it.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">🚨</div>
+        <div class="model-factor-icon">{{ icon_warning() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Short Notice</div>
           <div class="model-factor-text">Fighters who accept a bout on short notice — a late replacement without a full training camp — win measurably less often; published analyses of UFC short-notice outcomes put the drop at roughly 10 percentage points, which is the penalty applied here. Flagged per fighter when a late booking is confirmed, and cleared automatically once that fight happens, so a one-booking fact never bleeds into the fighter's next matchup.</div>
         </div>
       </div>
       <div class="model-factor-card group-blue">
-        <div class="model-factor-icon">⚖️</div>
+        <div class="model-factor-icon">{{ icon_scales() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Missed Weight</div>
           <div class="model-factor-text">A documented red flag for a rushed or broken camp — factored in when known, though real weigh-in history isn't fully populated for the roster yet (see limitations below).</div>
@@ -3051,14 +3126,14 @@
     </div>
     <div class="seg-pane" id="hiw-2">
       <div class="model-factor-card group-purple">
-        <div class="model-factor-icon">🎯</div>
+        <div class="model-factor-icon">{{ icon_target() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Method of Victory</div>
           <div class="model-factor-text">Prior-informed blend — starts at the divisional average rate for that method (heavyweight fights have an inherently higher baseline KO/TKO rate than strawweight, which leans toward decisions), shifts toward the fighter's own career tendency (weighted by experience), then further incorporates the specific opponent's demonstrated vulnerability.</div>
         </div>
       </div>
       <div class="model-factor-card group-purple">
-        <div class="model-factor-icon">🔔</div>
+        <div class="model-factor-icon">{{ icon_clock() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Total Rounds</div>
           <div class="model-factor-text">Blends combined finish rate with first-round finish percentage. Main events get 5-round-calibrated lines (3.5/4.5) instead of 3-round lines (1.5/2.5), since there's simply more scheduled fight to cover.</div>
@@ -3068,28 +3143,28 @@
     </div>
     <div class="seg-pane" id="hiw-3">
       <div class="model-factor-card group-green">
-        <div class="model-factor-icon">📈</div>
+        <div class="model-factor-icon">{{ icon_trendup() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Line Movement</div>
           <div class="model-factor-text">Each refresh is compared against saved history to show real price movement and render an actual chart. Honest limitation: this tracks price only, not bet volume or who's behind a move — true "sharp money" detection needs handle/ticket-count data no free source provides, so this is labeled "notable movement," not a sharp-money claim.</div>
         </div>
       </div>
       <div class="model-factor-card group-green">
-        <div class="model-factor-icon">💰</div>
+        <div class="model-factor-icon">{{ icon_coins() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Suggested Stake</div>
           <div class="model-factor-text">Tenth-Kelly, hard-capped at 5% of bankroll — and sized from a probability that's deliberately shrunk most of the way toward the market's own de-vigged price, not the raw model number. Backtesting showed the model's standalone probabilities carry real but modest signal, while sportsbook closing lines are among the sharpest predictors in sports — so when the model and the market disagree hugely, the stake respects that the market is usually the one that's right. Practical effect: big claimed edges get meaningfully smaller stakes than raw Kelly would suggest, and small edges (under roughly 5 points) stake zero, because after the shrink they no longer clear the vig. That's the system being deliberately humble, not broken.</div>
         </div>
       </div>
       <div class="model-factor-card group-green">
-        <div class="model-factor-icon">🎢</div>
+        <div class="model-factor-icon">{{ icon_gauge() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Closing Line Value (CLV)</div>
           <div class="model-factor-text">The moneyline price on the model's favorite the FIRST time it was logged, compared against the last known price before the fight. If the market moved toward the model's side by fight night (the price shortened), that's a "beat" — a real signal the model saw value before the market caught up, independent of whether the pick actually won. This is why CLV is tracked separately from raw accuracy: a model can lose a coinflip fight while still having correctly read where the market was headed, and that skill is what CLV isolates.</div>
         </div>
       </div>
       <div class="model-factor-card group-green">
-        <div class="model-factor-icon">🔬</div>
+        <div class="model-factor-icon">{{ icon_sigma() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Historical Upset Analysis</div>
           <div class="model-factor-text">Separately from live tracking, the rating engine is walked back through its full fight history in chronological order — replaying each fight using only the ratings as they stood the moment before, no future information — to see how favorites at each confidence level actually lost when they lost: close decision, or getting finished. This is diagnostic, not automatic: a pattern here is a reason to investigate a specific adjustment, not an instruction that silently reweights anything on its own.</div>
@@ -3099,7 +3174,7 @@
     </div>
     <div class="seg-pane" id="hiw-4">
       <div class="model-factor-card group-gold">
-        <div class="model-factor-icon">🧪</div>
+        <div class="model-factor-icon">{{ icon_gauge() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Walk-Forward Backtest</div>
           <div class="model-factor-text">The rating backbone is validated against 30 years of real fight history — nearly 3,000 strictly out-of-sample predictions, each made only from fights that happened before it, never retrodicted. This is also what keeps the adjustment weights honest: it's how the layoff penalty got cut to a third of its original size, how the recent-form window was fitted rather than guessed, and how a proposed strength-of-schedule factor got rejected entirely (it looked good in-sample and fell apart on held-out data — the exact failure the backtest exists to catch). Factors that can't be validated this way, like short notice, are labeled by what actually backs them instead of being presented as fitted.</div>
@@ -3109,10 +3184,10 @@
     </div>
     <div class="seg-pane" id="hiw-5">
       <div class="model-limitations-notice">
-        ⚠️ <strong>Honest data limitations:</strong> strike-volume (SLpM/SApM), control-time percentage, and missed-weight history are new schema fields the model is built to use, but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather than guess) until real data backs them. Everything else covered in this section is live and active.
+        {{ icon_warning() }} <strong>Honest data limitations:</strong> strike-volume (SLpM/SApM), control-time percentage, and missed-weight history are new schema fields the model is built to use, but they're not populated for the full roster yet — those specific adjustments quietly no-op (rather than guess) until real data backs them. Everything else covered in this section is live and active.
       </div>
       <div class="model-limitations-notice" style="margin-top:10px;">
-        📏 <strong>Reach sometimes matches height exactly.</strong> For roughly 1 in 7 tracked fighters, our source data lists reach identical to height down to the inch. We checked our own pipeline carefully — height and reach are pulled and validated completely independently, with no code path that copies one into the other — so this looks like a real quirk in the upstream data (some fighters' true reach genuinely isn't tracked, and it gets mirrored from height as a placeholder) rather than something we can correct on our end. Shown as-is rather than silently adjusted.
+        {{ icon_ruler() }} <strong>Reach sometimes matches height exactly.</strong> For roughly 1 in 7 tracked fighters, our source data lists reach identical to height down to the inch. We checked our own pipeline carefully — height and reach are pulled and validated completely independently, with no code path that copies one into the other — so this looks like a real quirk in the upstream data (some fighters' true reach genuinely isn't tracked, and it gets mirrored from height as a placeholder) rather than something we can correct on our end. Shown as-is rather than silently adjusted.
       </div>
     </div>
   </div>
@@ -3133,7 +3208,7 @@
       with the market — it doesn't mean it's right. Sanity-check against recent form, injuries, and
       camp news. Please gamble responsibly.
     </div>
-    <div class="disclaimer-meta">📊 Odds via {{ source or "unavailable" }} · 🔄 refreshes every 15 min</div>
+    <div class="disclaimer-meta">{{ icon_barchart() }} Odds via {{ source or "unavailable" }} · refreshes every 15 min</div>
     <div class="made-with-love">Made with love, by yours truly, SBP 🤍</div>
   </div>
 
@@ -3489,7 +3564,7 @@
           chip.className = 'live-prices-chip';
           meta.appendChild(chip);
         }
-        chip.innerHTML = '🔴 prices live · ' + t + ' <span class="chip-sub">(analysis as of build)</span>';
+        chip.innerHTML = 'Prices live · ' + t + ' <span class="chip-sub">(analysis as of build)</span>';
       }
 
       async function refresh() {
@@ -3660,7 +3735,7 @@
             html = 'Card complete — see you next time.';
           }
           if (resultsCoverage && resultsCoverage.confirmed < resultsCoverage.total) {
-            html += `<br><span class="coverage-warning">⚠️ ${resultsCoverage.confirmed}/${resultsCoverage.total} results confirmed so far — some may still be pending.</span>`;
+            html += `<br><span class="coverage-warning">{{ icon_warning() }} ${resultsCoverage.confirmed}/${resultsCoverage.total} results confirmed so far — some may still be pending.</span>`;
           }
           liveMicro.innerHTML = html;
           return;
@@ -3814,7 +3889,7 @@
           if (newStandout.length > 0) parts.push(`${newStandout.length} new standout prop${newStandout.length > 1 ? 's' : ''}`);
           if (newMovements.length > 0) parts.push(`${newMovements.length} new notable move${newMovements.length > 1 ? 's' : ''}`);
           if (newResults.length > 0) parts.push(`${newResults.length} new result${newResults.length > 1 ? 's' : ''}`);
-          document.getElementById('whats-new-text').textContent = `✨ Since your last visit: ${parts.join(' · ')}`;
+          document.getElementById('whats-new-text').textContent = `Since your last visit: ${parts.join(' · ')}`;
           document.getElementById('whats-new-banner').style.display = 'flex';
           setTimeout(window.__dismissToast, 7000);
 
@@ -4070,8 +4145,8 @@
 
       const steps = [
         { selector: '.countdown-card', text: '⏱ Live countdown to fight night — automatically switches to live tracking once the card actually starts.' },
-        { selector: '.hub-grid', text: '👋 Everything is organized into sections now — tap any card below to dive in, and use Back to return here.' },
-        { selector: '.hub-card.featured', text: '🥊 This Weekend has the full fight-by-fight breakdown — each fight includes a model probability, style-matchup radar, and the reasoning behind the pick.' },
+        { selector: '.hub-grid', text: 'Everything is organized into sections now — tap any card below to dive in, and use Back to return here.' },
+        { selector: '.hub-card.featured', text: 'This Weekend has the full fight-by-fight breakdown — each fight includes a model probability, style-matchup radar, and the reasoning behind the pick.' },
       ];
 
       let overlay = null, tooltip = null, currentTarget = null, stepIndex = 0;
