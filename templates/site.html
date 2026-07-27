@@ -3727,7 +3727,17 @@
       }
 
       function showChip() {
-        const t = new Date().toTimeString().slice(0, 8);
+        // Eastern, not the visitor's local clock. toTimeString() returns
+        // whatever timezone the device is in, so a user in London saw a time
+        // that matched nothing else on the page -- every other timestamp
+        // here (card times, countdown, "Updated ... ET") is Eastern, and the
+        // prices themselves are quoted against an Eastern fight schedule.
+        // timeZone handles EST/EDT automatically, so it stays correct across
+        // the DST switch without any date maths.
+        const t = new Date().toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric', minute: '2-digit', hour12: true
+        }) + ' ET';
         if (!chip) {
           const meta = document.querySelector('.meta-row');
           if (!meta) return;
@@ -3739,7 +3749,12 @@
           chip.className = 'live-prices-chip';
           meta.appendChild(chip);
         }
-        chip.innerHTML = 'Prices live · ' + t + ' <span class="chip-sub">(analysis as of build)</span>';
+        // "(analysis as of build)" removed: it wrapped to a second line on
+        // mobile, and it duplicated information already sitting immediately
+        // to its left -- the "Updated <time> ET" stamp IS the build time, so
+        // the contrast between live prices and build-time analysis is still
+        // legible from the two timestamps alone.
+        chip.innerHTML = 'Prices live · ' + t;
       }
 
       async function refresh() {

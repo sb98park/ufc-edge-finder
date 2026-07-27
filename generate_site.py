@@ -378,7 +378,10 @@ def main():
     # in predictions_log.csv and other logic may depend on that exact
     # format; this is purely a second, shorter rendering of the same
     # moment for a spot where space is tight.
-    generated_at_short = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%b %-d, %I:%M %p ET")
+    # %-I not %I: the padded form rendered "07:19 PM" while the client-side
+    # live-prices chip renders "7:19 PM", so the two timestamps sitting side
+    # by side in the same meta row disagreed on format.
+    generated_at_short = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%b %-d, %-I:%M %p ET")
     momentum_by_key = load_momentum_by_key()
     for event in events:
         for fight in event["fights"]:
