@@ -1096,9 +1096,9 @@
   .standout-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
   .rationale {
     font-size: var(--t-small); color: var(--text-soft); line-height: 1.6;
-    font-family: var(--font-display);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
     margin-top: 8px; padding: 10px 12px;
-    background: rgba(255,255,255,0.025);
+    background: rgba(0,0,0,0.28);
     border: 1px solid var(--border); border-radius: 8px;
     white-space: normal;
   }
@@ -1378,12 +1378,24 @@
     .wf-bar-cell { flex-basis: 20%; }
   }
   }
+  /* A NESTED, INSET panel -- deliberately DARKER than the .fight-card
+     (--panel) it sits inside. The old rule used a white wash, so the block
+     was slightly LIGHTER than its parent; once Phase 2 removed its
+     backdrop-blur and drop-shadow there was almost nothing left to separate
+     it and it read as loose text on the card. Going darker restores the
+     "sunken sub-panel" reading without reinstating an expensive blur.
+     Body prose stays on the SYSTEM face, not Space Grotesk: Grotesk's much
+     larger x-height makes an identical 11.5px read like ~15px, which is
+     exactly why this block started feeling oversized. Display faces are for
+     names and numbers; multi-line reading wants the system stack. */
   .model-preview {
-    background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
-    border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid rgba(255,255,255,0.08); border-radius: 12px;
-    padding: 12px 14px; margin: 4px 0 14px; font-size: var(--t-small); color: var(--text-soft); line-height: 1.65;
-    font-family: var(--font-display);
-    white-space: normal; 
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(255,255,255,0.06); border-left: 3px solid rgba(255,255,255,0.10);
+    border-radius: 10px;
+    padding: 11px 13px; margin: 4px 0 14px;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: var(--t-small); color: var(--text-soft); line-height: 1.6;
+    white-space: normal;
   }
   .model-preview.masterpiece {
     border-left: 3px solid #3ddc84;
