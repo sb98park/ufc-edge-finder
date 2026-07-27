@@ -45,6 +45,35 @@ DEFAULT_SEGMENT_START = {
     "Main Card": "21:00",
 }
 DEFAULT_MAIN_EVENT_START = "23:15"
+
+# The times above describe a STANDARD US-PRIMETIME card, and were previously
+# used as absolute wall-clock times for every event. That silently broke every
+# INTERNATIONAL card: a European or Middle Eastern event with 10:00 ET prelims
+# still rendered a 21:00 main card, because only Early Prelims ever consulted
+# the event's real start time. Real symptom: the countdown (which reads
+# event_start_time_et directly) showed the right target while the banner's
+# "Main Card · 9 PM ET" line, derived from this schedule, was eight hours out.
+#
+# So they're now treated as OFFSETS from the event's own prelims start rather
+# than fixed clock times. With a 19:00 anchor every offset reproduces the old
+# values exactly, so a normal US card is bit-for-bit unchanged; an early card
+# simply shifts wholesale.
+_SEGMENT_OFFSET_MIN = {
+    "Early Prelims": -105,   # 17:15 vs a 19:00 prelims start
+    "Prelims": 0,
+    "Main Card": 120,        # 21:00
+}
+_MAIN_EVENT_OFFSET_MIN = 255  # 23:15
+
+
+def _shift(hhmm: str, minutes: int) -> str:
+    """Clock arithmetic on an HH:MM string, wrapping within the day."""
+    try:
+        h, m = (int(x) for x in hhmm.split(":"))
+    except (ValueError, AttributeError):
+        return hhmm
+    total = (h * 60 + m + minutes) % (24 * 60)
+    return f"{total // 60:02d}:{total % 60:02d}"
 _MAIN_EVENT_FALLBACK_DURATION_MIN = 30
 
 # Fight_cards.csv's row order is DISPLAY order (billing order -- Main
@@ -112,7 +141,13 @@ def build_fight_schedule(
     verified real anchor times (as UFC 329's were) rather than the generic
     broadcast-standard guesses.
     """
-    segment_starts = {**DEFAULT_SEGMENT_START, **(segment_starts or {})}
+    # Derive each segment from THIS event's start time, then let any explicit
+    # segment_starts argument win -- a caller passing real published times
+    # should always beat a derived estimate.
+    derived = {seg: _shift(event_start_time_et, off) for seg, off in _SEGMENT_OFFSET_MIN.items()}
+    segment_starts = {**DEFAULT_SEGMENT_START, **derived, **(segment_starts or {})}
+    if main_event_start_et is None:
+        main_event_start_et = _shift(event_start_time_et, _MAIN_EVENT_OFFSET_MIN)
     main_event_start_str = main_event_start_et or DEFAULT_MAIN_EVENT_START
 
     chronological = sorted(fights, key=lambda f: _SEGMENT_ORDER.get(f.get("card_position"), 2))

@@ -597,8 +597,20 @@ def main():
     just_concluded = None
     if events:
         raw_card_rows = cards_df.to_dict("records")
+        # Prefer ESPN's PUBLISHED main-card time over the schedule's offset
+        # estimate. The offset assumes a constant-length prelim block, which
+        # doesn't hold: a US card runs 19:00 -> 21:00 while a short
+        # international card runs 10:00 -> 13:00. An explicit segment_starts
+        # entry wins over the derived value inside build_fight_schedule, so
+        # passing it here is all that's needed; omitting it (ESPN hasn't
+        # published times yet) leaves the estimate in place rather than
+        # inventing a number.
+        _published_main = (events[0].get("event_main_card_time_et")
+                           or (raw_card_rows[0].get("event_main_card_time_et") if raw_card_rows else None))
         fight_schedule = build_fight_schedule(
-            raw_card_rows, events[0]["event_date"], events[0].get("event_start_time_et", "17:00")
+            raw_card_rows, events[0]["event_date"],
+            events[0].get("event_start_time_et", "17:00"),
+            segment_starts={"Main Card": _published_main} if _published_main else None,
         )
         finished_keys = {
             frozenset({str(r["fighter_a"]).strip().lower(), str(r["fighter_b"]).strip().lower()})

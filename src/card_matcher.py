@@ -217,6 +217,7 @@ def group_edges_by_card(
             "event_name": row["event_name"],
             "event_date": row["event_date"],
             "event_start_time_et": row.get("event_start_time_et", "19:00"),
+            "event_main_card_time_et": row.get("event_main_card_time_et", ""),
             "event_location": row.get("event_location", ""),
             "card_position": row["card_position"],
             "segment_label": SEGMENT_LABELS.get(row["card_position"], row["card_position"]),
@@ -290,6 +291,7 @@ def group_edges_by_card(
             events_map[key] = {
                 "event_name": fight["event_name"], "event_date": fight["event_date"],
                 "event_start_time_et": fight.get("event_start_time_et", "19:00"),
+                "event_main_card_time_et": fight.get("event_main_card_time_et", ""),
                 "event_location": fight.get("event_location", ""),
                 "fights": [],
             }

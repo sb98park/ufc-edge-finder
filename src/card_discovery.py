@@ -45,7 +45,7 @@ DEFAULT_START_TIME_ET = "19:00"  # US-primetime fallback when ESPN has no compet
 
 FUTURE_CARDS_COLUMNS = [
     "event_name", "event_date", "card_position", "weight_class",
-    "fighter_a", "fighter_b", "event_start_time_et", "is_womens_division", "event_location",
+    "fighter_a", "fighter_b", "event_start_time_et", "event_main_card_time_et", "is_womens_division", "event_location",
 ]
 
 
@@ -372,6 +372,8 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
                 fresh_time = fresh.get("event_start_time_et")
                 if fresh_time and fresh_time != DEFAULT_START_TIME_ET:
                     existing_row["event_start_time_et"] = fresh_time
+                if fresh.get("event_main_card_time_et"):
+                    existing_row["event_main_card_time_et"] = fresh["event_main_card_time_et"]
                 new_order.append(existing_row)
             else:
                 fresh["event_start_time_et"] = rows[0].get("event_start_time_et")
@@ -480,6 +482,7 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
     event_location = ", ".join(location_parts)
 
     prelims_time_et = None
+    main_card_time_et = None
     rows = []
     for i, comp in enumerate(competitions):
         competitors = comp.get("competitors", [])
@@ -505,6 +508,15 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
                 et_dt = utc_dt.astimezone(ZoneInfo("America/New_York"))
                 if card_position in ("Prelims", "Early Prelims") and (prelims_time_et is None or et_dt.strftime("%H:%M") < prelims_time_et):
                     prelims_time_et = et_dt.strftime("%H:%M")
+                # The REAL main-card start, straight from ESPN. Previously the
+                # main card was only ever ESTIMATED as a fixed offset from the
+                # prelims start, which assumes a constant-length prelim block --
+                # it isn't. A standard US card runs 19:00 -> 21:00 (2h) while a
+                # short international card runs 10:00 -> 13:00 (3h), because the
+                # gap depends on how many prelim fights there are. Reading the
+                # published time removes the guess entirely.
+                if card_position in ("Main Card", "Main Event") and (main_card_time_et is None or et_dt.strftime("%H:%M") < main_card_time_et):
+                    main_card_time_et = et_dt.strftime("%H:%M")
             except (ValueError, TypeError):
                 pass
 
@@ -529,6 +541,9 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
                 prelims_time_et = DEFAULT_START_TIME_ET
     for r in rows:
         r["event_start_time_et"] = prelims_time_et or DEFAULT_START_TIME_ET
+        # Left blank when ESPN hasn't published main-card times; the schedule
+        # then falls back to its offset estimate rather than inventing one.
+        r["event_main_card_time_et"] = main_card_time_et or ""
 
     # Reversed before billing-order sorting: display order within a given
     # segment (prelims or main) should run from the soonest-to-happen
