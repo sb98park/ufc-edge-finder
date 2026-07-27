@@ -1852,7 +1852,7 @@
   </div>
 
   <div class="meta-row">
-    <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Clock"><defs><linearGradient id="hi-clock" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><circle cx="13" cy="13" r="9.3" fill="url(#hi-clock)" opacity="0.12" stroke="url(#hi-clock)" stroke-width="1.8"/><path d="M13 7.5 V13.4 L17 15.6" stroke="url(#hi-clock)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Updated Jul 27, 08:23 AM ET
+    <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Clock"><defs><linearGradient id="hi-clock" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><circle cx="13" cy="13" r="9.3" fill="url(#hi-clock)" opacity="0.12" stroke="url(#hi-clock)" stroke-width="1.8"/><path d="M13 7.5 V13.4 L17 15.6" stroke="url(#hi-clock)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Updated Jul 27, 08:46 AM ET
   </div>
 
   
@@ -16157,6 +16157,113 @@
       }
       update();
       setInterval(update, 1000);
+
+      // ===================== LIVE MODE =====================
+      // Confirmed buildable by docs/live-probe.html: ESPN's scoreboard sends
+      // permissive CORS headers, so the page can read it directly from the
+      // visitor's browser instead of waiting on a ~5-minute rebuild.
+      //
+      // DELIBERATELY AN OVERLAY, NOT A REPLACEMENT. Everything the model says
+      // stays baked in at build time; this layer only ever writes VOLATILE
+      // FACTS -- who won, and which fight is live. That split is also a trust
+      // property: predictions are committed in advance and cannot be rewritten
+      // after the fact by a layer that structurally only touches results.
+      //
+      // It works by mutating `schedule` and `espnLiveKey` in place, which the
+      // existing update() loop already reads -- so the countdown, the LIVE NOW
+      // banner and the card-concluded state all self-correct for free rather
+      // than needing a parallel implementation that could drift.
+      const LIVE_SCOREBOARD_URL = 'https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard';
+      const LIVE_POLL_MS = 45000;
+      const LIVE_WINDOW_PAD_MS = 60 * 60 * 1000;   // an hour either side of the card
+
+      function insideCardWindow(now) {
+        if (!schedule.length) return false;
+        const first = new Date(schedule[0].estimated_start_iso).getTime();
+        const last = new Date(schedule[schedule.length - 1].estimated_end_iso).getTime();
+        if (isNaN(first) || isNaN(last)) return false;
+        // No reason to poll ESPN at 4am on a Tuesday.
+        return now >= first - LIVE_WINDOW_PAD_MS && now <= last + LIVE_WINDOW_PAD_MS;
+      }
+
+      function paintResult(fight) {
+        // Mirror the server-rendered markup: swap the "VS" slot for the result
+        // and mark the row finished, so a live-updated card is visually
+        // indistinguishable from one that came baked that way.
+        const row = document.querySelector(`[data-fight-key="${CSS.escape(fight.fighter_a + '|' + fight.fighter_b)}"]`);
+        if (!row) return;
+        row.classList.add('finished-row');
+        const slot = row.querySelector('[data-vs-slot]');
+        if (slot) {
+          slot.textContent = fight.result_label + (fight.result_round_time ? ' \u00b7 ' + fight.result_round_time : '');
+          slot.classList.add('result-text');
+          slot.removeAttribute('data-vs-slot');   // never paint the same fight twice
+        }
+      }
+
+      function applyLiveScoreboard(data) {
+        let changed = false;
+        let liveKey = null;
+        for (const ev of (data.events || [])) {
+          for (const comp of (ev.competitions || [])) {
+            const cs = comp.competitors || [];
+            if (cs.length !== 2) continue;
+            const names = cs.map(c => (c.athlete && c.athlete.fullName) || '');
+            if (!names[0] || !names[1]) continue;
+            const key = canonicalKey(names[0], names[1]);
+            const fight = schedule.find(f => canonicalKey(f.fighter_a, f.fighter_b) === key);
+            if (!fight) continue;
+
+            const st = (comp.status && comp.status.type) || {};
+            if (st.state === 'in') liveKey = key;
+            if (!st.completed) continue;
+
+            const win = cs.find(c => c.winner);
+            if (!win || !win.athlete || !win.athlete.fullName) continue;
+            if (fight.result_label) continue;          // already known from the build
+            // Winner only. Method needs the deeper core-api call and can wait
+            // for the next rebuild -- a name appearing within seconds, with the
+            // method filling in shortly after, is the right trade.
+            fight.result_label = win.athlete.fullName + ' def. ' +
+              names.find(n => n !== win.athlete.fullName);
+            fight.winner = win.athlete.fullName;
+            paintResult(fight);
+            changed = true;
+          }
+        }
+        // A fight ESPN still calls live overrides the schedule estimate; once
+        // nothing is live, drop the override so update() falls back to its own
+        // window logic rather than clinging to a stale "LIVE NOW".
+        espnLiveKey = liveKey;
+        if (changed || liveKey !== null) update();
+      }
+
+      async function pollLive() {
+        if (document.visibilityState !== 'visible') return;
+        if (!insideCardWindow(Date.now())) return;
+        let data;
+        try {
+          const res = await fetch(LIVE_SCOREBOARD_URL, { mode: 'cors', cache: 'no-store' });
+          if (!res.ok) return;
+          data = await res.json();
+        } catch (e) {
+          return;    // network/CORS/parse failure -> the page simply stays as built
+        }
+        try {
+          applyLiveScoreboard(data);
+        } catch (e) {
+          // A shape change at ESPN must never take the page down with it.
+          console.warn('live update skipped:', e);
+        }
+      }
+
+      if (insideCardWindow(Date.now())) pollLive();
+      setInterval(pollLive, LIVE_POLL_MS);
+      // Catch up immediately when someone returns to the tab mid-card.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') pollLive();
+      });
+
     })();
 
     // What's new since your last visit
