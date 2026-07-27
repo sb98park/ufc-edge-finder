@@ -41,6 +41,8 @@ import requests
 
 from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, is_placeholder_fighter_name
 
+DEFAULT_START_TIME_ET = "19:00"  # US-primetime fallback when ESPN has no competition times yet
+
 FUTURE_CARDS_COLUMNS = [
     "event_name", "event_date", "card_position", "weight_class",
     "fighter_a", "fighter_b", "event_start_time_et", "is_womens_division", "event_location",
@@ -357,6 +359,19 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
             if existing_row is not None:
                 matched_keys.add(_key(existing_row))
                 existing_row["card_position"] = fresh["card_position"]
+                # Refresh the start time from ESPN too. Previously only
+                # card_position was updated, so a start time that fell back to
+                # the 19:00 default on first discovery (because ESPN hadn't
+                # published competition times yet) was preserved FOREVER --
+                # every later resync kept the stale value even once ESPN had
+                # real times. That silently mis-stated the countdown for any
+                # card not starting at the US-primetime default, which is every
+                # international event: a 10:00 ET prelims card was showing a
+                # 21:00 main card. Guarded so a fresh FALLBACK never clobbers a
+                # known-good stored time -- only a real ESPN-derived time wins.
+                fresh_time = fresh.get("event_start_time_et")
+                if fresh_time and fresh_time != DEFAULT_START_TIME_ET:
+                    existing_row["event_start_time_et"] = fresh_time
                 new_order.append(existing_row)
             else:
                 fresh["event_start_time_et"] = rows[0].get("event_start_time_et")
@@ -511,9 +526,9 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
                 earliest = dt.datetime.fromisoformat(min(all_times).replace("Z", "+00:00")).astimezone(ZoneInfo("America/New_York"))
                 prelims_time_et = earliest.strftime("%H:%M")
             except (ValueError, TypeError):
-                prelims_time_et = "19:00"
+                prelims_time_et = DEFAULT_START_TIME_ET
     for r in rows:
-        r["event_start_time_et"] = prelims_time_et or "19:00"
+        r["event_start_time_et"] = prelims_time_et or DEFAULT_START_TIME_ET
 
     # Reversed before billing-order sorting: display order within a given
     # segment (prelims or main) should run from the soonest-to-happen
