@@ -2765,7 +2765,7 @@
   {% if analytics_source_event %}
   <div class="analytics-fallback-notice">📅 This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
   {% endif %}
-  <div class="parlay-subtitle">The model's single highest-conviction picks on {{ "that card" if analytics_source_event else "this weekend's card" }}, all in one place — previously only visible as a badge you'd have to find on each individual fight. Capped at 3 per event, so a real standout doesn't get diluted by padded-out picks.</div>
+  <div class="parlay-subtitle">The model's single highest-conviction picks on {{ "that card" if analytics_source_event else "this weekend's card" }}, all in one place — previously only visible as a badge you'd have to find on each individual fight. A pick must clear 82% to qualify at all, and at most 3 per event make it — so "lock" means the same thing every week, and a thin card honestly returns none rather than promoting its least-weak pick.</div>
   <div class="standout-grid">
     {% for l in lock_picks %}
     <div class="lock-pick-card reveal-target{{ ' fight-cancelled' if l.cancelled }}" data-key="{{ l.fighter_a }}|{{ l.fighter_b }}">
@@ -2784,7 +2784,7 @@
     {% endfor %}
   </div>
   {% else %}
-  {{ empty_state(icon_lock(), "No locks this week", "The model doesn't have a standout, top-tier-conviction pick on this card right now — check back as its projections settle in.") }}
+  {{ empty_state(icon_lock(), "No locks this week", "Nothing on this card clears the 82% bar a lock has to meet. That's the system working, not a gap — the label is only worth something if some weeks it goes unearned.") }}
   {% endif %}
   </div>
 

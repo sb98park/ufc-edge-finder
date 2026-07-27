@@ -28,7 +28,7 @@ from src.line_movement import (
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
     load_token_cache, save_token_cache, update_token_cache,
 )
-from src.track_record import log_predictions, compute_track_record, load_momentum_by_key, LOCK_OF_WEEK_MAX
+from src.track_record import log_predictions, compute_track_record, load_momentum_by_key, LOCK_OF_WEEK_MAX, LOCK_OF_WEEK_MIN_PROB
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
 from src.card_discovery import discover_and_append_new_cards, normalize_existing_card_order, resync_tracked_card_order, deduplicate_tracked_fights
@@ -524,7 +524,8 @@ def main():
         for event in events_for_model_only:
             ranked_high_conf = sorted(
                 [f for f in event["fights"]
-                 if f.get("preview") and f["preview"].get("confidence_label") == "High Confidence"],
+                 if f.get("preview") and f["preview"].get("confidence_label") == "High Confidence"
+                 and f["preview"].get("favorite_prob", 0) >= LOCK_OF_WEEK_MIN_PROB],
                 key=lambda f: f["preview"]["favorite_prob"], reverse=True,
             )
             early_lock_ids = {id(f) for f in ranked_high_conf[:LOCK_OF_WEEK_MAX]}

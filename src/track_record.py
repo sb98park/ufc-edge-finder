@@ -35,6 +35,19 @@ FIELDNAMES = [
 MOMENTUM_HISTORY_CAP = 10
 MOMENTUM_THRESHOLD = 0.03  # 3 percentage points -- below this, treat as noise/stable
 LOCK_OF_WEEK_MAX = 3  # cap, not a target -- a card with only one real standout gets one lock, not three padded-out picks
+# Absolute floor a pick must clear to be called a lock, on top of the cap.
+# Without it the label was purely RELATIVE to whatever else was on the card,
+# which produced this in real logged data: Alden Coria at 76.9% was a lock
+# (his card had only two High Confidence picks) while Magomed Tuchalov at
+# 86.3% was NOT (his card had five, and he placed fourth). A pick 9.4 points
+# worse wore the label purely because of which card it landed on. A floor
+# makes "lock" mean something absolute; the cap then keeps a stacked card
+# from crowning six of them.
+# 0.82 chosen from the user's real predictions_log across 5 cards: it keeps
+# 7 locks, drops the two weakest (76.9%, 79.1%), and leaves 2 of 5 cards
+# with none -- which is the point, not a cost. Provisional on a small
+# sample (13 High Confidence picks); revisit once more locks have resolved.
+LOCK_OF_WEEK_MIN_PROB = 0.82
 
 
 def _loose_name(name: str) -> tuple:
@@ -221,7 +234,11 @@ def _assign_locks_of_week(existing: dict, events: list[dict], decided_keys: set)
             by_event.setdefault(event_name, []).append(key)
 
     for event_name, keys in by_event.items():
-        high_conf_keys = [k for k in keys if existing[k]["confidence_label"] == "High Confidence"]
+        high_conf_keys = [
+            k for k in keys
+            if existing[k]["confidence_label"] == "High Confidence"
+            and float(existing[k]["favorite_prob"]) >= LOCK_OF_WEEK_MIN_PROB
+        ]
         high_conf_keys.sort(key=lambda k: float(existing[k]["favorite_prob"]), reverse=True)
         lock_keys = set(high_conf_keys[:LOCK_OF_WEEK_MAX])
         for k in keys:
