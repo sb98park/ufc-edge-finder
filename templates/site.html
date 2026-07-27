@@ -58,6 +58,15 @@
        element makes that region match the page, so the overshoot still
        happens and simply becomes invisible. */
     background-color: #0a0c10;
+    /* STOP MOBILE TEXT INFLATION. Safari and Chrome on phones auto-scale
+       text in blocks they consider primary reading content -- multi-line
+       prose gets enlarged while short labels, numbers and badges do not.
+       That is why the model preview and prop explanations rendered far
+       larger than their declared size and why shrinking the value achieved
+       nothing: the browser was overriding it. 100% means "render exactly
+       what the CSS says", which is what a data-dense layout needs. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     /* Kills the browser's pull-to-refresh. On a data site an accidental
        downward drag at the top of a fight card reloads the whole page and
        loses your scroll position, which reads as the app being fragile.
