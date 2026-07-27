@@ -2769,7 +2769,7 @@
           <div class="standout-main">{{ p.fighter }}<span class="standout-vs">{% if p.opponent is real_value %} (vs. {{ p.opponent }}){% endif %}</span></div>
           <div class="standout-market">{{ p.market | clear_market(p.fighter) }}
             {% if p.market == 'Moneyline' %}
-              <span class="dog-badge {{ 'fav' if p.odds_american < 0 else 'dog' }}">{{ '{{ icon_star() }} Favorite' if p.odds_american < 0 else '{{ icon_underdog() }} Underdog' }}</span>
+              <span class="dog-badge {{ 'fav' if p.odds_american < 0 else 'dog' }}">{% if p.odds_american < 0 %}{{ icon_star() }} Favorite{% else %}{{ icon_underdog() }} Underdog{% endif %}</span>
             {% endif %}
             {% if p.low_sample %}
               <span class="sample-badge" title="{{ p.low_sample.fighter }} has {{ p.low_sample.fights }} career fights logged -- fewer data points behind this number than usual">{{ icon_barchart() }} {{ p.low_sample.fights }}-fight sample</span>
