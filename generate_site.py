@@ -197,9 +197,12 @@ def main():
         _tracked = []
         for _df in (cards_df, future_cards_df):
             if _df is not None and not _df.empty and {"fighter_a", "fighter_b"} <= set(_df.columns):
-                for _a, _b in zip(_df["fighter_a"], _df["fighter_b"]):
+                _dates = _df["event_date"] if "event_date" in _df.columns else [None] * len(_df)
+                for _a, _b, _d in zip(_df["fighter_a"], _df["fighter_b"], _dates):
                     if pd.notna(_a) and pd.notna(_b):
-                        _tracked.append((str(_a), str(_b)))
+                        # The event date is part of Polymarket's slug format,
+                        # so it has to travel with the bout.
+                        _tracked.append((str(_a), str(_b), str(_d) if pd.notna(_d) else None))
         upcoming_df, source = get_live_props(known_fighters=_tracked)
         all_known_cards = pd.concat([cards_df, future_cards_df], ignore_index=True)
         upcoming_df = assign_canonical_fight_ids(upcoming_df, all_known_cards)

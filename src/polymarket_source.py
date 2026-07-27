@@ -89,6 +89,7 @@ def _find_mma_tag_ids() -> list[str]:
 # set_known_fighters() before discovery; empty is safe -- the filter simply
 # falls back to its original "ufc" + "vs" behaviour.
 _KNOWN_FIGHT_PAIRS: list[tuple[str, str]] = []
+_KNOWN_SLUG_PARTS: list[tuple[str, str, str]] = []
 
 
 def _fold(text: str) -> str:
@@ -114,9 +115,18 @@ def set_known_fighters(pairs) -> None:
     Requiring BOTH surnames from the SAME bout makes a false positive
     essentially impossible -- two specific surnames don't co-occur by accident.
     """
-    global _KNOWN_FIGHT_PAIRS
+    global _KNOWN_FIGHT_PAIRS, _KNOWN_SLUG_PARTS
+    _KNOWN_SLUG_PARTS = []
+    for item in (pairs or []):
+        a, b = item[0], item[1]
+        date = item[2] if len(item) > 2 else None
+        fa = _fold(a).strip().split()
+        fb = _fold(b).strip().split()
+        if fa and fb and date:
+            _KNOWN_SLUG_PARTS.append((fa[0][:3], fb[0][:3], str(date)))
     out = []
-    for a, b in (pairs or []):
+    for item in (pairs or []):
+        a, b = item[0], item[1]
         sa = _fold(a).strip().split()[-1:] or [""]
         sb = _fold(b).strip().split()[-1:] or [""]
         if len(sa[0]) >= 4 and len(sb[0]) >= 4:
@@ -218,13 +228,40 @@ def _candidate_slugs() -> list[str]:
     formulaic -- so ask for the specific events by name instead of hunting for
     them. A direct hit needs no discovery at all.
     """
+    # CONFIRMED FORMAT (from real event URLs): ufc-jan-nav-2026-08-01 is
+    # Jan Blachowicz vs Navajo Stirling -- three letters of each FIRST name,
+    # plus the event date. Not surnames, which is why every earlier guess
+    # missed. Collisions get a numeric suffix (ufc-dan7-uro-...), and that
+    # number is unguessable -- so this will never find every fight. It only
+    # has to find ONE: see _bootstrap_tag_from_event below.
     out = []
-    for sa, sb in _KNOWN_FIGHT_PAIRS:
-        # Both orderings: their slug follows the promotion's billing, which
-        # has no reason to match our fighter_a/fighter_b convention.
-        out.append(f"{sa}-vs-{sb}")
-        out.append(f"{sb}-vs-{sa}")
+    for fa, fb, date in _KNOWN_SLUG_PARTS:
+        out.append(f"ufc-{fa}-{fb}-{date}")
+        out.append(f"ufc-{fb}-{fa}-{date}")
     return out
+
+
+def _bootstrap_tag_ids(events: list[dict]) -> list[str]:
+    """
+    Read the REAL tag ids off events we actually found.
+
+    Gamma's /sports endpoint claims UFC lives under tags 1 and 100639, and
+    both were confirmed live to contain no MMA whatsoever (Ballon d'Or, NFL,
+    League of Legends, tennis). Rather than trust that metadata, take the tag
+    ids from a genuine UFC event -- self-correcting by construction, because
+    it learns wherever Polymarket has actually filed the sport today.
+    One slug hit is therefore enough to unlock the whole card, which matters
+    because collision-suffixed slugs (ufc-dan7-uro-...) can't be guessed.
+    """
+    ids = []
+    for e in events:
+        for t in (e.get("tags") or []):
+            tid = str(t.get("id") if isinstance(t, dict) else t).strip()
+            if tid and tid not in ids:
+                ids.append(tid)
+    if ids:
+        print(f"[polymarket] bootstrapped real tag ids from a confirmed UFC event: {ids}")
+    return ids
 
 
 def _fetch_events_by_slug(limit: int = 200) -> list[dict]:
@@ -259,6 +296,15 @@ def fetch_ufc_events(limit: int = 200) -> list[dict]:
             found[e.get("slug") or e.get("title")] = e
     except Exception as exc:
         print(f"[polymarket] slug lookup failed ({exc})")
+
+    # Prefer tags learned from a real event over Gamma's own (wrong) metadata.
+    bootstrapped = _bootstrap_tag_ids(list(found.values()))
+    for tag_id in bootstrapped:
+        try:
+            for e in _fetch_events_by_tag(tag_id, limit):
+                found[e.get("slug") or e.get("title")] = e
+        except Exception as exc:
+            print(f"[polymarket] bootstrapped tag {tag_id} failed ({exc})")
 
     try:
         tag_ids = _find_mma_tag_ids()
