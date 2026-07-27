@@ -85,6 +85,25 @@ def _find_mma_tag_ids() -> list[str]:
     return []
 
 
+# Surnames from the cards we're actually tracking, lowercased. Populated by
+# set_known_fighters() before discovery; empty is safe -- the filter simply
+# falls back to its original "ufc" + "vs" behaviour.
+_KNOWN_FIGHTER_TOKENS: set[str] = set()
+
+
+def set_known_fighters(names) -> None:
+    """Give the discovery filter the fighters we're tracking this week."""
+    global _KNOWN_FIGHTER_TOKENS
+    tokens = set()
+    for n in names or []:
+        for part in str(n).strip().lower().split():
+            # Surnames only; first names like "dan" or "max" are far too
+            # common and would match unrelated markets.
+            if len(part) >= 5:
+                tokens.add(part)
+    _KNOWN_FIGHTER_TOKENS = tokens
+
+
 def _is_individual_fight_event(event: dict) -> bool:
     """
     'UFC' alone in the title isn't enough -- it also matches year-end
@@ -95,7 +114,23 @@ def _is_individual_fight_event(event: dict) -> bool:
     never do. Requiring both is what actually separates the two.
     """
     combined = f"{event.get('title') or ''} {event.get('slug') or ''}".lower()
-    return "ufc" in combined and bool(re.search(r"\bvs\.?\b", combined))
+    if not re.search(r"\bvs\.?\b", combined):
+        return False          # futures/ranking markets never have "vs"
+    if "ufc" in combined:
+        return True
+    # FALLBACK ADDED after a live run matched 0 of 200 events across both
+    # tags AND ten pages of volume-sorted fallback. Requiring the literal
+    # string "ufc" assumes Polymarket always prefixes fight titles that way
+    # ("UFC 329: Holloway vs. McGregor"). When they title an event just
+    # "Medic vs. Rodriguez", every real fight is silently rejected -- which
+    # is indistinguishable, in the logs, from "there are no UFC markets".
+    # Matching OUR OWN card's fighter names instead is robust to whatever
+    # they call the event, because we already know exactly who is fighting.
+    if _KNOWN_FIGHTER_TOKENS:
+        for token in _KNOWN_FIGHTER_TOKENS:
+            if token in combined:
+                return True
+    return False
 
 
 def _fetch_events_by_tag(tag_id: str, limit: int = 200) -> list[dict]:
@@ -108,7 +143,11 @@ def _fetch_events_by_tag(tag_id: str, limit: int = 200) -> list[dict]:
     events = resp.json()
     matched = [e for e in events if _is_individual_fight_event(e)]
     sample_titles = [e.get("title", "")[:40] for e in events[:3]]
-    print(f"[polymarket] tag_id={tag_id}: {len(events)} raw events, {len(matched)} matched the fight filter, sample: {sample_titles}")
+    vs_shaped = sum(1 for e in events
+                    if re.search(r"\bvs\.?\b", f"{e.get('title') or ''} {e.get('slug') or ''}".lower()))
+    print(f"[polymarket] tag_id={tag_id}: {len(events)} raw events, {len(matched)} matched the fight filter "
+          f"({vs_shaped} were 'vs'-shaped -- if that's >0 while matched is 0, the title just lacks 'UFC'), "
+          f"sample: {sample_titles}")
     return matched
 
 

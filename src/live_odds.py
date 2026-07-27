@@ -34,6 +34,25 @@ def fetch_mma_odds(api_key: str | None = None, regions: str = "us") -> list[dict
         },
         timeout=15,
     )
+    # A bare raise_for_status() turns every failure into an opaque "401
+    # Unauthorized", which is the one message that DOESN'T distinguish the two
+    # things it can mean: a key that's wrong/revoked, versus a valid key whose
+    # monthly quota is spent. The Odds API reports usage in response headers
+    # and puts a human-readable reason in the body, so surface both -- the
+    # difference decides whether you regenerate a key or just wait for the
+    # quota to roll over.
+    if resp.status_code in (401, 403, 429):
+        used = resp.headers.get("x-requests-used")
+        left = resp.headers.get("x-requests-remaining")
+        body = (resp.text or "")[:200].strip()
+        quota = f" | quota used={used} remaining={left}" if used or left else ""
+        raise RuntimeError(
+            f"The Odds API rejected the key (HTTP {resp.status_code}){quota}. "
+            f"Response: {body or '(empty)'}. "
+            f"If remaining=0 the key is fine and the quota is spent; otherwise the key "
+            f"itself is invalid or revoked -- regenerate at the-odds-api.com and update "
+            f"the ODDS_API_KEY secret in GitHub Actions."
+        )
     resp.raise_for_status()
     return resp.json()
 

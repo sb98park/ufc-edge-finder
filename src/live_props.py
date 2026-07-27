@@ -30,8 +30,20 @@ def _bet_key(row: dict) -> tuple:
     return (pair, row.get("market"), row.get("selection"), row.get("selection_method"))
 
 
-def get_live_props() -> tuple[pd.DataFrame, str]:
+def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
+    """
+    known_fighters: names on the cards we're tracking. Passed down to
+    Polymarket's discovery filter so a fight event is recognised by WHO is
+    in it rather than by whether the title happens to contain "UFC" -- a
+    live run matched 0 of 200 events because of exactly that assumption.
+    """
     sources_used = []
+    if known_fighters:
+        try:
+            from src.polymarket_source import set_known_fighters
+            set_known_fighters(known_fighters)
+        except Exception:
+            pass    # discovery still works on its original "ufc" + "vs" rule
     pm_rows, dk_rows = [], []
 
     try:

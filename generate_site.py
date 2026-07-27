@@ -191,7 +191,16 @@ def main():
     previous_snapshot = load_snapshot()
 
     try:
-        upcoming_df, source = get_live_props()
+        # Hand the market scrapers the fighters we're actually tracking, so
+        # Polymarket can recognise a fight event by its participants instead
+        # of relying on their title format staying stable.
+        _tracked = set()
+        for _df in (cards_df, future_cards_df):
+            if _df is not None and not _df.empty:
+                for _col in ("fighter_a", "fighter_b"):
+                    if _col in _df.columns:
+                        _tracked.update(str(x) for x in _df[_col].dropna())
+        upcoming_df, source = get_live_props(known_fighters=_tracked)
         all_known_cards = pd.concat([cards_df, future_cards_df], ignore_index=True)
         upcoming_df = assign_canonical_fight_ids(upcoming_df, all_known_cards)
         edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings, history_df)
