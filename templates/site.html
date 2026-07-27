@@ -288,15 +288,15 @@
   .favorite-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .favorite-main { font-size: 14.5px; font-weight: 800; }
   .favorite-vs { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .favorite-odds { font-size: 19px; font-weight: 800; color: var(--green); flex-shrink: 0; font-variant-numeric: tabular-nums; font-family: var(--font-display); }
+  .favorite-odds { font-size: 19px; font-weight: 800; color: var(--accent-cool); flex-shrink: 0; font-variant-numeric: tabular-nums; font-family: var(--font-display); }
   .lock-pick-card {
     background: var(--panel2);
-    border: 1px solid var(--border); border-left: 3px solid #8b5cf6; border-radius: 12px; padding: 14px 16px;
+    border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 12px; padding: 14px 16px;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
   .lock-pick-card:active { transform: scale(0.98); }
   @media (hover: hover) {
-    .lock-pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(139,92,246,0.15); }
+    .lock-pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255,255,255,0.05); }
   }
   .lock-pick-top { display: flex; align-items: center; gap: 12px; }
   .lock-pick-info { min-width: 0; }
@@ -418,17 +418,17 @@
   .event-summary-stat { text-align: center; }
   .underdog-block {
     margin: 0 0 16px; padding: 12px 14px; border-radius: 12px;
-    background: linear-gradient(135deg, rgba(240,149,74,0.1), var(--panel2) 70%);
-    border: 1px solid rgba(240,149,74,0.3);
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), var(--panel2) 70%);
+    border: 1px solid rgba(255,255,255,0.05);
   }
   .underdog-title {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
-    font-size: 12.5px; font-weight: 800; color: #f0954a; margin-bottom: 10px;
+    font-size: 12.5px; font-weight: 800; color: var(--muted); margin-bottom: 10px;
   }
   .underdog-alltime { font-size: 10px; font-weight: 600; color: var(--muted); }
   .underdog-biggest-label { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
   .underdog-biggest-pick { font-size: 16px; font-weight: 800; color: var(--text); margin-top: 2px; }
-  .underdog-biggest-odds { color: #f0954a; }
+  .underdog-biggest-odds { color: var(--accent-cool); }
   .underdog-biggest-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
   .underdog-list { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
   .underdog-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; }
@@ -439,32 +439,32 @@
   .underdog-pick { font-weight: 700; color: var(--text); flex: 1; }
   /* Lock of the Week full-history card -- same visual family as
      .underdog-block directly above it, in the site's established lock
-     purple (rgba(139,92,246,...), matching .lock-pick-card elsewhere)
+     purple (rgba(255,255,255,0.05), matching .lock-pick-card elsewhere)
      instead of underdog orange. Interior scrolls (capped height) so the
      card stays a fixed size as the list grows week over week. */
   .lock-history-block {
     margin: 0 0 16px; padding: 12px 14px; border-radius: 12px;
-    background: linear-gradient(135deg, rgba(139,92,246,0.1), var(--panel2) 70%);
-    border: 1px solid rgba(139,92,246,0.3);
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), var(--panel2) 70%);
+    border: 1px solid rgba(255,255,255,0.05);
   }
   .lock-history-title {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
-    font-size: 12.5px; font-weight: 800; color: #a78bfa; margin-bottom: 10px;
+    font-size: 12.5px; font-weight: 800; color: var(--text); margin-bottom: 10px;
   }
   .lock-history-alltime { font-size: 10px; font-weight: 600; color: var(--muted); }
   .lock-history-scroll {
     max-height: 300px; overflow-y: auto; padding-right: 6px;
-    scrollbar-width: thin; scrollbar-color: rgba(139,92,246,0.4) transparent;
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.05) transparent;
   }
   .lock-history-scroll::-webkit-scrollbar { width: 5px; }
-  .lock-history-scroll::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.4); border-radius: 4px; }
+  .lock-history-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 4px; }
   .lock-history-row { padding: 7px 8px; border-radius: 8px; margin-bottom: 4px; }
   .lock-history-row:last-child { margin-bottom: 0; }
   /* The special treatment: winner AND method both called in advance.
      Gold border + soft glow + badge -- deliberately the loudest thing in
      this card, since it's the strongest claim a pick can make. */
   .lock-history-row.perfect {
-    background: linear-gradient(135deg, rgba(212,175,55,0.14), rgba(139,92,246,0.06) 70%);
+    background: linear-gradient(135deg, rgba(212,175,55,0.14), rgba(255,255,255,0.05) 70%);
     border: 1px solid rgba(212,175,55,0.55);
     box-shadow: 0 0 10px rgba(212,175,55,0.12);
   }
@@ -512,8 +512,8 @@
   .fun-fact-card {
     display: flex; align-items: center; gap: 14px; margin: 0 0 10px; padding: 14px 16px;
     border-radius: 12px; position: relative; overflow: hidden;
-    background: linear-gradient(135deg, rgba(45,212,191,0.08), var(--panel2) 65%);
-    border: 1px solid rgba(45,212,191,0.3);
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), var(--panel2) 65%);
+    border: 1px solid rgba(255,255,255,0.05);
     opacity: 0; transform: translateY(12px);
     animation: factReveal 0.45s ease-out forwards;
     animation-delay: var(--fact-delay, 0s);
@@ -583,7 +583,7 @@
   .fun-fact-chip {
     display: inline-flex; align-items: center; gap: 5px; margin-top: 4px;
     font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px;
-    background: rgba(45,212,191,0.12); color: #2dd4bf; border: 1px solid rgba(45,212,191,0.3);
+    background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid rgba(255,255,255,0.05);
   }
   .fun-fact-chip.gold { background: rgba(212,175,55,0.12); color: var(--accent); border-color: rgba(212,175,55,0.4); }
   .fun-fact-chip.legendary {
@@ -640,9 +640,9 @@
     }
   }
   @keyframes factChipPulse {
-    0% { box-shadow: 0 0 0 0 rgba(45,212,191,0.35); }
-    70% { box-shadow: 0 0 0 7px rgba(45,212,191,0); }
-    100% { box-shadow: 0 0 0 0 rgba(45,212,191,0); }
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.05); }
+    70% { box-shadow: 0 0 0 7px rgba(255,255,255,0.05); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.05); }
   }
   @keyframes factChipPulseGold {
     0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.35); }
@@ -672,7 +672,7 @@
       box-shadow: 0 0 16px rgba(167,139,250,0.25);
     }
   }
-  .underdog-odds { color: #f0954a; font-weight: 700; font-size: 11px; }
+  .underdog-odds { color: var(--accent-cool); font-weight: 700; font-size: 11px; }
   .event-summary-value { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.1; }
   .event-summary-value.positive { color: var(--green); }
   .event-summary-value.negative { color: var(--red); }
@@ -790,15 +790,15 @@
   .favorite-accuracy-badge .clv-badge-label { color: var(--green); }
   .favorite-accuracy-value { color: var(--green); }
   .underdog-accuracy-badge {
-    background: linear-gradient(135deg, rgba(240,149,74,0.14), #14171f 70%); border: 1px solid rgba(240,149,74,0.35);
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), #14171f 70%); border: 1px solid rgba(255,255,255,0.05);
   }
-  .underdog-accuracy-badge .clv-badge-label { color: #f0954a; }
-  .underdog-accuracy-value { color: #f0954a; }
+  .underdog-accuracy-badge .clv-badge-label { color: var(--muted); }
+  .underdog-accuracy-value { color: var(--muted); }
   .lock-record-badge {
-    background: linear-gradient(135deg, rgba(139,92,246,0.16), #14171f 70%); border: 1px solid rgba(139,92,246,0.4);
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), #14171f 70%); border: 1px solid rgba(255,255,255,0.05);
   }
-  .lock-record-badge .clv-badge-label { color: #a78bfa; }
-  .lock-record-value { color: #c4b5fd; }
+  .lock-record-badge .clv-badge-label { color: var(--text); }
+  .lock-record-value { color: var(--muted); }
   .accuracy-split-row-3 { flex-wrap: wrap; gap: 10px; row-gap: 12px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--border); }
   .accuracy-split-row-3 .clv-badge { flex: 1 1 28%; min-width: 100px; padding: 12px 10px; }
   .accuracy-split-row-3 .clv-badge-label { font-size: 8.5px; letter-spacing: 0.15px; white-space: nowrap; }
@@ -867,7 +867,7 @@
   .units-tier-dot.high { background: var(--green); box-shadow: 0 0 5px 1px rgba(61,220,132,0.6); }
   .units-tier-dot.medium { background: var(--accent2); box-shadow: 0 0 5px 1px rgba(232,199,102,0.5); }
   .units-tier-dot.low { background: var(--muted); }
-  .units-tier-dot.lock { background: #a78bfa; box-shadow: 0 0 5px 1px rgba(167,139,250,0.6); }
+  .units-tier-dot.lock { background: var(--text); box-shadow: 0 0 5px 1px rgba(255,255,255,0.05); }
   .units-tier-label { font-weight: 700; color: var(--text); flex-shrink: 0; }
   .units-tier-size { color: var(--muted); font-size: 10px; flex-shrink: 0; }
   .units-tier-count { color: var(--muted); font-size: 10px; margin-left: auto; }
@@ -1007,8 +1007,8 @@
     border-radius: 8px; padding: 10px 12px; margin-bottom: 6px;
   }
   .model-factor-card.group-gold { border-left-color: var(--accent); }
-  .model-factor-card.group-blue { border-left-color: #6db3f2; }
-  .model-factor-card.group-purple { border-left-color: #c77dff; }
+  .model-factor-card.group-blue { border-left-color: var(--muted); }
+  .model-factor-card.group-purple { border-left-color: var(--muted); }
   .model-factor-card.group-green { border-left-color: var(--green); }
   .model-factor-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; line-height: 1.4; }
   .model-factor-content { min-width: 0; }
@@ -1039,15 +1039,15 @@
     display: inline-block; font-size: 10px; font-weight: 700; border-radius: 12px;
     padding: 2px 7px; margin-left: 6px; vertical-align: middle;
   }
-  .dog-badge.fav { background: #1a2a3a; color: #6db3f2; }
-  .dog-badge.dog { background: #2a1a3a; color: #c77dff; }
+  .dog-badge.fav { background: #1a2a3a; color: var(--muted); }
+  .dog-badge.dog { background: #2a1a3a; color: var(--muted); }
   .dog-badge-sm { font-size: 11px; margin-left: 4px; }
   .sample-badge {
     display: inline-block; font-size: 9.5px; font-weight: 700; border-radius: 8px;
     padding: 2px 7px; margin-left: 6px; margin-top: 3px; vertical-align: middle;
     background: #2a2410; color: #d4af37; border: 1px solid #4a3f1a;
   }
-  .standout-market { color: var(--accent2); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
+  .standout-market { color: var(--accent-cool); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
   .standout-edge-badge {
     font-size: 16px; font-weight: 800; white-space: nowrap; border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
     font-family: var(--font-display);
@@ -1058,7 +1058,7 @@
   }
   .odds-compare-col { flex: 1; text-align: center; min-width: 0; }
   .odds-compare-label { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; }
-  .odds-compare-value { font-size: 19px; font-weight: 800; margin-top: 2px; }
+  .odds-compare-value { color: var(--accent-cool); font-size: 19px; font-weight: 800; margin-top: 2px; }
   .odds-compare-value.book { color: var(--accent-cool); }
   .odds-compare-value.model { color: var(--accent2); }
   .move-arrow { font-size: 13px; margin-left: 3px; vertical-align: middle; }
@@ -1110,9 +1110,9 @@
 
   .parlay-section-title { font-size: 15px; margin: 28px 0 10px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
   .parlay-section-title.bankroll { color: var(--green); }
-  .parlay-section-title.lotto { color: #c77dff; }
+  .parlay-section-title.lotto { color: var(--muted); }
   .parlay-section-title.moonshot { color: #ffb347; }
-  .parlay-section-title.movement { color: #6db3f2; }
+  .parlay-section-title.movement { color: var(--muted); }
   .parlay-subtitle { font-size: 11.5px; color: var(--muted); margin: -6px 0 12px; line-height: 1.5; }
   .analytics-fallback-notice {
     font-size: 11.5px; color: var(--text); background: rgba(95,184,201,0.1);
@@ -1125,12 +1125,12 @@
     background: var(--panel2); border: 1px solid var(--border); border-left: 3px solid var(--border);
   }
   .parlay-card.bankroll { border-left-color: #3ddc84; }
-  .parlay-card.lotto { border-left-color: #c77dff; }
+  .parlay-card.lotto { border-left-color: var(--muted); }
   .parlay-card.moonshot { border-left-color: #ffb347; }
   .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .parlay-odds { font-size: 22px; font-weight: 800; font-family: var(--font-display); }
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
-  .parlay-card.lotto .parlay-odds { color: #c77dff; }
+  .parlay-card.lotto .parlay-odds { color: var(--muted); }
   .parlay-card.moonshot .parlay-odds {
     color: #ffb347;
   }
@@ -1148,9 +1148,9 @@
   }
   .parlay-leg-label { flex: 1; min-width: 0; }
   .parlay-leg-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; margin-left: auto; }
-  .parlay-leg-odds { font-size: 13px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+  .parlay-leg-odds { font-size: 13px; font-weight: 800; color: var(--accent-cool); font-variant-numeric: tabular-nums; }
   .model-tag {
-    font-size: 8px; font-weight: 800; color: #6db3f2; background: #16283a;
+    font-size: 8px; font-weight: 800; color: var(--muted); background: #16283a;
     border-radius: 4px; padding: 1.5px 5px; letter-spacing: 0.3px; white-space: nowrap;
   }
   .parlay-note { font-size: 10.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
