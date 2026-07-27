@@ -202,8 +202,63 @@ def _fetch_events_by_volume_fallback(limit: int = 200, pages: int = 10) -> list[
     return all_ufc_events
 
 
+def _candidate_slugs() -> list[str]:
+    """
+    Build the slugs Polymarket most likely used for the bouts we track.
+
+    WHY GUESS SLUGS INSTEAD OF ASKING WHICH TAG IS UFC. Both tag ids that
+    Gamma's own /sports endpoint reports for UFC were confirmed live to return
+    no MMA at all -- one gives Ballon d'Or and NFL markets, the other gives
+    League of Legends and tennis (96 of 100 events were even "vs"-shaped, none
+    were fights). The volume-sorted fallback doesn't rescue it either: an
+    individual UFC prelim ranks far below the platform's political and crypto
+    markets, so it never surfaces in the top pages.
+    Their tag metadata simply can't be trusted for this sport. But we already
+    know exactly who is fighting, and Polymarket slugs for fight markets are
+    formulaic -- so ask for the specific events by name instead of hunting for
+    them. A direct hit needs no discovery at all.
+    """
+    out = []
+    for sa, sb in _KNOWN_FIGHT_PAIRS:
+        # Both orderings: their slug follows the promotion's billing, which
+        # has no reason to match our fighter_a/fighter_b convention.
+        out.append(f"{sa}-vs-{sb}")
+        out.append(f"{sb}-vs-{sa}")
+    return out
+
+
+def _fetch_events_by_slug(limit: int = 200) -> list[dict]:
+    slugs = _candidate_slugs()
+    if not slugs:
+        return []
+    found, tried = [], 0
+    for slug in slugs:
+        tried += 1
+        try:
+            resp = requests.get(f"{GAMMA_BASE}/events", headers=HEADERS, timeout=15,
+                                params={"slug": slug, "closed": "false"})
+            if resp.status_code != 200:
+                continue
+            for e in (resp.json() or []):
+                if _is_individual_fight_event(e):
+                    found.append(e)
+        except Exception:
+            continue    # one bad slug must never stop the sweep
+    print(f"[polymarket] slug lookup: tried {tried} candidate slugs from tracked bouts, "
+          f"found {len(found)} matching event(s)")
+    return found
+
+
 def fetch_ufc_events(limit: int = 200) -> list[dict]:
     found: dict[str, dict] = {}  # keyed by slug/title to dedupe across strategies
+
+    # Slug lookup FIRST: it's a direct request for events we know exist,
+    # rather than scanning thousands hoping a fight surfaces.
+    try:
+        for e in _fetch_events_by_slug(limit):
+            found[e.get("slug") or e.get("title")] = e
+    except Exception as exc:
+        print(f"[polymarket] slug lookup failed ({exc})")
 
     try:
         tag_ids = _find_mma_tag_ids()
