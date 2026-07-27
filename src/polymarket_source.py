@@ -88,20 +88,40 @@ def _find_mma_tag_ids() -> list[str]:
 # Surnames from the cards we're actually tracking, lowercased. Populated by
 # set_known_fighters() before discovery; empty is safe -- the filter simply
 # falls back to its original "ufc" + "vs" behaviour.
-_KNOWN_FIGHTER_TOKENS: set[str] = set()
+_KNOWN_FIGHT_PAIRS: list[tuple[str, str]] = []
 
 
-def set_known_fighters(names) -> None:
-    """Give the discovery filter the fighters we're tracking this week."""
-    global _KNOWN_FIGHTER_TOKENS
-    tokens = set()
-    for n in names or []:
-        for part in str(n).strip().lower().split():
-            # Surnames only; first names like "dan" or "max" are far too
-            # common and would match unrelated markets.
-            if len(part) >= 5:
-                tokens.add(part)
-    _KNOWN_FIGHTER_TOKENS = tokens
+def _fold(text: str) -> str:
+    """
+    Lowercase and strip diacritics. Essential, not cosmetic: our roster holds
+    "Uroš Medić" while Polymarket writes "Medic vs. Rodriguez", so a raw
+    comparison misses every fighter with an accent -- which on an
+    international card is most of them.
+    """
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFKD", str(text).lower())
+                   if not unicodedata.combining(c))
+
+
+def set_known_fighters(pairs) -> None:
+    """
+    Register the BOUTS we're tracking as (surname_a, surname_b) pairs.
+
+    Matching single name-parts was tried first and let real garbage through:
+    "LoL: Bilibili Gaming Junior vs KT Rolster Challengers" matched because
+    "Junior" appears in a tracked fighter's name (Junior Tafa). Any one token
+    is a coin flip against a platform carrying esports, tennis and football.
+    Requiring BOTH surnames from the SAME bout makes a false positive
+    essentially impossible -- two specific surnames don't co-occur by accident.
+    """
+    global _KNOWN_FIGHT_PAIRS
+    out = []
+    for a, b in (pairs or []):
+        sa = _fold(a).strip().split()[-1:] or [""]
+        sb = _fold(b).strip().split()[-1:] or [""]
+        if len(sa[0]) >= 4 and len(sb[0]) >= 4:
+            out.append((sa[0], sb[0]))
+    _KNOWN_FIGHT_PAIRS = out
 
 
 def _is_individual_fight_event(event: dict) -> bool:
@@ -113,7 +133,7 @@ def _is_individual_fight_event(event: dict) -> bool:
     ('UFC 329: Max Holloway vs. Conor McGregor'); futures/ranking markets
     never do. Requiring both is what actually separates the two.
     """
-    combined = f"{event.get('title') or ''} {event.get('slug') or ''}".lower()
+    combined = _fold(f"{event.get('title') or ''} {event.get('slug') or ''}")
     if not re.search(r"\bvs\.?\b", combined):
         return False          # futures/ranking markets never have "vs"
     if "ufc" in combined:
@@ -126,10 +146,9 @@ def _is_individual_fight_event(event: dict) -> bool:
     # is indistinguishable, in the logs, from "there are no UFC markets".
     # Matching OUR OWN card's fighter names instead is robust to whatever
     # they call the event, because we already know exactly who is fighting.
-    if _KNOWN_FIGHTER_TOKENS:
-        for token in _KNOWN_FIGHTER_TOKENS:
-            if token in combined:
-                return True
+    for sa, sb in _KNOWN_FIGHT_PAIRS:
+        if sa in combined and sb in combined:
+            return True
     return False
 
 
