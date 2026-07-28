@@ -1740,18 +1740,18 @@
   .tabbar-btn {
     flex: 1 1 0; min-width: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 3px; padding: 8px 2px 7px;
+    gap: 4px; padding: 11px 2px 10px;
     background: none; border: 0; cursor: pointer;
-    color: var(--muted); font-family: inherit; font-size: 9.5px; font-weight: 600;
+    color: var(--muted); font-family: inherit; font-size: 10.5px; font-weight: 600;
     letter-spacing: 0.02em; -webkit-tap-highlight-color: transparent;
   }
   .tabbar-btn span { display: block; line-height: 1; }
-  .tabbar-btn .inline-icon { width: 19px; height: 19px; margin: 0; opacity: 0.75; }
+  .tabbar-btn .inline-icon { width: 23px; height: 23px; margin: 0; opacity: 0.75; }
   .tabbar-btn.active { color: var(--accent); }
   .tabbar-btn.active .inline-icon { opacity: 1; }
   .tabbar-btn:active { background: rgba(255,255,255,0.04); }
   /* Content must clear the fixed bar or the last card is unreachable. */
-  body { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  body { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
   @media (min-width: 1024px) {
     .mobile-tabbar { display: none; }
     body { padding-bottom: 0; }
@@ -1768,7 +1768,11 @@
     position: absolute; top: 5px; bottom: 5px; left: 0; width: 0;
     border-radius: 15px; background: rgba(212,175,55,0.16);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
-    transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), width 0.22s cubic-bezier(0.22,1,0.36,1);
+    /* transform-origin centre so the press magnification grows outward
+       from the pill rather than from its left edge. */
+    transform-origin: center;
+    transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
+                width 0.28s cubic-bezier(0.22,1,0.36,1);
     pointer-events: none; z-index: 0;
   }
   /* While a finger is down the indicator must track without easing, or it
@@ -1836,10 +1840,9 @@
          a place you go when you already know what you want */
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .hub-card::after {
-      content: "›"; margin-left: auto; color: var(--muted);
-      font-size: 19px; line-height: 1; opacity: 0.6;
-    }
+    /* No ::after chevron here -- .hub-card-arrow already provides one, and
+       adding a second produced a visible double arrow on every row. */
+    .hub-card-arrow { position: static; margin-left: auto; font-size: 17px; opacity: 0.5; }
   }
 
   /* ===== Fight list controls ===== */
@@ -1858,6 +1861,63 @@
   .fc-spacer { margin-left: auto; }
   .fight-card.fc-hidden { display: none; }
 
+
+  /* ===== "More" as an iOS-style grouped list (mobile) =====
+     The old cards were built for a landing screen, where each destination had
+     to sell itself -- accent colour, description, generous padding. In a
+     drawer you open already knowing where you're going, all of that is
+     friction, and it's what left the dead space at the bottom. Rows are ~half
+     the height, and the GROUP becomes the card rather than each row. */
+  @media (max-width: 1023px) {
+    .hub-group-header {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted);
+      margin: 18px 4px 7px; opacity: 0.75;
+    }
+    .hub-grid > .hub-group-header:first-child { margin-top: 4px; }
+
+    .hub-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 13px; margin: 0; min-height: 0;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 0; border-bottom: none;
+    }
+    /* Rounding only the ends is what makes a run of rows read as ONE grouped
+       container instead of a stack of separate tiles. */
+    .hub-card[data-row="first"] { border-radius: 11px 11px 0 0; }
+    .hub-card[data-row="last"]  { border-radius: 0 0 11px 11px; border-bottom: 1px solid var(--border); }
+    .hub-card[data-row="solo"]  { border-radius: 11px; border-bottom: 1px solid var(--border); }
+    /* Separator is inset past the icon tile, as iOS does -- it reads as one
+       surface divided, rather than boxes stacked. */
+    .hub-card[data-row="first"]::after,
+    .hub-card[data-row="mid"]::after {
+      content: ""; position: absolute; left: 52px; right: 0; bottom: 0;
+      height: 1px; background: var(--border);
+    }
+    .hub-card { position: relative; }
+
+    /* Icon in a rounded tinted tile -- the natural home for the identity
+       hues kept in the icon layer, without letting them back into the data
+       colour language. */
+    .hub-card-icon {
+      width: 30px; height: 30px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; background: color-mix(in srgb, var(--card-accent) 18%, transparent);
+      margin: 0;
+    }
+    .hub-card-icon svg { width: 18px; height: 18px; }
+    .hub-card-title { font-size: 14px; margin: 0; }
+    .hub-card-sub { display: none; }   /* labels are self-explanatory here */
+    .hub-card-arrow { position: static; margin-left: auto; font-size: 17px; opacity: 0.45; }
+
+    .hub-footer {
+      text-align: center; color: var(--muted); opacity: 0.55;
+      font-size: 10.5px; margin: 22px 0 6px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .hub-group-header, .hub-footer { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -2093,6 +2153,7 @@
     </div>
   </div>
   {% endif %}
+  <div class="hub-footer">Octane Alpha · built {{ generated_at_short }}</div>
   </div>
 
   <div id="whats-new-banner" class="whats-new-banner" style="display:none; cursor:pointer;" onclick="window.__goToWhatsNew();">
@@ -2159,7 +2220,8 @@
         <span class="hub-card-arrow">→</span>
       </div>
       {% if fun_facts %}
-      <div class="hub-card" style="--card-accent:#2dd4bf" onclick="showSection('funfacts')" data-section-nav="funfacts">
+      <div class="hub-group-header">Analysis</div>
+      <div class="hub-card" style="--card-accent:#2dd4bf" onclick="showSection('funfacts')" data-section-nav="funfacts" data-row="first">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Lightning bolt">
             <defs><linearGradient id="icon-funfacts" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#99f6e4"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient></defs>
@@ -2175,7 +2237,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       {% endif %}
-      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('favorites')" data-section-nav="favorites">
+      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('favorites')" data-section-nav="favorites" data-row="mid">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond">
             <defs><linearGradient id="icon-favorites" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2204,7 +2266,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#1d7ace" onclick="showSection('parlays')" data-section-nav="parlays">
+      <div class="hub-card" style="--card-accent:#1d7ace" onclick="showSection('parlays')" data-section-nav="parlays" data-row="last">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins">
             <defs><linearGradient id="icon-parlays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2221,7 +2283,8 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#b93187" onclick="showSection('coming')" data-section-nav="coming">
+      <div class="hub-group-header">Schedule</div>
+      <div class="hub-card" style="--card-accent:#b93187" onclick="showSection('coming')" data-section-nav="coming" data-row="solo">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar">
             <defs><linearGradient id="icon-coming" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2238,7 +2301,8 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('howitworks')" data-section-nav="howitworks">
+      <div class="hub-group-header">About</div>
+      <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('howitworks')" data-section-nav="howitworks" data-row="first">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Sigma summation symbol">
             <defs><linearGradient id="icon-howitworks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2251,7 +2315,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#8a8f9a" onclick="showSection('disclaimer')" data-section-nav="disclaimer">
+      <div class="hub-card" style="--card-accent:#8a8f9a" onclick="showSection('disclaimer')" data-section-nav="disclaimer" data-row="last">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Information">
             <defs><linearGradient id="icon-disclaimer" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c6cad4"/><stop offset="100%" stop-color="#8a8f9a"/></linearGradient></defs>
@@ -3589,11 +3653,19 @@
       const btns = Array.from(bar.querySelectorAll('.tabbar-btn'));
       let dragging = false, hovered = null;
 
+      // Single writer for the transform: translate and scale have to be set
+      // together or the later assignment silently drops the other.
+      let scale = 1;
+      function setX(x) { ind.style.transform = 'translateX(' + x + 'px) scale(' + scale + ')'; }
+      function setScale(v) { scale = v; setX(lastX); }
+      let lastX = 0;
+
       // SNAPPED position -- used on release and for external navigation.
       function moveTo(btn) {
         if (!btn) return;
         ind.style.width = btn.offsetWidth + 'px';
-        ind.style.transform = 'translateX(' + btn.offsetLeft + 'px)';
+        lastX = btn.offsetLeft;
+        setX(lastX);
       }
 
       // FREE position -- the indicator centres on the finger rather than on
@@ -3608,7 +3680,8 @@
         let x = clientX - r.left - w / 2;
         // Clamp inside the bar so it can't slide out past the end tabs.
         x = Math.max(0, Math.min(x, bar.offsetWidth - w));
-        ind.style.transform = 'translateX(' + x + 'px)';
+        lastX = x;
+        setX(x);
       }
       function btnAt(clientX) {
         const r = bar.getBoundingClientRect();
@@ -3627,19 +3700,27 @@
         if (btn) moveTo(btn);
       };
 
+      let startX = 0, moved = false;
       bar.addEventListener('touchstart', (e) => {
-        dragging = true; bar.classList.add('dragging');
-        hovered = btnAt(e.touches[0].clientX);
-        // Size to the touched tab first, then track freely from there.
-        if (hovered) ind.style.width = hovered.offsetWidth + 'px';
-        btns.forEach(b => b.classList.toggle('active', b === hovered));
-        moveFree(e.touches[0].clientX);
+        dragging = true; moved = false;
+        startX = e.touches[0].clientX;
+        hovered = btnAt(startX);
+        setScale(1.12);          // press magnification, iOS-style
       }, { passive: true });
 
       bar.addEventListener('touchmove', (e) => {
         if (!dragging) return;
         if (e.cancelable) e.preventDefault();   // the bar owns this gesture
         const x = e.touches[0].clientX;
+        // Enter drag mode only on REAL movement. The dragging class kills the
+        // indicator's transition, so entering it on touchstart made a plain
+        // tap teleport; holding off until the finger actually travels lets a
+        // tap animate across while a drag still tracks 1:1.
+        if (!moved && Math.abs(x - startX) > 6) {
+          moved = true;
+          bar.classList.add('dragging');
+        }
+        if (!moved) return;
         moveFree(x);
         const btn = btnAt(x);
         if (btn && btn !== hovered) {
@@ -3651,8 +3732,11 @@
       function release() {
         if (!dragging) return;
         dragging = false; bar.classList.remove('dragging');
+        setScale(1);
         // Easing returns here, so the indicator settles onto the chosen tab
-        // instead of stopping wherever the finger happened to lift.
+        // -- and on a plain tap it never left, so this is the animated slide.
+        if (!moved) { hovered = btnAt(startX); }
+        btns.forEach(b => b.classList.toggle('active', b === hovered));
         moveTo(hovered);
         if (!hovered) return;
         const target = hovered.dataset.tab;
@@ -3660,7 +3744,9 @@
       }
       bar.addEventListener('touchend', release, { passive: true });
       bar.addEventListener('touchcancel', () => {
-        dragging = false; bar.classList.remove('dragging');
+        dragging = false; moved = false;
+        bar.classList.remove('dragging');
+        setScale(1);
       }, { passive: true });
 
       // Position it once layout is settled (offsetWidth is 0 before paint).
