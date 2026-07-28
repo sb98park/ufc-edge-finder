@@ -511,6 +511,11 @@
   .lock-history-result.hit { background: rgba(61,220,132,0.15); color: var(--green); }
   .lock-history-result.miss { background: rgba(255,92,92,0.15); color: var(--red); }
   .lock-history-pick { font-weight: 700; color: var(--text); font-size: 12.5px; }
+  /* Icon scaled to the badge, not the page. The shared .inline-icon size
+     (15px) dwarfs 8.5px text and forces a gap that reads as a missing glyph. */
+  .lock-history-perfect-badge .inline-icon {
+    width: 10px; height: 10px; vertical-align: -1px; margin-right: 3px;
+  }
   .lock-history-perfect-badge {
     font-size: 8.5px; font-weight: 800; letter-spacing: 0.5px; color: #14171f;
     background: linear-gradient(135deg, var(--accent), #e8c766); border-radius: 4px;
@@ -1060,7 +1065,7 @@
   .standout-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 26px; }
   .standout-card {
     background: var(--panel2);
-    border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 12px; padding: 14px 16px;
+    border: 1px solid var(--border); border-left: 2px solid var(--border); border-radius: 12px; padding: 14px 16px;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
   .standout-card:active { transform: scale(0.98); }
@@ -1851,6 +1856,15 @@
     margin: 0 0 10px; padding-bottom: 10px;
     border-bottom: 1px solid var(--border);
   }
+  /* One label instead of three self-describing chips: it states what the
+     filter acts on once, lets the chips stay short enough not to wrap on a
+     phone, and keeps the site's own tier vocabulary ("High"/"Medium"
+     confidence) rather than substituting raw thresholds for it. */
+  .fc-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted); opacity: 0.8;
+    margin-right: 2px; white-space: nowrap;
+  }
   .fc-chip {
     padding: 5px 10px; border-radius: 999px; cursor: pointer;
     background: rgba(255,255,255,0.04); border: 1px solid var(--border);
@@ -2483,7 +2497,7 @@
           <div class="lock-history-main">
             <span class="lock-history-result {{ 'hit' if p.correct else 'miss' }}">{{ icon_check() if p.correct else icon_cross() }}</span>
             <span class="lock-history-pick">{{ p.predicted_favorite }}</span>
-            {% if perfect %}<span class="lock-history-perfect-badge">{{ icon_star() }} PERFECT</span>{% endif %}
+            {% if perfect %}<span class="lock-history-perfect-badge">{{ icon_lock() }}PERFECT</span>{% endif %}
           </div>
           <div class="lock-history-sub">
             <span class="lock-history-event">{{ p.event_name }}</span>
@@ -3215,8 +3229,9 @@
 
   <div class="detail-section" data-section="thisweekend">
     <div class="fight-controls" id="fight-controls">
+      <span class="fc-label">Confidence</span>
       <button class="fc-chip" data-filter="all">All</button>
-      <button class="fc-chip" data-filter="high">High conf</button>
+      <button class="fc-chip" data-filter="high">High</button>
       <button class="fc-chip" data-filter="medium">Medium</button>
       <button class="fc-chip fc-spacer" id="fc-toggle-all">Expand all</button>
     </div>
