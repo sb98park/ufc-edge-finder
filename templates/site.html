@@ -1764,7 +1764,20 @@
     letter-spacing: 0.02em; -webkit-tap-highlight-color: transparent;
   }
   .tabbar-btn span { display: block; line-height: 1; }
-  .tabbar-btn .inline-icon { width: 23px; height: 23px; margin: 0; opacity: 0.75; }
+  .tabbar-btn .inline-icon {
+    width: 23px; height: 23px; margin: 0; opacity: 0.75;
+    /* Pin the compositing layer. Toggling opacity on activation promotes the
+       icon to its own layer, and promotion routinely re-rounds its position
+       to a different subpixel -- which is the faint left/right shift when
+       switching tabs. Most obvious on Locks because the bar is 73.2px per
+       tab, so icons already sit on fractional pixels and the rounding has
+       somewhere to go. Declaring the transform and will-change UP FRONT
+       means the layer exists from the start and never changes state, so
+       there is nothing to re-round. */
+    transform: translateZ(0);
+    will-change: opacity;
+    backface-visibility: hidden;
+  }
   .tabbar-btn.active { color: var(--accent); }
   .tabbar-btn.active .inline-icon { opacity: 1; }
   .tabbar-btn:active { background: rgba(255,255,255,0.04); }
@@ -1954,6 +1967,14 @@
      styles, which override these, so navigation still behaves identically. */
   html.is-mobile #hub-view { display: none; }
   html.is-mobile #detail-view { display: block; }
+  /* ...and pick the SECTION here too. #detail-view being visible from first
+     paint isn't enough on its own: which section shows was still decided by
+     JS, so whichever one the script touched first flashed before Card. CSS
+     picks it now, so the very first frame is already correct. showSection()
+     sets inline display at runtime and overrides this, so navigation is
+     unaffected. */
+  html.is-mobile .detail-section { display: none; }
+  html.is-mobile .detail-section[data-section="thisweekend"] { display: block; }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
