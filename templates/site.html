@@ -3502,7 +3502,7 @@
       setTimeout(() => {
         oldEl.style.display = 'none';
         oldEl.classList.remove(outClass);
-        window.__restoreScroll();
+        if (window.__restoreScroll) { window.__restoreScroll(); } else { window.scrollTo(0, 0); }
         newEl.style.display = 'block';
         newEl.classList.add(inStartClass);
         void newEl.offsetWidth; // force reflow so the start state is registered before it's removed
@@ -3610,7 +3610,7 @@
         // which section shows in the persistent pane. Also covers the
         // existing mobile "already past the hub" case unchanged.
         activateAndReveal();
-        window.__restoreScroll();
+        if (window.__restoreScroll) { window.__restoreScroll(); } else { window.scrollTo(0, 0); }
       } else {
         transitionViews(hubView, detailView, 'forward', activateAndReveal);
       }
