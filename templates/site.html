@@ -3726,9 +3726,31 @@
         }
       }, { passive: true });
 
+      // Expanded fight cards are part of "where I left off" too -- coming
+      // back to a collapsed card loses the thing you were reading, which is
+      // more disruptive than losing scroll offset.
+      const openCards = {};
+      function snapshotOpen(sectionId) {
+        const sec = document.querySelector('.detail-section[data-section="' + sectionId + '"]');
+        if (!sec) return;
+        openCards[sectionId] = Array.from(sec.querySelectorAll('details.fight-card'))
+          .filter(d => d.open)
+          .map(d => d.dataset.fightKey);
+      }
+      window.__restoreOpenCards = function (sectionId) {
+        const keys = openCards[sectionId];
+        if (!keys || !keys.length) return;
+        const sec = document.querySelector('.detail-section[data-section="' + sectionId + '"]');
+        if (!sec) return;
+        sec.querySelectorAll('details.fight-card').forEach(d => {
+          if (keys.indexOf(d.dataset.fightKey) !== -1) d.open = true;
+        });
+      };
+
       window.__onSectionChange = function (id) {
-        // Save the OUTGOING position before switching identity.
+        // Save the OUTGOING position and open cards before switching identity.
         positions[current] = window.scrollY || document.documentElement.scrollTop;
+        snapshotOpen(current);
         current = id;
         pending = id;
       };
@@ -3740,11 +3762,20 @@
       window.__restoreScroll = function () {
         const y = pending !== null ? (positions[pending] || 0) : 0;
         pending = null;
+        // The root sets scroll-behavior: smooth, so a restore ANIMATED down
+        // to the old offset -- which reads as the page scrolling itself.
+        // Returning to a tab should feel like the page never moved, so the
+        // behaviour is suspended for the jump and put back afterwards
+        // (anchor links elsewhere still get their smooth scrolling).
+        if (window.__restoreOpenCards) window.__restoreOpenCards(current);
+        const root = document.documentElement;
+        const prev = root.style.scrollBehavior;
+        root.style.scrollBehavior = 'auto';
         window.scrollTo(0, y);
-        // Re-assert after layout settles: reveal animations and lazy content
-        // can change document height right after the swap, which clamps a
-        // restore issued too early.
-        requestAnimationFrame(() => window.scrollTo(0, y));
+        requestAnimationFrame(() => {
+          window.scrollTo(0, y);
+          root.style.scrollBehavior = prev;
+        });
       };
     })();
 
