@@ -1717,14 +1717,25 @@
      with "More" opening the existing hub grid so nothing is lost and there
      is only ONE navigation system, not two. */
   .mobile-tabbar {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
-    display: flex; align-items: stretch;
-    background: rgba(12,14,20,0.92);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid var(--border);
-    /* Without the safe-area inset the bar sits under the iPhone home
-       indicator and the labels get clipped. */
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Liquid-glass approximation. Real refraction is a renderer feature CSS
+       can't do, so the illusion is built from four cues that ARE available:
+       heavy blur + saturation (content bleeds through and stays colourful),
+       a bright top inset edge reading as a specular highlight, a soft outer
+       shadow lifting it off the page, and a FLOATING pill rather than an
+       edge-to-edge slab -- detachment is most of what makes it read as
+       glass rather than a toolbar. */
+    position: fixed; left: 12px; right: 12px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 90; display: flex; align-items: stretch;
+    border-radius: 22px; overflow: hidden;
+    background: linear-gradient(180deg, rgba(30,34,44,0.62), rgba(16,19,26,0.72));
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.16),   /* specular top edge */
+      inset 0 -1px 0 rgba(0,0,0,0.30),
+      0 8px 28px rgba(0,0,0,0.45);
   }
   .tabbar-btn {
     flex: 1 1 0; min-width: 0;
@@ -1740,7 +1751,7 @@
   .tabbar-btn.active .inline-icon { opacity: 1; }
   .tabbar-btn:active { background: rgba(255,255,255,0.04); }
   /* Content must clear the fixed bar or the last card is unreachable. */
-  body { padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+  body { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
   @media (min-width: 1024px) {
     .mobile-tabbar { display: none; }
     body { padding-bottom: 0; }
@@ -1751,10 +1762,12 @@
      bar a muted->gold text change alone is too quiet to answer "where am I". */
   .tabbar-btn { position: relative; }
   .tabbar-btn.active::before {
-    content: ""; position: absolute; top: 0; left: 22%; right: 22%;
-    height: 2px; background: var(--accent); border-radius: 0 0 2px 2px;
+    content: ""; position: absolute; inset: 5px 6px;
+    border-radius: 15px; background: rgba(212,175,55,0.14);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
   }
-  .tabbar-btn.active { color: var(--accent); background: rgba(212,175,55,0.07); }
+  .tabbar-btn > * { position: relative; z-index: 1; }
+  .tabbar-btn.active { color: var(--accent); }
 
   @media (max-width: 1023px) {
     /* The back button existed because the hub was the only way out of a
@@ -3555,6 +3568,40 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // ===== Swipe between tabs =====
+    // Gesture-triggered rather than finger-tracking: sections are swapped by
+    // display, not laid out on a scrollable track, so there's no content to
+    // drag. A threshold swipe moves to the adjacent tab and reuses the
+    // existing transition, which keeps one navigation path.
+    (function initSwipeNav() {
+      const order = ['thisweekend', 'standout', 'locks', 'track', '__hub'];
+      let x0 = 0, y0 = 0, tracking = false;
+      document.addEventListener('touchstart', (e) => {
+        if (window.matchMedia('(min-width: 1024px)').matches) return;
+        // Never hijack a gesture that started inside something scrollable
+        // sideways -- odds tables and carousels own their own horizontal axis.
+        if (e.target.closest('.table-scroll, .seg-nav, [data-scrollable]')) { tracking = false; return; }
+        const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; tracking = true;
+      }, { passive: true });
+      document.addEventListener('touchend', (e) => {
+        if (!tracking) return;
+        tracking = false;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - x0, dy = t.clientY - y0;
+        // Horizontal intent: far enough, and clearly more sideways than
+        // vertical, so a diagonal scroll never flips the tab.
+        if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+        const cur = document.body.dataset.section || 'thisweekend';
+        let i = order.indexOf(cur);
+        if (i === -1) return;
+        i += (dx < 0 ? 1 : -1);
+        if (i < 0 || i >= order.length) return;   // no wraparound; edges feel like walls
+        const next = order[i];
+        if (next === '__hub') { showHub(); } else { showSection(next); }
+      }, { passive: true });
+    })();
+
 
     // ===== Fight list: filter + expand-all =====
     // Ten-plus collapsed cards with no way to narrow them means a lot of
