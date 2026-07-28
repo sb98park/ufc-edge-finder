@@ -1910,13 +1910,9 @@
     .hub-card-sub { display: none; }   /* labels are self-explanatory here */
     .hub-card-arrow { position: static; margin-left: auto; font-size: 17px; opacity: 0.45; }
 
-    .hub-footer {
-      text-align: center; color: var(--muted); opacity: 0.55;
-      font-size: 10.5px; margin: 22px 0 6px;
-    }
   }
   @media (min-width: 1024px) {
-    .hub-group-header, .hub-footer { display: none; }
+    .hub-group-header { display: none; }
   }
 </style>
 </head>
@@ -2153,7 +2149,6 @@
     </div>
   </div>
   {% endif %}
-  <div class="hub-footer">Octane Alpha · built {{ generated_at_short }}</div>
   </div>
 
   <div id="whats-new-banner" class="whats-new-banner" style="display:none; cursor:pointer;" onclick="window.__goToWhatsNew();">
