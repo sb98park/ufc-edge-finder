@@ -1782,9 +1782,16 @@
   /* ONE shared indicator rather than a pill per button: a per-button
      pseudo-element can only appear and disappear, it can't travel. This is
      what lets the highlight follow a finger continuously across the bar. */
+  /* CONCENTRIC with the bar, per the nested-radius rule: an inner corner
+     tracks its container only when inner_radius = outer_radius - inset.
+     Bar radius is 22px and the border adds 1px, so a 5px visual inset needs
+     22 - 5 = 17px, not the 15px it had -- and the inset must be EQUAL on all
+     four sides, where it was 5px vertical against 6px horizontal. Those two
+     mismatches are what made the pill read as a separate rectangle dropped
+     inside the bar rather than a selection carved out of it. */
   .tabbar-indicator {
     position: absolute; top: 5px; bottom: 5px; left: 0; width: 0;
-    border-radius: 15px; background: rgba(212,175,55,0.16);
+    border-radius: 17px; background: rgba(212,175,55,0.16);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
     /* transform-origin centre so the press magnification grows outward
        from the pill rather than from its left edge. */
@@ -1941,7 +1948,21 @@
   @media (min-width: 1024px) {
     .hub-group-header { display: none; }
   }
+  /* Default (desktop, and any no-JS case): hub first, exactly as before. */
+  #detail-view { display: none; }
+  /* Mobile: land on the card. Runtime showSection()/showHub() set inline
+     styles, which override these, so navigation still behaves identically. */
+  html.is-mobile #hub-view { display: none; }
+  html.is-mobile #detail-view { display: block; }
 </style>
+<script>
+  /* Runs BEFORE the body parses. Previously #detail-view carried an inline
+     display:none and JS swapped views on DOMContentLoaded -- by which point
+     the browser had already painted the hub, which is the "More screen for a
+     split second" flash. Deciding in <head> means the first paint is already
+     the right view. Kept to one class toggle so it costs nothing. */
+  if (window.innerWidth < 1024) document.documentElement.classList.add('is-mobile');
+</script>
 </head>
 <body>
 {% macro scroll_value(id) %}
@@ -2356,7 +2377,7 @@
 
   </div>
 
-  <div id="detail-view" style="display:none;">
+  <div id="detail-view">
     <div class="back-btn" id="back-btn" onclick="showHub()">← Back to Overview</div>
 
   <div class="detail-section" data-section="track">
@@ -3683,11 +3704,17 @@
       function setScale(v) { scale = v; setX(lastX); }
       let lastX = 0;
 
+      // INSET must match the vertical one (5px) or the pill is only
+      // concentric top-and-bottom: spanning the full button width made it
+      // touch the bar's edge at the first and last tabs, which is what read
+      // as an uneven, dropped-in rectangle.
+      const INSET = 5;
+
       // SNAPPED position -- used on release and for external navigation.
       function moveTo(btn) {
         if (!btn) return;
-        ind.style.width = btn.offsetWidth + 'px';
-        lastX = btn.offsetLeft;
+        ind.style.width = Math.max(0, btn.offsetWidth - INSET * 2) + 'px';
+        lastX = btn.offsetLeft + INSET;
         setX(lastX);
       }
 
@@ -3701,8 +3728,9 @@
         const r = bar.getBoundingClientRect();
         const w = ind.offsetWidth || (bar.offsetWidth / btns.length);
         let x = clientX - r.left - w / 2;
-        // Clamp inside the bar so it can't slide out past the end tabs.
-        x = Math.max(0, Math.min(x, bar.offsetWidth - w));
+        // Clamp to the same inset, so a drag to either end stops flush with
+        // the bar's padding rather than against its border.
+        x = Math.max(INSET, Math.min(x, bar.offsetWidth - w - INSET));
         lastX = x;
         setX(x);
       }
