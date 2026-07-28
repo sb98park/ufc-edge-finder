@@ -1771,7 +1771,29 @@
   @media (max-width: 1023px) {
     /* The updated/prices strip reads as misaligned on a narrow screen because
        it's the only left-flushed element under a centred banner. */
-    .countdown-meta { justify-content: center; text-align: center; }
+    .meta-row { justify-content: center; text-align: center; }
+
+    /* PER-TAB CHROME. With a tab bar, each screen should own its context:
+       a countdown is about the EVENT, so it belongs on Card and nowhere
+       else -- it was costing ~120px on every screen for information
+       relevant to one. body[data-section] is set from showSection()/
+       showHub(), so this stays correct however the user got there (tab tap,
+       hub card, deep link, browser back). */
+    body[data-section]:not([data-section="thisweekend"]) .countdown-card { display: none; }
+
+    /* The meta strip is a DATA-FRESHNESS signal, so it follows the live
+       prices rather than the countdown: keep it wherever odds are shown
+       (Card, Edges, Locks), drop it where they aren't. Hiding it on Edges
+       would remove the staleness cue from the screen that most depends on
+       prices being current. */
+    body[data-section="track"] .meta-row,
+    body[data-section="__hub"] .meta-row,
+    body[data-section="funfacts"] .meta-row,
+    body[data-section="favorites"] .meta-row,
+    body[data-section="parlays"] .meta-row,
+    body[data-section="coming"] .meta-row,
+    body[data-section="howitworks"] .meta-row,
+    body[data-section="disclaimer"] .meta-row { display: none; }
   }
 </style>
 </head>
@@ -3370,6 +3392,7 @@
 
     function showSection(id) {
       if (window.__syncTabBar) window.__syncTabBar(id);
+      document.body.dataset.section = id;
       const alreadyInDetail = detailView.style.display === 'block';
 
       function activateAndReveal() {
@@ -3465,6 +3488,7 @@
     }
     function showHub() {
       if (window.__syncTabBar) window.__syncTabBar("__hub");
+      document.body.dataset.section = "__hub";
       if (isDesktopLayout()) return; // no hub to return to -- the rail is always visible there
       transitionViews(detailView, hubView, 'backward');
     }
