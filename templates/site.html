@@ -3582,7 +3582,7 @@
     // Slide along the bar and the highlight follows continuously, so Card ->
     // Record is one motion without lifting. Content commits on RELEASE only:
     // switching live would fire three section changes just passing over them.
-    (function initTabDrag() {
+    function initTabDrag() {
       const bar = document.getElementById('mobile-tabbar');
       const ind = document.getElementById('tabbar-indicator');
       if (!bar || !ind) return;
@@ -3641,7 +3641,12 @@
         const act = btns.find(b => b.classList.contains('active')) || btns[0];
         moveTo(act);
       });
-    })();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTabDrag);
+    } else {
+      initTabDrag();
+    }
 
 
 
@@ -3720,8 +3725,9 @@
       // Keep the bar in sync when navigation happens elsewhere (hub card tap,
       // back button, deep link) -- otherwise the highlight lies about where
       // the user actually is.
-      window.__syncTabBar = markActive;
-
+      // NOTE: __syncTabBar is owned by initTabDrag, which also slides the
+      // indicator. Assigning it here too would overwrite that with a
+      // class-only version depending on init order.
       // MOBILE LANDS ON CONTENT, NOT A MENU. The hub grid is a table of
       // contents; with a tab bar present it's redundant as a landing screen,
       // and every visit started with an extra tap. Desktop is unaffected --
