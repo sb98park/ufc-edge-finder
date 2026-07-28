@@ -202,7 +202,7 @@
   .countdown-box-label { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
   .countdown-sep {
     font-size: 17px; font-weight: 800; color: #3a2f14;
-    animation: sepPulse 2.6s ease-in-out infinite;
+    animation: sepPulse 2.6s ease-in-out 4;
   }
   @keyframes sepPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
   /* Hidden by default (mobile) -- these flanking info blocks only exist
@@ -364,7 +364,7 @@
     background: linear-gradient(135deg, #0f2a1e, #14171f 70%); border: 1px solid #1e4a2f;
     border-radius: 12px; padding: 10px 14px; font-size: 12.5px;
     
-    animation: toast-in 0.35s ease-out, banner-glow 2.4s ease-in-out 0.35s infinite;
+    animation: toast-in 0.35s ease-out, banner-glow 2.4s ease-in-out 0.35s 4;
   }
   .whats-new-banner.toast-out { animation: toast-out 0.3s ease-in forwards; }
   @keyframes toast-in {
@@ -582,7 +582,7 @@
       linear-gradient(135deg, rgba(167,139,250,0.07), var(--panel2) 55%) padding-box,
       linear-gradient(120deg, #a78bfa, #e879f9, #2dd4bf, #a78bfa) border-box;
     background-size: 100% 100%, 300% 100%;
-    animation: factReveal 0.45s ease-out forwards, legendaryBorder 4s linear infinite, legendaryGlow 2.6s ease-in-out infinite;
+    animation: factReveal 0.45s ease-out forwards, legendaryBorder 4s linear 5, legendaryGlow 2.6s ease-in-out infinite;
     animation-delay: var(--fact-delay, 0s), 0s, 0s;
   }
   @keyframes legendaryBorder { to { background-position: 0 0, 300% 0; } }
@@ -598,7 +598,7 @@
   .fun-fact-tier-badge.legendary-badge {
     background: linear-gradient(120deg, #a78bfa, #e879f9, #2dd4bf, #a78bfa);
     background-size: 300% 100%;
-    animation: legendaryBorder 4s linear infinite;
+    animation: legendaryBorder 4s linear 5;
   }
   .fun-fact-number {
     flex-shrink: 0; min-width: 52px; text-align: center;
@@ -628,7 +628,7 @@
       linear-gradient(#20222c, #20222c) padding-box,
       linear-gradient(120deg, #a78bfa, #e879f9, #2dd4bf, #a78bfa) border-box;
     background-size: 100% 100%, 300% 100%;
-    animation: legendaryBorder 4s linear infinite;
+    animation: legendaryBorder 4s linear 5;
   }
   .fun-fact-chip-row {
     display: flex; justify-content: space-between; gap: 8px; margin-top: 6px;
@@ -662,9 +662,9 @@
     .fun-fact-chip:not(.expanded) .fun-fact-chip-text { display: none; }
     /* The tap affordance: a soft tier-colored ring pulsing outward from
        the collapsed icon, looping until expanded. */
-    .fun-fact-chip:not(.expanded) { animation: factChipPulse 2.2s ease-out infinite; }
+    .fun-fact-chip:not(.expanded) { animation: factChipPulse 2.2s ease-out 4; }
     .fun-fact-chip.gold:not(.expanded) { animation-name: factChipPulseGold; }
-    .fun-fact-chip.legendary:not(.expanded) { animation: legendaryBorder 4s linear infinite, factChipPulseLegendary 2.2s ease-out infinite; }
+    .fun-fact-chip.legendary:not(.expanded) { animation: legendaryBorder 4s linear 5, factChipPulseLegendary 2.2s ease-out 4; }
     .fun-fact-chip.expanded {
       display: block; width: 100%; box-sizing: border-box; text-align: left;
       padding: 6px 9px;
@@ -732,7 +732,7 @@
     display: flex; flex-direction: column; align-items: center; text-align: center;
     padding: 28px 16px 22px; gap: 6px;
   }
-  .empty-state-icon { width: 42px; height: 42px; margin-bottom: 8px; animation: empty-state-pulse 3s ease-in-out infinite; }
+  .empty-state-icon { width: 42px; height: 42px; margin-bottom: 8px; animation: empty-state-pulse 3s ease-in-out 3; }
   .empty-state-icon svg { width: 100%; height: 100%; }
   .empty-state-headline { font-size: 14px; font-weight: 700; color: var(--text); }
   .empty-state-desc { font-size: 12px; color: var(--muted); line-height: 1.55; max-width: 320px; }
@@ -1257,7 +1257,7 @@
   .fighter-avatar-wrap { position: relative; flex-shrink: 0; display: inline-block; }
   .fighter-avatar.winner-glow {
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 2px var(--panel), 0 0 0 3px var(--green);
-    animation: winner-pulse 2s ease-in-out infinite;
+    animation: winner-pulse 2s ease-in-out 4;
   }
   @keyframes winner-pulse {
     0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 2px var(--panel), 0 0 0 3px var(--green), 0 0 0 3px rgba(61, 220, 132, 0.35); }
@@ -1563,7 +1563,7 @@
   .chart-block.revealed .chart-draw-endpoint { opacity: 1; }
   .chart-endpoint-halo { opacity: 0; }
   .chart-block.revealed .chart-endpoint-halo {
-    opacity: 1; animation: endpoint-pulse 1.8s ease-out 1.4s infinite;
+    opacity: 1; animation: endpoint-pulse 1.8s ease-out 1.4s 4;
   }
   @keyframes endpoint-pulse {
     0% { transform: scale(1); opacity: 0.55; }
@@ -1795,6 +1795,47 @@
     body[data-section="howitworks"] .meta-row,
     body[data-section="disclaimer"] .meta-row { display: none; }
   }
+
+  /* ===== Hub as a compact utility list (mobile) =====
+     The hub was the front door; with a tab bar it's the "More" drawer, so a
+     full-page grid of feature cards with descriptions is the wrong shape --
+     it makes a lookup feel like a landing page. A dense list scans in one
+     glance and puts every remaining section on one screen. */
+  @media (max-width: 1023px) {
+    .hub-grid { display: block; }
+    .hub-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 14px; margin: 0 0 8px;
+      min-height: 0; border-radius: 10px;
+    }
+    .hub-card .hub-card-title { font-size: 13.5px; margin: 0; }
+    .hub-card .hub-card-sub {
+      font-size: 11px; margin: 2px 0 0;
+      /* one line only -- descriptions are for discovery, and this is now
+         a place you go when you already know what you want */
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .hub-card::after {
+      content: "›"; margin-left: auto; color: var(--muted);
+      font-size: 19px; line-height: 1; opacity: 0.6;
+    }
+  }
+
+  /* ===== Fight list controls ===== */
+  .fight-controls {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin: 0 0 10px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .fc-chip {
+    padding: 5px 10px; border-radius: 999px; cursor: pointer;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    color: var(--muted); font-size: 11px; font-weight: 600;
+    font-family: inherit; -webkit-tap-highlight-color: transparent;
+  }
+  .fc-chip.on { background: rgba(212,175,55,0.14); border-color: var(--accent); color: var(--accent); }
+  .fc-spacer { margin-left: auto; }
+  .fight-card.fc-hidden { display: none; }
 </style>
 </head>
 <body>
@@ -2606,7 +2647,7 @@
   {%- endmacro %}
 
   {% macro render_fight_card(fight, card_index=none) %}
-  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label }}{{ ' fight-cancelled' if fight.cancelled }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
+  <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label }}{{ ' fight-cancelled' if fight.cancelled }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" data-confidence="{{ (fight.preview.confidence_label if fight.preview else '')|lower|replace(' confidence','') }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
     <summary>
       <div class="matchup-content">
       {% if fight.cancelled %}
@@ -3092,6 +3133,12 @@
   </div>
 
   <div class="detail-section" data-section="thisweekend">
+    <div class="fight-controls" id="fight-controls">
+      <button class="fc-chip" data-filter="all">All</button>
+      <button class="fc-chip" data-filter="high">High conf</button>
+      <button class="fc-chip" data-filter="medium">Medium</button>
+      <button class="fc-chip fc-spacer" id="fc-toggle-all">Expand all</button>
+    </div>
   {% if events %}
   {% set event = events[0] %}
   <div class="event-header" id="section-thisweekend">
@@ -3393,6 +3440,7 @@
     function showSection(id) {
       if (window.__syncTabBar) window.__syncTabBar(id);
       document.body.dataset.section = id;
+      if (window.__onSectionChange) window.__onSectionChange(id);
       const alreadyInDetail = detailView.style.display === 'block';
 
       function activateAndReveal() {
@@ -3489,6 +3537,7 @@
     function showHub() {
       if (window.__syncTabBar) window.__syncTabBar("__hub");
       document.body.dataset.section = "__hub";
+      if (window.__onSectionChange) window.__onSectionChange("__hub");
       if (isDesktopLayout()) return; // no hub to return to -- the rail is always visible there
       transitionViews(detailView, hubView, 'backward');
     }
@@ -3506,6 +3555,57 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // ===== Fight list: filter + expand-all =====
+    // Ten-plus collapsed cards with no way to narrow them means a lot of
+    // tapping to reach the two picks you actually care about.
+    (function initFightControls() {
+      const bar = document.getElementById('fight-controls');
+      if (!bar) return;
+      const cards = () => Array.from(document.querySelectorAll('.detail-section[data-section="thisweekend"] .fight-card'));
+      const chips = Array.from(bar.querySelectorAll('[data-filter]'));
+      let active = 'all';
+
+      function apply() {
+        cards().forEach(card => {
+          const conf = (card.dataset.confidence || '').trim();
+          card.classList.toggle('fc-hidden', active !== 'all' && conf !== active);
+        });
+        chips.forEach(ch => ch.classList.toggle('on', ch.dataset.filter === active));
+      }
+      chips.forEach(ch => ch.addEventListener('click', () => { active = ch.dataset.filter; apply(); }));
+      apply();
+
+      const toggle = document.getElementById('fc-toggle-all');
+      toggle.addEventListener('click', () => {
+        // Act on VISIBLE cards only, so "expand all" respects an active
+        // filter instead of quietly opening things you've filtered out.
+        const visible = cards().filter(c => !c.classList.contains('fc-hidden'));
+        const anyClosed = visible.some(c => !c.open);
+        visible.forEach(c => { c.open = anyClosed; });
+        toggle.textContent = anyClosed ? 'Collapse all' : 'Expand all';
+      });
+    })();
+
+    // ===== Scroll position per section =====
+    // Switching tabs and losing your place is the clearest "website, not app"
+    // tell on a long card. Keyed by section id, restored on return.
+    (function initScrollMemory() {
+      const positions = {};
+      let current = document.body.dataset.section || 'thisweekend';
+      window.addEventListener('scroll', () => {
+        positions[current] = window.scrollY || document.documentElement.scrollTop;
+      }, { passive: true });
+      const origPush = window.__onSectionChange;
+      window.__onSectionChange = function (id) {
+        current = id;
+        // rAF: the section is display-swapped first, so the document height
+        // isn't final until after paint -- scrolling before that clamps to 0.
+        requestAnimationFrame(() => window.scrollTo(0, positions[id] || 0));
+        if (typeof origPush === 'function') origPush(id);
+      };
+    })();
+
 
     // Bottom tab bar -> the SAME showSection/showHub the hub cards use, so
     // there's one navigation path and the two can never disagree about state.
