@@ -3443,7 +3443,7 @@
       setTimeout(() => {
         oldEl.style.display = 'none';
         oldEl.classList.remove(outClass);
-        window.scrollTo(0, 0);
+        window.__restoreScroll();
         newEl.style.display = 'block';
         newEl.classList.add(inStartClass);
         void newEl.offsetWidth; // force reflow so the start state is registered before it's removed
@@ -3551,7 +3551,7 @@
         // which section shows in the persistent pane. Also covers the
         // existing mobile "already past the hub" case unchanged.
         activateAndReveal();
-        window.scrollTo(0, 0);
+        window.__restoreScroll();
       } else {
         transitionViews(hubView, detailView, 'forward', activateAndReveal);
       }
@@ -3715,16 +3715,36 @@
     (function initScrollMemory() {
       const positions = {};
       let current = document.body.dataset.section || 'thisweekend';
+      let pending = null;
+
       window.addEventListener('scroll', () => {
-        positions[current] = window.scrollY || document.documentElement.scrollTop;
+        // Only record while settled. Without this guard the scrollTo(0,0)
+        // fired during a transition overwrites the outgoing section's saved
+        // position with 0, which is why every return landed at the top.
+        if (pending === null) {
+          positions[current] = window.scrollY || document.documentElement.scrollTop;
+        }
       }, { passive: true });
-      const origPush = window.__onSectionChange;
+
       window.__onSectionChange = function (id) {
+        // Save the OUTGOING position before switching identity.
+        positions[current] = window.scrollY || document.documentElement.scrollTop;
         current = id;
-        // rAF: the section is display-swapped first, so the document height
-        // isn't final until after paint -- scrolling before that clamps to 0.
-        requestAnimationFrame(() => window.scrollTo(0, positions[id] || 0));
-        if (typeof origPush === 'function') origPush(id);
+        pending = id;
+      };
+
+      // Called by the navigation code at the exact point it used to do
+      // scrollTo(0,0) -- i.e. after the section is displayed and laid out.
+      // Doing it here rather than on our own timer is what stops the two
+      // fighting: there is now only ONE thing setting scroll position.
+      window.__restoreScroll = function () {
+        const y = pending !== null ? (positions[pending] || 0) : 0;
+        pending = null;
+        window.scrollTo(0, y);
+        // Re-assert after layout settles: reveal animations and lazy content
+        // can change document height right after the swap, which clamps a
+        // restore issued too early.
+        requestAnimationFrame(() => window.scrollTo(0, y));
       };
     })();
 
