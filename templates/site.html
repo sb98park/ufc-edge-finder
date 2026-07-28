@@ -3589,10 +3589,26 @@
       const btns = Array.from(bar.querySelectorAll('.tabbar-btn'));
       let dragging = false, hovered = null;
 
+      // SNAPPED position -- used on release and for external navigation.
       function moveTo(btn) {
         if (!btn) return;
         ind.style.width = btn.offsetWidth + 'px';
         ind.style.transform = 'translateX(' + btn.offsetLeft + 'px)';
+      }
+
+      // FREE position -- the indicator centres on the finger rather than on
+      // the tab under it. Snapping to button bounds is why it looked static:
+      // it only moved when you crossed a boundary, so most of the drag
+      // produced no movement at all. Tracking the raw touch x makes the
+      // highlight feel physically attached to the finger, which is the whole
+      // point of the gesture.
+      function moveFree(clientX) {
+        const r = bar.getBoundingClientRect();
+        const w = ind.offsetWidth || (bar.offsetWidth / btns.length);
+        let x = clientX - r.left - w / 2;
+        // Clamp inside the bar so it can't slide out past the end tabs.
+        x = Math.max(0, Math.min(x, bar.offsetWidth - w));
+        ind.style.transform = 'translateX(' + x + 'px)';
       }
       function btnAt(clientX) {
         const r = bar.getBoundingClientRect();
@@ -3614,19 +3630,30 @@
       bar.addEventListener('touchstart', (e) => {
         dragging = true; bar.classList.add('dragging');
         hovered = btnAt(e.touches[0].clientX);
-        paint(hovered);
+        // Size to the touched tab first, then track freely from there.
+        if (hovered) ind.style.width = hovered.offsetWidth + 'px';
+        btns.forEach(b => b.classList.toggle('active', b === hovered));
+        moveFree(e.touches[0].clientX);
       }, { passive: true });
 
       bar.addEventListener('touchmove', (e) => {
         if (!dragging) return;
         if (e.cancelable) e.preventDefault();   // the bar owns this gesture
-        const btn = btnAt(e.touches[0].clientX);
-        if (btn && btn !== hovered) { hovered = btn; paint(btn); }
+        const x = e.touches[0].clientX;
+        moveFree(x);
+        const btn = btnAt(x);
+        if (btn && btn !== hovered) {
+          hovered = btn;
+          btns.forEach(b => b.classList.toggle('active', b === btn));
+        }
       }, { passive: false });
 
       function release() {
         if (!dragging) return;
         dragging = false; bar.classList.remove('dragging');
+        // Easing returns here, so the indicator settles onto the chosen tab
+        // instead of stopping wherever the finger happened to lift.
+        moveTo(hovered);
         if (!hovered) return;
         const target = hovered.dataset.tab;
         if (target === '__hub') showHub(); else showSection(target);
