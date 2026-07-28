@@ -1130,7 +1130,7 @@
   }
   .standout-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
   .rationale {
-    font-size: 11.5px; color: var(--muted); line-height: 1.55;
+    font-size: 12.5px; color: var(--muted); line-height: 1.55;
     margin-top: 8px; padding-top: 8px;
     border-top: 1px solid var(--border);
     white-space: normal;
@@ -1425,12 +1425,12 @@
        the card rather than laid on it. The previous rgba(0,0,0,0.28) was
        measured at only 6-9 RGB points darker than --panel -- real in the
        CSS, invisible to the eye. Contrast does the work here, not opacity. */
-    background: var(--bg);
-    border: 1px solid rgba(255,255,255,0.13); border-left: 3px solid var(--accent);
+    background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+    border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid rgba(255,255,255,0.08);
     border-radius: 10px;
     padding: 11px 13px; margin: 4px 0 14px;
     font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-    font-size: 11.5px; color: #b9bec9; line-height: 1.6;
+    font-size: 12.5px; color: #b9bec9; line-height: 1.6;
     white-space: normal;
   }
   .model-preview.masterpiece {
@@ -1768,6 +1768,11 @@
     .hub-card[data-section-nav="locks"],
     .hub-card[data-section-nav="track"] { display: none; }
   }
+  @media (max-width: 1023px) {
+    /* The updated/prices strip reads as misaligned on a narrow screen because
+       it's the only left-flushed element under a centred banner. */
+    .countdown-meta { justify-content: center; text-align: center; }
+  }
 </style>
 </head>
 <body>
@@ -1960,7 +1965,7 @@
       {% if countdown_main_card_time %}<div class="countdown-info-line">Main Card · {{ countdown_main_card_time }}</div>{% endif %}
     </div>
     <div class="countdown-center">
-    <div class="countdown-label" id="countdown-label">⏱ {{ countdown_label }}</div>
+    <div class="countdown-label" id="countdown-label">{{ icon_clock() }} {{ countdown_label }}</div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
         {{ scroll_value('days') }}
@@ -4447,7 +4452,7 @@
       try { if (localStorage.getItem(TOUR_KEY)) return; } catch (e) { return; }
 
       const steps = [
-        { selector: '.countdown-card', text: '⏱ Live countdown to fight night — automatically switches to live tracking once the card actually starts.' },
+        { selector: '.countdown-card', text: 'Live countdown to fight night — automatically switches to live tracking once the card actually starts.' },
         { selector: '.hub-grid', text: 'Everything is organized into sections now — tap any card below to dive in, and use Back to return here.' },
         { selector: '.hub-card.featured', text: 'This Weekend has the full fight-by-fight breakdown — each fight includes a model probability, style-matchup radar, and the reasoning behind the pick.' },
       ];
