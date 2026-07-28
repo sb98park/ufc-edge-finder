@@ -1336,22 +1336,30 @@
      anything else. This is the number people actually came for; the
      factor rows below explain how it got there. */
   .wf-headline { margin-top: 4px; }
-  /* Head-to-head, not stacked. The bar is spatially left=gold, right=cyan,
-     so names stacked above and below made the reader infer which name owned
-     which segment. Putting them on the same axis as the thing they describe
-     removes the guess entirely. */
-  .wf-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
-  .wf-head-side { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-  .wf-head-side.dog { justify-content: flex-end; text-align: right; }
+  /* Stacked, because head-to-head ran out of width on long names. The
+     ambiguity it was solving is fixed by COLOUR instead of position: each
+     name and number carries its own bar segment's colour, so the mapping is
+     explicit without costing any horizontal room. A colour tie is stronger
+     than a spatial one here anyway -- it survives truncation, wrapping, and
+     a reader skimming rather than reading. */
+  .wf-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .wf-head-row.fav .wf-head-name,
+  .wf-head-row.fav .wf-head-pct { color: var(--accent); }
+  .wf-head-row.dog .wf-head-name,
+  .wf-head-row.dog .wf-head-pct { color: var(--accent-cool); }
+  /* A small square in the segment colour, so the tie reads even for anyone
+     who can't separate gold from cyan. */
+  .wf-head-row .wf-head-name::before {
+    content: ""; display: inline-block; width: 7px; height: 7px;
+    border-radius: 2px; margin-right: 6px; background: currentColor;
+  }
   .wf-head-name { font-size: 12px; font-weight: 700; color: var(--muted); min-width: 0;
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .wf-head-side.fav .wf-head-name { color: var(--text); }
   /* Long names must truncate rather than push the percentage off-screen --
      the number is the point, the name is the label. */
   .wf-head-name { max-width: 46vw; }
   .wf-head-pct { font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .wf-head-side.fav .wf-head-pct { font-size: 17px; font-weight: 800; color: var(--accent); font-family: var(--font-display); }
-  .wf-head-side.dog .wf-head-pct { color: var(--accent-cool); }
+  .wf-head-row.fav .wf-head-pct { font-size: 17px; font-weight: 800; font-family: var(--font-display); }
   .wf-split { height: 9px; border-radius: 4px; background: var(--accent-cool); overflow: hidden; margin: 5px 0; }
   .wf-split-fill { display: block; height: 100%; background: var(--accent); border-radius: 4px 0 0 5px; }
   /* Fill animations. These are re-triggered from JS whenever the panel is
@@ -2887,17 +2895,15 @@
         </summary>
         <div class="waterfall-body">
           <div class="wf-headline">
-            <div class="wf-head-row">
-              <span class="wf-head-side fav">
-                <span class="wf-head-name">{{ wf.favorite }}</span>
-                <span class="wf-head-pct">{{ wf.favorite_pct }}%</span>
-              </span>
-              <span class="wf-head-side dog">
-                <span class="wf-head-pct">{{ wf.underdog_pct }}%</span>
-                <span class="wf-head-name">{{ wf.underdog }}</span>
-              </span>
+            <div class="wf-head-row fav">
+              <span class="wf-head-name">{{ wf.favorite }}</span>
+              <span class="wf-head-pct">{{ wf.favorite_pct }}%</span>
             </div>
             <div class="wf-split"><span class="wf-split-fill" style="width: {{ wf.favorite_pct }}%; --wf-final: {{ wf.favorite_pct }}%"></span></div>
+            <div class="wf-head-row dog">
+              <span class="wf-head-name">{{ wf.underdog }}</span>
+              <span class="wf-head-pct">{{ wf.underdog_pct }}%</span>
+            </div>
           </div>
           <div class="waterfall-caption">
             Start from an even fight at 50%, then watch each factor move the number.
