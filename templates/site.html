@@ -511,11 +511,6 @@
   .lock-history-result.hit { background: rgba(61,220,132,0.15); color: var(--green); }
   .lock-history-result.miss { background: rgba(255,92,92,0.15); color: var(--red); }
   .lock-history-pick { font-weight: 700; color: var(--text); font-size: 12.5px; }
-  /* Icon scaled to the badge, not the page. The shared .inline-icon size
-     (15px) dwarfs 8.5px text and forces a gap that reads as a missing glyph. */
-  .lock-history-perfect-badge .inline-icon {
-    width: 10px; height: 10px; vertical-align: -1px; margin-right: 3px;
-  }
   .lock-history-perfect-badge {
     font-size: 8.5px; font-weight: 800; letter-spacing: 0.5px; color: #14171f;
     background: linear-gradient(135deg, var(--accent), #e8c766); border-radius: 4px;
@@ -1341,12 +1336,22 @@
      anything else. This is the number people actually came for; the
      factor rows below explain how it got there. */
   .wf-headline { margin-top: 4px; }
-  .wf-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  /* Head-to-head, not stacked. The bar is spatially left=gold, right=cyan,
+     so names stacked above and below made the reader infer which name owned
+     which segment. Putting them on the same axis as the thing they describe
+     removes the guess entirely. */
+  .wf-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+  .wf-head-side { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .wf-head-side.dog { justify-content: flex-end; text-align: right; }
   .wf-head-name { font-size: 12px; font-weight: 700; color: var(--muted); min-width: 0;
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .wf-head-name.fav { color: var(--text); }
+  .wf-head-side.fav .wf-head-name { color: var(--text); }
+  /* Long names must truncate rather than push the percentage off-screen --
+     the number is the point, the name is the label. */
+  .wf-head-name { max-width: 46vw; }
   .wf-head-pct { font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .wf-head-pct.fav { font-size: 17px; font-weight: 800; color: var(--accent); font-family: var(--font-display); }
+  .wf-head-side.fav .wf-head-pct { font-size: 17px; font-weight: 800; color: var(--accent); font-family: var(--font-display); }
+  .wf-head-side.dog .wf-head-pct { color: var(--accent-cool); }
   .wf-split { height: 9px; border-radius: 4px; background: var(--accent-cool); overflow: hidden; margin: 5px 0; }
   .wf-split-fill { display: block; height: 100%; background: var(--accent); border-radius: 4px 0 0 5px; }
   /* Fill animations. These are re-triggered from JS whenever the panel is
@@ -2497,7 +2502,7 @@
           <div class="lock-history-main">
             <span class="lock-history-result {{ 'hit' if p.correct else 'miss' }}">{{ icon_check() if p.correct else icon_cross() }}</span>
             <span class="lock-history-pick">{{ p.predicted_favorite }}</span>
-            {% if perfect %}<span class="lock-history-perfect-badge">{{ icon_lock() }}PERFECT</span>{% endif %}
+            {% if perfect %}<span class="lock-history-perfect-badge">PERFECT</span>{% endif %}
           </div>
           <div class="lock-history-sub">
             <span class="lock-history-event">{{ p.event_name }}</span>
@@ -2883,14 +2888,16 @@
         <div class="waterfall-body">
           <div class="wf-headline">
             <div class="wf-head-row">
-              <span class="wf-head-name fav">{{ wf.favorite }}</span>
-              <span class="wf-head-pct fav">{{ wf.favorite_pct }}%</span>
+              <span class="wf-head-side fav">
+                <span class="wf-head-name">{{ wf.favorite }}</span>
+                <span class="wf-head-pct">{{ wf.favorite_pct }}%</span>
+              </span>
+              <span class="wf-head-side dog">
+                <span class="wf-head-pct">{{ wf.underdog_pct }}%</span>
+                <span class="wf-head-name">{{ wf.underdog }}</span>
+              </span>
             </div>
             <div class="wf-split"><span class="wf-split-fill" style="width: {{ wf.favorite_pct }}%; --wf-final: {{ wf.favorite_pct }}%"></span></div>
-            <div class="wf-head-row">
-              <span class="wf-head-name">{{ wf.underdog }}</span>
-              <span class="wf-head-pct">{{ wf.underdog_pct }}%</span>
-            </div>
           </div>
           <div class="waterfall-caption">
             Start from an even fight at 50%, then watch each factor move the number.
