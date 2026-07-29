@@ -654,7 +654,11 @@
        DEFINITE width (full row) for the chip's width:100% to resolve
        against -- without this, a flex item sizes from its content and
        the circular shrink-to-fit overflow bug comes straight back. */
-    .fun-fact-chip-row > div.fact-open { flex: 0 0 100%; }
+    /* `flex: 0 0 100%` forced the open side to take the FULL row, which pushed
+     the other fighter's chip onto a new line -- the "teleport". Growing only
+     as needed lets a short fact expand in place beside its sibling, while a
+     long one still wraps naturally because the row already allows wrapping. */
+  .fun-fact-chip-row > div.fact-open { flex: 1 1 auto; max-width: 100%; }
     .fun-fact-chip {
       cursor: pointer; position: relative; padding: 5px 7px;
       -webkit-tap-highlight-color: transparent;
@@ -665,8 +669,13 @@
     .fun-fact-chip:not(.expanded) { animation: factChipPulse 2.2s ease-out 4; }
     .fun-fact-chip.gold:not(.expanded) { animation-name: factChipPulseGold; }
     .fun-fact-chip.legendary:not(.expanded) { animation: legendaryBorder 4s linear 5, factChipPulseLegendary 2.2s ease-out 4; }
+    /* Hug the text. `display: block; width: 100%` made every expanded pill
+       span its container even for a short fact, so the rounded ends sat well
+       past where the sentence stopped. inline-flex + width:auto sizes to
+       content; max-width keeps a long fact inside the card. */
     .fun-fact-chip.expanded {
-      display: block; width: 100%; box-sizing: border-box; text-align: left;
+      display: inline-flex; align-items: flex-start;
+      width: auto; max-width: 100%; box-sizing: border-box; text-align: left;
       padding: 6px 9px;
     }
     .fun-fact-chip.expanded .fun-fact-chip-icon { vertical-align: -2px; margin-right: 4px; }
