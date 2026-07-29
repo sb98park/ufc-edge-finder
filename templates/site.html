@@ -1998,6 +1998,30 @@
      unaffected. */
   html.is-mobile .detail-section { display: none; }
   html.is-mobile .detail-section[data-section="thisweekend"] { display: block; }
+
+  /* ===== Scroll-responsive tab bar =====
+     Scrolling DOWN collapses the labels so the bar becomes an icon-only pill;
+     scrolling UP restores them. Reading gets the space, navigating gets the
+     clarity.
+     Labels animate via max-height + opacity rather than display:none, because
+     display isn't animatable -- it would pop rather than collapse. Button
+     WIDTHS are untouched, which matters: the drag indicator's width and
+     translateX are computed from button geometry, so a vertical-only change
+     can't desync it. */
+  .mobile-tabbar { transition: box-shadow 0.2s ease; }
+  .tabbar-btn { transition: padding 0.22s cubic-bezier(0.22,1,0.36,1); }
+  .tabbar-btn span {
+    max-height: 14px; overflow: hidden;
+    transition: max-height 0.22s cubic-bezier(0.22,1,0.36,1),
+                opacity 0.16s ease, margin 0.22s ease;
+  }
+  .mobile-tabbar.compact .tabbar-btn { padding-top: 9px; padding-bottom: 9px; }
+  .mobile-tabbar.compact .tabbar-btn span { max-height: 0; opacity: 0; margin-top: -4px; }
+  /* The indicator hugs the shorter bar without re-measuring. */
+  .mobile-tabbar.compact .tabbar-indicator { top: 4px; bottom: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    .tabbar-btn, .tabbar-btn span, .mobile-tabbar { transition: none; }
+  }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3729,6 +3753,35 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // ===== Collapse the tab bar while scrolling down =====
+    (function initTabBarCollapse() {
+      const bar = document.getElementById('mobile-tabbar');
+      if (!bar) return;
+      let lastY = window.scrollY || 0, compact = false;
+      const THRESHOLD = 8;   // ignore sub-pixel and rubber-band jitter
+
+      function onScroll() {
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        const dy = y - lastY;
+        if (Math.abs(dy) < THRESHOLD) return;
+        // Near the top the bar always shows its labels -- collapsing there
+        // reads as a glitch rather than a response to reading.
+        const want = dy > 0 && y > 90;
+        lastY = y;
+        if (want === compact) return;
+        compact = want;
+        bar.classList.toggle('compact', compact);
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+
+      // Any deliberate interaction with the bar restores it, so a tap never
+      // lands on a collapsed target the user didn't choose.
+      bar.addEventListener('touchstart', () => {
+        if (compact) { compact = false; bar.classList.remove('compact'); }
+      }, { passive: true });
+    })();
+
 
     // ===== Draggable tab bar =====
     // Slide along the bar and the highlight follows continuously, so Card ->
