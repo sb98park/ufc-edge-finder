@@ -367,7 +367,19 @@ def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None, fighter_name
                       f"{ {k: stype.get(k) for k in ('name','description','detail','shortDetail','completed')} }")
                 _LAST_FIGHT_METHOD_LOGGED += 1
             method = stype.get("detail") or stype.get("shortDetail") or stype.get("description")
-            if isinstance(method, str) and method.strip():
+            # REJECT completion-status labels. status.type here reports whether
+            # the bout has FINISHED, not how it ended -- "Final" / "FT" /
+            # "Completed" are states, and writing one into last_fight_method is
+            # what produced "W by Final against X" on every fighter card.
+            # ESPN does publish real methods, but only via the CORE api (see
+            # results_fetcher._fetch_espn_core_results). Until this path is
+            # wired to that, storing nothing is strictly better than storing a
+            # word that isn't a method: the template already renders the bare
+            # "W against X", which is true.
+            STATUS_WORDS = {"final", "final/ot", "ft", "completed", "complete",
+                            "status_final", "end", "ended"}
+            if isinstance(method, str) and method.strip() \
+                    and method.strip().lower() not in STATUS_WORDS:
                 result["last_fight_method"] = method.strip()
 
     return result
