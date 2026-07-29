@@ -295,6 +295,32 @@ def blend_method_probability(
     return 0.7 * fighter_adjusted + 0.3 * opponent_vulnerability
 
 
+def _stat(row, field):
+    """
+    Prefer the RECENCY-WEIGHTED value, fall back to the all-time one.
+
+    Career means treat a fighter's 2016 form as equal to their 2025 form.
+    Measured across 1,061 fighters with 6+ tracked fights, the median
+    within-career drift in strikes/min is 0.62 of the BETWEEN-fighter
+    standard deviation, and 32% drift by more than a full sd -- so an
+    all-time mean often describes a blend of two different fighters.
+
+    Validated before wiring (research_recency_weighting.py): an 18-month
+    half-life was swept on the tuning split with all-time included as a
+    control, and the control lost MONOTONICALLY. Frozen holdout, n=1747:
+    58.6% -> 59.9% accuracy, Brier 0.2345 -> 0.2329.
+
+    The fallback matters as much as the preference: scripts/backfill_recency_stats.py
+    only writes a weighted value for fighters with enough dated cage time, so
+    debutants and thin records keep the all-time number rather than dropping
+    out of the adjustment entirely.
+    """
+    v = row.get(field + "_r")
+    if v is not None and pd.notna(v) and str(v) != "":
+        return v
+    return row.get(field)
+
+
 def build_probability_waterfall(matchup: dict) -> dict | None:
     """
     Decomposes the final probability into a running journey a reader can
@@ -566,8 +592,8 @@ def style_matchup_adjustment(
     # dynamic. Falls back to accuracy-only when strike-volume data isn't
     # populated yet (graceful no-op, not a guessed number).
     striking_adj = ((strike_acc_a - strike_acc_b) / 100.0) * STRIKING_ADVANTAGE_SCALE
-    slpm_a, sapm_a = row_a.get("slpm"), row_a.get("sapm")
-    slpm_b, sapm_b = row_b.get("slpm"), row_b.get("sapm")
+    slpm_a, sapm_a = _stat(row_a, "slpm"), _stat(row_a, "sapm")
+    slpm_b, sapm_b = _stat(row_b, "slpm"), _stat(row_b, "sapm")
     volume_adj = 0.0
     if pd.notna(slpm_a) and pd.notna(sapm_a) and pd.notna(slpm_b) and pd.notna(sapm_b):
         volume_diff_a = float(slpm_a) - float(sapm_a)
@@ -581,7 +607,7 @@ def style_matchup_adjustment(
     # Falls back to takedown-accuracy-vs-defense when control time isn't
     # populated yet.
     ctrl_a, ctrl_b = row_a.get("control_time_pct"), row_b.get("control_time_pct")
-    td_rate_a, td_rate_b = row_a.get("td_per_15"), row_b.get("td_per_15")
+    td_rate_a, td_rate_b = _stat(row_a, "td_per_15"), _stat(row_b, "td_per_15")
     if pd.notna(td_rate_a) and pd.notna(td_rate_b):
         # Takedown RATE differential -- validated on a frozen 2019+ holdout in
         # head_to_head_adjustment.py. Holding every other term fixed and
