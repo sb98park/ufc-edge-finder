@@ -117,12 +117,24 @@ def main():
     for name, fights in per.items():
         if len(fights) < MIN_FIGHTS:
             continue
-        wsig = wabs = wtd = wsec = 0.0
+        wsig = wabs = wtd = wsec = wcount = 0.0
         for when, sig, absorbed, td, sec in fights:
             w = 0.5 ** (max(0.0, (today - when).days) / HALF_LIFE_DAYS)
+            wcount += w
             wsig += w * sig; wabs += w * absorbed; wtd += w * td; wsec += w * sec
         mins = wsec / 60.0
-        if mins < MIN_MINUTES * 0.25:      # weighted minutes, so a lower bar
+        # EFFECTIVE-SAMPLE GUARD. The old floor was a quarter of one fight in
+        # weighted minutes, which is far too loose: with an 18-month half-life
+        # a fighter whose bouts were 3-5 years ago carries weights of 0.10-0.25
+        # each, so they can clear that bar while contributing well under a
+        # single effective fight. A rate from that slice is noise, and it can
+        # land on exactly 0.0 -- which then reads as "this fighter never scores
+        # takedowns" and silently inflates the opponent's wrestling edge.
+        # Real case: a fighter came out at td_per_15 = 0.0 against 0.592
+        # all-time, and it moved a Lock of the Week pick.
+        # Falling back to the all-time value is strictly better than a
+        # confident number computed from almost nothing.
+        if mins < MIN_MINUTES or wcount < 1.5:
             continue
         out[_normalize_name(name)] = {
             "slpm_r": round(wsig / mins, 3),
