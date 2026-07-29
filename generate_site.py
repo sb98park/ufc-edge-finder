@@ -148,10 +148,19 @@ def main():
     except Exception as e:
         print(f"[generate_site] card order normalization failed unexpectedly, continuing without it: {e}")
 
-    try:
-        backfill_fighters(f"{DATA_DIR}/fighters.csv", f"{DATA_DIR}/future_cards.csv")
-    except Exception as e:
-        print(f"[generate_site] fighter backfill failed unexpectedly, continuing without it: {e}")
+    # Backfill against BOTH card files. Previously only future_cards.csv was
+    # passed, so any fighter who appeared on the CURRENT card without first
+    # having been on a tracked future card never got a roster row at all --
+    # and predict_matchup returns None when either fighter is missing, which
+    # silently strips the ENTIRE preview (confidence, tale of the tape,
+    # reasoning, waterfall) leaving only the moneyline chart. That's how a
+    # roster gap shows up as a rendering bug. Real case: four prelim fighters
+    # on a live card, three fights rendered bare.
+    for _cards in (f"{DATA_DIR}/fight_cards.csv", f"{DATA_DIR}/future_cards.csv"):
+        try:
+            backfill_fighters(f"{DATA_DIR}/fighters.csv", _cards)
+        except Exception as e:
+            print(f"[generate_site] fighter backfill failed for {_cards}, continuing: {e}")
 
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
     history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
