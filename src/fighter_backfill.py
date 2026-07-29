@@ -88,6 +88,81 @@ def _parse_record(summary: str) -> tuple[int | None, int | None]:
     return int(m.group(1)), int(m.group(2))
 
 
+
+SITE_ATHLETE_URL = "https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/{}"
+
+
+def _parse_wl(display_value):
+    """'10-1' or '10-1-0' -> (10, 1). Returns (None, None) on anything else."""
+    try:
+        parts = [int(x) for x in str(display_value).strip().split("-")[:2]]
+        return (parts[0], parts[1]) if len(parts) == 2 else (None, None)
+    except (ValueError, AttributeError, IndexError):
+        return (None, None)
+
+
+def _fetch_espn_method_records(athlete_id: str) -> dict:
+    """
+    Method splits from ESPN's SITE athlete endpoint.
+
+    WHY THIS EXISTS DESPITE AN EARLIER 'CONFIRMED ABSENCE'. A previous attempt
+    parsed the SCOREBOARD's `records` array, found only an 'overall' entry
+    across ~80 fighters, and concluded the breakdown wasn't in ESPN at all.
+    That generalised one endpoint to the whole API. It IS published, under
+    athlete.statsSummary.statistics on the site endpoint -- confirmed from a
+    real probe: 'wins-losses-draws' -> '14-3-0' alongside 'tkos-tkoLosses'.
+    That endpoint was never being called.
+
+    Matching is by SUBSTRING on the entry name/displayName rather than an
+    exact key, because only the TKO key was visible in the probe output and
+    guessing the submission key exactly is how the last wrong conclusion got
+    made. Anything unrecognised is logged, so a missed split self-diagnoses
+    on the next run instead of silently staying blank.
+    """
+    out = {}
+    try:
+        resp = requests.get(SITE_ATHLETE_URL.format(athlete_id), headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            return out
+        stats = (resp.json().get("athlete") or {}).get("statsSummary", {}).get("statistics", [])
+    except Exception as exc:
+        print(f"[fighter_backfill] method-records fetch failed for {athlete_id}: {exc}")
+        return out
+
+    unmatched = []
+    for entry in stats or []:
+        name = f"{entry.get('name','')} {entry.get('displayName','')}".lower()
+        w, l = _parse_wl(entry.get("displayValue"))
+        if w is None:
+            continue
+        if "draw" in name or name.strip().startswith("wins-losses"):
+            out["_total_w"], out["_total_l"] = w, l          # for the DEC remainder
+        elif "knockout" in name or "tko" in name or name.startswith("ko"):
+            out["ko_wins"], out["ko_losses"] = w, l
+        elif "submission" in name or "sub" in name:
+            out["sub_wins"], out["sub_losses"] = w, l
+        elif "decision" in name:
+            out["dec_wins"], out["dec_losses"] = w, l
+        else:
+            unmatched.append(f"{entry.get('name')}={entry.get('displayValue')}")
+
+    # DEC by subtraction when ESPN doesn't publish it directly. This is
+    # arithmetic, not inference: 14-3 total with KO 10-1 and SUB 4-1 leaves
+    # DEC 0-1 exactly. Only applied when BOTH other splits are known, so a
+    # missing one can never be silently absorbed into decisions.
+    if "dec_wins" not in out and "_total_w" in out \
+            and "ko_wins" in out and "sub_wins" in out:
+        dw = out["_total_w"] - out["ko_wins"] - out["sub_wins"]
+        dl = out["_total_l"] - out["ko_losses"] - out["sub_losses"]
+        if dw >= 0 and dl >= 0:
+            out["dec_wins"], out["dec_losses"] = dw, dl
+    if unmatched:
+        print(f"[fighter_backfill] unrecognised stat entries for {athlete_id}: {unmatched[:5]}")
+    out.pop("_total_w", None)
+    out.pop("_total_l", None)
+    return out
+
+
 def _fetch_espn_athlete_detail(athlete_id: str) -> tuple[dict, str | None]:
     """
     Pass 2 -- see this module's docstring for the confidence tier of
@@ -855,6 +930,9 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                 # only a single 'overall' entry -- no KO/TKO, Submission, or
                 # Decision breakdown exists in this data at all. Not a parsing
                 # bug to fix; a confirmed absence in the source itself.
+
+                if attempt_athlete_detail and athlete_id:
+                    physical.update(_fetch_espn_method_records(athlete_id))
 
                 if attempt_athlete_detail and eventlog_ref:
                     physical.update(_fetch_espn_last_fight_info(eventlog_ref, athlete_id, name))
