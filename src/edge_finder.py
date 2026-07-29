@@ -337,6 +337,108 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
     return pd.DataFrame(rows).sort_values("edge_pct", ascending=False).reset_index(drop=True)
 
 
+def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
+    """
+    Price Polymarket's FIGHT-LEVEL method markets against the hazard model.
+
+    "Will the fight be won by KO or TKO?" names a method but NEITHER fighter,
+    which is exactly what src/method_model.py predicts -- so no allocation
+    between the two fighters is needed and nothing has to be invented. That's
+    why this market, rather than the per-fighter Method display, is where the
+    model gets used first: the validated object and the traded object are the
+    same object.
+
+    Validated on a frozen 2019+ holdout (n=1743): P(KO) Brier 0.2028 vs 0.2155
+    for base rates, P(SUB) 0.1331 vs 0.1380.
+
+    TWO CAVEATS, both measured:
+
+    1. The chained probability runs ~2.4pp overconfident out of sample and
+       that could not be fitted away (isotonic made calibration WORSE;
+       single-parameter shrinkage selected "no correction"), because the
+       miscalibration is drift rather than bias. Edges here are therefore
+       tilted toward "yes" on finishes.
+
+    2. FIVE-ROUND FIGHTS ARE WORSE, and main events are exactly where the
+       liquidity is. Only 17% of training rows are five-round, and on the
+       holdout the per-round finish hazard is predicted at 19.4% against an
+       actual 14.6% -- a 4.8pp overstatement, versus 1.3pp on three-round
+       fights. Chaining five rounds compounds it, so a title fight's P(KO)
+       is materially too high.
+
+    Hence MAIN_EVENT_SHRINK below: a blunt correction, applied only where the
+    error was measured, and deliberately NOT tuned -- it's the ratio of
+    predicted to actual finish hazard on five-round holdout rows. It makes
+    the number less wrong; it does not make it validated.
+    """
+    from src.method_model import method_probabilities
+
+    rows = []
+    props = upcoming_df[upcoming_df["market"] == "FightMethod"]
+    for _, row in props.iterrows():
+        f_a = fighters_df[fighters_df["name"] == row["fighter_a"]]
+        f_b = fighters_df[fighters_df["name"] == row["fighter_b"]]
+        if f_a.empty or f_b.empty:
+            continue
+        a, b = f_a.iloc[0], f_b.iloc[0]
+
+        wins_a, wins_b = max(int(a["wins"]), 1), max(int(b["wins"]), 1)
+        losses_a, losses_b = max(int(_get(a, "losses", 0)), 1), max(int(_get(b, "losses", 0)), 1)
+        ko_a, ko_b = _get(a, "ko_wins", 0) / wins_a, _get(b, "ko_wins", 0) / wins_b
+        sub_a, sub_b = _get(a, "sub_wins", 0) / wins_a, _get(b, "sub_wins", 0) / wins_b
+        kol_a, kol_b = _get(a, "ko_losses", 0) / losses_a, _get(b, "ko_losses", 0) / losses_b
+        subl_a, subl_b = _get(a, "sub_losses", 0) / losses_a, _get(b, "sub_losses", 0) / losses_b
+
+        gap = 0.0
+        if effective_ratings:
+            gap = abs(effective_ratings.get(row["fighter_a"], 1500)
+                      - effective_ratings.get(row["fighter_b"], 1500)) / 400.0
+
+        # Feature construction mirrors research_survival_model.py exactly --
+        # offense meeting the opponent's vulnerability, not raw rates.
+        dist = method_probabilities(
+            ko_press=ko_a * kol_b + ko_b * kol_a,
+            sub_press=sub_a * subl_b + sub_b * subl_a,
+            ko_rate_sum=ko_a + ko_b,
+            sub_rate_sum=sub_a + sub_b,
+            durability=kol_a + kol_b,
+            elo_gap=gap,
+            scheduled_rounds=5 if str(row.get("card_position", "")).strip() == "Main Event" else 3,
+        )
+        if not dist:
+            continue
+
+        # Measured on five-round holdout rows: 14.6 / 19.4. Applied to the
+        # finish probabilities only, with the remainder going to decision.
+        MAIN_EVENT_SHRINK = 0.75
+        if str(row.get("card_position", "")).strip() == "Main Event":
+            dist = {"ko": dist["ko"] * MAIN_EVENT_SHRINK,
+                    "sub": dist["sub"] * MAIN_EVENT_SHRINK,
+                    "decision": 1.0 - (dist["ko"] + dist["sub"]) * MAIN_EVENT_SHRINK}
+
+        sel = str(row["selection"])
+        base = dist["ko"] if "KO" in sel.upper() else dist["sub"]
+        # "Not KO/TKO" is the complement, and the market prices both sides.
+        model_p = (1 - base) if sel.lower().startswith("not") else base
+
+        imp = american_to_implied_prob(row["odds_american"])
+        rows.append({
+            "fight_id": row["fight_id"],
+            "fighter": f"{row['fighter_a']} vs {row['fighter_b']}",
+            "market": f"Fight Method: {sel}",
+            "odds_american": row["odds_american"],
+            "model_prob": round(model_p, 3),
+            "book_fair_prob": round(imp, 3),
+            "edge_pct": round(edge_percent(model_p, imp), 2),
+            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
+            "clob_token_id": row.get("clob_token_id"),
+        })
+
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).sort_values("edge_pct", ascending=False).reset_index(drop=True)
+
+
 def derive_card_label(row: pd.Series) -> str:
     """Prefer an explicit event name (e.g. 'UFC 329'); fall back to date-based grouping."""
     event_name = (row.get("event_name") or "").strip()

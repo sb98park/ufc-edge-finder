@@ -963,6 +963,20 @@
   .perfect-prop-badge.celebrate {
     animation: perfect-prop-celebrate 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
+  /* Force the padlock DARK inside the badge. The icon's own gradient is
+     purple (#c4b5fd -> #8b5cf6), which sits at almost the same luminance as
+     the gold background -- different hue, no tonal contrast, so it reads as
+     a smudge. The badge's text is near-black and reads perfectly, so the
+     icon should match the text rather than fight the background.
+     A filter is used because the colour lives in an SVG <linearGradient>
+     referenced by url(), which CSS cannot restyle directly -- brightness(0)
+     collapses it to black regardless of what the gradient holds, so this
+     keeps working if the icon is ever recoloured. */
+  .lock-badge .inline-icon {
+    filter: brightness(0);
+    opacity: 0.85;
+    width: 11px; height: 11px; vertical-align: -1px; margin-right: 2px;
+  }
   .lock-badge.celebrate {
     animation: perfect-prop-celebrate 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
