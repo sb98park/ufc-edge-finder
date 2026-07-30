@@ -296,6 +296,32 @@ def group_edges_by_card(
                         model_only.append(row)
             fight["model_only_rows"] = model_only
 
+            # ONE merged view. The old split was by an IMPLEMENTATION detail --
+            # whether a book happens to price that market -- not by anything a
+            # reader cares about, which is why a fighter's KO could sit in a
+            # different table from his opponent's. Every market for both
+            # fighters now appears exactly once here, with book/edge present
+            # only where a line exists.
+            merged = []
+            for e in fight["edges"]:
+                merged.append({
+                    "fighter": e.get("fighter"), "market": e.get("market"),
+                    "model_prob": e.get("model_prob"), "odds_american": e.get("odds_american"),
+                    "book_fair_prob": e.get("book_fair_prob"), "edge_pct": e.get("edge_pct"),
+                    "suggested_stake_pct": e.get("suggested_stake_pct"), "has_line": True,
+                    "clob_token_id": e.get("clob_token_id"),
+                })
+            for r in model_only:
+                merged.append({
+                    "fighter": r.get("fighter"), "market": r.get("market"),
+                    "model_prob": r.get("model_prob"), "has_line": False,
+                })
+            # Priced markets first (they're actionable), then model-only;
+            # within each, highest model probability first so the strongest
+            # reads sit at the top of their group.
+            merged.sort(key=lambda r: (not r["has_line"], -(r.get("model_prob") or 0)))
+            fight["all_market_rows"] = merged
+
         key = (fight["event_name"], fight["event_date"])
         if key not in events_map:
             events_map[key] = {

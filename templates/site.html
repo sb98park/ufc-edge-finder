@@ -2241,6 +2241,13 @@
   @media (prefers-reduced-motion: reduce) {
     details.fight-card[open] > summary { box-shadow: none; }
   }
+  /* Model-only rows sit quieter than priced ones -- the eye should land on
+     markets that carry an edge, with unpriced estimates available but not
+     competing. */
+  tr.model-only-row td { opacity: 0.72; }
+  tr.model-only-row .mkt-model { opacity: 1; color: var(--accent); font-weight: 700; }
+  td.mkt-none { color: var(--muted); opacity: 0.5; }
+  .mkt-model { font-weight: 700; }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3274,42 +3281,35 @@
       </details>
       {% endif %}
 
-      {% if fight.edges %}
-      <div class="market-group-label">{{ icon_barchart() }} Live lines vs. model</div>
+      {# all_market_rows supersedes the old edges/model-only split -- it holds
+         BOTH, so the previous `{% if fight.edges %}` wrapper would have hidden
+         model-only projections whenever a fight had no live lines at all. #}
+      {% if fight.all_market_rows %}
+      <div class="market-group-label">{{ icon_barchart() }} All markets — model vs. book</div>
       <div class="table-scroll"><table>
-        <tr><th>Selection</th><th>Market</th><th>Odds</th><th>Model</th><th>Book Fair</th><th>Edge %</th><th>Stake</th></tr>
-        {% for row in fight.edges %}
-        <tr class="edge-heat-{{ 3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0)) }}">
-          <td>{{ row.fighter }}{% if row.market == 'Moneyline' %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
-          <td>{{ row.market }}</td>
+        <tr><th>Selection</th><th>Market</th><th>Model</th><th>Odds</th><th>Book Fair</th><th>Edge %</th><th>Stake</th></tr>
+        {% for row in fight.all_market_rows %}
+        <tr class="{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}">
+          <td>{{ row.fighter }}{% if row.market == 'Moneyline' and row.has_line %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
+          <td>{{ row.market | short_market }}</td>
+          <td class="mkt-model">{{ (row.model_prob*100)|round(1) }}%</td>
+          {% if row.has_line %}
           <td>{{ odds_cell(row) }}</td>
-          <td>{{ row.model_prob }}</td>
           <td>{{ row.book_fair_prob }}</td>
           <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
           <td>{{ row.suggested_stake_pct }}%</td>
+          {% else %}
+          {# No book line for this market -- em dashes rather than blanks, so
+             an unpriced row reads as "not offered" instead of "missing data". #}
+          <td class="mkt-none">—</td><td class="mkt-none">—</td>
+          <td class="mkt-none">—</td><td class="mkt-none">—</td>
+          {% endif %}
         </tr>
         {% endfor %}
       </table></div>
-      {# Per-prop prose removed: the table directly above already gives book
-         price, model fair and edge for each row -- three numbers that state
-         the same thing more precisely than a sentence, which is why the
-         prose read as skippable. Removing it also fixes a knock-on: KO rows
-         were being SUPPRESSED from Model Projection because this text
-         covered them, so the most-read table was incomplete to avoid
-         duplicating the least-read one. #}
+      <div class="model-only-note">Rows showing — have no live sportsbook line; the model estimate stands alone.</div>
       {% else %}
       <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
-      {% endif %}
-
-      {% if fight.model_only_rows %}
-      <div class="market-group-label">{{ icon_sigma() }} Model projection (no live book line to compare yet)</div>
-      <div class="table-scroll"><table class="model-only-table">
-        <tr><th>Selection</th><th>Market</th><th>Prob</th></tr>
-        {% for row in fight.model_only_rows %}
-        <tr><td>{{ row.fighter }}</td><td>{{ row.market | short_market }}</td><td>{{ (row.model_prob*100)|round(1) }}%</td></tr>
-        {% endfor %}
-      </table></div>
-      <div class="model-only-note">These are model-only estimates, not compared against a live sportsbook line.</div>
       {% endif %}
     </div>
   </details>
