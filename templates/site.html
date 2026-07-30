@@ -1837,7 +1837,13 @@
     backface-visibility: hidden;
   }
   .tabbar-btn.active .inline-icon { opacity: 1; }
-  .tabbar-btn:active { background: rgba(255,255,255,0.04); }
+  /* No :active background. This painted a RECTANGLE across the whole button
+     while the finger was down -- it predates the pill, from when there was no
+     shared indicator to show the pressed state. Against a capsule pill it
+     reads as a box flashing behind the oval, and it stays visible for the
+     entire drag because :active persists while the touch is held.
+     The pressed state is already expressed by the indicator's 1.12 scale,
+     which is both subtler and correctly shaped. */
   /* Content must clear the fixed bar or the last card is unreachable. */
   body { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
   @media (min-width: 1024px) {
