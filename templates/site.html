@@ -1776,14 +1776,33 @@
        height by the browser, so both states are capsules automatically and
        the shape stays consistent as it animates between them. */
     border-radius: 999px; overflow: hidden;
-    background: linear-gradient(180deg, rgba(30,34,44,0.62), rgba(16,19,26,0.72));
-    backdrop-filter: blur(22px) saturate(180%);
-    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    /* Far more transparent than before (0.62/0.72 -> 0.28/0.38). A heavy
+       semi-opaque fill defeats its own blur: if little shows through, there
+       is nothing to blur and the result reads as faded rather than
+       translucent. Thinning the fill and leaning on blur + saturation is what
+       separates real glass from a grey panel.
+       Saturation is pushed to 190% so colour bleeding through stays vivid --
+       desaturated bleed-through is the other thing that reads as muddy. */
+    background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04)),
+                linear-gradient(180deg, rgba(22,26,35,0.28), rgba(12,15,21,0.38));
+    backdrop-filter: blur(26px) saturate(190%);
+    -webkit-backdrop-filter: blur(26px) saturate(190%);
     border: 1px solid rgba(255,255,255,0.10);
     box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.16),   /* specular top edge */
-      inset 0 -1px 0 rgba(0,0,0,0.30),
-      0 8px 28px rgba(0,0,0,0.45);
+      inset 0 1px 0 rgba(255,255,255,0.22),   /* crisp 1px rim */
+      inset 0 -1px 0 rgba(0,0,0,0.28),
+      0 8px 30px rgba(0,0,0,0.42);
+  }
+  /* A soft sheen over the upper half, fading to nothing -- glass catches
+     light along its top curve rather than uniformly. The 1px inset above is
+     the hard rim; this is the falloff beneath it. Sits above the indicator
+     but below the icons, and ignores pointer events so it can't intercept a
+     drag. */
+  .mobile-tabbar::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 55%;
+    border-radius: 999px 999px 0 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0));
+    pointer-events: none; z-index: 1;
   }
   .tabbar-btn {
     flex: 1 1 0; min-width: 0;
@@ -1856,7 +1875,14 @@
        Kept deliberately faint: with the inactive state now muted, the pill
        only has to hint at the selection -- the crisp white glyph does the
        actual work. */
-    background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.07));
+    background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.06));
+    /* Its OWN backdrop-filter, so the pill is a lens rather than a lighter
+       patch of paint. This composes on top of the bar's blur -- the region
+       behind the selected tab gets blurred and brightened a second time,
+       which is what makes it read as a separate pane of glass floating on
+       the first one instead of a flat overlay. */
+    backdrop-filter: blur(8px) saturate(150%) brightness(1.22);
+    -webkit-backdrop-filter: blur(8px) saturate(150%) brightness(1.22);
     box-shadow: none;
     /* transform-origin centre so the press magnification grows outward
        from the pill rather than from its left edge. */
