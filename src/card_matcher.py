@@ -499,7 +499,12 @@ def _sample_size_flag(fighter_field: str, fighters_df: pd.DataFrame | None) -> d
     names = [n.strip() for n in fighter_field.split(" vs ")]
     thinnest = None
     for name in names:
-        row = fighters_df[fighters_df["name"] == name]
+        # Accent-tolerant, same reason as edge_finder: this resolves names
+        # that arrived from Polymarket ("Uros Medic") against a roster that
+        # stores them accented ("Uroš Medić"), so an exact match silently
+        # skipped every fighter with a diacritic.
+        from src.edge_finder import _find_fighter
+        row = _find_fighter(fighters_df, name)
         if row.empty:
             continue
         r = row.iloc[0]

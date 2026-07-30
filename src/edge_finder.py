@@ -16,6 +16,30 @@ from .odds_utils import american_to_implied_prob, implied_prob_to_american, remo
 from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
 
 
+def _fold_name(t):
+    """Lowercase + strip diacritics for cross-source name matching."""
+    import unicodedata
+    return "".join(ch for ch in unicodedata.normalize("NFKD", str(t).lower())
+                   if not unicodedata.combining(ch)).strip()
+
+
+def _find_fighter(fighters_df, name):
+    """
+    Look a fighter up TOLERANTLY of accents.
+
+    Polymarket returns "Uros Medic" while fighters.csv holds "Uroš Medić", so
+    an exact `== name` match failed and every market needing BOTH fighters was
+    silently skipped -- which is why GoesTheDistance classified 40 rows and
+    produced zero edges. Moneyline and Method survived because they only
+    resolve the SELECTED fighter, so a mismatch on the opponent didn't matter.
+    """
+    exact = fighters_df[fighters_df["name"] == name]
+    if not exact.empty:
+        return exact
+    folded = _fold_name(name)
+    return fighters_df[fighters_df["name"].map(_fold_name) == folded]
+
+
 def compute_moneyline_edges(
     upcoming_df: pd.DataFrame, elo_ratings: dict[str, float], fighters_df: pd.DataFrame | None = None,
     fight_history_df: pd.DataFrame | None = None,
@@ -111,14 +135,14 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
         return blend_method_probability(divisional_prior, own_rate, opp_vulnerability, total_wins)
 
     for _, row in props.iterrows():
-        stats = fighters_df[fighters_df["name"] == row["selection"]]
+        stats = _find_fighter(fighters_df, row["selection"])
         if stats.empty:
             continue
         f = stats.iloc[0]
 
         # find the opponent to factor in their specific vulnerability
         opponent_name = row["fighter_b"] if row["selection"] == row["fighter_a"] else row["fighter_a"]
-        opp_stats = fighters_df[fighters_df["name"] == opponent_name]
+        opp_stats = _find_fighter(fighters_df, opponent_name)
 
         if row["selection_method"] == "FINISH":
             # "Wins by finish" = KO/TKO or SUB -- these are mutually
@@ -190,7 +214,7 @@ def compute_round_betting_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataF
         # rather than assuming position, since DK's outcome ordering isn't
         # guaranteed to put fighter_a first.
         fighter_name = row["fighter_a"] if str(row["selection"]).startswith(str(row["fighter_a"])) else row["fighter_b"]
-        stats = fighters_df[fighters_df["name"] == fighter_name]
+        stats = _find_fighter(fighters_df, fighter_name)
         if stats.empty:
             continue
         f = stats.iloc[0]
@@ -249,7 +273,7 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
         finish_rates = []
         first_round_rates = []
         for name in fighters_in_fight:
-            stats = fighters_df[fighters_df["name"] == name]
+            stats = _find_fighter(fighters_df, name)
             if stats.empty:
                 continue
             f = stats.iloc[0]
@@ -298,29 +322,6 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
     return pd.DataFrame(rows).sort_values("edge_pct", ascending=False).reset_index(drop=True)
 
 
-
-def _fold_name(t):
-    """Lowercase + strip diacritics for cross-source name matching."""
-    import unicodedata
-    return "".join(ch for ch in unicodedata.normalize("NFKD", str(t).lower())
-                   if not unicodedata.combining(ch)).strip()
-
-
-def _find_fighter(fighters_df, name):
-    """
-    Look a fighter up TOLERANTLY of accents.
-
-    Polymarket returns "Uros Medic" while fighters.csv holds "Uroš Medić", so
-    an exact `== name` match failed and every market needing BOTH fighters was
-    silently skipped -- which is why GoesTheDistance classified 40 rows and
-    produced zero edges. Moneyline and Method survived because they only
-    resolve the SELECTED fighter, so a mismatch on the opponent didn't matter.
-    """
-    exact = fighters_df[fighters_df["name"] == name]
-    if not exact.empty:
-        return exact
-    folded = _fold_name(name)
-    return fighters_df[fighters_df["name"].map(_fold_name) == folded]
 
 
 def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
