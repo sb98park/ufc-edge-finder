@@ -298,6 +298,31 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
     return pd.DataFrame(rows).sort_values("edge_pct", ascending=False).reset_index(drop=True)
 
 
+
+def _fold_name(t):
+    """Lowercase + strip diacritics for cross-source name matching."""
+    import unicodedata
+    return "".join(ch for ch in unicodedata.normalize("NFKD", str(t).lower())
+                   if not unicodedata.combining(ch)).strip()
+
+
+def _find_fighter(fighters_df, name):
+    """
+    Look a fighter up TOLERANTLY of accents.
+
+    Polymarket returns "Uros Medic" while fighters.csv holds "Uroš Medić", so
+    an exact `== name` match failed and every market needing BOTH fighters was
+    silently skipped -- which is why GoesTheDistance classified 40 rows and
+    produced zero edges. Moneyline and Method survived because they only
+    resolve the SELECTED fighter, so a mismatch on the opponent didn't matter.
+    """
+    exact = fighters_df[fighters_df["name"] == name]
+    if not exact.empty:
+        return exact
+    folded = _fold_name(name)
+    return fighters_df[fighters_df["name"].map(_fold_name) == folded]
+
+
 def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
     """
     'Fight goes the distance' vs 'ends in a finish' -- derived the same way
@@ -307,8 +332,8 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
     props = upcoming_df[upcoming_df["market"] == "GoesTheDistance"]
 
     for _, row in props.iterrows():
-        f_a = fighters_df[fighters_df["name"] == row["fighter_a"]]
-        f_b = fighters_df[fighters_df["name"] == row["fighter_b"]]
+        f_a = _find_fighter(fighters_df, row["fighter_a"])
+        f_b = _find_fighter(fighters_df, row["fighter_b"])
         if f_a.empty or f_b.empty:
             continue
         a, b = f_a.iloc[0], f_b.iloc[0]
@@ -376,8 +401,8 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
     rows = []
     props = upcoming_df[upcoming_df["market"] == "FightMethod"]
     for _, row in props.iterrows():
-        f_a = fighters_df[fighters_df["name"] == row["fighter_a"]]
-        f_b = fighters_df[fighters_df["name"] == row["fighter_b"]]
+        f_a = _find_fighter(fighters_df, row["fighter_a"])
+        f_b = _find_fighter(fighters_df, row["fighter_b"])
         if f_a.empty or f_b.empty:
             continue
         a, b = f_a.iloc[0], f_b.iloc[0]
@@ -491,6 +516,11 @@ def find_all_edges(
         compute_total_rounds_edges(upcoming_df, fighters_df),
         compute_goes_the_distance_edges(upcoming_df, fighters_df),
         compute_round_betting_edges(upcoming_df, fighters_df),
+        # FightMethod was built last session and left unwired pending review,
+        # then never connected -- 80 classified rows per card with no path to
+        # the site. These are Polymarket's "Will the fight be won by KO/TKO?"
+        # markets, which the hazard model prices directly.
+        find_fight_method_edges(upcoming_df, fighters_df, elo_ratings),
     ]
     frames = [f for f in frames if not f.empty]
     if not frames:
