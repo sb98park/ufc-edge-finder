@@ -3755,7 +3755,7 @@
     initDesktopLayoutIfNeeded();
 
     // ===== Collapse the tab bar while scrolling down =====
-    (function initTabBarCollapse() {
+    function initTabBarCollapse() {
       const bar = document.getElementById('mobile-tabbar');
       if (!bar) return;
       let lastY = window.scrollY || 0, compact = false;
@@ -3780,7 +3780,17 @@
       bar.addEventListener('touchstart', () => {
         if (compact) { compact = false; bar.classList.remove('compact'); }
       }, { passive: true });
-    })();
+    }
+    // Deferred, for the THIRD time in this feature: this script block runs
+    // during parsing and the <nav> is emitted ~60k characters later, so any
+    // getElementById here returns null and the early-return guard silently
+    // wires nothing. Every init that looks up an element in the page body
+    // must wait for DOMContentLoaded.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTabBarCollapse);
+    } else {
+      initTabBarCollapse();
+    }
 
 
     // ===== Draggable tab bar =====
@@ -3915,7 +3925,7 @@
     // ===== Fight list: filter + expand-all =====
     // Ten-plus collapsed cards with no way to narrow them means a lot of
     // tapping to reach the two picks you actually care about.
-    (function initFightControls() {
+    function initFightControls() {
       const bar = document.getElementById('fight-controls');
       if (!bar) return;
       const cards = () => Array.from(document.querySelectorAll('.detail-section[data-section="thisweekend"] .fight-card'));
@@ -3941,7 +3951,12 @@
         visible.forEach(c => { c.open = anyClosed; });
         toggle.textContent = anyClosed ? 'Collapse all' : 'Expand all';
       });
-    })();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initFightControls);
+    } else {
+      initFightControls();
+    }
 
     // ===== Scroll position per section =====
     // Switching tabs and losing your place is the clearest "website, not app"
