@@ -1795,7 +1795,13 @@
   }
   .tabbar-btn span { display: block; line-height: 1; }
   .tabbar-btn .inline-icon {
-    width: 23px; height: 23px; margin: 0; opacity: 0.75;
+    width: 23px; height: 23px; margin: 0; opacity: 0.62;
+    /* MONOTONE, and not only to match iOS. The Phase 3 colour system reserves
+       gold for "model" and cyan for "market" -- semantic roles. Tab icons are
+       NAVIGATION, not data, so every gold pixel here dilutes what gold means
+       on a fight card. grayscale() neutralises them without rewriting five
+       icon macros, and keeps working if any icon is recoloured later. */
+    filter: grayscale(1) brightness(1.35);
     /* Pin the compositing layer. Toggling opacity on activation promotes the
        icon to its own layer, and promotion routinely re-rounds its position
        to a different subpixel -- which is the faint left/right shift when
@@ -1808,7 +1814,7 @@
     will-change: opacity;
     backface-visibility: hidden;
   }
-  .tabbar-btn.active { color: var(--accent); }
+  .tabbar-btn.active { color: var(--text); }
   .tabbar-btn.active .inline-icon { opacity: 1; }
   .tabbar-btn:active { background: rgba(255,255,255,0.04); }
   /* Content must clear the fixed bar or the last card is unreachable. */
@@ -1839,8 +1845,12 @@
        bar's effective radius is 30 and the pill's is 25, exactly 30 - 5; at
        41px it's 20.5 and 15.5. The nested-radius rule holds at every height
        without hard-coding a value per state. */
-    border-radius: 999px; background: rgba(212,175,55,0.16);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+    border-radius: 999px;
+    /* Neutral wash rather than gold: this pill is the single largest tinted
+       element on screen, and pointing the brand colour at navigation competes
+       with the data it should be reserved for. */
+    background: rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
     /* transform-origin centre so the press magnification grows outward
        from the pill rather than from its left edge. */
     transform-origin: center;
@@ -1855,7 +1865,7 @@
      lags behind the touch and stops feeling attached to it. */
   .mobile-tabbar.dragging .tabbar-indicator { transition: none; }
   .tabbar-btn > * { position: relative; z-index: 1; }
-  .tabbar-btn.active { color: var(--accent); }
+  .tabbar-btn.active { color: var(--text); }
 
   @media (max-width: 1023px) {
     /* The back button existed because the hub was the only way out of a
@@ -2040,6 +2050,10 @@
   }
   .mobile-tabbar.compact .tabbar-btn { padding-top: 9px; padding-bottom: 9px; }
   .mobile-tabbar.compact .tabbar-btn span { max-height: 0; opacity: 0; margin-top: -4px; }
+  /* Active state: brightness and a neutral wash, not hue. The contrast comes
+     from light rather than colour, which is what makes a native tab bar read
+     as calm -- and it leaves the accent free to mean one thing. */
+  .tabbar-btn.active .inline-icon { opacity: 1; filter: grayscale(1) brightness(1.9); }
   /* Inset stays 5px in BOTH states. Changing it to 4px when compact would
      break the equal-inset condition the concentric capsule relies on. */
   @media (prefers-reduced-motion: reduce) {
@@ -3844,16 +3858,10 @@
         if (!compact) return;
         compact = false;
         bar.classList.remove('compact');
-        // The bar is now ANIMATING back to full width. initTabDrag's release
-        // handler runs moveTo() on the same tap, which reads offsetWidth and
-        // offsetLeft -- mid-transition those return intermediate values, so
-        // the pill lands too narrow and too far left (its right edge barely
-        // reaching the tapped icon). Re-measure once the width has settled.
-        setTimeout(() => {
-          if (window.__syncTabBar) {
-            window.__syncTabBar(document.body.dataset.section || 'thisweekend');
-          }
-        }, 300);
+        // No deferred correction needed any more: initTabDrag computes tab
+        // geometry from this class rather than measuring live layout, so the
+        // moment 'compact' is removed it already targets the expanded
+        // positions. Re-syncing afterwards would just be a second move.
       }, { passive: true });
     }
     // Deferred, for the THIRD time in this feature: this script block runs
@@ -3887,16 +3895,33 @@
       let lastX = 0;
 
       // INSET must match the vertical one (5px) or the pill is only
-      // concentric top-and-bottom: spanning the full button width made it
-      // touch the bar's edge at the first and last tabs, which is what read
-      // as an uneven, dropped-in rectangle.
+      // concentric top-and-bottom.
       const INSET = 5;
+      const BAR_BORDER = 1;
+
+      // SINGLE SOURCE OF TRUTH for tab geometry, COMPUTED not measured.
+      // Every geometry bug in this feature came from reading offsetWidth /
+      // offsetLeft while the bar was animating: the scroll-collapse stretch,
+      // the width-narrowing drift, and the pill landing left on tap. Live
+      // layout lags the animation, so a measurement taken during it is
+      // always an intermediate value.
+      // The class reflects the TARGET state immediately, and tabs are equal
+      // flex items inside a known inset, so arithmetic gives the final
+      // geometry the instant the class changes -- no animation to wait out
+      // and no reflow forced.
+      function geom(index) {
+        const inset = bar.classList.contains('compact') ? 46 : 12;
+        const barW = Math.max(0, window.innerWidth - inset * 2 - BAR_BORDER * 2);
+        const tabW = barW / Math.max(1, btns.length);
+        return { tabW, width: Math.max(0, tabW - INSET * 2), x: index * tabW + INSET };
+      }
 
       // SNAPPED position -- used on release and for external navigation.
       function moveTo(btn) {
         if (!btn) return;
-        ind.style.width = Math.max(0, btn.offsetWidth - INSET * 2) + 'px';
-        lastX = btn.offsetLeft + INSET;
+        const g = geom(btns.indexOf(btn));
+        ind.style.width = g.width + 'px';
+        lastX = g.x;
         setX(lastX);
       }
 
@@ -3917,11 +3942,14 @@
         setX(x);
       }
       function btnAt(clientX) {
+        // Hit-test against the same computed grid, so selection and rendering
+        // can never disagree about where a tab starts.
         const r = bar.getBoundingClientRect();
-        // clientLeft is the border width -- subtracting it puts x in the same
-        // padding-box space that offsetLeft uses, rather than 1px off.
         const x = clientX - r.left - bar.clientLeft;
-        return btns.find(b => x >= b.offsetLeft && x < b.offsetLeft + b.offsetWidth) || null;
+        const { tabW } = geom(0);
+        if (tabW <= 0) return null;
+        const i = Math.floor(x / tabW);
+        return btns[Math.max(0, Math.min(btns.length - 1, i))] || null;
       }
       function paint(btn) {
         btns.forEach(b => b.classList.toggle('active', b === btn));
