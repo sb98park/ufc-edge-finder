@@ -749,7 +749,8 @@
     0%, 100% { opacity: 0.55; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.06); }
   }
-  /* Height published as a variable so .fight-sticky can pin BELOW these
+  /* Height published as a variable so an expanded fight card's <summary>
+     can pin BELOW these
      rather than behind them: 11px padding top + 11px bottom + ~16px line +
      2px active underline + 1px border = ~41px. */
   :root { --seg-tabs-h: 41px; }
@@ -2202,37 +2203,6 @@
      A long fight card scrolls the names out of view, so you lose track of
      whose stats you're reading. Pins BELOW the page header, and only while
      that card is open. */
-  /* WHY THIS NEEDED THREE FIXES, all invisible in the CSS itself:
-     position:sticky is silently disabled by ANY ancestor that establishes a
-     scroll container. `body { overflow-x: hidden }` did it document-wide and
-     `.fight-card { overflow: hidden }` did it again locally. `overflow: clip`
-     contains spill identically WITHOUT creating that container, so both keep
-     their original purpose and sticky works.
-     No error is raised for either -- the element simply scrolls away as if
-     position:sticky were never declared, which is why this looked like the
-     feature "not working" rather than a layout conflict. */
-  .fight-sticky {
-    position: sticky;
-    /* BELOW .seg-tabs, not behind it. Those tabs are already sticky at top:0
-       with z-index 40, so a fight header pinned at top:4px with the same
-       z-index lands underneath them and is never seen -- which is exactly
-       what "the sticky header isn't working" looked like.
-       Offset by their height, and z-index 39 so the tabs stay in front if
-       the two ever overlap during a scroll. */
-    z-index: 39;
-    top: var(--seg-tabs-h, 41px);
-    display: none; align-items: center; gap: 8px;
-    padding: 7px 12px; margin: 0 0 8px;
-    background: rgba(12,15,21,0.82);
-    backdrop-filter: blur(14px) saturate(160%);
-    -webkit-backdrop-filter: blur(14px) saturate(160%);
-    border-bottom: 1px solid var(--border);
-    font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em;
-  }
-  details.fight-card[open] > .fight-sticky { display: flex; }
-  .fight-sticky .fs-vs { color: var(--muted); font-weight: 600; }
-  .fight-sticky .fs-a { color: var(--accent); }
-  .fight-sticky .fs-b { color: var(--accent-cool); }
 
   /* ===== 4. Staggered row entry =====
      The waterfall already staggers its factor rows; extending the same
@@ -2244,6 +2214,32 @@
     .reveal-target.revealed { transition-delay: 0ms !important; }
     .roll-wrap.rolling .roll-old,
     .roll-wrap.rolling .roll-new { animation: none; }
+  }
+
+  /* ===== Sticky matchup header while a card is expanded =====
+     The <summary> ITSELF pins, rather than a duplicate bar. Two reasons:
+     a copy would drift out of sync with the real header, and sticky is
+     constrained by its PARENT's box -- anything nested inside <summary>
+     would stick only for the summary's own height, which is useless. The
+     summary is a direct child of <details>, so it can pin for the card's
+     full length.
+     Offset by --seg-tabs-h so it lands below the Main Card / Prelims tabs,
+     which are themselves sticky at top:0; z-index 39 keeps those in front.
+     Only while OPEN -- a collapsed card is already its own header. */
+  details.fight-card[open] > summary {
+    position: sticky; top: var(--seg-tabs-h, 41px); z-index: 39;
+    background: var(--panel);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.38);
+    border-bottom: 1px solid var(--border);
+  }
+  /* Trim the vertical cost while pinned: the avatars and chip rows are
+     orientation aids, not reading material, so they tighten rather than
+     disappear -- losing them entirely would make the pinned bar stop
+     matching the header it replaced. */
+  details.fight-card[open] > summary .matchup-content { padding-top: 6px; padding-bottom: 6px; }
+  details.fight-card[open] > summary .fun-fact-chip-row { margin-top: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    details.fight-card[open] > summary { box-shadow: none; }
   }
 </style>
 <script>
@@ -3068,11 +3064,6 @@
 
   {% macro render_fight_card(fight, card_index=none) %}
   <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label }}{{ ' fight-cancelled' if fight.cancelled }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" data-confidence="{{ (fight.preview.confidence_label if fight.preview else '')|lower|replace(' confidence','') }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
-    <div class="fight-sticky" aria-hidden="true">
-      <span class="fs-a">{{ fight.fighter_a }}</span>
-      <span class="fs-vs">vs</span>
-      <span class="fs-b">{{ fight.fighter_b }}</span>
-    </div>
     <summary>
       <div class="matchup-content">
       {% if fight.cancelled %}
