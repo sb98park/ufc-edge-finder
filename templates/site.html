@@ -1832,8 +1832,11 @@
     /* transform-origin centre so the press magnification grows outward
        from the pill rather than from its left edge. */
     transform-origin: center;
-    transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
-                width 0.28s cubic-bezier(0.22,1,0.36,1);
+    /* 0.24s to MATCH .mobile-tabbar's left/right transition exactly -- a
+       different duration or easing makes the pill and the bar arrive at
+       different moments, which reads as the pill lagging or overshooting. */
+    transition: transform 0.24s cubic-bezier(0.22,1,0.36,1),
+                width 0.24s cubic-bezier(0.22,1,0.36,1);
     pointer-events: none; z-index: 0;
   }
   /* While a finger is down the indicator must track without easing, or it
@@ -3767,6 +3770,9 @@
       const bar = document.getElementById('mobile-tabbar');
       if (!bar) return;
       let lastY = window.scrollY || 0, compact = false;
+      const btns = () => Array.from(bar.querySelectorAll('.tabbar-btn'));
+      const btnCount = () => Math.max(1, btns().length);
+      const activeIndex = () => btns().findIndex(b => b.classList.contains('active'));
       const THRESHOLD = 8;   // ignore sub-pixel and rubber-band jitter
 
       function onScroll() {
@@ -3779,26 +3785,39 @@
         lastY = y;
         if (want === compact) return;
         compact = want;
+
+        // Move the indicator IN LOCKSTEP with the bar, not after it.
+        // Re-syncing on transitionend made the two animations sequential: the
+        // bar resized while the indicator held stale geometry (reading as a
+        // stretch), then corrected itself afterwards (the snap-back). Both
+        // must start in the same frame.
+        //
+        // At this instant the DOM still reports the OLD width -- layout hasn't
+        // recalculated -- so the target geometry is COMPUTED rather than
+        // measured. Insets are known constants, tabs are equal-width flex
+        // items, so predicting is exact and avoids a forced reflow.
+        const inset = compact ? 46 : 12;
+        const barW = Math.max(0, window.innerWidth - inset * 2);
+        const tabW = barW / btnCount();
+        const idx = activeIndex();
+        if (idx >= 0 && tabW > 0) {
+            const ind = document.getElementById('tabbar-indicator');
+            if (ind) {
+                const PILL_INSET = 5;      // matches moveTo() in initTabDrag
+                ind.style.width = Math.max(0, tabW - PILL_INSET * 2) + 'px';
+                ind.style.transform = 'translateX(' + (idx * tabW + PILL_INSET) + 'px) scale(1)';
+            }
+        }
         bar.classList.toggle('compact', compact);
-        // CRITICAL: the drag indicator's width and translateX are computed
-        // from bar.offsetWidth and each button's offsetLeft/offsetWidth. The
-        // bar just changed width, so those measurements are now stale and the
-        // pill would sit misaligned until the next tap. Re-sync AFTER the
-        // transition settles -- measuring mid-animation captures an
-        // intermediate width and lands it in the wrong place.
-        const resync = () => {
+        // A single measured correction once layout has settled. The computed
+        // values above should already be exact, so this is a no-op safety net
+        // rather than a visible move -- and because it runs after the
+        // transition, an exact prediction produces no animation at all.
+        setTimeout(() => {
           if (window.__syncTabBar) {
             window.__syncTabBar(document.body.dataset.section || 'thisweekend');
           }
-        };
-        bar.addEventListener('transitionend', function once(e) {
-          if (e.propertyName !== 'left') return;      // one property, not all three
-          bar.removeEventListener('transitionend', once);
-          resync();
-        });
-        // Fallback: transitionend never fires if the transition is skipped
-        // (reduced-motion, or a class toggle that doesn't actually animate).
-        setTimeout(resync, 300);
+        }, 320);
       }
       window.addEventListener('scroll', onScroll, { passive: true });
 
