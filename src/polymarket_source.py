@@ -515,6 +515,38 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     is_yes_no = {o.strip().lower() for o in outcomes} == {"yes", "no"}
     clob_token_ids = _safe_json_loads(market.get("clobTokenIds"))
 
+    # OVER/UNDER markets are neither Yes/No nor a fighter pair. Polymarket
+    # phrases round totals as "O/U 1.5 Rounds" with outcomes ["Over","Under"],
+    # so the is_yes_no split sent them down the moneyline branch and invented
+    # two fighters called "Over" and "Under" -- which is why TotalRounds
+    # classified ZERO rows despite five lines being offered per fight.
+    is_over_under = {o.strip().lower() for o in outcomes} == {"over", "under"}
+    if is_over_under and title_pair:
+        line = _extract_round_line(question)
+        if line:
+            f_a, f_b = title_pair
+            over_i = 0 if outcomes[0].strip().lower() == "over" else 1
+            prices = [price_a, 1 - price_a]
+            try:
+                over_odds = implied_prob_to_american(prices[over_i])
+                under_odds = implied_prob_to_american(prices[1 - over_i])
+            except (ValueError, ZeroDivisionError):
+                return []
+            rows.append({
+                "fight_id": fight_id, "fighter_a": f_a, "fighter_b": f_b,
+                "market": "TotalRounds", "selection": f"Over {line}", "selection_method": line,
+                "odds_american": over_odds,
+                "clob_token_id": clob_token_ids[over_i] if len(clob_token_ids) > over_i else None,
+            })
+            rows.append({
+                "fight_id": fight_id, "fighter_a": f_a, "fighter_b": f_b,
+                "market": "TotalRounds", "selection": f"Under {line}", "selection_method": line,
+                "odds_american": under_odds,
+                "clob_token_id": clob_token_ids[1 - over_i] if len(clob_token_ids) > (1 - over_i) else None,
+            })
+            return rows
+        return []
+
     if not is_yes_no:
         # outcomes ARE the two fighter names -- a moneyline market
         fighter_a, fighter_b = outcomes[0], outcomes[1]

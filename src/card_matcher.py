@@ -318,6 +318,20 @@ def group_edges_by_card(
             projection = build_full_market_projection(
                 fight["fighter_a"], fight["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round
             )
+            # A 3-round fight has no 3.5 or 4.5 line -- only main events (and
+            # title fights) are scheduled for 5. If a stray one ever arrives
+            # from the book, or a projection is generated for the wrong
+            # length, it's nonsense rather than a long shot, so drop it.
+            max_line = 4.5 if is_five_round else 2.5
+
+            def _round_line_out_of_range(e):
+                import re as _re
+                txt = f"{e.get('market','')} {e.get('selection','')}"
+                m = _re.search(r"(\d+\.5)", txt)
+                if not m or "round" not in txt.lower():
+                    return False
+                return float(m.group(1)) > max_line
+
             model_only = []
             if projection:
                 # Match on FIGHTER + MARKET, not market alone. "Method: KO/TKO"
@@ -331,6 +345,8 @@ def group_edges_by_card(
                               for e in fight["edges"]}
                 for row in projection["method_rows"] + projection["rounds_rows"] + projection["distance_rows"]:
                     pair = (str(row.get("fighter", "")).strip(), str(row.get("market", "")).strip())
+                    if _round_line_out_of_range(row):
+                        continue
                     if pair not in live_pairs:
                         model_only.append(row)
             fight["model_only_rows"] = model_only
@@ -357,7 +373,7 @@ def group_edges_by_card(
 
             merged = []
             for e in fight["edges"]:
-                if _is_complement(e):
+                if _is_complement(e) or _round_line_out_of_range(e):
                     continue
                 merged.append({
                     "fighter": e.get("fighter"), "market": e.get("market"),
