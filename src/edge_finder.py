@@ -12,7 +12,7 @@ import re
 
 import pandas as pd
 
-from .odds_utils import american_to_implied_prob, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob
+from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob
 from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
 
 
@@ -337,11 +337,30 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
         if f_a.empty or f_b.empty:
             continue
         a, b = f_a.iloc[0], f_b.iloc[0]
-        dec_rate_a = _get(a, "dec_wins", 0) / max(int(a["wins"]), 1)
-        dec_rate_b = _get(b, "dec_wins", 0) / max(int(b["wins"]), 1)
-        # rough proxy: average of both fighters' decision tendency as the
-        # fight-level chance it goes the distance
-        goes_distance_prob = (dec_rate_a + dec_rate_b) / 2
+        # Use the HAZARD MODEL's decision probability, not a proxy. The old
+        # "average of both fighters' decision tendency" came from a different
+        # model than the KO and submission rows, so the three fight-level
+        # method probabilities had nothing forcing them to sum to 1 -- they
+        # were landing near 104%. The hazard model produces P(decision) as
+        # the chance of surviving every round, so taking all three from it
+        # makes them exhaustive by construction.
+        from src.method_model import method_probabilities
+        wins_a, wins_b = max(int(a["wins"]), 1), max(int(b["wins"]), 1)
+        losses_a, losses_b = max(int(_get(a, "losses", 0)), 1), max(int(_get(b, "losses", 0)), 1)
+        ko_a, ko_b = _get(a, "ko_wins", 0) / wins_a, _get(b, "ko_wins", 0) / wins_b
+        sub_a, sub_b = _get(a, "sub_wins", 0) / wins_a, _get(b, "sub_wins", 0) / wins_b
+        kol_a, kol_b = _get(a, "ko_losses", 0) / losses_a, _get(b, "ko_losses", 0) / losses_b
+        subl_a, subl_b = _get(a, "sub_losses", 0) / losses_a, _get(b, "sub_losses", 0) / losses_b
+        _dist = method_probabilities(
+            ko_press=ko_a * kol_b + ko_b * kol_a,
+            sub_press=sub_a * subl_b + sub_b * subl_a,
+            ko_rate_sum=ko_a + ko_b, sub_rate_sum=sub_a + sub_b,
+            durability=kol_a + kol_b, elo_gap=0.0,
+            scheduled_rounds=5 if str(row.get("card_position", "")).strip() == "Main Event" else 3,
+        )
+        if not _dist:
+            continue
+        goes_distance_prob = _dist["decision"]
 
         model_p = goes_distance_prob if "distance" in row["selection"].lower() and "ends" not in row["selection"].lower() else (1 - goes_distance_prob)
         imp = american_to_implied_prob(row["odds_american"])
@@ -521,8 +540,148 @@ def find_all_edges(
         # the site. These are Polymarket's "Will the fight be won by KO/TKO?"
         # markets, which the hazard model prices directly.
         find_fight_method_edges(upcoming_df, fighters_df, elo_ratings),
+        # Derived book lines LAST, so a real published line always wins if
+        # both somehow exist for the same selection.
+        _score_derived_lines(derive_missing_method_lines(upcoming_df), fighters_df, elo_ratings),
     ]
     frames = [f for f in frames if not f.empty]
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True).sort_values("edge_pct", ascending=False).reset_index(drop=True)
+
+
+def _score_derived_lines(derived_df, fighters_df, elo_ratings):
+    """
+    Attach our model probability and an edge to each derived book line.
+
+    The derivation produces a PRICE with no model view attached; without this
+    the row would show odds and a blank model column, which is the opposite
+    of what the table is for.
+    """
+    if derived_df is None or derived_df.empty:
+        return pd.DataFrame()
+    rows = []
+    for r in derived_df.to_dict("records"):
+        method = str(r["market"]).split(":", 1)[1].strip()
+        f = _find_fighter(fighters_df, r["fighter"])
+        if f.empty:
+            continue
+        row = f.iloc[0]
+        wins = max(int(row["wins"]), 1)
+        col = {"KO/TKO": "ko_wins", "SUB": "sub_wins"}.get(method)
+        if not col:
+            continue
+        model_p = _get(row, col, 0) / wins
+        imp = r["book_fair_prob"]
+        rows.append({**r, "model_prob": round(model_p, 3),
+                     "edge_pct": round(edge_percent(model_p, imp), 2),
+                     "suggested_stake_pct": round(
+                         kelly_fraction(market_blended_prob(model_p, imp), r["odds_american"]) * 100, 2)})
+    return pd.DataFrame(rows)
+
+
+def derive_missing_method_lines(upcoming_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Derive a missing per-fighter method line by SUBTRACTION within the book.
+
+    THE IDENTITY. "Fight ends by KO" is exactly "A wins by KO" OR "B wins by
+    KO", and those are mutually exclusive. So:
+
+        P(B by KO) = P(fight ends by KO) - P(A by KO)
+
+    WHY THIS IS SAFE WHERE OUR OWN SUBTRACTION WASN'T. Doing this across our
+    two models is not valid -- research_method_reconciliation.py measured the
+    per-fighter and fight-level models disagreeing by a mean of -11.3% on KO
+    (worst -29.2%) and +4.5% on submission, in OPPOSITE directions. Subtracting
+    across that gap inherits it.
+    Here both terms come from the SAME source: Polymarket. There is only one
+    model involved, so no gap exists to inherit. The output is a derived BOOK
+    line, not a derived model estimate.
+
+    DEVIGGING IS MANDATORY, not a refinement. Raw Yes prices carry the book's
+    margin -- the app showed KO 82% + SUB 25% + DEC 20% = 127%. Subtracting
+    two inflated numbers gives a third that is wrong by the difference of two
+    different overrounds. Each binary is normalised against its own No side
+    first, which is why the complement rows are kept in the data even though
+    the table hides them.
+
+    Only fires when exactly ONE leg is missing; with both unknown, subtraction
+    cannot split them and nothing is emitted.
+    """
+    if upcoming_df is None or upcoming_df.empty:
+        return pd.DataFrame()
+
+    def _devig(yes_odds, no_odds):
+        """Normalise a binary pair to a fair, no-vig probability."""
+        # Uses the repo's existing remove_vig_two_way rather than a second
+        # implementation -- a duplicate would be one more place to drift.
+        try:
+            p_yes = american_to_implied_prob(float(yes_odds))
+            p_no = american_to_implied_prob(float(no_odds))
+        except (TypeError, ValueError):
+            return None
+        if p_yes + p_no <= 0:
+            return None
+        fair_yes, _ = remove_vig_two_way(p_yes, p_no)
+        return fair_yes
+
+    rows = []
+    for fid, grp in upcoming_df.groupby("fight_id"):
+        recs = grp.to_dict("records")
+        f_a = str(recs[0].get("fighter_a", "")).strip()
+        f_b = str(recs[0].get("fighter_b", "")).strip()
+
+        def _sel(market, selection):
+            for r in recs:
+                if str(r.get("market", "")) == market and \
+                        str(r.get("selection", "")).strip().lower() == selection.lower():
+                    return r
+            return None
+
+        for method_key, yes_sel, not_sel in (("KO/TKO", "KO/TKO", "Not KO/TKO"),
+                                             ("SUB", "SUB", "Not SUB")):
+            fight_yes = _sel("FightMethod", yes_sel)
+            fight_no = _sel("FightMethod", not_sel)
+            if not fight_yes or not fight_no:
+                continue
+            p_fight = _devig(fight_yes.get("odds_american"), fight_no.get("odds_american"))
+            if p_fight is None:
+                continue
+
+            # Per-fighter legs for this method, devigged the same way.
+            legs = {}
+            for name in (f_a, f_b):
+                leg_yes = _sel("Method", name)
+                if leg_yes is None:
+                    continue
+                # The Method market's own complement isn't published as a
+                # separate row, so fall back to the raw implied probability.
+                # It is the only unnormalised term here; flagged below.
+                try:
+                    legs[name] = american_to_implied_prob(float(leg_yes.get("odds_american")))
+                except (TypeError, ValueError):
+                    pass
+
+            if len(legs) != 1:
+                continue          # both known (nothing to derive) or both missing
+            known_name, known_p = next(iter(legs.items()))
+            missing_name = f_b if known_name == f_a else f_a
+            derived = p_fight - known_p
+
+            # A negative or near-zero remainder means the two prices are
+            # inconsistent -- usually a stale quote on one side. Emitting it
+            # would put a fabricated number next to real ones.
+            if derived <= 0.005 or derived >= 1.0:
+                continue
+
+            rows.append({
+                "fight_id": fid, "fighter": missing_name,
+                "market": f"Method: {method_key}",
+                "model_prob": None,
+                "odds_american": implied_prob_to_american(derived),
+                "book_fair_prob": round(derived, 3),
+                "edge_pct": None, "suggested_stake_pct": None,
+                "clob_token_id": None,
+                "derived_from": f"{p_fight:.3f} fight-level minus {known_p:.3f} {known_name}",
+            })
+    return pd.DataFrame(rows)
