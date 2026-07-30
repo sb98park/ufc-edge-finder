@@ -2227,7 +2227,7 @@
      which are themselves sticky at top:0; z-index 39 keeps those in front.
      Only while OPEN -- a collapsed card is already its own header. */
   details.fight-card[open] > summary {
-    position: sticky; top: var(--seg-tabs-h, 41px); z-index: 39;
+    position: sticky; top: var(--seg-tabs-h, 44px); z-index: 39;
     background: var(--panel);
     box-shadow: 0 6px 16px rgba(0,0,0,0.38);
     border-bottom: 1px solid var(--border);
@@ -3972,6 +3972,34 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // ===== Measure the sticky segment tabs =====
+    // --seg-tabs-h was a hand-estimated 41px, and being even 2px short leaves
+    // a gap the expanded card's content peeks through. Padding, line-height
+    // and the active underline all shift with font rendering, so the value
+    // can't be reliably predicted -- measure it instead.
+    // Safe to measure here (unlike the tab bar's geometry): .seg-tabs is not
+    // animated, so offsetHeight is stable rather than mid-transition.
+    function syncSegTabsHeight() {
+      const seg = document.querySelector('.seg-tabs');
+      if (!seg) return;
+      const h = Math.ceil(seg.getBoundingClientRect().height);
+      if (h > 0) {
+        // Minus 1px so the sticky header tucks UNDER the tabs rather than
+        // butting against them. The tabs are opaque and sit at a higher
+        // z-index, so a 1px overlap is invisible -- while a 1px gap is not.
+        document.documentElement.style.setProperty('--seg-tabs-h', (h - 1) + 'px');
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', syncSegTabsHeight);
+    } else {
+      syncSegTabsHeight();
+    }
+    window.addEventListener('resize', syncSegTabsHeight, { passive: true });
+    // Segment tabs are re-rendered on card switches, so re-measure then too.
+    window.addEventListener('load', syncSegTabsHeight);
+
 
     // ===== Haptics =====
     // Android gives a real tactile click; iOS Safari ignores vibrate()
