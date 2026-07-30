@@ -1825,6 +1825,20 @@
     letter-spacing: 0.02em; -webkit-tap-highlight-color: transparent;
   }
   .tabbar-btn span { display: block; line-height: 1; }
+  /* STROKE-ONLY OUTLINES, the Instagram / SF Symbols treatment. The house
+     icon style pairs a low-opacity interior fill with a gradient stroke,
+     which gives the two-tone look; removing the fill leaves pure outlines
+     with transparent centres.
+     Targeted at [stroke] deliberately rather than every shape: the padlock's
+     keyhole is a fill-only circle with no stroke, and a blanket fill:none
+     would erase it. Solid accent details like that are part of the outline
+     idiom too -- SF Symbols does exactly the same thing.
+     CSS wins over SVG presentation attributes, so no markup changes and the
+     same macros keep their two-tone look everywhere else on the site. */
+  .tabbar-btn .inline-icon [stroke] { fill: none; }
+  /* Outlines need a touch more weight than a filled shape to read at 23px. */
+  .tabbar-btn .inline-icon [stroke-width] { stroke-width: 2; }
+
   .tabbar-btn .inline-icon {
     width: 23px; height: 23px; margin: 0; opacity: 0.55;
     /* MONOTONE, and not only to match iOS. The Phase 3 colour system reserves
