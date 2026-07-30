@@ -341,10 +341,21 @@ def group_edges_by_card(
                 # Decision for each man but no KO at all. The gap was covered
                 # by the per-prop prose beneath the table; with that prose
                 # removed, the table has to be complete on its own.
-                live_pairs = {(str(e.get("fighter", "")).strip(), str(e.get("market", "")).strip())
+                # Fold accents on BOTH sides of the key. Live rows carry
+                # Polymarket's spelling ("Uros Medic") while projections use
+                # the roster's ("Uroš Medić"), so an exact pair comparison
+                # never matched and every round total rendered TWICE -- once
+                # with a live line, once as a model-only row.
+                import unicodedata as _ud
+
+                def _fold(t):
+                    return "".join(ch for ch in _ud.normalize("NFKD", str(t).lower())
+                                   if not _ud.combining(ch)).strip()
+
+                live_pairs = {(_fold(e.get("fighter", "")), _fold(e.get("market", "")))
                               for e in fight["edges"]}
                 for row in projection["method_rows"] + projection["rounds_rows"] + projection["distance_rows"]:
-                    pair = (str(row.get("fighter", "")).strip(), str(row.get("market", "")).strip())
+                    pair = (_fold(row.get("fighter", "")), _fold(row.get("market", "")))
                     if _round_line_out_of_range(row):
                         continue
                     if pair not in live_pairs:
@@ -395,6 +406,41 @@ def group_edges_by_card(
             # reads sit at the top of their group.
             merged.sort(key=lambda r: (not r["has_line"], -(r.get("model_prob") or 0)))
             fight["all_market_rows"] = merged
+
+            # GROUP BY WHAT THE MODEL IS ANSWERING, not by whether a book
+            # happens to price it. Splitting on has_line would scatter one
+            # question across two tiers for an external reason -- a KO
+            # projection landing somewhere different from a submission
+            # projection purely because Polymarket priced one of them.
+            # The three groups also read in a natural order: who wins, how it
+            # ends, when it ends.
+            def _group_of(market):
+                m = str(market or "").lower().replace(" ", "")
+                if m.startswith("totalrounds") or m.startswith("roundbetting"):
+                    return "rounds"
+                if m.startswith("fightmethod") or m.startswith("goesthedistance"):
+                    return "fight"
+                return "fighter"          # Moneyline and per-fighter Method
+
+            groups = []
+            for gid, gname, gsub in (
+                ("fighter", "Fighter props", "Who wins, and how"),
+                ("fight", "Fight props", "How the fight ends, regardless of winner"),
+                ("rounds", "Round props", "When it ends"),
+            ):
+                rows = [r for r in merged if _group_of(r.get("market")) == gid]
+                if not rows:
+                    continue
+                groups.append({
+                    "id": gid, "name": gname, "sub": gsub, "rows": rows,
+                    "count": len(rows),
+                    # Surfaced on the closed summary so a group's worth is
+                    # visible WITHOUT opening it -- otherwise collapsing just
+                    # moves the scanning cost rather than removing it.
+                    "live_count": sum(1 for r in rows if r.get("has_line")),
+                    "best_edge": max((abs(r.get("edge_pct") or 0) for r in rows if r.get("has_line")), default=0),
+                })
+            fight["market_groups"] = groups
 
         key = (fight["event_name"], fight["event_date"])
         if key not in events_map:

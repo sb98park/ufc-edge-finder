@@ -2251,6 +2251,20 @@
   /* The merged column carries more text than either did alone, so give it
      room and let it wrap rather than forcing a horizontal scroll. */
   td.mkt-label { white-space: normal; min-width: 130px; line-height: 1.35; }
+  /* Market groups */
+  .market-group { margin: 0 0 8px; }
+  .market-group-summary {
+    display: flex; align-items: baseline; gap: 8px; cursor: pointer;
+    padding: 8px 10px; border-radius: 8px; list-style: none;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  }
+  .market-group-summary::-webkit-details-marker { display: none; }
+  .market-group-summary .mg-name { font-size: 12.5px; font-weight: 800; color: var(--text); }
+  .market-group-summary .mg-sub { font-size: 10.5px; color: var(--muted); flex: 1; min-width: 0; }
+  .market-group-summary .mg-meta { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+  .market-group[open] .market-group-summary { border-radius: 8px 8px 0 0; }
+  .market-group[open] .market-group-summary .chevron { transform: rotate(90deg); }
+  .market-group-summary .chevron { transition: transform 0.18s ease; font-size: 9px; color: var(--muted); }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3287,31 +3301,37 @@
       {# all_market_rows supersedes the old edges/model-only split -- it holds
          BOTH, so the previous `{% if fight.edges %}` wrapper would have hidden
          model-only projections whenever a fight had no live lines at all. #}
-      {% if fight.all_market_rows %}
-      <div class="market-group-label">{{ icon_barchart() }} All markets — model vs. book</div>
-      <div class="table-scroll"><table>
-        <tr><th>Market</th><th>Model</th><th>Odds</th><th>Book Fair</th><th>Edge %</th><th>Stake</th></tr>
-        {% for row in fight.all_market_rows %}
-        <tr class="{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}">
-          {# Selection and Market merged into ONE column: fight-level props
-             were repeating the matchup on every row inside a table that
-             already belongs to that fight, costing a full column of width. #}
-          <td class="mkt-label">{{ row.label or row.market }}{% if row.market == 'Moneyline' and row.has_line %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
-          <td class="mkt-model">{{ (row.model_prob*100)|round(1) }}%</td>
-          {% if row.has_line %}
-          <td>{{ odds_cell(row) }}</td>
-          <td>{{ row.book_fair_prob }}</td>
-          <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
-          <td>{{ row.suggested_stake_pct }}%</td>
-          {% else %}
-          {# No book line for this market -- em dashes rather than blanks, so
-             an unpriced row reads as "not offered" instead of "missing data". #}
-          <td class="mkt-none">—</td><td class="mkt-none">—</td>
-          <td class="mkt-none">—</td><td class="mkt-none">—</td>
-          {% endif %}
-        </tr>
-        {% endfor %}
-      </table></div>
+      {% if fight.market_groups %}
+      {% for g in fight.market_groups %}
+      {# Fighter props open by default -- it holds the moneyline, which is the
+         headline. The rest start closed so the card opens scannable. #}
+      <details class="market-group" {% if loop.first %}open{% endif %}>
+        <summary class="market-group-summary">
+          <span class="mg-name">{{ g.name }}</span>
+          <span class="mg-sub">{{ g.sub }}</span>
+          {# Counts on the CLOSED summary, so a group's worth is visible
+             without opening it -- otherwise collapsing moves the scanning
+             cost instead of removing it. #}
+          <span class="mg-meta">{{ g.count }}{% if g.live_count %} · {{ g.live_count }} priced{% endif %}</span>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="table-scroll"><table>
+          <tr><th>Market</th><th>Model</th><th>Odds</th><th>Edge %</th></tr>
+          {% for row in g.rows %}
+          <tr class="{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}">
+            <td class="mkt-label">{{ row.label or row.market }}{% if row.market == 'Moneyline' and row.has_line %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
+            <td class="mkt-model">{{ (row.model_prob*100)|round(1) }}%</td>
+            {% if row.has_line %}
+            <td>{{ odds_cell(row) }}</td>
+            <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
+            {% else %}
+            <td class="mkt-none">—</td><td class="mkt-none">—</td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </table></div>
+      </details>
+      {% endfor %}
       <div class="model-only-note">Rows showing — have no live sportsbook line; the model estimate stands alone.</div>
       {% else %}
       <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
