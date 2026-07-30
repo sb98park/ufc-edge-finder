@@ -1790,18 +1790,21 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 4px; padding: 11px 2px 10px;
     background: none; border: 0; cursor: pointer;
-    color: #a9b0bd; font-family: inherit; font-size: 10.5px; font-weight: 600;
+    color: var(--text); font-family: inherit; font-size: 10.5px; font-weight: 600;
     letter-spacing: 0.02em; -webkit-tap-highlight-color: transparent;
   }
   .tabbar-btn span { display: block; line-height: 1; }
   .tabbar-btn .inline-icon {
-    width: 23px; height: 23px; margin: 0; opacity: 0.80;
+    width: 23px; height: 23px; margin: 0; opacity: 1;
     /* MONOTONE, and not only to match iOS. The Phase 3 colour system reserves
        gold for "model" and cyan for "market" -- semantic roles. Tab icons are
        NAVIGATION, not data, so every gold pixel here dilutes what gold means
        on a fight card. grayscale() neutralises them without rewriting five
        icon macros, and keeps working if any icon is recoloured later. */
-    filter: grayscale(1) brightness(2.1);
+    /* grayscale collapses each icon's own gradient, then brightness pushes it
+       to white -- so five differently-coloured macros render identically
+       without rewriting any of them. */
+    filter: grayscale(1) brightness(3);
     /* Pin the compositing layer. Toggling opacity on activation promotes the
        icon to its own layer, and promotion routinely re-rounds its position
        to a different subpixel -- which is the faint left/right shift when
@@ -1814,7 +1817,6 @@
     will-change: opacity;
     backface-visibility: hidden;
   }
-  .tabbar-btn.active { color: var(--text); }
   .tabbar-btn.active .inline-icon { opacity: 1; }
   .tabbar-btn:active { background: rgba(255,255,255,0.04); }
   /* Content must clear the fixed bar or the last card is unreachable. */
@@ -1846,16 +1848,10 @@
        41px it's 20.5 and 15.5. The nested-radius rule holds at every height
        without hard-coding a value per state. */
     border-radius: 999px;
-    /* A DARK pill, not a light one -- it reads as carved into the glass
-       rather than sitting on top of it, which is the right relationship for a
-       translucent bar. Inverting also lets the icons carry the brightness,
-       so the selected tab is the LIGHTEST thing in the darkest area.
-       The shadow direction sells the recess: dark along the top inner edge
-       (as if light is occluded), a faint light line along the bottom (the
-       far wall catching it). Reverse those and the same shape reads raised. */
-    background: rgba(0,0,0,0.30);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.45),
-                inset 0 -1px 0 rgba(255,255,255,0.07);
+    /* Lighter than the bar it sits in, with a bright top edge -- the same
+       raised reading iOS uses for a selected tab. */
+    background: rgba(255,255,255,0.13);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
     /* transform-origin centre so the press magnification grows outward
        from the pill rather than from its left edge. */
     transform-origin: center;
@@ -2058,7 +2054,18 @@
   /* Active state: brightness and a neutral wash, not hue. The contrast comes
      from light rather than colour, which is what makes a native tab bar read
      as calm -- and it leaves the accent free to mean one thing. */
-  .tabbar-btn.active .inline-icon { opacity: 1; filter: grayscale(1) brightness(2.9); }
+  /* GOLD on the selected tab. The icons fill via url(#gradient), which CSS
+     cannot restyle directly, so the tint is built with filters: grayscale
+     flattens the source colour, sepia lays down a warm base, then saturate
+     and hue-rotate steer it onto gold. Doing it this way means all five icons
+     land on the SAME gold regardless of their own gradients -- the padlock is
+     natively purple and would otherwise stay purple. */
+  .tabbar-btn.active .inline-icon {
+    opacity: 1;
+    filter: grayscale(1) brightness(0.95) sepia(1) saturate(4.2) hue-rotate(-8deg) brightness(1.15);
+  }
+  /* Label follows the icon, as on iOS. */
+  .tabbar-btn.active { color: var(--accent); }
   /* Inset stays 5px in BOTH states. Changing it to 4px when compact would
      break the equal-inset condition the concentric capsule relies on. */
   @media (prefers-reduced-motion: reduce) {
