@@ -154,13 +154,20 @@ def build_market_label(fighter: str, market: str) -> str:
     market = str(market or "").strip()
     fight_level = " vs " in fighter or not fighter
 
+    # Phrase the fight-level markets as ONE three-way question -- KO/TKO,
+    # Submission, Decision -- matching how FanDuel and DraftKings present
+    # "How will the fight end?". "Goes the distance" IS the decision leg, so
+    # naming it that way makes the set read as three answers to one question
+    # rather than three unrelated props.
     PHRASE = {
-        "goesthedistance": "Fight goes the distance",
+        "goesthedistance": "Fight ends by decision",
+        "fightoutcome": "Fight ends by decision",
         "fightmethod": "Fight ends by {}",
         "totalrounds": "Total rounds {}",
     }
     # Method abbreviations are fine in a data column but not in a sentence.
-    EXPAND = {"sub": "submission", "ko/tko": "KO/TKO", "dec": "decision"}
+    EXPAND = {"sub": "Submission", "ko/tko": "KO/TKO", "dec": "Decision",
+              "goesthedistance": "Decision", "goes the distance": "Decision"}
     if fight_level:
         # edge_finder emits "Fight Method: KO/TKO" (with a space) while the
         # projection builder uses "FightMethod" -- normalise both.
@@ -352,10 +359,19 @@ def group_edges_by_card(
                     return "".join(ch for ch in _ud.normalize("NFKD", str(t).lower())
                                    if not _ud.combining(ch)).strip()
 
-                live_pairs = {(_fold(e.get("fighter", "")), _fold(e.get("market", "")))
+                def _key(fighter, market):
+                    f = _fold(fighter)
+                    if " vs " in f:
+                        # Order-independent: the two sources disagree on which
+                        # fighter comes first, so a positional key duplicated
+                        # every fight-level row.
+                        f = " vs ".join(sorted(p.strip() for p in f.split(" vs ")))
+                    return (f, _fold(market))
+
+                live_pairs = {_key(e.get("fighter", ""), e.get("market", ""))
                               for e in fight["edges"]}
                 for row in projection["method_rows"] + projection["rounds_rows"] + projection["distance_rows"]:
-                    pair = (_fold(row.get("fighter", "")), _fold(row.get("market", "")))
+                    pair = _key(row.get("fighter", ""), row.get("market", ""))
                     if _round_line_out_of_range(row):
                         continue
                     if pair not in live_pairs:
@@ -374,11 +390,16 @@ def group_edges_by_card(
             # nothing. What remains reads as the three-way market FanDuel and
             # DraftKings actually offer: KO/TKO, Submission, Decision.
             def _is_complement(e):
-                sel = str(e.get("selection", "") or "")
-                mkt = str(e.get("market", "") or "")
-                if mkt == "FightMethod" and sel.lower().startswith("not"):
+                # Match on the NORMALISED market string. edge_finder emits
+                # "Fight Method: SUB" and "Fight Outcome: Ends In Finish",
+                # not the bare "FightMethod"/"GoesTheDistance" keys the
+                # classifier uses -- so the earlier equality checks never
+                # fired and every complement row survived.
+                mkt = str(e.get("market", "") or "").lower().replace(" ", "")
+                txt = f"{e.get('market','')} {e.get('selection','')}".lower()
+                if mkt.startswith("fightmethod") and "not" in txt.split(":")[-1]:
                     return True
-                if mkt == "GoesTheDistance" and "ends in finish" in sel.lower():
+                if "endsinfinish" in txt.replace(" ", ""):
                     return True
                 return False
 
@@ -418,7 +439,11 @@ def group_edges_by_card(
                 m = str(market or "").lower().replace(" ", "")
                 if m.startswith("totalrounds") or m.startswith("roundbetting"):
                     return "rounds"
-                if m.startswith("fightmethod") or m.startswith("goesthedistance"):
+                # "Fight Outcome:" is what compute_goes_the_distance_edges
+                # emits; without it, goes-the-distance fell through to the
+                # fighter group.
+                if m.startswith("fightmethod") or m.startswith("goesthedistance") \
+                        or m.startswith("fightoutcome"):
                     return "fight"
                 return "fighter"          # Moneyline and per-fighter Method
 

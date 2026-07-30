@@ -2260,7 +2260,7 @@
   }
   .market-group-summary::-webkit-details-marker { display: none; }
   .market-group-summary .mg-name { font-size: 12.5px; font-weight: 800; color: var(--text); }
-  .market-group-summary .mg-sub { font-size: 10.5px; color: var(--muted); flex: 1; min-width: 0; }
+  .market-group-summary .mg-name { flex: 1; min-width: 0; }
   .market-group-summary .mg-meta { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
   .market-group[open] .market-group-summary { border-radius: 8px 8px 0 0; }
   .market-group[open] .market-group-summary .chevron { transform: rotate(90deg); }
@@ -3308,7 +3308,6 @@
       <details class="market-group" {% if loop.first %}open{% endif %}>
         <summary class="market-group-summary">
           <span class="mg-name">{{ g.name }}</span>
-          <span class="mg-sub">{{ g.sub }}</span>
           {# Counts on the CLOSED summary, so a group's worth is visible
              without opening it -- otherwise collapsing moves the scanning
              cost instead of removing it. #}
