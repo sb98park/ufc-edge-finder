@@ -749,6 +749,10 @@
     0%, 100% { opacity: 0.55; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.06); }
   }
+  /* Height published as a variable so .fight-sticky can pin BELOW these
+     rather than behind them: 11px padding top + 11px bottom + ~16px line +
+     2px active underline + 1px border = ~41px. */
+  :root { --seg-tabs-h: 41px; }
   .seg-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 4px 0 14px; position: sticky; top: 0; background: var(--bg); z-index: 40; }
   .seg-tab {
     flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
@@ -2208,8 +2212,15 @@
      position:sticky were never declared, which is why this looked like the
      feature "not working" rather than a layout conflict. */
   .fight-sticky {
-    position: sticky; z-index: 40;
-    top: 4px;
+    position: sticky;
+    /* BELOW .seg-tabs, not behind it. Those tabs are already sticky at top:0
+       with z-index 40, so a fight header pinned at top:4px with the same
+       z-index lands underneath them and is never seen -- which is exactly
+       what "the sticky header isn't working" looked like.
+       Offset by their height, and z-index 39 so the tabs stay in front if
+       the two ever overlap during a scroll. */
+    z-index: 39;
+    top: var(--seg-tabs-h, 41px);
     display: none; align-items: center; gap: 8px;
     padding: 7px 12px; margin: 0 0 8px;
     background: rgba(12,15,21,0.82);
