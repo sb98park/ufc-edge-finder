@@ -1839,6 +1839,20 @@
   /* Outlines need a touch more weight than a filled shape to read at 23px. */
   .tabbar-btn .inline-icon [stroke-width] { stroke-width: 2; }
 
+  /* SELECTED = FILLED, the Instagram / iOS pairing. No second set of macros is
+     needed: each icon already carries its own fill, just held at opacity 0.18
+     so the house style reads two-tone. The outline rule above zeroes that
+     fill; here we restore it at full strength and thin the stroke back down,
+     so the SAME path renders as an outline when inactive and a solid when
+     selected. One shape, two states -- which is exactly how SF Symbols
+     handles it, rather than shipping two drawings.
+     currentColor rather than the gradient: the active icon is pure white, and
+     a solid gradient fill at 23px would reintroduce the two-tone shading the
+     outline treatment just removed. */
+  .tabbar-btn.active .inline-icon [stroke] { fill: currentColor; fill-opacity: 1; }
+  .tabbar-btn.active .inline-icon [stroke-width] { stroke-width: 1.4; }
+  .tabbar-btn.active .inline-icon { color: #ffffff; }
+
   .tabbar-btn .inline-icon {
     width: 23px; height: 23px; margin: 0; opacity: 0.55;
     /* MONOTONE, and not only to match iOS. The Phase 3 colour system reserves
