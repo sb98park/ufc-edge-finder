@@ -281,8 +281,18 @@ def group_edges_by_card(
             )
             model_only = []
             if projection:
+                # Match on FIGHTER + MARKET, not market alone. "Method: KO/TKO"
+                # doesn't identify whose KO it is, so a live line on one
+                # fighter's KO suppressed the projection row for BOTH -- which
+                # is why the Model Projection table showed Submission and
+                # Decision for each man but no KO at all. The gap was covered
+                # by the per-prop prose beneath the table; with that prose
+                # removed, the table has to be complete on its own.
+                live_pairs = {(str(e.get("fighter", "")).strip(), str(e.get("market", "")).strip())
+                              for e in fight["edges"]}
                 for row in projection["method_rows"] + projection["rounds_rows"] + projection["distance_rows"]:
-                    if row["market"] not in live_markets:
+                    pair = (str(row.get("fighter", "")).strip(), str(row.get("market", "")).strip())
+                    if pair not in live_pairs:
                         model_only.append(row)
             fight["model_only_rows"] = model_only
 

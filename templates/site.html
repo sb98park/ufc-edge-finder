@@ -3290,13 +3290,13 @@
         </tr>
         {% endfor %}
       </table></div>
-      {% for row in fight.edges %}
-      {% if row.rationale %}
-      <div class="model-preview edge-rationale">
-        <span class="preview-label">{% if not row.market.startswith('Method: ') %}{{ row.fighter }} — {% endif %}{{ row.market | clear_market(row.fighter) }}:</span> {{ row.rationale }}
-      </div>
-      {% endif %}
-      {% endfor %}
+      {# Per-prop prose removed: the table directly above already gives book
+         price, model fair and edge for each row -- three numbers that state
+         the same thing more precisely than a sentence, which is why the
+         prose read as skippable. Removing it also fixes a knock-on: KO rows
+         were being SUPPRESSED from Model Projection because this text
+         covered them, so the most-read table was incomplete to avoid
+         duplicating the least-read one. #}
       {% else %}
       <div class="no-edges">No live odds matched to this fight yet — model preview above still applies.</div>
       {% endif %}
