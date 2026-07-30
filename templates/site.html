@@ -91,7 +91,7 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
     margin: 0; padding: 16px; max-width: 720px; margin-inline: auto;
-    overflow-x: hidden; position: relative;
+    overflow-x: clip; position: relative;
   }
   body::before {
     content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
@@ -1236,7 +1236,7 @@
 
   details.fight-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-    margin-bottom: 12px; overflow: hidden; transition: transform 0.15s ease, box-shadow 0.15s ease;
+    margin-bottom: 12px; overflow: clip; transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
   details.fight-card summary:active { transform: scale(0.995); }
   @media (hover: hover) {
@@ -2198,9 +2198,18 @@
      A long fight card scrolls the names out of view, so you lose track of
      whose stats you're reading. Pins BELOW the page header, and only while
      that card is open. */
+  /* WHY THIS NEEDED THREE FIXES, all invisible in the CSS itself:
+     position:sticky is silently disabled by ANY ancestor that establishes a
+     scroll container. `body { overflow-x: hidden }` did it document-wide and
+     `.fight-card { overflow: hidden }` did it again locally. `overflow: clip`
+     contains spill identically WITHOUT creating that container, so both keep
+     their original purpose and sticky works.
+     No error is raised for either -- the element simply scrolls away as if
+     position:sticky were never declared, which is why this looked like the
+     feature "not working" rather than a layout conflict. */
   .fight-sticky {
     position: sticky; z-index: 40;
-    top: 0;
+    top: 4px;
     display: none; align-items: center; gap: 8px;
     padding: 7px 12px; margin: 0 0 8px;
     background: rgba(12,15,21,0.82);
