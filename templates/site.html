@@ -1893,11 +1893,13 @@
     /* transform-origin centre so the press magnification grows outward
        from the pill rather than from its left edge. */
     transform-origin: center;
-    /* 0.24s to MATCH .mobile-tabbar's left/right transition exactly -- a
-       different duration or easing makes the pill and the bar arrive at
-       different moments, which reads as the pill lagging or overshooting. */
-    transition: transform 0.24s cubic-bezier(0.22,1,0.36,1),
-                width 0.24s cubic-bezier(0.22,1,0.36,1);
+    /* Must MATCH .mobile-tabbar exactly -- same curve, same duration. A
+       different easing makes the pill and the bar arrive at different
+       moments, which reads as the pill lagging or overshooting the bar. */
+    transition: transform 0.55s cubic-bezier(0.34,1.4,0.64,1),
+                width 0.55s cubic-bezier(0.34,1.4,0.64,1);
+    transition: transform 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1),
+                width 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1);
     pointer-events: none; z-index: 0;
   }
   /* While a finger is down the indicator must track without easing, or it
@@ -2073,19 +2075,35 @@
      translateX are computed from button geometry, so a vertical-only change
      can't desync it. */
   .mobile-tabbar {
-    transition: left 0.24s cubic-bezier(0.22,1,0.36,1),
-                right 0.24s cubic-bezier(0.22,1,0.36,1),
+  /* SPRING EASING, sampled from an actual damped-spring equation
+     (zeta 0.72, omega 12) rather than approximated with a bezier: it rises,
+     overshoots ~3.8%, then settles. A cubic-bezier can fake the overshoot but
+     not the settle, which is the part that reads as physical.
+     Duration is 0.55s, up from 0.24s -- the old timing was the real reason it
+     felt abrupt; no easing curve rescues a transition that short.
+     Every animated property on the bar, the pill and the labels uses the SAME
+     curve and duration. They are computed to move in lockstep, so any
+     mismatch would show up as the pill drifting against the bar.
+     cubic-bezier fallback first for browsers without linear(). */
+    transition: left 0.55s cubic-bezier(0.34,1.4,0.64,1),
+                right 0.55s cubic-bezier(0.34,1.4,0.64,1),
+                box-shadow 0.2s ease;
+    transition: left 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1),
+                right 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1),
                 box-shadow 0.2s ease;
   }
   /* Narrow the pill as well as shortening it. Inset grows 12px -> 46px per
      side, so the bar visibly contracts toward the centre rather than only
      losing height. */
   .mobile-tabbar.compact { left: 46px; right: 46px; }
-  .tabbar-btn { transition: padding 0.22s cubic-bezier(0.22,1,0.36,1); }
+  .tabbar-btn { transition: padding 0.55s cubic-bezier(0.34,1.4,0.64,1); }
+  .tabbar-btn { transition: padding 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1); }
   .tabbar-btn span {
     max-height: 14px; overflow: hidden;
-    transition: max-height 0.22s cubic-bezier(0.22,1,0.36,1),
-                opacity 0.16s ease, margin 0.22s ease;
+    transition: max-height 0.55s cubic-bezier(0.34,1.4,0.64,1),
+                opacity 0.22s ease, margin 0.55s cubic-bezier(0.34,1.4,0.64,1);
+    transition: max-height 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1),
+                opacity 0.22s ease, margin 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1);
   }
   .mobile-tabbar.compact .tabbar-btn { padding-top: 9px; padding-bottom: 9px; }
   .mobile-tabbar.compact .tabbar-btn span { max-height: 0; opacity: 0; margin-top: -4px; }
