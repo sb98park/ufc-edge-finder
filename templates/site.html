@@ -1839,22 +1839,17 @@
   /* Outlines need a touch more weight than a filled shape to read at 23px. */
   .tabbar-btn .inline-icon [stroke-width] { stroke-width: 2; }
 
-  /* SELECTED = FILLED, the Instagram / iOS pairing. No second set of macros is
-     needed: each icon already carries its own fill, just held at opacity 0.18
-     so the house style reads two-tone. The outline rule above zeroes that
-     fill; here we restore it at full strength and thin the stroke back down,
-     so the SAME path renders as an outline when inactive and a solid when
-     selected. One shape, two states -- which is exactly how SF Symbols
-     handles it, rather than shipping two drawings.
-     currentColor rather than the gradient: the active icon is pure white, and
-     a solid gradient fill at 23px would reintroduce the two-tone shading the
-     outline treatment just removed. */
-  .tabbar-btn.active .inline-icon [stroke] { fill: currentColor; fill-opacity: 1; }
-  .tabbar-btn.active .inline-icon [stroke-width] { stroke-width: 1.4; }
-  .tabbar-btn.active .inline-icon { color: #ffffff; }
+  /* NO FILLED VARIANT. Filling on selection was tried and abandoned: these
+     icons carry interior structure, and a solid fill collapses that detail
+     into a featureless blob. SF Symbols gets away with it because its filled
+     variants are DRAWN as solids; ours are outline drawings whose fill was
+     only ever a faint tint.
+     So the geometry stays identical in both states and selection is carried
+     by the frosted pill plus the bolder label -- which is enough, and keeps
+     every icon legible. */
 
   .tabbar-btn .inline-icon {
-    width: 23px; height: 23px; margin: 0; opacity: 0.55;
+    width: 23px; height: 23px; margin: 0; opacity: 0.5;
     /* MONOTONE, and not only to match iOS. The Phase 3 colour system reserves
        gold for "model" and cyan for "market" -- semantic roles. Tab icons are
        NAVIGATION, not data, so every gold pixel here dilutes what gold means
@@ -2170,6 +2165,9 @@
      the contrast has to come from the glyph itself. brightness(3) after
      grayscale drives every gradient to flat white regardless of its source
      colour, so all five read identically. */
+  /* Same outline, crisper. Inactive sits at a muted white; selected goes to
+     full strength. The stroke weight is deliberately unchanged so the shape
+     doesn't shift at all between states. */
   .tabbar-btn.active .inline-icon { opacity: 1; filter: grayscale(1) brightness(3); }
   /* Label stays bright rather than tinted: with the icon carrying its own
      hue, a gold label would clash against a purple padlock. */
