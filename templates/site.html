@@ -3797,7 +3797,12 @@
         // measured. Insets are known constants, tabs are equal-width flex
         // items, so predicting is exact and avoids a forced reflow.
         const inset = compact ? 46 : 12;
-        const barW = Math.max(0, window.innerWidth - inset * 2);
+        // Subtract the bar's 1px border per side: the buttons are flex items
+        // inside the CONTENT box, so using the outer width overstates each
+        // tab by 0.4px -- invisible at index 0 and 1.6px of drift by index 4,
+        // which is precisely the wiggle that grew toward the right-hand tabs.
+        const BAR_BORDER = 1;
+        const barW = Math.max(0, window.innerWidth - inset * 2 - BAR_BORDER * 2);
         const tabW = barW / btnCount();
         const idx = activeIndex();
         if (idx >= 0 && tabW > 0) {
@@ -3899,7 +3904,15 @@
 
       // Keep the indicator aligned with whatever navigation actually happened.
       window.__syncTabBar = function (sectionId) {
-        const btn = btns.find(b => b.dataset.tab === sectionId);
+        let btn = btns.find(b => b.dataset.tab === sectionId);
+        // Sections reachable only through the drawer (Favorite Picks, Parlays,
+        // Fight Facts, Coming Up, How It Works, Disclaimer) have no tab of
+        // their own. Attribute them to "More" -- that IS where the user is,
+        // and leaving nothing active meant the indicator had no anchor to
+        // move to, so it kept its old size while the bar shrank around it.
+        if (!btn && sectionId && sectionId !== 'thisweekend') {
+          btn = btns.find(b => b.dataset.tab === '__hub');
+        }
         btns.forEach(b => b.classList.toggle('active', b === btn));
         if (btn) moveTo(btn);
       };
