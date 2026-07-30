@@ -1783,10 +1783,22 @@
        separates real glass from a grey panel.
        Saturation is pushed to 190% so colour bleeding through stays vivid --
        desaturated bleed-through is the other thing that reads as muddy. */
-    background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04)),
-                linear-gradient(180deg, rgba(22,26,35,0.28), rgba(12,15,21,0.38));
-    backdrop-filter: blur(26px) saturate(190%);
-    -webkit-backdrop-filter: blur(26px) saturate(190%);
+    /* HEAVY blur is what turns text underneath into smooth gradient shapes
+       rather than merely soft text. 26px still resolved glyph edges; ~48px
+       destroys them, leaving only colour masses -- which is the whole optical
+       trick of iOS's glass.
+       saturate(200%) is what makes it ADAPT to what's behind: it amplifies
+       whatever hue bleeds through, so the bar picks up gold over a fight card
+       and near-black over the page background, rather than staying one fixed
+       grey. contrast(1.05) keeps those masses from flattening into mush at
+       this blur radius.
+       The dark fill drops again (0.28/0.38 -> 0.16/0.24) because every point
+       of opacity is content NOT bleeding through -- and bleed-through is the
+       entire effect. */
+    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045)),
+                linear-gradient(180deg, rgba(22,26,35,0.16), rgba(12,15,21,0.24));
+    backdrop-filter: blur(48px) saturate(200%) contrast(1.05);
+    -webkit-backdrop-filter: blur(48px) saturate(200%) contrast(1.05);
     border: 1px solid rgba(255,255,255,0.10);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.22),   /* crisp 1px rim */
@@ -1887,8 +1899,13 @@
        behind the selected tab gets blurred and brightened a second time,
        which is what makes it read as a separate pane of glass floating on
        the first one instead of a flat overlay. */
-    backdrop-filter: blur(8px) saturate(150%) brightness(1.22);
-    -webkit-backdrop-filter: blur(8px) saturate(150%) brightness(1.22);
+    /* The pill blurs AGAIN on top of the bar's blur. At 20px the second pass
+       is heavy enough to be visible as a distinct lens -- the selected tab's
+       patch of background is measurably smoother than the bar around it,
+       which is what separates "a lighter rectangle" from "a second pane of
+       glass". */
+    backdrop-filter: blur(20px) saturate(180%) brightness(1.18);
+    -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.18);
     box-shadow: none;
     /* transform-origin centre so the press magnification grows outward
        from the pill rather than from its left edge. */
