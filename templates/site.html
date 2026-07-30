@@ -2008,7 +2008,15 @@
      WIDTHS are untouched, which matters: the drag indicator's width and
      translateX are computed from button geometry, so a vertical-only change
      can't desync it. */
-  .mobile-tabbar { transition: box-shadow 0.2s ease; }
+  .mobile-tabbar {
+    transition: left 0.24s cubic-bezier(0.22,1,0.36,1),
+                right 0.24s cubic-bezier(0.22,1,0.36,1),
+                box-shadow 0.2s ease;
+  }
+  /* Narrow the pill as well as shortening it. Inset grows 12px -> 46px per
+     side, so the bar visibly contracts toward the centre rather than only
+     losing height. */
+  .mobile-tabbar.compact { left: 46px; right: 46px; }
   .tabbar-btn { transition: padding 0.22s cubic-bezier(0.22,1,0.36,1); }
   .tabbar-btn span {
     max-height: 14px; overflow: hidden;
@@ -3772,6 +3780,25 @@
         if (want === compact) return;
         compact = want;
         bar.classList.toggle('compact', compact);
+        // CRITICAL: the drag indicator's width and translateX are computed
+        // from bar.offsetWidth and each button's offsetLeft/offsetWidth. The
+        // bar just changed width, so those measurements are now stale and the
+        // pill would sit misaligned until the next tap. Re-sync AFTER the
+        // transition settles -- measuring mid-animation captures an
+        // intermediate width and lands it in the wrong place.
+        const resync = () => {
+          if (window.__syncTabBar) {
+            window.__syncTabBar(document.body.dataset.section || 'thisweekend');
+          }
+        };
+        bar.addEventListener('transitionend', function once(e) {
+          if (e.propertyName !== 'left') return;      // one property, not all three
+          bar.removeEventListener('transitionend', once);
+          resync();
+        });
+        // Fallback: transitionend never fires if the transition is skipped
+        // (reduced-motion, or a class toggle that doesn't actually animate).
+        setTimeout(resync, 300);
       }
       window.addEventListener('scroll', onScroll, { passive: true });
 
