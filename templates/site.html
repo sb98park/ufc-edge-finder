@@ -3841,7 +3841,19 @@
       // Any deliberate interaction with the bar restores it, so a tap never
       // lands on a collapsed target the user didn't choose.
       bar.addEventListener('touchstart', () => {
-        if (compact) { compact = false; bar.classList.remove('compact'); }
+        if (!compact) return;
+        compact = false;
+        bar.classList.remove('compact');
+        // The bar is now ANIMATING back to full width. initTabDrag's release
+        // handler runs moveTo() on the same tap, which reads offsetWidth and
+        // offsetLeft -- mid-transition those return intermediate values, so
+        // the pill lands too narrow and too far left (its right edge barely
+        // reaching the tapped icon). Re-measure once the width has settled.
+        setTimeout(() => {
+          if (window.__syncTabBar) {
+            window.__syncTabBar(document.body.dataset.section || 'thisweekend');
+          }
+        }, 300);
       }, { passive: true });
     }
     // Deferred, for the THIRD time in this feature: this script block runs
@@ -3906,7 +3918,9 @@
       }
       function btnAt(clientX) {
         const r = bar.getBoundingClientRect();
-        const x = clientX - r.left;
+        // clientLeft is the border width -- subtracting it puts x in the same
+        // padding-box space that offsetLeft uses, rather than 1px off.
+        const x = clientX - r.left - bar.clientLeft;
         return btns.find(b => x >= b.offsetLeft && x < b.offsetLeft + b.offsetWidth) || null;
       }
       function paint(btn) {
