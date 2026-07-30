@@ -357,14 +357,22 @@ def main():
         print(f"[parlays] build failed unexpectedly, continuing without parlay sections: {e}")
         bankroll_parlays, lotto_parlays, moonshot_parlays = [], [], []
 
-    # Notable line movement across everything we track, for its own section
-    all_display_edges = tracked_edges_list + [
-        edge for event in future_events for fight in event["fights"] for edge in fight["edges"]
-    ]
-    notable_movements = sorted(
-        [e for e in all_display_edges if e.get("movement") and e["movement"].get("notable")],
-        key=lambda e: e["movement"]["pct_change"], reverse=True,
-    )[:8]
+    # Notable line movement, SPLIT BY CARD rather than pooled. Sorting one
+    # combined list purely by pct_change let a big move on a fight three weeks
+    # out push this weekend's movement off an 8-row cut entirely -- the card
+    # you can actually act on losing to one you can't, for no reason beyond
+    # magnitude. Movement on a distant fight is still worth seeing; it just
+    # shouldn't compete for the same slots.
+    def _notable(edges, limit):
+        return sorted(
+            [e for e in edges if e.get("movement") and e["movement"].get("notable")],
+            key=lambda e: e["movement"]["pct_change"], reverse=True,
+        )[:limit]
+
+    notable_movements = _notable(tracked_edges_list, 8)
+    notable_movements_upcoming = _notable(
+        [edge for event in future_events for fight in event["fights"] for edge in fight["edges"]], 6
+    )
 
     if not edges_df.empty:
         updated_snapshot = save_snapshot(edges_df.to_dict("records"), previous_snapshot)
@@ -837,6 +845,7 @@ def main():
         lotto_parlays=lotto_parlays,
         moonshot_parlays=moonshot_parlays,
         notable_movements=notable_movements,
+        notable_movements_upcoming=notable_movements_upcoming,
         live_error=live_error,
         source=source,
         generated_at=generated_at_str,

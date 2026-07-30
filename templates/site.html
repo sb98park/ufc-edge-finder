@@ -2265,6 +2265,8 @@
   .market-group[open] .market-group-summary { border-radius: 8px 8px 0 0; }
   .market-group[open] .market-group-summary .chevron { transform: rotate(90deg); }
   .market-group-summary .chevron { transition: transform 0.18s ease; font-size: 9px; color: var(--muted); }
+  .upcoming-movement { margin-top: 10px; }
+  .upcoming-movement .line-card { margin-top: 6px; }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3355,6 +3357,29 @@
     <div class="movement-tag {{ row.movement.direction }} notable">{{ icon_trendup() if row.movement.direction == 'shortening' else icon_trenddown() }} {{ row.movement.pct_change }}%</div>
   </div>
   {% endfor %}
+  {% endif %}
+
+  {# Later cards get their own collapsed section rather than competing for
+     slots in the list above. Movement weeks out is worth knowing but it isn't
+     the same thing as movement on a fight happening in days -- the market has
+     weeks left to correct it. #}
+  {% if notable_movements_upcoming %}
+  <details class="market-group upcoming-movement">
+    <summary class="market-group-summary">
+      <span class="mg-name">Movement on later cards</span>
+      <span class="mg-meta">{{ notable_movements_upcoming | length }}</span>
+      <span class="chevron">▶</span>
+    </summary>
+    {% for row in notable_movements_upcoming %}
+    <div class="line-card" data-key="{{ row.fighter }}|{{ row.market }}">
+      <div>
+        <div class="line-matchup">{{ row.fighter }}{% if row.opponent is real_value %} vs {{ row.opponent }}{% endif %}</div>
+        <div class="line-market">{{ row.market | clear_market(row.fighter) }} · {{ row.movement.from | american }} → {{ row.movement.to | american }}</div>
+      </div>
+      <div class="movement-tag {{ row.movement.direction }} notable">{{ icon_trendup() if row.movement.direction == 'shortening' else icon_trenddown() }} {{ row.movement.pct_change }}%</div>
+    </div>
+    {% endfor %}
+  </details>
   {% endif %}
 
   {% if standout_props %}
