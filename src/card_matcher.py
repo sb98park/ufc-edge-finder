@@ -139,6 +139,45 @@ def group_unmatched_by_fight(unmatched_df: pd.DataFrame) -> list[dict]:
     return result
 
 
+
+def build_market_label(fighter: str, market: str) -> str:
+    """
+    One readable label instead of a Selection + Market pair.
+
+    Fight-level props (rounds, distance, fight-method) carried the matchup
+    "A vs B" in the Selection column of EVERY row -- redundant inside a table
+    that already belongs to that fight, and it cost a full column of width on
+    a phone. Fighter-specific rows keep the name because there the selection
+    genuinely disambiguates; fight-level rows become a sentence instead.
+    """
+    fighter = str(fighter or "").strip()
+    market = str(market or "").strip()
+    fight_level = " vs " in fighter or not fighter
+
+    PHRASE = {
+        "goesthedistance": "Fight goes the distance",
+        "fightmethod": "Fight ends by {}",
+        "totalrounds": "Total rounds {}",
+    }
+    # Method abbreviations are fine in a data column but not in a sentence.
+    EXPAND = {"sub": "submission", "ko/tko": "KO/TKO", "dec": "decision"}
+    if fight_level:
+        # edge_finder emits "Fight Method: KO/TKO" (with a space) while the
+        # projection builder uses "FightMethod" -- normalise both.
+        base = market.split(":")[0].strip().lower().replace(" ", "")
+        detail = market.split(":", 1)[1].strip() if ":" in market else ""
+        detail = EXPAND.get(detail.lower(), detail)
+        if base in PHRASE:
+            tpl = PHRASE[base]
+            return tpl.format(detail) if "{}" in tpl else tpl
+        return market
+    if market.startswith("Method:"):
+        return f"{fighter} — {market.split(':', 1)[1].strip()}"
+    if market == "Moneyline":
+        return fighter
+    return f"{fighter} — {market}"
+
+
 def assign_canonical_fight_ids(upcoming_df: pd.DataFrame, cards_df: pd.DataFrame) -> pd.DataFrame:
     """
     Different odds sources assign their own internal fight IDs -- Polymarket
@@ -302,19 +341,38 @@ def group_edges_by_card(
             # different table from his opponent's. Every market for both
             # fighters now appears exactly once here, with book/edge present
             # only where a line exists.
+            # Drop complement rows. Polymarket prices each method as a
+            # binary, so "Not KO/TKO" and "Ends In Finish" are just 1 minus a
+            # row already in the table -- they double its length while adding
+            # nothing. What remains reads as the three-way market FanDuel and
+            # DraftKings actually offer: KO/TKO, Submission, Decision.
+            def _is_complement(e):
+                sel = str(e.get("selection", "") or "")
+                mkt = str(e.get("market", "") or "")
+                if mkt == "FightMethod" and sel.lower().startswith("not"):
+                    return True
+                if mkt == "GoesTheDistance" and "ends in finish" in sel.lower():
+                    return True
+                return False
+
             merged = []
             for e in fight["edges"]:
+                if _is_complement(e):
+                    continue
                 merged.append({
                     "fighter": e.get("fighter"), "market": e.get("market"),
                     "model_prob": e.get("model_prob"), "odds_american": e.get("odds_american"),
                     "book_fair_prob": e.get("book_fair_prob"), "edge_pct": e.get("edge_pct"),
                     "suggested_stake_pct": e.get("suggested_stake_pct"), "has_line": True,
                     "clob_token_id": e.get("clob_token_id"),
+                    "label": build_market_label(e.get("fighter"), e.get("market")),
+                    "selection": e.get("selection"),
                 })
             for r in model_only:
                 merged.append({
                     "fighter": r.get("fighter"), "market": r.get("market"),
                     "model_prob": r.get("model_prob"), "has_line": False,
+                    "label": build_market_label(r.get("fighter"), r.get("market")),
                 })
             # Priced markets first (they're actionable), then model-only;
             # within each, highest model probability first so the strongest
