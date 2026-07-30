@@ -2054,18 +2054,21 @@
   /* Active state: brightness and a neutral wash, not hue. The contrast comes
      from light rather than colour, which is what makes a native tab bar read
      as calm -- and it leaves the accent free to mean one thing. */
-  /* GOLD on the selected tab. The icons fill via url(#gradient), which CSS
-     cannot restyle directly, so the tint is built with filters: grayscale
-     flattens the source colour, sepia lays down a warm base, then saturate
-     and hue-rotate steer it onto gold. Doing it this way means all five icons
-     land on the SAME gold regardless of their own gradients -- the padlock is
-     natively purple and would otherwise stay purple. */
-  .tabbar-btn.active .inline-icon {
-    opacity: 1;
-    filter: grayscale(1) brightness(0.95) sepia(1) saturate(4.2) hue-rotate(-8deg) brightness(1.15);
-  }
-  /* Label follows the icon, as on iOS. */
-  .tabbar-btn.active { color: var(--accent); }
+  /* The selected icon shows its OWN colour -- filter removed entirely.
+     The previous filter chain could never be uniform: grayscale() collapses
+     each gradient to a different LUMINANCE, and sepia/saturate then map that
+     luminance onto a different hue, so darker sources came out orange and
+     lighter ones yellow. That drift was the technique failing, not a value
+     needing tuning.
+     Native colour is also the better design here. Only ONE icon is ever
+     coloured at a time, so five hues never compete -- and these are the
+     identity colours Phase 3 deliberately preserved in the icon layer
+     (purple padlock, teal bolt) and uses elsewhere on the site. Overriding
+     them to approximate gold was fighting the system for no gain. */
+  .tabbar-btn.active .inline-icon { opacity: 1; filter: none; }
+  /* Label stays bright rather than tinted: with the icon carrying its own
+     hue, a gold label would clash against a purple padlock. */
+  .tabbar-btn.active { color: #ffffff; font-weight: 700; }
   /* Inset stays 5px in BOTH states. Changing it to 4px when compact would
      break the equal-inset condition the concentric capsule relies on. */
   @media (prefers-reduced-motion: reduce) {
