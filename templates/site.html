@@ -3818,6 +3818,13 @@
 
       function onScroll() {
         const y = window.scrollY || document.documentElement.scrollTop || 0;
+        // Ignore scroll events caused by a restore, but STILL update the
+        // baseline -- otherwise the next genuine scroll is measured against a
+        // stale position and produces a huge delta.
+        if (window.__programmaticScroll && Date.now() - window.__programmaticScroll < 500) {
+          lastY = y;
+          return;
+        }
         const dy = y - lastY;
         if (Math.abs(dy) < THRESHOLD) return;
         // Near the top the bar always shows its labels -- collapsing there
@@ -4145,6 +4152,12 @@
         // behaviour is suspended for the jump and put back afterwards
         // (anchor links elsewhere still get their smooth scrolling).
         if (window.__restoreOpenCards) window.__restoreOpenCards(current);
+        // Flag this as a PROGRAMMATIC scroll. Restoring a saved offset jumps
+        // scrollY from 0 to (say) 800 in one step, which the tab-bar collapse
+        // handler reads as a fast downward scroll and reacts to -- so
+        // returning to a tab re-collapsed the bar right after tapping had
+        // expanded it. A returning user hasn't scrolled; they've navigated.
+        window.__programmaticScroll = Date.now();
         const root = document.documentElement;
         const prev = root.style.scrollBehavior;
         root.style.scrollBehavior = 'auto';
