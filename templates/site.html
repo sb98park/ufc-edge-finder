@@ -2177,6 +2177,54 @@
   @media (prefers-reduced-motion: reduce) {
     .tabbar-btn, .tabbar-btn span, .mobile-tabbar { transition: none; }
   }
+
+  /* ===== 1. Rolling digits on live price changes =====
+     Reuses the countdown's visual language rather than inventing a second
+     one: a changed character slides up and out while its replacement slides
+     in from below. Only characters that ACTUALLY changed animate -- -140 ->
+     -145 moves one digit, not the whole number, which is what reads as an
+     odometer instead of a flash. */
+  .roll-wrap { display: inline-block; position: relative; overflow: hidden; vertical-align: bottom; }
+  .roll-wrap .roll-old,
+  .roll-wrap .roll-new { display: inline-block; }
+  .roll-wrap .roll-old { position: absolute; left: 0; top: 0; }
+  .roll-wrap.rolling .roll-old { animation: rollOut 0.34s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .roll-wrap.rolling .roll-new { animation: rollIn 0.34s cubic-bezier(0.22,1,0.36,1) backwards; }
+  @keyframes rollOut { to { transform: translateY(-100%); opacity: 0; } }
+  @keyframes rollIn { from { transform: translateY(100%); opacity: 0; } }
+
+
+  /* ===== 3. Sticky fighter header while a card is expanded =====
+     A long fight card scrolls the names out of view, so you lose track of
+     whose stats you're reading. Pins BELOW the page header, and only while
+     that card is open. */
+  .fight-sticky {
+    position: sticky; z-index: 40;
+    top: 0;
+    display: none; align-items: center; gap: 8px;
+    padding: 7px 12px; margin: 0 0 8px;
+    background: rgba(12,15,21,0.82);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-bottom: 1px solid var(--border);
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em;
+  }
+  details.fight-card[open] > .fight-sticky { display: flex; }
+  .fight-sticky .fs-vs { color: var(--muted); font-weight: 600; }
+  .fight-sticky .fs-a { color: var(--accent); }
+  .fight-sticky .fs-b { color: var(--accent-cool); }
+
+  /* ===== 4. Staggered row entry =====
+     The waterfall already staggers its factor rows; extending the same
+     30ms cascade to Standout Props and Track Record makes a section arrive
+     as one authored motion rather than everything landing at once.
+     Capped at 10 steps so a long list never feels slow to finish. */
+  .reveal-target.revealed { transition-delay: calc(var(--stagger, 0) * 30ms); }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-target.revealed { transition-delay: 0ms !important; }
+    .roll-wrap.rolling .roll-old,
+    .roll-wrap.rolling .roll-new { animation: none; }
+  }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3000,6 +3048,11 @@
 
   {% macro render_fight_card(fight, card_index=none) %}
   <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label }}{{ ' fight-cancelled' if fight.cancelled }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" data-confidence="{{ (fight.preview.confidence_label if fight.preview else '')|lower|replace(' confidence','') }}" style="border-left: 3px solid {{ fight.weight_class_color }};">
+    <div class="fight-sticky" aria-hidden="true">
+      <span class="fs-a">{{ fight.fighter_a }}</span>
+      <span class="fs-vs">vs</span>
+      <span class="fs-b">{{ fight.fighter_b }}</span>
+    </div>
     <summary>
       <div class="matchup-content">
       {% if fight.cancelled %}
@@ -3909,6 +3962,63 @@
     }
     initDesktopLayoutIfNeeded();
 
+    // ===== Haptics =====
+    // Android gives a real tactile click; iOS Safari ignores vibrate()
+    // entirely, so this degrades to nothing rather than needing a feature
+    // test. 8ms is a tick, not a buzz.
+    function haptic(ms) {
+      try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) {}
+    }
+
+    // ===== Rolling digits on a changed value =====
+    // Only characters that ACTUALLY differ animate. Rolling the whole string
+    // on every tick reads as a flash; rolling just the digit that moved is
+    // what makes it an odometer.
+    function rollTo(el, newText) {
+      const oldText = (el.dataset.rollValue || el.textContent || '').trim();
+      newText = String(newText).trim();
+      if (oldText === newText) return;
+      el.dataset.rollValue = newText;
+      if (!oldText) { el.textContent = newText; return; }
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.textContent = newText; return;
+      }
+      el.textContent = '';
+      const maxLen = Math.max(oldText.length, newText.length);
+      for (let i = 0; i < maxLen; i++) {
+        const oc = oldText[i] || '', nc = newText[i] || '';
+        if (oc === nc) { el.appendChild(document.createTextNode(nc)); continue; }
+        const wrap = document.createElement('span');
+        wrap.className = 'roll-wrap';
+        const o = document.createElement('span'); o.className = 'roll-old'; o.textContent = oc;
+        const n = document.createElement('span'); n.className = 'roll-new'; n.textContent = nc;
+        wrap.appendChild(o); wrap.appendChild(n);
+        el.appendChild(wrap);
+        requestAnimationFrame(() => wrap.classList.add('rolling'));
+        // Collapse back to plain text once settled, so the DOM doesn't
+        // accumulate wrappers across dozens of price ticks.
+        setTimeout(() => { if (wrap.parentNode === el) wrap.replaceWith(document.createTextNode(nc)); }, 380);
+      }
+    }
+    window.__rollTo = rollTo;
+
+    // ===== Stagger indices =====
+    // The reveal CSS reads --stagger; assign it per section so each list
+    // cascades from its own first row rather than from the top of the page.
+    function assignStagger() {
+      document.querySelectorAll('.detail-section').forEach(sec => {
+        sec.querySelectorAll('.reveal-target').forEach((el, i) => {
+          el.style.setProperty('--stagger', Math.min(i, 10));
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', assignStagger);
+    } else {
+      assignStagger();
+    }
+
+
     // ===== Collapse the tab bar while scrolling down =====
     function initTabBarCollapse() {
       const bar = document.getElementById('mobile-tabbar');
@@ -4136,6 +4246,7 @@
         moveTo(hovered);
         if (!hovered) return;
         const target = hovered.dataset.tab;
+        haptic(8);
         if (target === '__hub') showHub(); else showSection(target);
       }
       bar.addEventListener('touchend', release, { passive: true });
@@ -4177,7 +4288,9 @@
         });
         chips.forEach(ch => ch.classList.toggle('on', ch.dataset.filter === active));
       }
-      chips.forEach(ch => ch.addEventListener('click', () => { active = ch.dataset.filter; apply(); }));
+      chips.forEach(ch => ch.addEventListener('click', () => {
+        active = ch.dataset.filter; apply(); haptic(8);
+      }));
       apply();
 
       const toggle = document.getElementById('fc-toggle-all');
@@ -4560,6 +4673,14 @@
       }
 
       async function refresh() {
+        // Shimmer only on the FIRST fetch. On later ticks the displayed price
+        // is a real, recent value -- shimmering it every 30s would flicker
+        // constantly and imply the number is unknown when it isn't. The lie
+        // this fixes is specifically "stale numbers on load looking current".
+        const firstLoad = !refresh._hasRun;
+        if (firstLoad) {
+          document.querySelectorAll('[data-live-token]').forEach(el => el.classList.add('price-updating'));
+        }
         try {
           const results = await Promise.all(tokens.map(tok =>
             fetch('https://clob.polymarket.com/midpoint?token_id=' + encodeURIComponent(tok), { signal: AbortSignal.timeout(6000) })
@@ -4571,7 +4692,10 @@
           for (const [tok, mid] of results) {
             const american = (mid || mid === 0) ? toAmerican(mid) : null;
             if (!american) continue;
-            document.querySelectorAll('[data-live-token="' + tok + '"]').forEach(el => { el.textContent = american; });
+            document.querySelectorAll('[data-live-token="' + tok + '"]').forEach(el => {
+              el.classList.remove('price-updating');
+              if (window.__rollTo) { window.__rollTo(el, american); } else { el.textContent = american; }
+            });
             updated++;
           }
           if (updated > 0) showChip();
