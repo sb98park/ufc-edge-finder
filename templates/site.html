@@ -4852,7 +4852,16 @@
       document.addEventListener('touchstart', (e) => {
         const detailView = document.getElementById('detail-view');
         if (detailView.style.display !== 'block') { tracking = false; return; }
-        if (e.target.closest('.table-scroll')) { tracking = false; return; }
+        // Ignore gestures that begin inside a control which owns its own
+        // horizontal drag. This handler predates the segmented control and
+        // the bottom tab bar, so it only knew about scrollable tables --
+        // a fast swipe on the header pill was ALSO being read here as a
+        // section swipe, moving the bottom tab indicator to "More". It only
+        // happened at speed because this handler requires the gesture to
+        // finish inside MAX_DURATION_MS, which a slow drag exceeds.
+        if (e.target.closest('.table-scroll, .seg-tabs, .mobile-tabbar, [data-scrollable]')) {
+          tracking = false; return;
+        }
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         touchStartTime = Date.now();
