@@ -4134,6 +4134,24 @@
         // release, so either surface works -- swipe the fights, or slide the
         // control.
         let barDrag = false, barHover = -1;
+        // FREE tracking: the pill centres on the finger rather than snapping
+        // to whichever segment it is over. Snapping meant the indicator only
+        // moved when you crossed a boundary, so most of the drag produced no
+        // movement -- the same thing that made the bottom bar feel static
+        // before it tracked the raw touch position.
+        function placeFree(clientX) {
+          const r = bar.getBoundingClientRect();
+          const n = Math.max(1, tabs().length);
+          const wSeg = (bar.clientWidth - PAD * 2) / n;
+          if (wSeg <= 0) return;
+          let x = clientX - r.left - bar.clientLeft - wSeg / 2;
+          // Clamp to the same padding the snapped positions use, so a drag to
+          // either end stops flush rather than against the border.
+          x = Math.max(PAD, Math.min(x, bar.clientWidth - wSeg - PAD));
+          ind.style.width = wSeg + 'px';
+          ind.style.transform = 'translateX(' + x + 'px)';
+        }
+
         function segAt(clientX) {
           const r = bar.getBoundingClientRect();
           const x = clientX - r.left - bar.clientLeft;
@@ -4146,18 +4164,18 @@
           barDrag = true;
           barHover = segAt(e.touches[0].clientX);
           bar.classList.add('dragging');
-          // Centre the pill on the finger, as the bottom bar does.
-          const g = geom(barHover);
-          ind.style.width = g.w + 'px';
-          ind.style.transform = 'translateX(' + g.x + 'px)';
+          placeFree(e.touches[0].clientX);
         }, { passive: true });
         bar.addEventListener('touchmove', (e) => {
           if (!barDrag) return;
           if (e.cancelable) e.preventDefault();
-          const i = segAt(e.touches[0].clientX);
+          const x = e.touches[0].clientX;
+          placeFree(x);                     // every frame, not just at boundaries
+          const i = segAt(x);
+          // Labels still light per-segment, but the pill no longer waits for a
+          // boundary crossing to move.
           if (i >= 0 && i !== barHover) {
             barHover = i;
-            place(i, 0);
             tabs().forEach((t, k) => t.classList.toggle('active', k === i));
           }
         }, { passive: false });
@@ -4165,6 +4183,9 @@
           if (!barDrag) return;
           barDrag = false;
           bar.classList.remove('dragging');
+          // Easing returns here, so the pill settles onto the chosen segment
+          // instead of stopping wherever the finger lifted.
+          if (barHover >= 0) place(barHover, 0);
           if (barHover >= 0) {
             switchSegTab(tabs()[barHover]);
             if (window.navigator.vibrate) { try { navigator.vibrate(8); } catch (err) {} }
