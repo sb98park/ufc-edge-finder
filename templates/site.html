@@ -1807,20 +1807,22 @@
        tints itself; CSS has no equivalent, so a text shadow is the honest
        substitute -- it protects contrast without needing to know what's
        behind. */
-    /* Fill reduced to ~8% total -- close to the practical floor. Below this
-       the bar stops reading as an OBJECT and becomes an unexplained blurry
-       patch, which is a different look rather than a more premium one.
-       What keeps it legible as a pane at this fill is the EDGE, not the
-       body: the border and rim below are strengthened to compensate, which
-       is why Apple's glass has such a pronounced bright boundary. The more
-       transparent the material, the more the boundary has to carry. */
-    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
-                linear-gradient(180deg, rgba(22,26,35,0.02), rgba(12,15,21,0.05));
-    backdrop-filter: blur(60px) saturate(220%) contrast(1.08);
-    -webkit-backdrop-filter: blur(60px) saturate(220%) contrast(1.08);
-    border: 1px solid rgba(255,255,255,0.17);
+    /* ~16% fill. Pushed to 10% and reverted: the change was imperceptible
+       while costing real legibility margin.
+       WHY FURTHER TRANSPARENCY DOESN'T SHOW HERE, worth remembering before
+       anyone tries again -- transparency reveals what is BEHIND, and behind
+       this bar is a near-black page gradient and dark fight cards. Blurring
+       dark content produces dark content. Apple's glass reads dramatically
+       because it usually sits over photos, video or colourful UI; on a dark
+       data app there is simply nothing to see through to. The limit is the
+       backdrop, not the opacity value. */
+    background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03)),
+                linear-gradient(180deg, rgba(22,26,35,0.04), rgba(12,15,21,0.09));
+    backdrop-filter: blur(52px) saturate(210%) contrast(1.06);
+    -webkit-backdrop-filter: blur(52px) saturate(210%) contrast(1.06);
+    border: 1px solid rgba(255,255,255,0.13);
     box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.30),   /* crisp 1px rim, doing more work at low fill */
+      inset 0 1px 0 rgba(255,255,255,0.24),   /* crisp 1px rim */
       inset 0 -1px 0 rgba(0,0,0,0.28),
       0 8px 30px rgba(0,0,0,0.42);
   }
@@ -1844,7 +1846,7 @@
     /* Carries contrast that the fill no longer provides. Two stacked shadows:
        a tight dark halo for edge definition, a wider soft one for separation
        from bright content scrolling underneath. */
-    text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 10px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.55), 0 0 8px rgba(0,0,0,0.35);
     letter-spacing: 0.02em; -webkit-tap-highlight-color: transparent;
   }
   .tabbar-btn span { display: block; line-height: 1; }
@@ -1895,7 +1897,7 @@
     backface-visibility: hidden;
     /* Same job for the glyphs -- a stroke-only icon over a near-transparent
        bar would otherwise disappear against light content. */
-    filter: grayscale(1) brightness(3) drop-shadow(0 1px 3px rgba(0,0,0,0.65));
+    filter: grayscale(1) brightness(3) drop-shadow(0 1px 2px rgba(0,0,0,0.5));
   }
   .tabbar-btn.active .inline-icon { opacity: 1; }
   /* No :active background. This painted a RECTANGLE across the whole button
