@@ -4149,7 +4149,19 @@
             to = from + (dx < 0 ? 1 : -1);
             if (to < 0 || to >= panes.length) { locked = 'y'; return; }
             bar.classList.add('dragging');
+            // Both panes are normally in document FLOW, so simply showing the
+            // incoming one stacked it BELOW the outgoing pane -- which is why
+            // the drag revealed blank space and the old content vanished
+            // upward. Overlay the incoming pane absolutely while the outgoing
+            // one stays in flow (so the container keeps its height), and clip
+            // the host so neither spills.
+            host.style.position = 'relative';
+            host.style.overflow = 'hidden';
             panes[to].style.display = 'block';
+            panes[to].style.position = 'absolute';
+            panes[to].style.top = '0';
+            panes[to].style.left = '0';
+            panes[to].style.right = '0';
           }
           if (locked !== 'x') return;
           if (e.cancelable) e.preventDefault();
@@ -4173,7 +4185,12 @@
           }
           place(commit ? to : from, 0);
           setTimeout(() => {
-            [panes[from], panes[to]].forEach(pn => { if (pn) { pn.style.transition = ''; pn.style.transform = ''; } });
+            [panes[from], panes[to]].forEach(pn => {
+              if (!pn) return;
+              pn.style.transition = ''; pn.style.transform = '';
+              pn.style.position = ''; pn.style.top = ''; pn.style.left = ''; pn.style.right = '';
+            });
+            host.style.position = ''; host.style.overflow = '';
             if (commit) {
               // Commit through the EXISTING switcher so active classes and
               // pane visibility stay owned by one code path.
@@ -4190,6 +4207,48 @@
           const dx = e.changedTouches[0].clientX - x0;
           settle(Math.abs(dx) > w * 0.28);
           x0 = 0; locked = null;
+        }, { passive: true });
+
+        // Drag the PILL itself too, matching the bottom tab bar. The
+        // indicator follows the finger across segments and commits on
+        // release, so either surface works -- swipe the fights, or slide the
+        // control.
+        let barDrag = false, barHover = -1;
+        function segAt(clientX) {
+          const r = bar.getBoundingClientRect();
+          const x = clientX - r.left - bar.clientLeft;
+          const n = Math.max(1, tabs().length);
+          const wSeg = (bar.clientWidth - PAD * 2) / n;
+          if (wSeg <= 0) return -1;
+          return Math.max(0, Math.min(n - 1, Math.floor((x - PAD) / wSeg)));
+        }
+        bar.addEventListener('touchstart', (e) => {
+          barDrag = true;
+          barHover = segAt(e.touches[0].clientX);
+          bar.classList.add('dragging');
+          // Centre the pill on the finger, as the bottom bar does.
+          const g = geom(barHover);
+          ind.style.width = g.w + 'px';
+          ind.style.transform = 'translateX(' + g.x + 'px)';
+        }, { passive: true });
+        bar.addEventListener('touchmove', (e) => {
+          if (!barDrag) return;
+          if (e.cancelable) e.preventDefault();
+          const i = segAt(e.touches[0].clientX);
+          if (i >= 0 && i !== barHover) {
+            barHover = i;
+            place(i, 0);
+            tabs().forEach((t, k) => t.classList.toggle('active', k === i));
+          }
+        }, { passive: false });
+        bar.addEventListener('touchend', () => {
+          if (!barDrag) return;
+          barDrag = false;
+          bar.classList.remove('dragging');
+          if (barHover >= 0) {
+            switchSegTab(tabs()[barHover]);
+            if (window.navigator.vibrate) { try { navigator.vibrate(8); } catch (err) {} }
+          }
         }, { passive: true });
       });
     }
