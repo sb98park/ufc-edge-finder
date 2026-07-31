@@ -1796,10 +1796,21 @@
        The dark fill drops again (0.28/0.38 -> 0.16/0.24) because every point
        of opacity is content NOT bleeding through -- and bleed-through is the
        entire effect. */
-    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045)),
-                linear-gradient(180deg, rgba(22,26,35,0.16), rgba(12,15,21,0.24));
-    backdrop-filter: blur(48px) saturate(200%) contrast(1.05);
-    -webkit-backdrop-filter: blur(48px) saturate(200%) contrast(1.05);
+    /* GENUINELY see-through. The dark fill drops from 0.16/0.24 to
+       0.04/0.09 -- almost nothing. It was previously carrying two jobs:
+       giving the glass a body, AND guaranteeing the white labels had
+       something to sit against. That second job is what forced it to stay
+       opaque enough to block the view.
+       Legibility is now handled separately, by a text shadow on the labels
+       and icons (below), which frees the fill to nearly vanish.
+       iOS can go further still because its material SAMPLES the backdrop and
+       tints itself; CSS has no equivalent, so a text shadow is the honest
+       substitute -- it protects contrast without needing to know what's
+       behind. */
+    background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03)),
+                linear-gradient(180deg, rgba(22,26,35,0.04), rgba(12,15,21,0.09));
+    backdrop-filter: blur(52px) saturate(210%) contrast(1.06);
+    -webkit-backdrop-filter: blur(52px) saturate(210%) contrast(1.06);
     border: 1px solid rgba(255,255,255,0.10);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.22),   /* crisp 1px rim */
@@ -1822,7 +1833,11 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 4px; padding: 11px 2px 10px;
     background: none; border: 0; cursor: pointer;
-    color: rgba(255,255,255,0.55); font-family: inherit; font-size: 10.5px; font-weight: 600;
+    color: rgba(255,255,255,0.62); font-family: inherit; font-size: 10.5px; font-weight: 600;
+    /* Carries contrast that the fill no longer provides. Two stacked shadows:
+       a tight dark halo for edge definition, a wider soft one for separation
+       from bright content scrolling underneath. */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.55), 0 0 8px rgba(0,0,0,0.35);
     letter-spacing: 0.02em; -webkit-tap-highlight-color: transparent;
   }
   .tabbar-btn span { display: block; line-height: 1; }
@@ -1871,6 +1886,9 @@
     transform: translateZ(0);
     will-change: opacity;
     backface-visibility: hidden;
+    /* Same job for the glyphs -- a stroke-only icon over a near-transparent
+       bar would otherwise disappear against light content. */
+    filter: grayscale(1) brightness(3) drop-shadow(0 1px 2px rgba(0,0,0,0.5));
   }
   .tabbar-btn.active .inline-icon { opacity: 1; }
   /* No :active background. This painted a RECTANGLE across the whole button
@@ -1917,7 +1935,7 @@
        Kept deliberately faint: with the inactive state now muted, the pill
        only has to hint at the selection -- the crisp white glyph does the
        actual work. */
-    background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.06));
+    background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.07));
     /* Its OWN backdrop-filter, so the pill is a lens rather than a lighter
        patch of paint. This composes on top of the bar's blur -- the region
        behind the selected tab gets blurred and brightened a second time,
