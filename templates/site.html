@@ -750,13 +750,34 @@
      rather than behind them: 11px padding top + 11px bottom + ~16px line +
      2px active underline + 1px border = ~41px. */
   :root { --seg-tabs-h: 41px; }
-  .seg-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 4px 0 14px; position: sticky; top: 0; background: var(--bg); z-index: 40; }
+  /* iOS-style segmented control rather than a black rectangle with an
+     underline: a rounded track with a sliding pill behind the active
+     segment. The pill is what lets a swipe drive the indicator
+     proportionally -- an underline can only jump. */
+  .seg-tabs {
+    display: flex; position: relative; margin: 4px 0 14px;
+    position: sticky; top: 0; z-index: 40;
+    padding: 3px; border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+  }
+  .seg-indicator {
+    position: absolute; top: 3px; bottom: 3px; left: 0; width: 0;
+    border-radius: 999px; background: rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+    transition: transform 0.34s cubic-bezier(0.22,1,0.36,1), width 0.34s cubic-bezier(0.22,1,0.36,1);
+    pointer-events: none; z-index: 0;
+  }
+  .seg-tabs.dragging .seg-indicator { transition: none; }
+  .seg-tab { position: relative; z-index: 1; }
   .seg-tab {
     flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
     color: var(--muted); font-size: 12px; font-weight: 700; padding: 11px 4px;
     cursor: pointer; font-family: inherit; letter-spacing: 0.2px; transition: color 0.15s, border-color 0.15s;
   }
-  .seg-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .seg-tab.active { color: var(--text); }
   .track-tabs {
     display: flex; flex-wrap: nowrap; overflow-x: auto; border-bottom: 1px solid var(--border);
     margin: 4px 0 14px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
@@ -4064,6 +4085,121 @@
     }
     initDesktopLayoutIfNeeded();
 
+    // ===== Segmented controls: sliding pill + finger-tracked swipe =====
+    function initSegControls() {
+      document.querySelectorAll('.seg-tabs').forEach(bar => {
+        if (bar.querySelector('.seg-indicator')) return;
+        const ind = document.createElement('span');
+        ind.className = 'seg-indicator';
+        bar.insertBefore(ind, bar.firstChild);
+        const tabs = () => Array.from(bar.querySelectorAll('.seg-tab'));
+
+        // COMPUTED, never measured mid-animation -- the same rule that fixed
+        // the bottom tab bar. Segments are equal flex items inside a known
+        // 3px padding, so arithmetic gives exact geometry with no reflow.
+        const PAD = 3;
+        function geom(i) {
+          const n = Math.max(1, tabs().length);
+          const w = (bar.clientWidth - PAD * 2) / n;
+          return { w, x: PAD + i * w };
+        }
+        function place(i, frac) {
+          const g = geom(i);
+          const off = (frac || 0) * g.w;
+          ind.style.width = g.w + 'px';
+          ind.style.transform = 'translateX(' + (g.x + off) + 'px)';
+        }
+        function activeIndex() {
+          const i = tabs().findIndex(t => t.classList.contains('active'));
+          return i < 0 ? 0 : i;
+        }
+        bar.__place = place;
+        bar.__activeIndex = activeIndex;
+        requestAnimationFrame(() => place(activeIndex(), 0));
+        window.addEventListener('resize', () => place(activeIndex(), 0), { passive: true });
+
+        // Panes this bar controls, in tab order.
+        const panes = tabs().map(t => document.getElementById(t.dataset.segTarget)).filter(Boolean);
+        if (panes.length < 2) return;
+        const host = panes[0].parentElement;
+        if (!host) return;
+
+        let x0 = 0, y0 = 0, locked = null, from = 0, to = 0, w = 0;
+
+        host.addEventListener('touchstart', (e) => {
+          // Never hijack a gesture that began inside a horizontally
+          // scrollable table -- swiping a wide odds table must scroll it,
+          // not switch cards.
+          if (e.target.closest('.table-scroll, .mobile-tabbar, [data-scrollable]')) { locked = 'y'; return; }
+          const t0 = e.touches[0];
+          x0 = t0.clientX; y0 = t0.clientY; locked = null; w = host.offsetWidth || 1;
+        }, { passive: true });
+
+        host.addEventListener('touchmove', (e) => {
+          if (locked === 'y' || !x0) return;
+          const t0 = e.touches[0];
+          const dx = t0.clientX - x0, dy = t0.clientY - y0;
+          if (locked === null) {
+            if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+            // Decide ONCE. Committing early stops a diagonal drag flipping
+            // between scrolling and swiping mid-gesture.
+            locked = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';
+            if (locked !== 'x') return;
+            from = activeIndex();
+            to = from + (dx < 0 ? 1 : -1);
+            if (to < 0 || to >= panes.length) { locked = 'y'; return; }
+            bar.classList.add('dragging');
+            panes[to].style.display = 'block';
+          }
+          if (locked !== 'x') return;
+          if (e.cancelable) e.preventDefault();
+          const frac = Math.max(-1, Math.min(1, dx / w));
+          panes[from].style.transform = 'translateX(' + (frac * 100) + '%)';
+          panes[to].style.transform = 'translateX(' + ((dx < 0 ? 100 : -100) + frac * 100) + '%)';
+          // The pill tracks the SAME fraction, so the indicator and the
+          // content move as one object rather than the pill jumping at the end.
+          place(from, Math.abs(frac) * (to > from ? 1 : -1));
+        }, { passive: false });
+
+        function settle(commit) {
+          bar.classList.remove('dragging');
+          [panes[from], panes[to]].forEach(pn => { if (pn) pn.style.transition = 'transform 0.3s cubic-bezier(0.22,1,0.36,1)'; });
+          if (commit) {
+            panes[from].style.transform = 'translateX(' + (to > from ? -100 : 100) + '%)';
+            panes[to].style.transform = 'translateX(0%)';
+          } else {
+            panes[from].style.transform = 'translateX(0%)';
+            panes[to].style.transform = 'translateX(' + (to > from ? 100 : -100) + '%)';
+          }
+          place(commit ? to : from, 0);
+          setTimeout(() => {
+            [panes[from], panes[to]].forEach(pn => { if (pn) { pn.style.transition = ''; pn.style.transform = ''; } });
+            if (commit) {
+              // Commit through the EXISTING switcher so active classes and
+              // pane visibility stay owned by one code path.
+              switchSegTab(tabs()[to]);
+              if (window.navigator.vibrate) { try { navigator.vibrate(8); } catch (err) {} }
+            } else {
+              panes[to].style.display = 'none';
+            }
+          }, 310);
+        }
+
+        host.addEventListener('touchend', (e) => {
+          if (locked !== 'x') { x0 = 0; locked = null; return; }
+          const dx = e.changedTouches[0].clientX - x0;
+          settle(Math.abs(dx) > w * 0.28);
+          x0 = 0; locked = null;
+        }, { passive: true });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSegControls);
+    } else {
+      initSegControls();
+    }
+
+
     // ===== Measure the sticky segment tabs =====
     // --seg-tabs-h was a hand-estimated 41px, and being even 2px short leaves
     // a gap the expanded card's content peeks through. Padding, line-height
@@ -4669,6 +4805,11 @@
     // same staggered pattern, then clear the inline delay so it can't
     // interfere with later transitions.
     function switchSegTab(btn) {
+      const _bar = btn.closest('.seg-tabs');
+      if (_bar && _bar.__place) {
+        const _tabs = Array.from(_bar.querySelectorAll('.seg-tab'));
+        requestAnimationFrame(() => _bar.__place(_tabs.indexOf(btn), 0));
+      }
       const targetId = btn.dataset.segTarget;
       btn.parentElement.querySelectorAll('.seg-tab').forEach(t => t.classList.toggle('active', t === btn));
       // Scoped to the enclosing detail-section, not the whole document --

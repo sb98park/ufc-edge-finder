@@ -160,8 +160,8 @@ def build_market_label(fighter: str, market: str) -> str:
     # naming it that way makes the set read as three answers to one question
     # rather than three unrelated props.
     PHRASE = {
-        "goesthedistance": "Fight ends by decision",
-        "fightoutcome": "Fight ends by decision",
+        "goesthedistance": "Fight ends by Decision",
+        "fightoutcome": "Fight ends by Decision",
         "fightmethod": "Fight ends by {}",
         "totalrounds": "Total rounds {}",
     }
