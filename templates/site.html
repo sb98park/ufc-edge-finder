@@ -139,7 +139,7 @@
   .brand-logo { flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(212,175,55,0.35)); }
   .brand-text { line-height: 1.15; }
   .brand-name {
-    position: relative; font-size: 25px; font-weight: 900; letter-spacing: 1px; white-space: nowrap;
+    position: relative; font-size: 21px; font-weight: 900; letter-spacing: 0.8px; white-space: nowrap;
     background: linear-gradient(135deg, #f5e29a, #d4af37 55%, #a3801f);
     -webkit-background-clip: text; background-clip: text; color: transparent;
     text-shadow: 0 0 22px rgba(212,175,55,0.3);
@@ -156,10 +156,6 @@
     100% { background-position: -100% 0; }
   }
   .brand-tagline { font-size: 12px; font-weight: 600; color: #b5a26a; letter-spacing: 0.5px; margin-top: 1px; }
-  .subtitle { font-size: 12.5px; margin-bottom: 8px; letter-spacing: 0.15px; }
-  .subtitle-model { color: #d4af37; font-weight: 700; }
-  .subtitle-vs { color: var(--accent-cool); font-weight: 700; font-style: italic; font-size: 11px; margin: 0 5px; }
-  .subtitle-market { color: var(--accent-cool); font-weight: 500; }
   .made-with-love {
     text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.3px;
     margin-top: 4px; padding-bottom: 24px; font-style: italic;
@@ -2267,6 +2263,18 @@
   .market-group-summary .chevron { transition: transform 0.18s ease; font-size: 9px; color: var(--muted); }
   .upcoming-movement { margin-top: 10px; }
   .upcoming-movement .line-card { margin-top: 6px; }
+  /* Live pulse: states that prices are refreshing without spending a second
+     timestamp on it. Goes quiet when the feed stops, so a dead price feed is
+     visible rather than silently implied by a stale number. */
+  .live-dot-sm {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-cool); margin-right: 6px; vertical-align: 1px;
+    box-shadow: 0 0 6px rgba(95,184,201,0.7);
+    animation: pricePulse 2s ease-in-out infinite;
+  }
+  .live-dot-sm.stalled { background: var(--muted); box-shadow: none; animation: none; }
+  @keyframes pricePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) { .live-dot-sm { animation: none; } }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -2415,7 +2423,7 @@
   <div class="page-header">
   <div class="brand-header">
     <div class="brand-left">
-    <svg width="46" height="46" viewBox="0 0 44 44" class="brand-logo" role="img" aria-label="Octane Alpha logo">
+    <svg width="38" height="38" viewBox="0 0 44 44" class="brand-logo" role="img" aria-label="Octane Alpha logo">
       <defs>
         <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#1a1508"/>
@@ -2458,7 +2466,6 @@
       }
     })();
   </script>
-  <div class="subtitle"><span class="subtitle-model">Model probability</span><span class="subtitle-vs">vs.</span><span class="subtitle-market">live sportsbook lines</span></div>
 
   {% if countdown_target_iso %}
   <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}" data-espn-live-key="{{ espn_live_fight_key_json | e }}">
@@ -2517,7 +2524,15 @@
     <button class="whats-new-dismiss" onclick="event.stopPropagation(); window.__dismissToast();">{{ icon_cross() }}</button>
   </div>
 
+  {# Build time, not price time. "Prices live" refreshes client-side every
+     30s, so it reads as current even if Actions has been broken for days --
+     it would report a healthy feed beside three-day-old model numbers. The
+     build time is the one that can actually go stale, and the model is the
+     product. The dot carries "prices are updating" better than a second
+     timestamp did: a pulse reads as happening-now, where a time requires
+     comparing it against the clock yourself. #}
   <div class="meta-row">
+    <span class="live-dot-sm" id="price-pulse" aria-hidden="true"></span>
     {{ icon_clock() }} Updated {{ generated_at_short }}
   </div>
 
@@ -4737,27 +4752,14 @@
         // prices themselves are quoted against an Eastern fight schedule.
         // timeZone handles EST/EDT automatically, so it stays correct across
         // the DST switch without any date maths.
-        const t = new Date().toLocaleTimeString('en-US', {
-          timeZone: 'America/New_York',
-          hour: 'numeric', minute: '2-digit', hour12: true
-        }) + ' ET';
-        if (!chip) {
-          const meta = document.querySelector('.meta-row');
-          if (!meta) return;
-          const sep = document.createElement('span');
-          sep.className = 'meta-sep';
-          sep.textContent = '·';
-          meta.appendChild(sep);
-          chip = document.createElement('span');
-          chip.className = 'live-prices-chip';
-          meta.appendChild(chip);
-        }
-        // "(analysis as of build)" removed: it wrapped to a second line on
-        // mobile, and it duplicated information already sitting immediately
-        // to its left -- the "Updated <time> ET" stamp IS the build time, so
-        // the contrast between live prices and build-time analysis is still
-        // legible from the two timestamps alone.
-        chip.innerHTML = 'Prices live · ' + t;
+      // The meta row now carries a live DOT rather than a second timestamp.
+      // A pulse says "prices are refreshing" more directly than a time the
+      // reader has to compare against their own clock -- and crucially it can
+      // show the feed STOPPING, which a self-updating timestamp never could.
+      function markPricesLive(ok) {
+        const dot = document.getElementById('price-pulse');
+        if (dot) dot.classList.toggle('stalled', !ok);
+      }
       }
 
       async function refresh() {
@@ -4786,8 +4788,9 @@
             });
             updated++;
           }
+          markPricesLive(updated > 0);
           if (updated > 0) showChip();
-        } catch (e) { /* fail silent -- baked odds remain */ }
+        } catch (e) { markPricesLive(false); }
         finally {
           // End the first-load shimmer whether the fetch succeeded or not
           // -- on failure the baked values simply stay, and they should
