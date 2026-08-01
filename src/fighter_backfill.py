@@ -370,6 +370,16 @@ def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None, fighter_name
         ev_obj = _get(ev_ref) if ev_ref else None
         d = ev_obj.get("date") if isinstance(ev_obj, dict) else None
         if isinstance(d, str) and len(d) >= 10:
+            # A "last fight" cannot be in the FUTURE. ESPN's eventLog marks
+            # some SCHEDULED bouts as played=true, so that flag alone let an
+            # upcoming card through -- fighters were showing a last fight
+            # dated a week ahead of today, with a fabricated result attached.
+            # Comparing against today is cheap and doesn't depend on trusting
+            # the flag.
+            if d[:10] > _dt.date.today().isoformat():
+                print(f"[fighter_backfill] eventLog: skipping FUTURE-dated bout {d[:10]} "
+                      f"for {fighter_name or athlete_id} -- ESPN flagged a scheduled fight as played.")
+                continue
             dated.append((d[:10], it))
     if not dated:
         print(f"[fighter_backfill] eventLog: couldn't resolve any event dates for {fighter_name or athlete_id} -- skipping last-fight.")
