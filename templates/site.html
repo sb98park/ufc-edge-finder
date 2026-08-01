@@ -4859,7 +4859,13 @@
         // section swipe, moving the bottom tab indicator to "More". It only
         // happened at speed because this handler requires the gesture to
         // finish inside MAX_DURATION_MS, which a slow drag exceeds.
-        if (e.target.closest('.table-scroll, .seg-tabs, .mobile-tabbar, [data-scrollable]')) {
+        // .track-tabs is the Record tab's scrollable card-group bar -- a
+        // DIFFERENT class from .seg-tabs, so excluding the latter didn't
+        // cover it and scrolling through cards navigated to "More" instead.
+        // Any horizontally scrollable or draggable strip has to be listed
+        // here; the tell is always the same, a horizontal gesture doing
+        // something at page level.
+        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .mobile-tabbar, [data-scrollable]')) {
           tracking = false; return;
         }
         touchStartX = e.touches[0].clientX;
