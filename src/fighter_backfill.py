@@ -158,6 +158,11 @@ def _fetch_espn_method_records(athlete_id: str) -> dict:
             out["dec_wins"], out["dec_losses"] = dw, dl
     if unmatched:
         print(f"[fighter_backfill] unrecognised stat entries for {athlete_id}: {unmatched[:5]}")
+    # Hand the career W-L back to the caller. It was being dropped after
+    # deriving the decision remainder, even though it is the most reliable
+    # career record ESPN publishes.
+    if "_total_w" in out:
+        out["_career_w"], out["_career_l"] = out["_total_w"], out["_total_l"]
     out.pop("_total_w", None)
     out.pop("_total_l", None)
     return out
@@ -932,7 +937,25 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                 # bug to fix; a confirmed absence in the source itself.
 
                 if attempt_athlete_detail and athlete_id:
-                    physical.update(_fetch_espn_method_records(athlete_id))
+                    method_recs = _fetch_espn_method_records(athlete_id)
+                    physical.update(method_recs)
+                    # PREFER THE ATHLETE ENDPOINT'S CAREER RECORD over the
+                    # scoreboard's. The scoreboard's records[] entry named
+                    # "overall" is the fighter's record WITHIN THAT PROMOTION,
+                    # not their career -- so a regional fighter debuting in the
+                    # UFC showed 2-1 against a true career mark of 16-2. That
+                    # understates a debutant's experience, which is exactly the
+                    # input the model leans on, and it silently inflated
+                    # confidence in his opponent.
+                    # athlete.statsSummary's "wins-losses-draws" IS the career
+                    # figure (the same block the method splits come from), so
+                    # when the two disagree the athlete endpoint wins.
+                    cw, cl = method_recs.pop("_career_w", None), method_recs.pop("_career_l", None)
+                    if cw is not None and cl is not None:
+                        if wins is not None and (cw != wins or cl != losses):
+                            print(f"[fighter_backfill] {name}: scoreboard record {wins}-{losses} "
+                                  f"disagrees with career {cw}-{cl}; using career")
+                        wins, losses = cw, cl
 
                 if attempt_athlete_detail and eventlog_ref:
                     physical.update(_fetch_espn_last_fight_info(eventlog_ref, athlete_id, name))

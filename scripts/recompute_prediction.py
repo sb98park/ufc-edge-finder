@@ -1,0 +1,128 @@
+"""
+Recompute one fight's logged prediction after a DATA correction.
+
+WHEN THIS IS LEGITIMATE, and when it isn't. A track record is only worth
+anything if entries aren't quietly adjusted after the fact, so this is not a
+general "change a pick" tool. It exists for one case: a prediction was
+generated from demonstrably wrong INPUT data, the error was identified
+before the fight, and the fix simply hadn't shipped yet.
+
+Real case: Borislav Nikolić was stored at 2-1 because the backfill read the
+scoreboard's promotion-scoped record instead of his 16-2 career mark. His
+opponent was a 79% High Confidence pick built on a phantom debutant.
+
+WHAT IT DOES NOT DO: hide the change. The correction is appended to
+favorite_prob_history with a note, so the old and new probabilities both
+remain visible. A record that shows "this was corrected, here's why" is more
+trustworthy than one that silently reads as if the error never happened --
+and the whole reason to bother is trustworthiness.
+
+Usage:
+    python3 scripts/recompute_prediction.py "Vologdin"          # dry run
+    python3 scripts/recompute_prediction.py "Vologdin" --apply
+"""
+
+import datetime as dt
+import json
+import os
+import sys
+
+import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.elo import EloRatingSystem  # noqa: E402
+from src.power_rating import build_effective_ratings  # noqa: E402
+from src.model_preview import build_fight_preview  # noqa: E402
+
+LOG = "data/predictions_log.csv"
+
+
+def main():
+    args = [a for a in sys.argv[1:] if a != "--apply"]
+    apply = "--apply" in sys.argv
+    if not args:
+        print(__doc__)
+        sys.exit(1)
+    needle = args[0].lower()
+
+    log = pd.read_csv(LOG)
+    mask = (log["fighter_a"].astype(str).str.lower().str.contains(needle, regex=False) |
+            log["fighter_b"].astype(str).str.lower().str.contains(needle, regex=False))
+    if not mask.any():
+        print(f"No logged prediction matching {args[0]!r}.")
+        sys.exit(1)
+
+    fighters = pd.read_csv("data/fighters.csv")
+    history = pd.read_csv("data/fight_history.csv")
+    try:
+        weight_hist = pd.read_csv("data/fighter_weight_class_history.csv")
+    except FileNotFoundError:
+        weight_hist = None
+
+    elo = EloRatingSystem()
+    elo.build_from_history(history)
+    eff = build_effective_ratings(fighters, elo.ratings, history)
+    now = dt.datetime.now().isoformat(timespec="seconds")
+
+    for i in log.index[mask]:
+        row = log.loc[i]
+        a, b = str(row["fighter_a"]), str(row["fighter_b"])
+        # build_fight_preview, not predict_matchup: the log stores favorite /
+        # favorite_prob / confidence_label, which are the preview's shape.
+        # predict_matchup returns raw prob_a / prob_b and no label.
+        preview = build_fight_preview(a, b, fighters, eff,
+                                      weight_class_history_df=weight_hist)
+        if not preview:
+            print(f"  {a} vs {b}: no preview produced -- check both fighters exist in fighters.csv")
+            continue
+
+        old_fav, old_prob = str(row["favorite"]), float(row["favorite_prob"])
+        old_label = str(row["confidence_label"])
+        # The CSV stores this as a string, so "False" is TRUTHY -- a plain
+        # str() check fired the lock warning on a 64.6% pick that was never a
+        # lock. Test the value, not its presence.
+        _lock_raw = str(row.get("is_lock_of_week", "")).strip().lower()
+        old_lock = _lock_raw in ("true", "yes", "1")
+        new_fav, new_prob = preview["favorite"], preview["favorite_prob"]
+        new_label = preview["confidence_label"]
+
+        print(f"\n{a} vs {b}")
+        print(f"   favorite   {old_fav:22} -> {new_fav}")
+        print(f"   probability{old_prob:>10.1%}            -> {new_prob:.1%}")
+        print(f"   confidence {old_label:22} -> {new_label}")
+        if old_fav != new_fav:
+            print("   NOTE: the corrected data flips which fighter the model favours.")
+        if old_lock and new_prob < 0.82:
+            print("   NOTE: was a Lock of the Week; the new probability is below the 82% floor.")
+
+        if not apply:
+            continue
+
+        try:
+            hist = json.loads(row.get("favorite_prob_history") or "[]")
+        except (json.JSONDecodeError, TypeError):
+            hist = []
+        # The correction is APPENDED, never overwritten -- the original
+        # probability stays in the history so the change is auditable.
+        hist.append({
+            "prob": new_prob, "date": now,
+            "note": f"corrected from {old_prob:.3f} after opponent record fix",
+        })
+        log.at[i, "favorite"] = new_fav
+        log.at[i, "favorite_prob"] = new_prob
+        log.at[i, "confidence_label"] = new_label
+        log.at[i, "likely_method"] = preview.get("likely_method", row.get("likely_method"))
+        log.at[i, "favorite_prob_history"] = json.dumps(hist)
+        log.at[i, "last_updated"] = now
+        if old_lock and new_prob < 0.82:
+            log.at[i, "is_lock_of_week"] = ""
+
+    if not apply:
+        print("\nDRY RUN -- nothing written. Re-run with --apply.")
+        return
+    log.to_csv(LOG, index=False)
+    print("\nWritten. Commit data/predictions_log.csv.")
+
+
+if __name__ == "__main__":
+    main()
