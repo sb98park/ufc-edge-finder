@@ -2773,6 +2773,44 @@
   <div class="track-record-card">
     {% if track_record %}
     <div class="seg-pane active" id="tr-overall">
+      {# UNITS FIRST. It was rendering fourth, below the overall record and
+         the confidence donuts -- but it's the only headline figure that
+         already accounts for BOTH price and conviction, which is what the
+         tiered staking exists to express. Hit rate can't distinguish a
+         string of -300 favourites from genuine edge; units can. #}
+    {% if track_record.units_stats %}
+    <div class="units-block">
+      <div class="units-title">{{ icon_coins() }} Units Tracker</div>
+      <div class="units-headline {{ 'positive' if track_record.units_stats.total_units >= 0 else 'negative' }}">
+        {{ '+' if track_record.units_stats.total_units >= 0 else '' }}{{ track_record.units_stats.total_units }}<span class="units-suffix">U</span>
+      </div>
+      {# Dollar equivalent. "Units" is standard among bettors but the cash
+         figure is what lands instantly -- and it's stated as an explicit
+         hypothetical at a named unit size, never as realised profit. #}
+      <div class="units-dollars">
+        At $100 a unit, that's <strong>{{ '+' if track_record.units_stats.total_units >= 0 else '-' }}${{ '{:,.0f}'.format(track_record.units_stats.total_units | abs * 100) }}</strong>
+      </div>
+      <div class="units-sub">
+        {{ track_record.units_stats.eligible_count }} pick{{ 's' if track_record.units_stats.eligible_count != 1 }} priced across {{ track_record.units_stats.event_count }} fight card{{ 's' if track_record.units_stats.event_count != 1 }}
+        {% if track_record.units_stats.roi_pct is not none %}<span class="units-roi {{ 'positive' if track_record.units_stats.roi_pct >= 0 else 'negative' }}"> · ROI {{ '+' if track_record.units_stats.roi_pct >= 0 else '' }}{{ track_record.units_stats.roi_pct }}%</span>{% endif %}
+      </div>
+      {% if units_timeseries_svg %}
+      <div class="chart-block units-chart-wrap">{{ units_timeseries_svg | safe }}</div>
+      {% endif %}
+      <div class="units-tier-breakdown">
+        {% for tier, stats in track_record.units_stats.by_tier.items() %}
+        <div class="units-tier-row">
+          <span class="units-tier-dot {{ 'lock' if tier == 'Lock of the Week' else tier|lower|replace(' confidence','') }}"></span>
+          <span class="units-tier-label">{{ 'Lock of the Week' if tier == 'Lock of the Week' else tier|replace(' Confidence','') }}</span>
+          <span class="units-tier-size">{{ stats.unit_size|int }}U/pick</span>
+          <span class="units-tier-count">{{ stats.count }}p</span>
+          <span class="units-tier-value {{ 'positive' if stats.units >= 0 else 'negative' }}">{{ '+' if stats.units >= 0 else '' }}{{ stats.units }}U</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="units-caption">Sized by conviction (10U lock of the week · 5U high confidence · 3U medium · 1U low), priced at the real market odds when picked — never the model's own probability. A lock counts only once, at its own weight — not also folded into High Confidence. Only counts picks with known odds on record.</div>
+    </div>
+    {% endif %}
       <div class="track-record-kicker">Overall Record</div>
       <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span class="countup">({{ track_record.accuracy_pct }}%)</span></div>
     {% if track_record.by_confidence %}
@@ -2824,39 +2862,6 @@
     {% endif %}
     {% endif %}
 
-    {% if track_record.units_stats %}
-    <div class="units-block">
-      <div class="units-title">{{ icon_coins() }} Units Tracker</div>
-      <div class="units-headline {{ 'positive' if track_record.units_stats.total_units >= 0 else 'negative' }}">
-        {{ '+' if track_record.units_stats.total_units >= 0 else '' }}{{ track_record.units_stats.total_units }}<span class="units-suffix">U</span>
-      </div>
-      {# Dollar equivalent. "Units" is standard among bettors but the cash
-         figure is what lands instantly -- and it's stated as an explicit
-         hypothetical at a named unit size, never as realised profit. #}
-      <div class="units-dollars">
-        At $100 a unit, that's <strong>{{ '+' if track_record.units_stats.total_units >= 0 else '-' }}${{ '{:,.0f}'.format(track_record.units_stats.total_units | abs * 100) }}</strong>
-      </div>
-      <div class="units-sub">
-        {{ track_record.units_stats.eligible_count }} pick{{ 's' if track_record.units_stats.eligible_count != 1 }} priced across {{ track_record.units_stats.event_count }} fight card{{ 's' if track_record.units_stats.event_count != 1 }}
-        {% if track_record.units_stats.roi_pct is not none %}<span class="units-roi {{ 'positive' if track_record.units_stats.roi_pct >= 0 else 'negative' }}"> · ROI {{ '+' if track_record.units_stats.roi_pct >= 0 else '' }}{{ track_record.units_stats.roi_pct }}%</span>{% endif %}
-      </div>
-      {% if units_timeseries_svg %}
-      <div class="chart-block units-chart-wrap">{{ units_timeseries_svg | safe }}</div>
-      {% endif %}
-      <div class="units-tier-breakdown">
-        {% for tier, stats in track_record.units_stats.by_tier.items() %}
-        <div class="units-tier-row">
-          <span class="units-tier-dot {{ 'lock' if tier == 'Lock of the Week' else tier|lower|replace(' confidence','') }}"></span>
-          <span class="units-tier-label">{{ 'Lock of the Week' if tier == 'Lock of the Week' else tier|replace(' Confidence','') }}</span>
-          <span class="units-tier-size">{{ stats.unit_size|int }}U/pick</span>
-          <span class="units-tier-count">{{ stats.count }}p</span>
-          <span class="units-tier-value {{ 'positive' if stats.units >= 0 else 'negative' }}">{{ '+' if stats.units >= 0 else '' }}{{ stats.units }}U</span>
-        </div>
-        {% endfor %}
-      </div>
-      <div class="units-caption">Sized by conviction (10U lock of the week · 5U high confidence · 3U medium · 1U low), priced at the real market odds when picked — never the model's own probability. A lock counts only once, at its own weight — not also folded into High Confidence. Only counts picks with known odds on record.</div>
-    </div>
-    {% endif %}
     {% if track_record.clv_stats %}
     <div class="clv-badge">
       <div class="clv-badge-label">{{ icon_target() }} Beat the Closing Line</div>
