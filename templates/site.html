@@ -787,7 +787,6 @@
   .seg-pane { display: none; }
   .seg-pane.active { display: block; }
   #live-header { cursor: pointer; }
-  .live-cta { font-size: 11px; color: var(--accent2); font-weight: 700; margin-left: 8px; }
   .live-prices-chip { color: #d97a72; font-weight: 600; }
   .live-prices-chip .chip-sub { color: var(--muted); font-weight: 500; }
 
@@ -2550,7 +2549,10 @@
     </div>
     <div class="live-header" id="live-header" style="display:none;" onclick="showSection('thisweekend')" data-section-nav="thisweekend" role="button" tabindex="0" aria-label="View the live fight card">
       <div class="live-header-macro">
-        <span class="live-dot"></span> <span id="live-macro-text">LIVE NOW</span><span class="live-cta">view card →</span>
+        {# "view card →" removed: the banner only renders on the Card tab now,
+           so it was inviting the reader to navigate to the page they were
+           already on. #}
+        <span class="live-dot"></span> <span id="live-macro-text">LIVE NOW</span>
       </div>
       <div class="live-header-micro" id="live-header-micro">—</div>
     </div>

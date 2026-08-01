@@ -89,6 +89,12 @@ def _parse_record(summary: str) -> tuple[int | None, int | None]:
 
 
 
+# Completion STATES that ESPN returns where a method belongs. Shared by both
+# last-fight extraction paths so they can never disagree about what counts as
+# a real method.
+STATUS_WORDS = {"final", "final/ot", "ft", "completed", "complete",
+                "status_final", "end", "ended"}
+
 SITE_ATHLETE_URL = "https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/{}"
 
 
@@ -285,6 +291,78 @@ def _fetch_espn_athlete_detail(athlete_id: str) -> tuple[dict, str | None]:
 _LAST_FIGHT_METHOD_LOGGED = 0
 
 
+
+def _fetch_last_fight_from_events_map(athlete_id: str, fighter_name: str | None = None) -> dict:
+    """
+    Last fight from the SITE athlete endpoint's eventsMap.
+
+    WHY THIS REPLACES THE eventLog PATH. The core api's eventLog marks some
+    SCHEDULED bouts as played=true, which gave 45 fighters a "last fight"
+    dated up to five weeks in the FUTURE with a fabricated result attached.
+    Rejecting those left many fighters with nothing at all, even though
+    espn.com renders their full history -- because that page is backed by
+    eventsMap, which we were never reading.
+
+    Each eventsMap value carries gameDate, gameResult, opponent and status,
+    so a completed bout is identifiable without trusting a played flag.
+
+    Field SHAPES are handled defensively (dict or string) and anything
+    unrecognised is logged rather than silently dropped -- the probe showed
+    the keys but not every value type, and guessing shapes has been the
+    single most expensive habit in this codebase.
+    """
+    out = {}
+    try:
+        resp = requests.get(SITE_ATHLETE_URL.format(athlete_id), headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            return out
+        events_map = resp.json().get("eventsMap") or {}
+    except Exception as exc:
+        print(f"[fighter_backfill] eventsMap fetch failed for {fighter_name or athlete_id}: {exc}")
+        return out
+
+    today = dt.date.today().isoformat()
+    candidates = []
+    for rec in events_map.values():
+        if not isinstance(rec, dict):
+            continue
+        date = str(rec.get("gameDate") or "")[:10]
+        if not date or date > today:
+            continue                      # scheduled, or today's card mid-event
+        result = rec.get("gameResult")
+        if isinstance(result, dict):
+            result = result.get("displayName") or result.get("abbreviation")
+        result = str(result or "").strip().upper()
+        # No W/L means the bout hasn't resolved, whatever status claims.
+        if result not in ("W", "L", "D", "WIN", "LOSS", "DRAW"):
+            continue
+        candidates.append((date, rec, result))
+
+    if not candidates:
+        return out
+    date, rec, result = max(candidates, key=lambda t: t[0])
+
+    opp = rec.get("opponent")
+    if isinstance(opp, dict):
+        opp = opp.get("displayName") or opp.get("shortDisplayName") or opp.get("name")
+    opp = str(opp).strip() if opp else None
+
+    out["last_fight_date"] = date
+    out["last_fight_result"] = "W" if result.startswith("W") else ("L" if result.startswith("L") else "D")
+    if opp:
+        out["last_fight_opponent"] = opp
+
+    # Method, only if it's a real one. status.type.detail returns "Final" --
+    # a completion state -- which is what produced "W by Final against X".
+    status = rec.get("status")
+    if isinstance(status, dict):
+        stype = status.get("type") if isinstance(status.get("type"), dict) else status
+        method = stype.get("detail") or stype.get("description") or stype.get("shortDetail")
+        if isinstance(method, str) and method.strip().lower() not in STATUS_WORDS:
+            out["last_fight_method"] = method.strip()
+    return out
+
+
 def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None, fighter_name=None) -> dict:
     """
     Pass 4 -- the most experimental piece in this module. 'eventLog' was
@@ -376,7 +454,7 @@ def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None, fighter_name
             # dated a week ahead of today, with a fabricated result attached.
             # Comparing against today is cheap and doesn't depend on trusting
             # the flag.
-            if d[:10] > _dt.date.today().isoformat():
+            if d[:10] > dt.date.today().isoformat():
                 print(f"[fighter_backfill] eventLog: skipping FUTURE-dated bout {d[:10]} "
                       f"for {fighter_name or athlete_id} -- ESPN flagged a scheduled fight as played.")
                 continue
@@ -466,8 +544,6 @@ def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None, fighter_name
             # wired to that, storing nothing is strictly better than storing a
             # word that isn't a method: the template already renders the bare
             # "W against X", which is true.
-            STATUS_WORDS = {"final", "final/ot", "ft", "completed", "complete",
-                            "status_final", "end", "ended"}
             if isinstance(method, str) and method.strip() \
                     and method.strip().lower() not in STATUS_WORDS:
                 result["last_fight_method"] = method.strip()
@@ -967,7 +1043,18 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                                   f"disagrees with career {cw}-{cl}; using career")
                         wins, losses = cw, cl
 
-                if attempt_athlete_detail and eventlog_ref:
+                # eventsMap FIRST. It's the source behind espn.com's own
+                # fight-history table, it distinguishes scheduled from
+                # completed by whether a W/L exists, and it carries the
+                # opponent and method in the same record. The eventLog path
+                # below stays as a fallback for fighters whose site-endpoint
+                # response lacks eventsMap.
+                if attempt_athlete_detail and athlete_id:
+                    em = _fetch_last_fight_from_events_map(athlete_id, name)
+                    if em:
+                        physical.update(em)
+
+                if attempt_athlete_detail and eventlog_ref and not physical.get("last_fight_date"):
                     physical.update(_fetch_espn_last_fight_info(eventlog_ref, athlete_id, name))
 
                 existing_row = fighters[fighters["name"] == name]
@@ -1084,6 +1171,97 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
 
     if new_rows:
         fighters = pd.concat([fighters, pd.DataFrame(new_rows)], ignore_index=True)
+
     if filled_count or any_checked_flag_changed:
         fighters.to_csv(fighters_path, index=False)
     return filled_count
+
+
+def fill_missing_last_fights(fighters_path: str = "data/fighters.csv",
+                             card_paths: tuple[str, ...] = ("data/fight_cards.csv", "data/future_cards.csv")) -> int:
+    """
+    Fill last-fight data for tracked fighters the main backfill missed.
+
+    WHY THIS IS SEPARATE. backfill_fighters() only ever reaches a fighter who
+    appears as a competitor inside a scoreboard event it fetched BY NAME, and
+    it returns early when it judges there's nothing to do. Fighters on a
+    future card kept ending up with null last-fight fields even though every
+    individual step worked when called by hand -- verified with
+    scripts/diagnose_last_fight.py, which resolved the id and pulled a real
+    bout for a fighter the pipeline left empty.
+
+    This resolves ids from the scoreboard BY EVENT DATE, which is the route
+    that diagnostic proved, and reports what it found EVERY time. The
+    previous version printed only on success, so "skipped" and "worked" were
+    indistinguishable -- the same silent-skip failure this whole area keeps
+    producing.
+    """
+    try:
+        fighters = pd.read_csv(fighters_path)
+    except FileNotFoundError:
+        return 0
+    if "last_fight_date" not in fighters.columns:
+        return 0
+
+    card_names, dates = set(), set()
+    for path in card_paths:
+        try:
+            d = pd.read_csv(path)
+        except FileNotFoundError:
+            continue
+        if {"fighter_a", "fighter_b"} <= set(d.columns):
+            card_names |= set(d["fighter_a"].dropna()) | set(d["fighter_b"].dropna())
+        if "event_date" in d.columns:
+            dates |= {str(x)[:10] for x in d["event_date"].dropna()}
+
+    need = [n for n in fighters[fighters["last_fight_date"].isna()]["name"] if n in card_names]
+    if not need:
+        print("[last_fight] every tracked fighter already has a last fight on file.")
+        return 0
+
+    id_map = {}
+    for d in sorted(dates):
+        try:
+            r = requests.get(ESPN_SCOREBOARD_URL, params={"dates": d.replace("-", "")},
+                             headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+            if r.status_code != 200:
+                continue
+            for ev in r.json().get("events", []):
+                for comp in ev.get("competitions", []):
+                    for c in comp.get("competitors", []):
+                        ath = c.get("athlete") or {}
+                        aid = ath.get("id") or c.get("id")
+                        if ath.get("fullName") and aid:
+                            id_map[_normalize_name(ath["fullName"])] = str(aid)
+        except requests.RequestException:
+            continue
+
+    filled, no_id, no_bouts = 0, [], []
+    for nm in need:
+        aid = id_map.get(_normalize_name(nm))
+        if not aid:
+            no_id.append(nm)
+            continue
+        got = _fetch_last_fight_from_events_map(aid, nm)
+        if not got:
+            no_bouts.append(nm)
+            continue
+        idx = fighters.index[fighters["name"] == nm]
+        if len(idx) == 0:
+            continue
+        i = idx[0]
+        for col, val in got.items():
+            if col in fighters.columns and pd.isna(fighters.at[i, col]) and val is not None:
+                fighters = _safe_set_cell(fighters, i, col, val)
+                filled += 1
+
+    print(f"[last_fight] {len(need)} fighter(s) missing a last fight | "
+          f"{len(id_map)} espn id(s) resolved from {len(dates)} card date(s) | "
+          f"filled {filled} field(s)")
+    if no_id:
+        print(f"[last_fight] no ESPN id for: {sorted(no_id)[:8]}")
+    if no_bouts:
+        print(f"[last_fight] id found but no completed bouts for: {sorted(no_bouts)[:8]}")
+    if filled:
+        fighters.to_csv(fighters_path, index=False)
+    return filled
