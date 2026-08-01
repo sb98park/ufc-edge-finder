@@ -228,6 +228,7 @@ def group_edges_by_card(
     fighters_df: pd.DataFrame | None = None,
     effective_ratings: dict[str, float] | None = None,
     weight_class_history_df: pd.DataFrame | None = None,
+    fight_history_df: pd.DataFrame | None = None,
 ) -> tuple[list[dict], pd.DataFrame]:
     """
     Returns (events, unmatched_edges):
@@ -245,6 +246,7 @@ def group_edges_by_card(
                 preview = build_fight_preview(
                     row["fighter_a"], row["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round,
                     weight_class_history_df=weight_class_history_df, fight_weight_class=row.get("weight_class"),
+                    fight_history_df=fight_history_df,
                 )
             except Exception as e:
                 # One fight's preview failing -- bad roster data, a NaN slipping

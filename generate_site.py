@@ -228,8 +228,12 @@ def main():
         print(f"[generate_site] live odds fetch failed: {exc}")
         live_error = "Couldn't fetch live odds right now — will retry on the next update."
 
-    events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings, weight_class_history_df)
-    future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings, weight_class_history_df)
+    # history_df threaded through so the PREVIEW runs the same model as the
+    # moneyline edge row -- without it the headline pick omitted the
+    # recent-form adjustment and the weight-class penalty, and the two
+    # disagreed on screen for the same fight.
+    events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings, weight_class_history_df, history_df)
+    future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings, weight_class_history_df, history_df)
 
     # Event display order must be chronological (soonest first), independent
     # of whatever order their rows happen to sit in the source CSV -- that

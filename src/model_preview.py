@@ -147,6 +147,7 @@ def build_fight_preview(
     is_five_round: bool = False,
     weight_class_history_df: pd.DataFrame | None = None,
     fight_weight_class: str | None = None,
+    fight_history_df: pd.DataFrame | None = None,
 ) -> dict | None:
     row_a, row_b = _fighter_row(fighters_df, fighter_a), _fighter_row(fighters_df, fighter_b)
     if row_a is None or row_b is None:
@@ -154,6 +155,12 @@ def build_fight_preview(
 
     matchup = predict_matchup(
         fighter_a, fighter_b, fighters_df, effective_ratings,
+        # fight_history_df was being DROPPED here. It enables the recent-form
+        # adjustment, and compute_moneyline_edges passes it -- so the headline
+        # pick and the Moneyline row in the markets table were running
+        # DIFFERENT models on the same fight, with the headline the less
+        # informed of the two.
+        fight_history_df=fight_history_df,
         weight_class_history_df=weight_class_history_df, fight_weight_class=fight_weight_class,
     )
     prob_a = matchup["prob_a"]
