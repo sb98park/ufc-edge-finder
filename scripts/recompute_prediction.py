@@ -115,7 +115,14 @@ def main():
         log.at[i, "favorite_prob_history"] = json.dumps(hist)
         log.at[i, "last_updated"] = now
         if old_lock and new_prob < 0.82:
-            log.at[i, "is_lock_of_week"] = ""
+            # Match the column's existing dtype. pandas reads this column as
+            # bool when every value is True/False, and writing "" into a bool
+            # column raises rather than coercing -- which crashed mid-run,
+            # after the console had already printed the change.
+            if pd.api.types.is_bool_dtype(log["is_lock_of_week"]):
+                log.at[i, "is_lock_of_week"] = False
+            else:
+                log.at[i, "is_lock_of_week"] = ""
 
     if not apply:
         print("\nDRY RUN -- nothing written. Re-run with --apply.")
