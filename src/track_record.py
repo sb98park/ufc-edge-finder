@@ -791,11 +791,18 @@ def _group_results_by_event(matched: list[dict]) -> list[dict]:
     billing_rank = {"Main Event": 0, "Co-Main Event": 1, "Main Card": 2, "Prelims": 3, "Early Prelims": 4}
 
     def _sort_within_event(entries: list[dict]) -> list[dict]:
-        # Missing card_position (e.g. an older result logged before this
-        # field existed) falls back to keeping its original relative
-        # position rather than being scattered to an arbitrary spot --
-        # stable sort with a rank that doesn't discriminate among unknowns.
-        return sorted(entries, key=lambda e: billing_rank.get(e.get("card_position"), 99))
+        # LATEST FIGHT FIRST. Billing rank alone only orders the GROUPS --
+        # five fights all sharing "Main Card" (rank 2) came out in whatever
+        # order they happened to be stored, so within a segment the list was
+        # effectively arbitrary rather than chronological.
+        # Two stable passes: date_added descending first (results are
+        # recorded as each fight finishes, so it tracks fight order within a
+        # card), then billing rank. Python's sort is stable, so the second
+        # pass preserves the date order inside each equal rank.
+        # Missing card_position still falls back to rank 99 rather than
+        # being scattered to an arbitrary spot.
+        by_recency = sorted(entries, key=lambda e: str(e.get("date_added") or ""), reverse=True)
+        return sorted(by_recency, key=lambda e: billing_rank.get(e.get("card_position"), 99))
 
     ordered_event_names = sorted(groups.keys(), key=lambda name: _latest_date(groups[name]), reverse=True)
     return [{"event_name": name, "results": _sort_within_event(groups[name])} for name in ordered_event_names]
