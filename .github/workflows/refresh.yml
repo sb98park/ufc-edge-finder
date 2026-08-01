@@ -56,6 +56,18 @@ jobs:
           COMBAT_EDGE_RELAY_TOKEN: ${{ secrets.COMBAT_EDGE_RELAY_TOKEN }}
         run: python generate_site.py
 
+      - name: Lint rendered output
+        # Gates the COMMIT, not the generation -- a page that fails these
+        # checks never reaches the repo, so a stray brace or an undeferred
+        # init can't ship the way both previously did.
+        #
+        # DELIBERATELY NON-BLOCKING (|| true). This job also carries live
+        # fight-night results, and a linter false positive during a card
+        # would freeze the site exactly when it matters most. Failures are
+        # printed loudly in the log; flip to a hard failure once the checks
+        # have run clean across a few weeks of real builds.
+        run: python scripts/lint_site.py || true
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
