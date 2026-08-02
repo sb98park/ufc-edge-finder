@@ -108,12 +108,16 @@ def share_card(out):
 
     Deliberately sparse: at the size a link preview actually renders, a
     crowded card turns to mush. Mark, wordmark, one line.
+
+    No top rule. A 4px gold strip along the edge read as a stray artifact in
+    an iMessage bubble rather than as a deliberate accent -- the preview is
+    already clipped and rounded by the client, so any edge treatment competes
+    with the frame the OS draws around it.
     """
     mark = apex_svg(180, 4.6)
     inner = mark.split(">", 1)[1].rsplit("</svg>", 1)[0]
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
 <rect width="1200" height="630" fill="{INK}"/>
-<rect width="1200" height="4" fill="{GOLD}" opacity="0.5"/>
 <g transform="translate(510,150)">{inner}</g>
 <text x="600" y="420" text-anchor="middle" fill="#ffffff"
       font-family="-apple-system, SF Pro Display, Helvetica, Arial, sans-serif"
