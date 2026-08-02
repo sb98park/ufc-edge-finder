@@ -469,6 +469,13 @@ def main():
         else events[0]["event_name"].strip() if events
         else "This Weekend"
     )
+    # Just the matchup. The prefix ("UFC Fight Night", "UFC 330") is either
+    # generic or already implied, and including it pushed the Standout Props
+    # heading onto two lines. The names are what identify the card.
+    event_matchup = (
+        event_full_name.split(":", 1)[1].strip()
+        if ":" in event_full_name else event_full_name
+    )
 
     # Countdown target: this weekend's tracked event if we have one, otherwise
     # the nearest future card. ET is UTC-4 (EDT) for all currently tracked
@@ -873,6 +880,7 @@ def main():
         lock_picks=lock_picks,
         event_short_name=event_short_name,
         event_full_name=event_full_name,
+        event_matchup=event_matchup,
         countdown_target_iso=countdown_target_iso,
         fight_schedule_json=json.dumps(fight_schedule),
         just_concluded_json=json.dumps(just_concluded),
