@@ -712,10 +712,24 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         # pick's own result -- otherwise the very first data point would
         # misleadingly look like where the series "started."
         running = [0.0]
+        # Per-point metadata for the interactive chart. The cumulative figure
+        # tells you where you STOOD; the pick's own result tells you what
+        # happened AT that point, which is the actual reason to scrub -- a
+        # downward step becomes "this fight cost 10U" rather than an
+        # unexplained dip. Index 0 is the synthetic origin, so it gets a null
+        # entry to stay aligned with `running`.
+        running_points = [None]
         cumulative = 0.0
         for m in reversed(units_eligible):
             cumulative += m["units_result"]
             running.append(round(cumulative, 2))
+            running_points.append({
+                "fight": f'{m["predicted_favorite"]} vs {m["fighter_b"] if m["predicted_favorite"] == m["fighter_a"] else m["fighter_a"]}',
+                "pick": m["predicted_favorite"],
+                "units": round(m["units_result"], 2),
+                "won": bool(m.get("correct")),
+                "tier": m.get("confidence_label") or "",
+            })
         units_stats = {
             "total_units": total_units,
             "total_staked": total_staked,
@@ -724,6 +738,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "event_count": len({m["event_name"] for m in units_eligible}),
             "by_tier": by_tier,
             "running_total": running,
+            "running_points": running_points,
         }
 
     # Event Summary: an at-a-glance digest per event -- built once per

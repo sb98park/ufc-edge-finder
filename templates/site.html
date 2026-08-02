@@ -2351,6 +2351,25 @@
     font-size: 13px; color: var(--text-soft); margin-top: 2px;
   }
   .units-dollars strong { color: var(--accent); font-weight: 700; font-family: var(--font-display); }
+
+  /* ===== Units chart scrubbing ===== */
+  .units-chart-wrap { position: relative; touch-action: pan-y; }
+  .units-chart-wrap svg { display: block; }
+  .scrub-readout {
+    position: absolute; top: -2px; left: 0; right: 0;
+    text-align: center; font-size: 11px; color: var(--muted);
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.2s ease;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .units-chart-wrap.scrubbing .scrub-readout { opacity: 1; }
+  .scrub-readout .sr-units { font-weight: 700; font-family: var(--font-display); }
+  .scrub-readout .sr-win { color: var(--good, #4ade80); }
+  .scrub-readout .sr-loss { color: var(--bad, #ff5c5c); }
+  /* The cursor line and dot are injected into the SVG so they scale with it
+     rather than needing separate positioning maths. */
+  .scrub-line { stroke: rgba(255,255,255,0.35); stroke-width: 1; pointer-events: none; }
+  .scrub-dot { pointer-events: none; }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -2813,21 +2832,30 @@
     {% if track_record.units_stats %}
     <div class="units-block">
       <div class="units-title">{{ icon_coins() }} Units Tracker</div>
-      <div class="units-headline {{ 'positive' if track_record.units_stats.total_units >= 0 else 'negative' }}">
-        {{ '+' if track_record.units_stats.total_units >= 0 else '' }}{{ track_record.units_stats.total_units }}<span class="units-suffix">U</span>
+      <div class="units-headline {{ 'positive' if track_record.units_stats.total_units >= 0 else 'negative' }}"
+           id="units-headline"
+           data-total="{{ track_record.units_stats.total_units }}">
+        <span id="units-figure">{{ '+' if track_record.units_stats.total_units >= 0 else '' }}{{ track_record.units_stats.total_units }}</span><span class="units-suffix">U</span>
       </div>
       {# Dollar equivalent. "Units" is standard among bettors but the cash
          figure is what lands instantly -- and it's stated as an explicit
          hypothetical at a named unit size, never as realised profit. #}
       <div class="units-dollars">
-        At $100 a unit, that's <strong>{{ '+' if track_record.units_stats.total_units >= 0 else '-' }}${{ '{:,.0f}'.format(track_record.units_stats.total_units | abs * 100) }}</strong>
+        At $100 a unit, that's <strong id="units-dollar-figure">{{ '+' if track_record.units_stats.total_units >= 0 else '-' }}${{ '{:,.0f}'.format(track_record.units_stats.total_units | abs * 100) }}</strong>
       </div>
       <div class="units-sub">
         {{ track_record.units_stats.eligible_count }} pick{{ 's' if track_record.units_stats.eligible_count != 1 }} priced across {{ track_record.units_stats.event_count }} fight card{{ 's' if track_record.units_stats.event_count != 1 }}
         {% if track_record.units_stats.roi_pct is not none %}<span class="units-roi {{ 'positive' if track_record.units_stats.roi_pct >= 0 else 'negative' }}"> · ROI {{ '+' if track_record.units_stats.roi_pct >= 0 else '' }}{{ track_record.units_stats.roi_pct }}%</span>{% endif %}
       </div>
       {% if units_timeseries_svg %}
-      <div class="chart-block units-chart-wrap">{{ units_timeseries_svg | safe }}</div>
+      <div class="chart-block units-chart-wrap"
+           data-points='{{ track_record.units_stats.running_points | tojson }}'>
+        {{ units_timeseries_svg | safe }}
+        {# Readout sits ABOVE the chart, where the eye already is after
+           reading the big number -- Robinhood puts it there for the same
+           reason. Empty until a scrub starts. #}
+        <div class="scrub-readout" id="scrub-readout" aria-hidden="true"></div>
+      </div>
       {% endif %}
       <div class="units-tier-breakdown">
         {% for tier, stats in track_record.units_stats.by_tier.items() %}
@@ -4143,6 +4171,134 @@
     }
     initDesktopLayoutIfNeeded();
 
+    // ===== Units chart scrubbing =====
+    // Drag (or hover on desktop) along the chart to read the cumulative
+    // figure at any pick. The big number rolls with the same odometer helper
+    // the live prices use, so the two behave identically.
+    //
+    // On release it SNAPS BACK to the current total: the headline is a
+    // statement of where things stand, and leaving it parked on an old value
+    // would misreport that to anyone glancing at the page afterwards.
+    function initUnitsScrub() {
+      const wrap = document.querySelector('.units-chart-wrap');
+      if (!wrap) return;
+      const svg = wrap.querySelector('svg');
+      const figure = document.getElementById('units-figure');
+      const dollars = document.getElementById('units-dollar-figure');
+      const readout = document.getElementById('scrub-readout');
+      const headline = document.getElementById('units-headline');
+      if (!svg || !figure || !readout) return;
+
+      let points = [];
+      try { points = JSON.parse(wrap.dataset.points || '[]'); } catch (e) { return; }
+      const xs = (svg.dataset.scrubXs || '').split(',').map(Number);
+      const ys = (svg.dataset.scrubYs || '').split(',').map(Number);
+      if (xs.length < 2 || xs.length !== ys.length) return;
+
+      const vb = svg.viewBox.baseVal;
+      const total = parseFloat(headline?.dataset.total ?? '0');
+
+      // Cursor line + dot live INSIDE the svg so they scale with it -- no
+      // second coordinate system to keep in sync.
+      const ns = 'http://www.w3.org/2000/svg';
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('class', 'scrub-line');
+      line.setAttribute('y1', vb.y);
+      line.setAttribute('y2', vb.y + vb.height);
+      const dot = document.createElementNS(ns, 'circle');
+      dot.setAttribute('class', 'scrub-dot');
+      dot.setAttribute('r', '4.5');
+      line.style.display = dot.style.display = 'none';
+      svg.appendChild(line);
+      svg.appendChild(dot);
+
+      const fmtU = v => (v >= 0 ? '+' : '') + v.toFixed(2);
+      const fmtD = v => (v >= 0 ? '+' : '-') + '$' + Math.abs(v * 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+      function nearestIndex(clientX) {
+        const r = svg.getBoundingClientRect();
+        // Map screen x into the svg's own coordinate space, so this stays
+        // correct whatever width the svg is rendered at.
+        const sx = ((clientX - r.left) / r.width) * vb.width + vb.x;
+        let best = 0, bestD = Infinity;
+        for (let i = 0; i < xs.length; i++) {
+          const d = Math.abs(xs[i] - sx);
+          if (d < bestD) { bestD = d; best = i; }
+        }
+        return best;
+      }
+
+      function show(i) {
+        const p = points[i];
+        line.setAttribute('x1', xs[i]);
+        line.setAttribute('x2', xs[i]);
+        dot.setAttribute('cx', xs[i]);
+        dot.setAttribute('cy', ys[i]);
+        const won = p && p.won;
+        dot.setAttribute('fill', p ? (won ? '#4ade80' : '#ff5c5c') : '#8b93a3');
+        line.style.display = dot.style.display = '';
+        wrap.classList.add('scrubbing');
+
+        // Cumulative value at this index comes from the points payload's
+        // running figure, reconstructed by summing -- the svg only knows
+        // pixel coordinates, and inverting y_at() here would duplicate the
+        // server's scale maths.
+        let cumUnits = 0;
+        for (let k = 1; k <= i; k++) { if (points[k]) cumUnits += points[k].units; }
+        if (window.__rollTo) window.__rollTo(figure, fmtU(cumUnits));
+        else figure.textContent = fmtU(cumUnits);
+        if (dollars) dollars.textContent = fmtD(cumUnits);
+
+        if (p) {
+          const cls = won ? 'sr-win' : 'sr-loss';
+          readout.innerHTML = p.fight + ' · <span class="' + cls + ' sr-units">' +
+                              fmtU(p.units) + 'U</span>';
+        } else {
+          readout.textContent = 'Before the first pick';
+        }
+      }
+
+      function reset() {
+        line.style.display = dot.style.display = 'none';
+        wrap.classList.remove('scrubbing');
+        if (window.__rollTo) window.__rollTo(figure, fmtU(total));
+        else figure.textContent = fmtU(total);
+        if (dollars) dollars.textContent = fmtD(total);
+      }
+
+      // --- touch ---
+      let axis = null, x0 = 0, y0 = 0;
+      wrap.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        x0 = t.clientX; y0 = t.clientY; axis = null;
+      }, { passive: true });
+      wrap.addEventListener('touchmove', e => {
+        const t = e.touches[0];
+        const dx = t.clientX - x0, dy = t.clientY - y0;
+        if (axis === null) {
+          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+          // Lock ONCE. A vertical drag starting on the chart must still
+          // scroll the page rather than being captured as a scrub.
+          axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        }
+        if (axis !== 'x') return;
+        if (e.cancelable) e.preventDefault();
+        show(nearestIndex(t.clientX));
+      }, { passive: false });
+      wrap.addEventListener('touchend', () => { if (axis === 'x') reset(); axis = null; }, { passive: true });
+      wrap.addEventListener('touchcancel', () => { if (axis === 'x') reset(); axis = null; }, { passive: true });
+
+      // --- desktop: no click needed, the cursor is the finger ---
+      wrap.addEventListener('mousemove', e => show(nearestIndex(e.clientX)));
+      wrap.addEventListener('mouseleave', reset);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initUnitsScrub);
+    } else {
+      initUnitsScrub();
+    }
+
+
     // ===== Live edge recalculation =====
     // Prices already refresh every 90s, but the edge beside them was frozen
     // at build time -- so a line moving from -150 to -200 updated the price
@@ -4988,7 +5144,7 @@
         // Any horizontally scrollable or draggable strip has to be listed
         // here; the tell is always the same, a horizontal gesture doing
         // something at page level.
-        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .mobile-tabbar, [data-scrollable]')) {
+        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .mobile-tabbar, .units-chart-wrap, [data-scrollable]')) {
           tracking = false; return;
         }
         touchStartX = e.touches[0].clientX;

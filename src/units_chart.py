@@ -98,7 +98,14 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
         f'class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/>'
     )
 
-    return f"""<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" class="units-timeseries-chart" role="img"
+    # Expose the plotted coordinates so the client can map a finger or cursor
+    # position to a point WITHOUT re-deriving the geometry. Re-deriving it in
+    # JS would mean two copies of the same maths that could drift apart the
+    # moment padding or sizing changed here.
+    scrub_xs = ",".join(f"{x:.1f}" for x, _ in points)
+    scrub_ys = ",".join(f"{y:.1f}" for _, y in points)
+
+    return f"""<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" data-scrub-xs="{scrub_xs}" data-scrub-ys="{scrub_ys}" class="units-timeseries-chart" role="img"
   aria-label="Cumulative units over time, starting from a zero baseline">
   {grid_svg}
   {x_labels_svg}
