@@ -815,7 +815,23 @@
     from { stroke-dashoffset: var(--donut-circ); }
     to { stroke-dashoffset: var(--donut-end); }
   }
-  .confidence-donut-row .donut-col { animation: donutColIn 0.55s ease-out both; }
+  /* REVEAL motion, not a state transition -- so it sits outside the
+     0.2/0.35/0.55 vocabulary deliberately. The design pass snapped this from
+     ~0.85s to 0.55s while the ring sweep beside it stayed at 1.15s (above the
+     cutoff), so the column landed less than half way through its own ring
+     filling. That mismatch is what read as rushed: two parts of one object
+     moving at unrelated speeds.
+     0.9s now leads the 1.15s ring slightly -- the container settles, then the
+     value finishes drawing into it.
+     Staggered 90ms apart so the three tiers arrive in sequence rather than
+     as one block, which also gives the eye time to read each figure. */
+  .confidence-donut-row .donut-col { animation: donutColIn 0.9s cubic-bezier(0.22,1,0.36,1) both; }
+  .confidence-donut-row .donut-col:nth-child(1) { animation-delay: 0s; }
+  .confidence-donut-row .donut-col:nth-child(2) { animation-delay: 0.09s; }
+  .confidence-donut-row .donut-col:nth-child(3) { animation-delay: 0.18s; }
+  /* Ring follows its own column, so each donut fills after it has settled. */
+  .confidence-donut-row .donut-col:nth-child(2) .donut-fill-ring { animation-delay: 0.09s; }
+  .confidence-donut-row .donut-col:nth-child(3) .donut-fill-ring { animation-delay: 0.18s; }
   @keyframes donutColIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   @media (prefers-reduced-motion: reduce) {
     .donut-fill-ring, .confidence-donut-row .donut-col { animation: none; }
