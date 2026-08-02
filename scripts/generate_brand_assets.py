@@ -25,7 +25,14 @@ import tempfile
 
 INK = "#0a0c10"
 GOLD = "#d4af37"
-GOLD_LT = "#f0d97a"
+WHITE = "#ffffff"
+
+# Outer octagon WHITE, inner apex GOLD -- the mark carrying the same split as
+# the wordmark (Octane white, Alpha gold). The earlier two-gold version
+# separated at only 1.49:1, so at 16px the octagon and the apex merged into a
+# single blurred shape; white against gold is 2.10:1.
+# On a LIGHT background white disappears, so the outer stroke takes the ink
+# colour instead -- same mark, inverted where it has to be.
 
 # Exact regular octagon, vertices at 22.5 + k*45 degrees.
 def octagon_points(cx, cy, r):
@@ -33,7 +40,7 @@ def octagon_points(cx, cy, r):
              cy + r * math.sin(math.radians(22.5 + k * 45))) for k in range(8)]
 
 
-def apex_svg(size, stroke, pad_ratio=0.0, bg=None):
+def apex_svg(size, stroke, pad_ratio=0.0, bg=None, on_light=False):
     """
     The mark at a given pixel size.
 
@@ -49,11 +56,12 @@ def apex_svg(size, stroke, pad_ratio=0.0, bg=None):
     p = octagon_points(50, 50, 40)
     top = (f"M{P(p[3][0], p[3][1])} L{P(p[4][0], p[4][1])} L{P(p[5][0], p[5][1])} "
            f"L{P(p[6][0], p[6][1])} L{P(p[7][0], p[7][1])} L{P(p[0][0], p[0][1])}")
+    outer = INK if on_light else WHITE
     rect = f'<rect width="{size}" height="{size}" fill="{bg}"/>' if bg else ""
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}" fill="none">
 {rect}
-<path d="{top}" stroke="{GOLD}" stroke-width="{stroke * sc:.2f}" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M{P(32,74)} L{P(50,38)} L{P(68,74)}" stroke="{GOLD_LT}" stroke-width="{stroke * sc:.2f}" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="{top}" stroke="{outer}" stroke-width="{stroke * sc:.2f}" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M{P(32,74)} L{P(50,38)} L{P(68,74)}" stroke="{GOLD}" stroke-width="{stroke * sc:.2f}" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>'''
 
 
@@ -139,18 +147,45 @@ def main():
         else:
             print(f"  FAILED {path}")
 
+    # Light-background variant. Not linked from the page today, but the
+    # moment the mark lands on anything white the all-white outer vanishes,
+    # and generating it here keeps it from being redrawn by hand later --
+    # which is exactly how the old share card drifted.
+    if render(apex_svg(512, 4.6, on_light=True), "docs/icon-512-light.png", 512, 512):
+        optimize("docs/icon-512-light.png")
+        ok += 1
+        print("  wrote docs/icon-512-light.png (dark outer, for light backgrounds)")
+
     if share_card("docs/og-share-card.png"):
         ok += 1
         b, a = optimize("docs/og-share-card.png")
         saved = f" [{b//1024}kb -> {a//1024}kb]" if b and a else ""
         print(f"  wrote docs/og-share-card.png (1200x630){saved}")
 
+    # --- SVG favicon: the real fix for desktop rendering ---
+    # Chrome prefers an SVG icon when offered and rasterises it itself at
+    # whatever size the UI needs, so there is no small-bitmap artifact to go
+    # wrong. The .ico stays as a fallback for older browsers.
+    with open("docs/favicon.svg", "w", encoding="utf-8") as f:
+        f.write(apex_svg(64, 5.6))
+    ok += 1
+    print("  wrote docs/favicon.svg (vector -- desktop Chrome prefers this)")
+
     try:
         from PIL import Image
-        ims = [Image.open("docs/favicon-16.png"), Image.open("docs/favicon-32.png")]
-        ims[1].save("docs/favicon.ico", format="ICO", sizes=[(16, 16), (32, 32)])
+        # Render fresh, UNOPTIMIZED sources for the ICO. Bundling the
+        # palette-quantized PNGs produced the stray marks above the icon in
+        # desktop Chrome; a clean RGBA source avoids it.
+        tmp16, tmp32 = "docs/_ico16.png", "docs/_ico32.png"
+        render(apex_svg(16, 8.0), tmp16, 16, 16)
+        render(apex_svg(32, 7.0), tmp32, 32, 32)
+        base = Image.open(tmp32).convert("RGBA")
+        base.save("docs/favicon.ico", format="ICO", sizes=[(16, 16), (32, 32)])
+        for t in (tmp16, tmp32):
+            if os.path.exists(t):
+                os.unlink(t)
         ok += 1
-        print("  wrote docs/favicon.ico")
+        print("  wrote docs/favicon.ico (from clean RGBA, not the palette PNGs)")
     except Exception as e:
         print(f"  favicon.ico skipped ({e})")
 

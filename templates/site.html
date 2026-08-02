@@ -5,16 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Octane Alpha | Quantitative UFC Analytics & Edge Detection</title>
 
-<link rel="icon" type="image/x-icon" href="favicon.ico?v=4">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=4">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=4">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=4">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=4">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=4">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=5">
+<link rel="icon" type="image/x-icon" href="favicon.ico?v=5">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=5">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=5">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=5">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=5">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=5">
 
 <meta property="og:title" content="Octane Alpha | Quantitative UFC Analytics & Edge Detection">
 <meta property="og:description" content="Model probability vs. live sportsbook lines. Real fight predictions, tracked publicly, checked against the market -- misses included.">
-<meta property="og:image" content="https://octanealpha.com/og-share-card.png?v=4">
+<meta property="og:image" content="https://octanealpha.com/og-share-card.png?v=5">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://octanealpha.com">
@@ -23,7 +24,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Octane Alpha | Quantitative UFC Analytics & Edge Detection">
 <meta name="twitter:description" content="Model probability vs. live sportsbook lines. Real fight predictions, tracked publicly, checked against the market -- misses included.">
-<meta name="twitter:image" content="https://octanealpha.com/og-share-card.png?v=4">
+<meta name="twitter:image" content="https://octanealpha.com/og-share-card.png?v=5">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
@@ -137,25 +138,21 @@
   }
   .account-logout:active { color: var(--text); }
   .brand-logo { flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(212,175,55,0.35)); }
-  .brand-text { line-height: 1.15; }
+  .brand-text { line-height: 1.15; display: flex; flex-direction: column; justify-content: center; }
   .brand-name {
-    position: relative; font-size: 20px; font-weight: 800; letter-spacing: 0.8px; white-space: nowrap;
-    background: linear-gradient(135deg, #f5e29a, #d4af37 55%, #a3801f);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    text-shadow: 0 0 22px rgba(212,175,55,0.3);
+    position: relative; font-size: 20px; font-weight: 800; letter-spacing: 0.8px;
+    white-space: nowrap;
+    /* Per-word colour rather than one gradient across both: OCTANE white,
+       ALPHA gold -- the same split the mark and the share card use. The old
+       background-clip gradient couldn't express that, and it's why the
+       header and the link preview had drifted apart. */
   }
-  .brand-name::after {
-    content: 'OCTANE ALPHA'; position: absolute; top: 0; left: 0; pointer-events: none;
-    background: linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.85) 50%, transparent 58%);
-    background-size: 250% 100%; background-position: 200% 0; background-repeat: no-repeat;
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    animation: brand-shimmer 1.6s linear 0.35s 1 forwards;
-  }
+  .brand-name .bn-octane { color: #ffffff; }
+  .brand-name .bn-alpha { color: #d4af37; text-shadow: 0 0 18px rgba(212,175,55,0.35); }
   @keyframes brand-shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -100% 0; }
   }
-  .brand-tagline { font-size: 12px; font-weight: 600; color: #b5a26a; letter-spacing: 0.5px; margin-top: 1px; }
   .made-with-love {
     text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.3px;
     margin-top: 4px; padding-bottom: 24px; font-style: italic;
@@ -2498,14 +2495,19 @@
            degrees, r=40 about 50,50) so it stays true at any size.
            Two tones, not a gradient: gradients muddy at favicon sizes and
            can't be recoloured by CSS. -->
+      <!-- WHITE outer, GOLD apex -- the mark saying what the wordmark says:
+           outer form = Octane, inner peak = Alpha.
+           The previous two-gold version separated at only 1.49:1, so at
+           favicon size the octagon and the apex blurred into one shape.
+           White against gold is 2.10:1, and it reserves gold for a single
+           element, which is the same discipline applied to the tab bar. -->
       <path d="M13.04 65.31 L13.04 34.69 L34.69 13.04 L65.31 13.04 L86.96 34.69 L86.96 65.31"
-            stroke="#d4af37" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+            stroke="#ffffff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M32 74 L50 38 L68 74"
-            stroke="#f0d97a" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+            stroke="#d4af37" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <div class="brand-text">
-      <div class="brand-name" aria-label="Octane Alpha">OCTANE ALPHA</div>
-      <div class="brand-tagline">{{ icon_target() | safe }} UFC Analytics</div>
+      <div class="brand-name" aria-label="Octane Alpha"><span class="bn-octane">OCTANE</span> <span class="bn-alpha">ALPHA</span></div>
     </div>
     </div>
     <div class="account-badge" id="account-badge" style="display:none;">
