@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Octane Alpha | Quantitative UFC Analytics & Edge Detection</title>
 
-<link rel="icon" type="image/x-icon" href="favicon.ico?v=3">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=3">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=3">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=3">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
+<link rel="icon" type="image/x-icon" href="favicon.ico?v=4">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=4">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=4">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=4">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=4">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=4">
 
 <meta property="og:title" content="Octane Alpha | Quantitative UFC Analytics & Edge Detection">
 <meta property="og:description" content="Model probability vs. live sportsbook lines. Real fight predictions, tracked publicly, checked against the market -- misses included.">
-<meta property="og:image" content="https://octanealpha.com/og-share-card.png">
+<meta property="og:image" content="https://octanealpha.com/og-share-card.png?v=4">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://octanealpha.com">
@@ -23,7 +23,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Octane Alpha | Quantitative UFC Analytics & Edge Detection">
 <meta name="twitter:description" content="Model probability vs. live sportsbook lines. Real fight predictions, tracked publicly, checked against the market -- misses included.">
-<meta name="twitter:image" content="https://octanealpha.com/og-share-card.png">
+<meta name="twitter:image" content="https://octanealpha.com/og-share-card.png?v=4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
@@ -2490,24 +2490,18 @@
   <div class="page-header">
   <div class="brand-header">
     <div class="brand-left">
-    <svg width="38" height="38" viewBox="0 0 44 44" class="brand-logo" role="img" aria-label="Octane Alpha logo">
-      <defs>
-        <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#1a1508"/>
-          <stop offset="100%" stop-color="#0d0f14"/>
-        </linearGradient>
-        <linearGradient id="aGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#f0d97a"/>
-          <stop offset="100%" stop-color="#d4af37"/>
-        </linearGradient>
-      </defs>
-      <polygon points="22,3 35.4,8.6 41,22 35.4,35.4 22,41 8.6,35.4 3,22 8.6,8.6" fill="url(#badgeGrad)" stroke="#d4af37" stroke-width="1.5"/>
-      <line x1="14" y1="34" x2="22" y2="10" stroke="url(#aGrad)" stroke-width="4.5" stroke-linecap="round"/>
-      <line x1="30" y1="34" x2="22" y2="10" stroke="url(#aGrad)" stroke-width="4.5" stroke-linecap="round"/>
-      <line x1="17.3" y1="24.5" x2="26.7" y2="24.5" stroke="url(#aGrad)" stroke-width="3.5" stroke-linecap="round"/>
-      <line x1="32" y1="15" x2="37" y2="10" stroke="#e8c766" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
-      <line x1="34" y1="19.5" x2="40" y2="15" stroke="#e8c766" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
-      <line x1="36" y1="24" x2="41.5" y2="20.5" stroke="#e8c766" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+    <svg width="38" height="38" viewBox="0 0 100 100" fill="none" class="brand-logo" role="img" aria-label="Octane Alpha logo">
+      <!-- APEX. Only the octagon's top three edges are drawn: the cage is
+           implied rather than closed, which keeps the mark light, and the
+           open base stops it reading as a container.
+           Geometry is an exact regular octagon (vertices at 22.5 + k*45
+           degrees, r=40 about 50,50) so it stays true at any size.
+           Two tones, not a gradient: gradients muddy at favicon sizes and
+           can't be recoloured by CSS. -->
+      <path d="M13.04 65.31 L13.04 34.69 L34.69 13.04 L65.31 13.04 L86.96 34.69 L86.96 65.31"
+            stroke="#d4af37" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M32 74 L50 38 L68 74"
+            stroke="#f0d97a" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <div class="brand-text">
       <div class="brand-name" aria-label="Octane Alpha">OCTANE ALPHA</div>
