@@ -46,7 +46,7 @@ def build_donut_svg(landed: int, attempted: int, color: str, size: int = 108, st
     pct_class = "donut-center-pct countup" if animate else "donut-center-pct"
 
     return f"""<svg viewBox="0 0 {size} {size}" width="{size}" height="{size}" class="{ring_class}">
-  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#262b36" stroke-width="{stroke_width}"/>
+  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#2c2a26" stroke-width="{stroke_width}"/>
   <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{color}" stroke-width="{stroke_width}"
     class="{progress_class}" {progress_style} stroke-linecap="round"
     transform="rotate(-90 {cx} {cy})"/>

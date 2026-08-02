@@ -237,7 +237,7 @@ def build_dual_line_chart_svg(
         odds_label = _book_odds_label(pct, 1 - pct)
         grid_svg += (
             f'<line x1="{left_pad}" y1="{y:.1f}" x2="{left_pad + plot_w}" y2="{y:.1f}" '
-            f'stroke="#262b36" stroke-width="1" stroke-dasharray="2,3"/>'
+            f'stroke="#2c2a26" stroke-width="1" stroke-dasharray="2,3"/>'
             f'<text class="label-pct" x="{left_pad - 6}" y="{y + 3:.1f}" font-size="9" fill="#8a8f9a" text-anchor="end">{round(pct*100)}%</text>'
         )
         if odds_label:
@@ -320,7 +320,7 @@ def build_dual_line_chart_svg(
     # documented gap in WebKit: transform animations get real hardware
     # compositing, direct SVG stroke-property animation often doesn't.
     mask_svg = (
-        f'<rect x="{left_pad}" y="{top_pad}" width="{plot_w}" height="{plot_h}" fill="#1a1e28" '
+        f'<rect x="{left_pad}" y="{top_pad}" width="{plot_w}" height="{plot_h}" fill="#1e1d1a" '
         f'class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/>'
     )
 

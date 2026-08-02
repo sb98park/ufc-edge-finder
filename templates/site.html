@@ -36,7 +36,13 @@
      genuinely floating rather than marginally lighter.
      The panels keep their blue lift (+11, +14) so the elevation system is
      intact: surfaces still get cooler as they rise. */
-  --bg: #000000; --panel: #14171f; --panel2: #1a1e28; --border: #262b36;
+  --bg: #000000; --panel: #171614; --panel2: #1e1d1a; --border: #2c2a26;
+  /* Panels are WARM CHARCOAL, not navy. Blue and gold are complements, so a
+     cool panel actively opposes the accent -- it reads as sports broadcast
+     rather than as something expensive. Luxury dark interfaces pair gold with
+     neutral-to-warm greys so the metal is the only hue present.
+     The bias is 3-6 points: enough that the surfaces stop feeling cold,
+     small enough that they never read as brown. */
     --text: #eef0f2; --text-soft: #b9bec9; --muted: #8a8f9a; --green: #3ddc84;
     --red: #ff5c5c; --accent: #d4af37; --accent2: #e8c766;
     --accent-cool: #5fb8c9;
@@ -48,9 +54,9 @@
     --t-lead: 14px; --t-h3: 17px; --t-h2: 22px; --t-h1: 34px;
   }
   * { box-sizing: border-box; }
-  html { scrollbar-color: var(--accent) #14171f; scrollbar-width: thin; scroll-behavior: smooth; }
+  html { scrollbar-color: var(--accent) #171614; scrollbar-width: thin; scroll-behavior: smooth; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: #14171f; }
+  ::-webkit-scrollbar-track { background: #171614; }
   ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #e8c766, #a3801f); border-radius: 8px; }
   ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #f0d97a, #d4af37); }
   html {
@@ -166,7 +172,7 @@
   .meta-row { font-size: 11px; color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
   .meta-sep { color: var(--border); margin: 0 2px; }
   .countdown-card {
-    background: linear-gradient(135deg, #1a1508, #14171f 70%);
+    background: linear-gradient(135deg, #1a1508, #171614 70%);
     border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; text-align: center;
     position: relative; border: 1px solid transparent;
     background-clip: padding-box;
@@ -268,7 +274,7 @@
 
   .hub-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .hub-card {
-    background: linear-gradient(145deg, #1a1e28, #14171f 65%);
+    background: linear-gradient(145deg, #1e1d1a, #171614 65%);
     border: 1px solid var(--border); border-radius: 12px; padding: 16px;
     cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex; flex-direction: row; align-items: center; gap: 14px; position: relative; overflow: hidden;
@@ -348,7 +354,7 @@
     border-radius: 20px; padding: 7px 14px; color: var(--text); font-size: 12px; font-weight: 600;
     cursor: pointer; margin-bottom: 14px; width: fit-content; position: sticky; top: 8px; z-index: 50;
   }
-  .back-btn:active { background: var(--accent-cool); color: #14171f; }
+  .back-btn:active { background: var(--accent-cool); color: #171614; }
   .segment-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 12px; }
   .segment-divider:first-child { margin-top: 4px; }
   .segment-divider-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
@@ -360,7 +366,7 @@
   .whats-new-banner {
     position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 688px; margin: 0 auto; z-index: 200;
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    background: linear-gradient(135deg, #0f2a1e, #14171f 70%); border: 1px solid #1e4a2f;
+    background: linear-gradient(135deg, #0f2a1e, #171614 70%); border: 1px solid #1e4a2f;
     border-radius: 12px; padding: 10px 14px; font-size: 12px;
     
     animation: toast-in 0.35s ease-out, banner-glow 2.4s ease-in-out 0.35s 4;
@@ -511,7 +517,7 @@
   .lock-history-result.miss { background: rgba(255,92,92,0.15); color: var(--red); }
   .lock-history-pick { font-weight: 600; color: var(--text); font-size: 12px; }
   .lock-history-perfect-badge {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: #14171f;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: #171614;
     background: linear-gradient(135deg, var(--accent), #e8c766); border-radius: 4px;
     padding: 2px 6px; white-space: nowrap;
   }
@@ -609,7 +615,7 @@
   .fun-fact-text { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .fun-fact-tier-badge {
     position: absolute; top: 8px; right: 10px; font-size: 9px; font-weight: 700;
-    letter-spacing: 0.6px; color: #14171f; padding: 2px 6px; border-radius: 4px;
+    letter-spacing: 0.6px; color: #171614; padding: 2px 6px; border-radius: 4px;
     background: linear-gradient(135deg, var(--accent), #e8c766);
   }
   /* Small chip variant, shown on the fighter's own fight card in This
@@ -873,7 +879,7 @@
   }
   .clv-badge {
     margin-top: 12px; padding: 10px 12px; border-radius: 12px; text-align: center;
-    background: linear-gradient(135deg, #1a2a1a, #14171f 70%); border: 1px solid #2a4a2a;
+    background: linear-gradient(135deg, #1a2a1a, #171614 70%); border: 1px solid #2a4a2a;
   }
   .clv-badge-label { font-size: 11px; font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.4px; }
   .clv-badge-value { font-size: 24px; font-weight: 700; margin-top: 2px; font-family: var(--font-display); }
@@ -881,17 +887,17 @@
   .accuracy-split-row { display: flex; gap: 8px; margin-top: 10px; }
   .accuracy-split-row .clv-badge { flex: 1; margin-top: 0; min-width: 0; }
   .favorite-accuracy-badge {
-    background: linear-gradient(135deg, rgba(61,220,132,0.14), #14171f 70%); border: 1px solid rgba(61,220,132,0.35);
+    background: linear-gradient(135deg, rgba(61,220,132,0.14), #171614 70%); border: 1px solid rgba(61,220,132,0.35);
   }
   .favorite-accuracy-badge .clv-badge-label { color: var(--green); }
   .favorite-accuracy-value { color: var(--green); }
   .underdog-accuracy-badge {
-    background: linear-gradient(135deg, rgba(255,255,255,0.05), #14171f 70%); border: 1px solid rgba(255,255,255,0.05);
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), #171614 70%); border: 1px solid rgba(255,255,255,0.05);
   }
   .underdog-accuracy-badge .clv-badge-label { color: var(--muted); }
   .underdog-accuracy-value { color: var(--muted); }
   .lock-record-badge {
-    background: linear-gradient(135deg, rgba(255,255,255,0.05), #14171f 70%); border: 1px solid rgba(255,255,255,0.05);
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), #171614 70%); border: 1px solid rgba(255,255,255,0.05);
   }
   .lock-record-badge .clv-badge-label { color: var(--text); }
   .lock-record-value { color: var(--muted); }
@@ -1016,7 +1022,7 @@
     font-size: 9px; font-weight: 700; letter-spacing: 0.3px;
     padding: 3px 9px; border-radius: 8px; line-height: 1.6;
     background: linear-gradient(135deg, #f0d97a, #d4af37);
-    border: 1px solid #d4af37; color: #14171f;
+    border: 1px solid #d4af37; color: #171614;
     display: inline-block;
     box-shadow: 0 0 10px rgba(212,175,55,0.4);
     margin-left: 6px;
@@ -1569,9 +1575,9 @@
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     padding: 8px 12px; border-radius: 12px; margin: 4px 0 10px; font-size: 12px;
   }
-  .model-pick-badge.high { background: linear-gradient(135deg, #10251a, #14171f); border: 1px solid #1e4a2f; }
-  .model-pick-badge.medium { background: linear-gradient(135deg, #241f10, #14171f); border: 1px solid #4a3f1e; }
-  .model-pick-badge.low { background: linear-gradient(135deg, #241010, #14171f); border: 1px solid #4a1e1e; }
+  .model-pick-badge.high { background: linear-gradient(135deg, #10251a, #171614); border: 1px solid #1e4a2f; }
+  .model-pick-badge.medium { background: linear-gradient(135deg, #241f10, #171614); border: 1px solid #4a3f1e; }
+  .model-pick-badge.low { background: linear-gradient(135deg, #241010, #171614); border: 1px solid #4a1e1e; }
   .pick-winner { font-weight: 700; font-size: 13px; }
   .momentum-arrow { font-size: 9px; font-weight: 600; border-radius: 8px; padding: 1.5px 5px; margin-left: 2px; }
   .momentum-arrow.up { background: #10251a; color: var(--green); }
@@ -1600,7 +1606,7 @@
   }
   .tour-tooltip-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
   .tour-skip { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; padding: 4px; }
-  .tour-next { background: var(--accent); color: #14171f; border: none; border-radius: 8px; font-size: 11px; font-weight: 600; padding: 6px 12px; cursor: pointer; }
+  .tour-next { background: var(--accent); color: #171614; border: none; border-radius: 8px; font-size: 11px; font-weight: 600; padding: 6px 12px; cursor: pointer; }
   .tour-step-count { font-size: 9px; color: var(--muted); }
   .ripple-effect {
     position: absolute; border-radius: 50%; background: rgba(212,175,55,0.35);
@@ -1754,7 +1760,7 @@
        rail and its content are visible at the same time (on mobile you
        navigate AWAY from the hub-card grid entirely, so highlighting
        one item there would never be seen). */
-    .hub-card.rail-active { background: linear-gradient(145deg, #23283a, #1a1e28 65%); }
+    .hub-card.rail-active { background: linear-gradient(145deg, #23283a, #1e1d1a 65%); }
     .hub-card.rail-active::before { width: 4px; }
 
     /* Content pane: always visible (mobile JS toggles this via inline
@@ -2465,7 +2471,7 @@
 {%- endmacro %}
 
 {% macro icon_flame() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame"><defs><linearGradient id="hi-flame" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 2 C13 2 8 8 8 13 C8 16.5 10 19 13 19 C16 19 18 16.5 18 13 C18 13 16 15 15 13 C15 13 17 9 13 2 Z" fill="url(#hi-flame)" opacity="0.9"/><path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#14171f"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame"><defs><linearGradient id="hi-flame" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 2 C13 2 8 8 8 13 C8 16.5 10 19 13 19 C16 19 18 16.5 18 13 C18 13 16 15 15 13 C15 13 17 9 13 2 Z" fill="url(#hi-flame)" opacity="0.9"/><path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#171614"/></svg>
 {%- endmacro %}
 
 {% macro icon_diamond() -%}
@@ -2477,7 +2483,7 @@
 {%- endmacro %}
 
 {% macro icon_coins() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins"><defs><linearGradient id="hi-coins" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><ellipse cx="13" cy="19" rx="9" ry="3.2" fill="none" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#14171f" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#14171f" stroke="url(#hi-coins)" stroke-width="2"/><line x1="4" y1="9" x2="4" y2="19" stroke="url(#hi-coins)" stroke-width="2"/><line x1="22" y1="9" x2="22" y2="19" stroke="url(#hi-coins)" stroke-width="2"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins"><defs><linearGradient id="hi-coins" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><ellipse cx="13" cy="19" rx="9" ry="3.2" fill="none" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#171614" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#171614" stroke="url(#hi-coins)" stroke-width="2"/><line x1="4" y1="9" x2="4" y2="19" stroke="url(#hi-coins)" stroke-width="2"/><line x1="22" y1="9" x2="22" y2="19" stroke="url(#hi-coins)" stroke-width="2"/></svg>
 {%- endmacro %}
 
 {% macro icon_calendar() -%}
@@ -2497,7 +2503,7 @@
 {%- endmacro %}
 
 {% macro icon_rocket() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Rocket"><defs><linearGradient id="hi-rocket" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13,3 Q16,6 16,9 L16,16 L19,20 L16,18 Q13,19.5 10,18 L7,20 L10,16 L10,9 Q10,6 13,3 Z" fill="url(#hi-rocket)" opacity="0.5" stroke="url(#hi-rocket)" stroke-width="1.4" stroke-linejoin="round"/><circle cx="13" cy="10" r="1.6" fill="#14171f" stroke="url(#hi-rocket)" stroke-width="1"/><path d="M11,19 Q13,23 15,19 Q13,21 11,19 Z" fill="url(#hi-rocket)" opacity="0.85"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Rocket"><defs><linearGradient id="hi-rocket" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13,3 Q16,6 16,9 L16,16 L19,20 L16,18 Q13,19.5 10,18 L7,20 L10,16 L10,9 Q10,6 13,3 Z" fill="url(#hi-rocket)" opacity="0.5" stroke="url(#hi-rocket)" stroke-width="1.4" stroke-linejoin="round"/><circle cx="13" cy="10" r="1.6" fill="#171614" stroke="url(#hi-rocket)" stroke-width="1"/><path d="M11,19 Q13,23 15,19 Q13,21 11,19 Z" fill="url(#hi-rocket)" opacity="0.85"/></svg>
 {%- endmacro %}
 
 {% macro icon_target() -%}
@@ -2693,7 +2699,7 @@
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame">
             <defs><linearGradient id="icon-standout" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
             <path d="M13 2 C13 2 8 8 8 13 C8 16.5 10 19 13 19 C16 19 18 16.5 18 13 C18 13 16 15 15 13 C15 13 17 9 13 2 Z" fill="url(#icon-standout)" opacity="0.9"/>
-            <path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#1a1e28"/>
+            <path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#1e1d1a"/>
           </svg>
         </div>
         <div class="hub-card-text">
@@ -2754,8 +2760,8 @@
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins">
             <defs><linearGradient id="icon-parlays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
             <ellipse cx="13" cy="19" rx="9" ry="3.2" fill="none" stroke="url(#icon-parlays)" stroke-width="1.8"/>
-            <ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#1a1e28" stroke="url(#icon-parlays)" stroke-width="1.8"/>
-            <ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#1a1e28" stroke="url(#icon-parlays)" stroke-width="1.8"/>
+            <ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#1e1d1a" stroke="url(#icon-parlays)" stroke-width="1.8"/>
+            <ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#1e1d1a" stroke="url(#icon-parlays)" stroke-width="1.8"/>
             <line x1="4" y1="9" x2="4" y2="19" stroke="url(#icon-parlays)" stroke-width="1.8"/>
             <line x1="22" y1="9" x2="22" y2="19" stroke="url(#icon-parlays)" stroke-width="1.8"/>
           </svg>
@@ -3206,7 +3212,7 @@
     {%- set circumference = 2 * 3.14159265 * radius -%}
     {%- set offset = circumference * (1 - prob) -%}
     <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 {{ size }} {{ size }}" class="confidence-ring">
-      <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="#262b36" stroke-width="3"/>
+      <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="#2c2a26" stroke-width="3"/>
       <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="{{ color }}" stroke-width="3"
         stroke-dasharray="{{ circumference }}" stroke-dashoffset="{{ circumference }}" data-target-offset="{{ offset }}" stroke-linecap="round"
         class="ring-progress" transform="rotate(-90 {{ size/2 }} {{ size/2 }})"/>
@@ -4214,7 +4220,7 @@
         if (!DEBUG) return;
         const box = document.createElement('div');
         box.style.cssText = 'position:fixed;bottom:90px;left:10px;right:10px;z-index:9999;' +
-          'background:#12151c;border:1px solid #d4af37;border-radius:10px;padding:12px;' +
+          'background:#161513;border:1px solid #d4af37;border-radius:10px;padding:12px;' +
           'font:11px/1.5 monospace;color:#e6e9ef;white-space:pre-wrap;max-height:45vh;overflow:auto';
         box.textContent = 'SCRUB DIAGNOSTIC\n' + notes.join('\n') + '\n\nBAILED AT: ' + why;
         document.body.appendChild(box);
