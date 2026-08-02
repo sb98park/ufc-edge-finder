@@ -2848,8 +2848,17 @@
         {% if track_record.units_stats.roi_pct is not none %}<span class="units-roi {{ 'positive' if track_record.units_stats.roi_pct >= 0 else 'negative' }}"> · ROI {{ '+' if track_record.units_stats.roi_pct >= 0 else '' }}{{ track_record.units_stats.roi_pct }}%</span>{% endif %}
       </div>
       {% if units_timeseries_svg %}
-      <div class="chart-block units-chart-wrap"
-           data-points='{{ track_record.units_stats.running_points | tojson }}'>
+      {# Payload in a SCRIPT TAG, not an attribute. It was in
+         data-points='...' with single quotes, so the first fighter with an
+         apostrophe in their name -- an O'Malley, a D'Angelo -- closed the
+         attribute early and the browser discarded everything after it. The
+         JSON arrived truncated mid-string and JSON.parse threw, which made
+         the whole scrub silently never wire up.
+         A script tag has no attribute quoting to escape, so apostrophes are
+         inert. tojson still escapes < and & , so it can't break out of the
+         tag either. #}
+      <div class="chart-block units-chart-wrap">
+        <script type="application/json" id="units-scrub-points">{{ track_record.units_stats.running_points | tojson }}</script>
         {{ units_timeseries_svg | safe }}
         {# Readout sits ABOVE the chart, where the eye already is after
            reading the big number -- Robinhood puts it there for the same
@@ -4180,20 +4189,48 @@
     // statement of where things stand, and leaving it parked on an old value
     // would misreport that to anyone glancing at the page afterwards.
     function initUnitsScrub() {
+      // ?scrubdebug=1 prints why the scrub bailed, ON THE PAGE. Mobile Chrome
+      // has no console, and every guard below returns silently -- so a
+      // missing data attribute and a broken listener look identical from the
+      // outside. This makes the failing step name itself.
+      const DEBUG = location.search.indexOf('scrubdebug') !== -1;
+      const notes = [];
+      function bail(why) {
+        if (!DEBUG) return;
+        const box = document.createElement('div');
+        box.style.cssText = 'position:fixed;bottom:90px;left:10px;right:10px;z-index:9999;' +
+          'background:#12151c;border:1px solid #d4af37;border-radius:10px;padding:12px;' +
+          'font:11px/1.5 monospace;color:#e6e9ef;white-space:pre-wrap;max-height:45vh;overflow:auto';
+        box.textContent = 'SCRUB DIAGNOSTIC\n' + notes.join('\n') + '\n\nBAILED AT: ' + why;
+        document.body.appendChild(box);
+      }
+
       const wrap = document.querySelector('.units-chart-wrap');
-      if (!wrap) return;
+      notes.push('1 wrap element      : ' + !!wrap);
+      if (!wrap) { bail('no .units-chart-wrap on the page'); return; }
       const svg = wrap.querySelector('svg');
       const figure = document.getElementById('units-figure');
       const dollars = document.getElementById('units-dollar-figure');
       const readout = document.getElementById('scrub-readout');
       const headline = document.getElementById('units-headline');
-      if (!svg || !figure || !readout) return;
+      notes.push('2 svg inside wrap   : ' + !!svg);
+      notes.push('3 #units-figure     : ' + !!figure);
+      notes.push('4 #scrub-readout    : ' + !!readout);
+      if (!svg || !figure || !readout) { bail('a required element is missing'); return; }
 
       let points = [];
-      try { points = JSON.parse(wrap.dataset.points || '[]'); } catch (e) { return; }
+      const payload = document.getElementById('units-scrub-points');
+      const raw = payload ? payload.textContent : '';
+      notes.push('5 payload chars     : ' + raw.length + (payload ? '' : '  (SCRIPT TAG MISSING)'));
+      notes.push('   first 90         : ' + raw.slice(0, 90));
+      try { points = JSON.parse(raw || '[]'); }
+      catch (e) { notes.push('   JSON parse ERROR : ' + e.message); bail('data-points is not valid JSON'); return; }
+      notes.push('6 points parsed     : ' + points.length);
       const xs = (svg.dataset.scrubXs || '').split(',').map(Number);
       const ys = (svg.dataset.scrubYs || '').split(',').map(Number);
-      if (xs.length < 2 || xs.length !== ys.length) return;
+      notes.push('7 scrub-xs count    : ' + xs.length + '  (raw: ' + (svg.dataset.scrubXs || 'MISSING').slice(0, 40) + ')');
+      if (xs.length < 2 || xs.length !== ys.length) { bail('svg is missing data-scrub-xs / data-scrub-ys'); return; }
+      if (points.length !== xs.length) { notes.push('   MISMATCH: points ' + points.length + ' vs xs ' + xs.length); }
 
       const vb = svg.viewBox.baseVal;
       const total = parseFloat(headline?.dataset.total ?? '0');
@@ -4291,6 +4328,12 @@
       // --- desktop: no click needed, the cursor is the finger ---
       wrap.addEventListener('mousemove', e => show(nearestIndex(e.clientX)));
       wrap.addEventListener('mouseleave', reset);
+
+      if (DEBUG) {
+        notes.push('8 listeners attached: yes');
+        notes.push('9 touch-action      : ' + getComputedStyle(wrap).touchAction);
+        bail('(nothing -- wiring completed)');
+      }
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initUnitsScrub);
