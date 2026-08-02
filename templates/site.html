@@ -806,8 +806,16 @@
      percentage differ. */
   .donut-fill-ring {
     stroke-dasharray: var(--donut-circ) var(--donut-circ);
-    animation: donutFill 1.15s cubic-bezier(0.22,1,0.36,1) both;
+    /* PAUSED until the row scrolls into view. These ran on page load, so by
+       the time you had scrolled to the Record tab the sweep had finished --
+       the only way to see it was to scroll faster than the animation, which
+       is the opposite of the intent.
+       1.6s rather than 1.15s: this is a value being drawn, not a state
+       change, and it's the one animation meant to be watched complete. */
+    animation: donutFill 1.6s cubic-bezier(0.22,1,0.36,1) both;
+    animation-play-state: paused;
   }
+  .confidence-donut-row.donuts-in-view .donut-fill-ring { animation-play-state: running; }
   @keyframes donutFill {
     from { stroke-dashoffset: var(--donut-circ); }
     to { stroke-dashoffset: var(--donut-end); }
@@ -822,7 +830,11 @@
      value finishes drawing into it.
      Staggered 90ms apart so the three tiers arrive in sequence rather than
      as one block, which also gives the eye time to read each figure. */
-  .confidence-donut-row .donut-col { animation: donutColIn 0.9s cubic-bezier(0.22,1,0.36,1) both; }
+  .confidence-donut-row .donut-col {
+    animation: donutColIn 0.9s cubic-bezier(0.22,1,0.36,1) both;
+    animation-play-state: paused;
+  }
+  .confidence-donut-row.donuts-in-view .donut-col { animation-play-state: running; }
   .confidence-donut-row .donut-col:nth-child(1) { animation-delay: 0s; }
   .confidence-donut-row .donut-col:nth-child(2) { animation-delay: 0.09s; }
   .confidence-donut-row .donut-col:nth-child(3) { animation-delay: 0.18s; }
@@ -5751,6 +5763,20 @@
       }, { threshold: 0.15 });
       document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card, .standout-card, .lock-pick-card').forEach(el => fillObserver.observe(el));
       window.__fillObserver = fillObserver;
+
+      // The donuts get their own observer rather than joining fillObserver:
+      // that one reveals an element's opacity, whereas these need their
+      // ALREADY-RUNNING css animations released from a paused state. A
+      // higher threshold (0.4) so the sweep starts when the row is properly
+      // on screen, not as its first pixel clips the edge.
+      const donutObserver = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('donuts-in-view');
+          obs.unobserve(entry.target);
+        });
+      }, { threshold: 0.4 });
+      document.querySelectorAll('.confidence-donut-row').forEach(el => donutObserver.observe(el));
 
       // A brief, one-time celebration flourish the first time a Perfect
       // Prop badge -- or a Lock of the Week badge that actually hit --

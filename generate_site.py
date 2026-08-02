@@ -305,7 +305,28 @@ def main():
     else:
         events_for_model_only = events
 
-    standout_props = top_standout_props(tracked_edges, fighters_df, n=5, min_edge=5.0)
+    def _is_complement_row(e):
+        """
+        "Not KO/TKO" carries nothing its counterpart doesn't -- it's the same
+        market mirrored, so it renders as a second line saying -239 -> -144
+        beside +239 -> +144. The markets table already strips these; movement
+        and standout props never got the same filter, which doubled the length
+        of both sections for no added information.
+        """
+        market = str(e.get("market", "") or "").lower()
+        selection = str(e.get("selection", "") or "").lower()
+        tail = market.split(":")[-1]
+        if "not" in tail or selection.startswith("not"):
+            return True
+        return "ends in finish" in f"{market} {selection}"
+
+    # Same complement filter before standout props are chosen, so a "Not X"
+    # row can't take one of the five slots from a real market.
+    _sp_source = tracked_edges
+    if not tracked_edges.empty:
+        _keep = [not _is_complement_row(r) for r in tracked_edges.to_dict("records")]
+        _sp_source = tracked_edges[_keep]
+    standout_props = top_standout_props(_sp_source, fighters_df, n=5, min_edge=5.0)
 
     # Fun facts: genuinely notable patterns for fighters on the current
     # card (active method streaks, career purity, win streaks) -- gated
@@ -378,13 +399,20 @@ def main():
     # shouldn't compete for the same slots.
     def _notable(edges, limit):
         return sorted(
-            [e for e in edges if e.get("movement") and e["movement"].get("notable")],
+            [e for e in edges
+             if e.get("movement") and e["movement"].get("notable") and not _is_complement_row(e)],
             key=lambda e: e["movement"]["pct_change"], reverse=True,
         )[:limit]
 
     notable_movements = _notable(tracked_edges_list, 8)
+    # Derive "later cards" BY EXCLUSION, not from a separate source. Once the
+    # current card has finished, tracked_edges is REPLACED with the next
+    # future event -- so that event sat in both lists and every one of its
+    # movements rendered twice, once in each section.
+    _promoted = {e["event_name"] for e in events_for_model_only}
     notable_movements_upcoming = _notable(
-        [edge for event in future_events for fight in event["fights"] for edge in fight["edges"]], 6
+        [edge for event in future_events if event["event_name"] not in _promoted
+         for fight in event["fights"] for edge in fight["edges"]], 6
     )
 
     if not edges_df.empty:
