@@ -3984,6 +3984,7 @@
     function showSection(id) {
       if (window.__syncTabBar) window.__syncTabBar(id);
       document.body.dataset.section = id;
+      if (window.__rememberDrawerSection) window.__rememberDrawerSection(id);
       if (window.__onSectionChange) window.__onSectionChange(id);
       const alreadyInDetail = detailView.style.display === 'block';
 
@@ -4099,6 +4100,37 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // ===== "More" remembers where you were =====
+    // Tapping More always called showHub(), so leaving Coming Up for another
+    // tab and returning dumped you back at the drawer list -- even though the
+    // section itself had kept its scroll position, which made the reset feel
+    // like a bug rather than a choice.
+    // Follows the iOS convention instead: tapping a tab you're ALREADY in
+    // returns to its root, tapping it from elsewhere restores where you left
+    // off. That also preserves a way back to the list, which matters since
+    // the back button is hidden on mobile.
+    const DRAWER_SECTIONS = ['funfacts', 'favorites', 'parlays', 'coming', 'howitworks', 'disclaimer'];
+    let lastDrawerSection = null;
+
+    function goToMore() {
+      const current = document.body.dataset.section || '';
+      if (DRAWER_SECTIONS.indexOf(current) !== -1) {
+        // Already inside the drawer -- go up to the list.
+        lastDrawerSection = null;
+        showHub();
+        return;
+      }
+      if (lastDrawerSection) {
+        showSection(lastDrawerSection);
+      } else {
+        showHub();
+      }
+    }
+    window.__rememberDrawerSection = function (id) {
+      if (DRAWER_SECTIONS.indexOf(id) !== -1) lastDrawerSection = id;
+    };
+
 
     // ===== Segmented controls: sliding pill + finger-tracked swipe =====
     function initSegControls() {
@@ -4528,7 +4560,7 @@
         if (!hovered) return;
         const target = hovered.dataset.tab;
         haptic(8);
-        if (target === '__hub') showHub(); else showSection(target);
+        if (target === '__hub') goToMore(); else showSection(target);
       }
       bar.addEventListener('touchend', release, { passive: true });
       bar.addEventListener('touchcancel', () => {
@@ -4683,7 +4715,7 @@
       btns.forEach(btn => {
         btn.addEventListener('click', () => {
           const target = btn.dataset.tab;
-          if (target === '__hub') { showHub(); markActive('__hub'); }
+          if (target === '__hub') { goToMore(); markActive('__hub'); }
           else { showSection(target); markActive(target); }
         });
       });

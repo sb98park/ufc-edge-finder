@@ -46,8 +46,20 @@ def main():
     needle = args[0].lower()
 
     log = pd.read_csv(LOG)
-    mask = (log["fighter_a"].astype(str).str.lower().str.contains(needle, regex=False) |
-            log["fighter_b"].astype(str).str.lower().str.contains(needle, regex=False))
+
+    # Accent-folded search. A plain substring match can't find "Uroš Medić"
+    # from "medic" -- ć is not c -- so every accented fighter needed their
+    # opponent's name used instead. That's the fifth place diacritics have
+    # broken a lookup in this codebase; fold both sides and it stops.
+    import unicodedata as _ud
+
+    def _fold(t):
+        return "".join(ch for ch in _ud.normalize("NFKD", str(t).lower())
+                       if not _ud.combining(ch))
+
+    needle_folded = _fold(needle)
+    mask = (log["fighter_a"].map(lambda v: needle_folded in _fold(v)) |
+            log["fighter_b"].map(lambda v: needle_folded in _fold(v)))
     if not mask.any():
         print(f"No logged prediction matching {args[0]!r}.")
         sys.exit(1)
