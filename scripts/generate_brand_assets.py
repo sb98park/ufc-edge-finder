@@ -51,8 +51,15 @@ def apex_svg(size, stroke, pad_ratio=0.0, bg=None, on_light=False):
     pad = size * pad_ratio
     inner = size - pad * 2
     sc = inner / 100.0
+    # OPTICAL CENTRING. The mark has an open base, so its ink spans y 13.04 to
+    # 74 -- centre 43.5, not 50. Drawn on the raw grid it sits high with a
+    # visible gap beneath, which reads as misaligned in a favicon slot or an
+    # app icon. Shifting down by the difference centres the ink rather than
+    # the coordinate space.
+    Y_SHIFT = 50 - (13.04 + 74.0) / 2
+
     def P(x, y):
-        return f"{pad + x * sc:.2f} {pad + y * sc:.2f}"
+        return f"{pad + x * sc:.2f} {pad + (y + Y_SHIFT) * sc:.2f}"
     p = octagon_points(50, 50, 40)
     top = (f"M{P(p[3][0], p[3][1])} L{P(p[4][0], p[4][1])} L{P(p[5][0], p[5][1])} "
            f"L{P(p[6][0], p[6][1])} L{P(p[7][0], p[7][1])} L{P(p[0][0], p[0][1])}")
@@ -88,6 +95,31 @@ def optimize(path):
         return before, after
     except Exception:
         return None, None
+
+
+def render_downsampled(svg_fn, out, size, stroke, pad=0.0, bg=None, on_light=False):
+    """
+    Render LARGE, then downsample to the target size.
+
+    Asking wkhtmltoimage for a 32px viewport produced a band of noise across
+    the top four rows -- visible in desktop Chrome as stray marks above the
+    icon. It was in the raw render, before any optimisation, so it's the
+    browser engine rendering a tiny page rather than anything we did to the
+    PNG afterwards.
+    Rendering at 512 and downsampling with Lanczos avoids that entirely, and
+    gives better antialiasing at favicon sizes than a native small render
+    would. Stroke is specified in the 100-unit coordinate space, so the
+    proportions are identical either way.
+    """
+    from PIL import Image
+    big = "/tmp/_brand_big.png"
+    if not render(svg_fn(512, stroke, pad, bg, on_light), big, 512, 512):
+        return False
+    im = Image.open(big).convert("RGBA")
+    im = im.resize((size, size), Image.LANCZOS)
+    im.save(out)
+    os.unlink(big)
+    return True
 
 
 def render(svg, out, w, h):
@@ -143,7 +175,7 @@ def main():
     ]
     ok = 0
     for path, size, stroke, pad, bg in jobs:
-        if render(apex_svg(size, stroke, pad, bg), path, size, size):
+        if render_downsampled(apex_svg, path, size, stroke, pad, bg):
             ok += 1
             b, a = optimize(path)
             saved = f" [{b//1024}kb -> {a//1024}kb]" if b and a else ""
@@ -155,7 +187,7 @@ def main():
     # moment the mark lands on anything white the all-white outer vanishes,
     # and generating it here keeps it from being redrawn by hand later --
     # which is exactly how the old share card drifted.
-    if render(apex_svg(512, 4.6, on_light=True), "docs/icon-512-light.png", 512, 512):
+    if render_downsampled(apex_svg, "docs/icon-512-light.png", 512, 4.6, on_light=True):
         optimize("docs/icon-512-light.png")
         ok += 1
         print("  wrote docs/icon-512-light.png (dark outer, for light backgrounds)")
@@ -181,8 +213,8 @@ def main():
         # palette-quantized PNGs produced the stray marks above the icon in
         # desktop Chrome; a clean RGBA source avoids it.
         tmp16, tmp32 = "docs/_ico16.png", "docs/_ico32.png"
-        render(apex_svg(16, 8.0), tmp16, 16, 16)
-        render(apex_svg(32, 7.0), tmp32, 32, 32)
+        render_downsampled(apex_svg, tmp16, 16, 8.0)
+        render_downsampled(apex_svg, tmp32, 32, 7.0)
         base = Image.open(tmp32).convert("RGBA")
         base.save("docs/favicon.ico", format="ICO", sizes=[(16, 16), (32, 32)])
         for t in (tmp16, tmp32):

@@ -317,10 +317,16 @@ function renderLoginPage({ error }) {
            viewBox is 0 0 100 100 -- the geometry is built on a 100-unit grid,
            so the old 0 0 44 44 box would crop it. -->
       <svg width="52" height="52" viewBox="0 0 100 100" fill="none" role="img" aria-label="Octane Alpha logo">
+              <!-- translate(0,6.48): the mark's ink spans y 13.04-74, so its optical
+           centre is 43.5 rather than 50. Drawn on the raw grid it floats high
+           against the wordmark beside it. The generated icons apply the same
+           shift, so header and favicon stay identical. -->
+      <g transform="translate(0,6.48)">
         <path d="M13.04 65.31 L13.04 34.69 L34.69 13.04 L65.31 13.04 L86.96 34.69 L86.96 65.31"
               stroke="#ffffff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M32 74 L50 38 L68 74"
               stroke="#d4af37" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
       </svg>
       <div>
         <div class="brand-name"><span class="bn-octane">OCTANE</span> <span class="bn-alpha">ALPHA</span></div>
