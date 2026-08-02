@@ -460,6 +460,15 @@ def main():
         else events[0]["event_name"].split(":")[0].strip() if events
         else "This Weekend"
     )
+    # FULL name, matchup included. event_short_name cuts at the colon, so the
+    # Standout Props heading read "Standout Props for UFC Fight Night" -- true
+    # of most cards and therefore useless for telling one from another. The
+    # matchup is the part that identifies the event.
+    event_full_name = (
+        analytics_source_event.strip() if analytics_source_event
+        else events[0]["event_name"].strip() if events
+        else "This Weekend"
+    )
 
     # Countdown target: this weekend's tracked event if we have one, otherwise
     # the nearest future card. ET is UTC-4 (EDT) for all currently tracked
@@ -863,6 +872,7 @@ def main():
         favorite_picks=favorite_picks,
         lock_picks=lock_picks,
         event_short_name=event_short_name,
+        event_full_name=event_full_name,
         countdown_target_iso=countdown_target_iso,
         fight_schedule_json=json.dumps(fight_schedule),
         just_concluded_json=json.dumps(just_concluded),

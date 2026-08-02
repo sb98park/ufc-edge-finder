@@ -61,7 +61,12 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     # clean step so the labels read as real numbers, not float noise.
     step = max(1, round(span / 4))
     grid_values = sorted(set([0] + [round(lo / step) * step + i * step for i in range(6)]))
-    grid_values = [v for v in grid_values if lo - step <= v <= hi + step]
+    # Clamp to the ACTUAL domain. This allowed values up to hi + step -- a
+    # full gridline above the top of the plot -- so its label was drawn above
+    # y=0 and the svg clipped it in half. Only the topmost label ever showed
+    # the symptom, which is why it looked like a one-off rather than an
+    # off-by-one in the range.
+    grid_values = [v for v in grid_values if lo <= v <= hi]
 
     grid_svg = ""
     for v in grid_values:

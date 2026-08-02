@@ -1125,7 +1125,7 @@
   }
   .model-limitations-notice strong { color: var(--text); }
 
-  .standout-title { font-size: 15px; color: var(--accent); margin-bottom: 10px; font-weight: 600; }
+  .standout-title { font-size: 15px; color: #ffffff; margin-bottom: 10px; font-weight: 600; }
   .standout-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 26px; }
   .standout-card {
     background: var(--panel2);
@@ -3540,7 +3540,7 @@
   {% endif %}
 
   {% if standout_props %}
-  <div class="standout-title" id="section-standout">{{ icon_flame() }} Standout Props for {{ event_short_name }}</div>
+  <div class="standout-title" id="section-standout">{{ icon_flame() }} Standout Props for {{ event_full_name }}</div>
   <div class="standout-grid">
     {% for p in standout_props %}
     <div class="standout-card reveal-target heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}" data-key="{{ p.fighter }}|{{ p.market }}">
