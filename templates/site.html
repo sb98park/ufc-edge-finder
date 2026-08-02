@@ -3402,7 +3402,19 @@
             <td class="mkt-model">{{ (row.model_prob*100)|round(1) }}%</td>
             {% if row.has_line %}
             <td>{{ odds_cell(row) }}</td>
-            <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}">{{ row.edge_pct }}%</td>
+            {# Inputs for LIVE edge recalculation. edge = model - book_FAIR,
+               and "fair" means devigged, which needs both sides of a market.
+               The client only ever sees one token's price, so it can't devig
+               from scratch -- instead it derives the build-time vig factor
+               from (fair / implied) and applies the same correction to the
+               live price. Vig doesn't move meaningfully between polls. #}
+            <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}"
+                {%- if row.clob_token_id and row.model_prob is not none and row.book_fair_prob is not none %}
+                data-edge-for="{{ row.clob_token_id }}"
+                data-model-prob="{{ row.model_prob }}"
+                data-fair-at-build="{{ row.book_fair_prob }}"
+                data-odds-at-build="{{ row.odds_american }}"
+                {%- endif %}>{{ row.edge_pct }}%</td>
             {% else %}
             <td class="mkt-none">—</td><td class="mkt-none">—</td>
             {% endif %}
@@ -4100,6 +4112,40 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // ===== Live edge recalculation =====
+    // Prices already refresh every 90s, but the edge beside them was frozen
+    // at build time -- so a line moving from -150 to -200 updated the price
+    // and left a stale comparison. Model vs market is the whole product, and
+    // half of it was going out of date.
+    // The model probability stays BAKED. Only the comparison is recomputed,
+    // so the trust property holds: a layer that touches results and prices
+    // still cannot rewrite a prediction.
+    function impliedFromAmerican(o) {
+      o = parseFloat(o);
+      if (!isFinite(o) || o === 0) return null;
+      return o > 0 ? 100 / (o + 100) : -o / (-o + 100);
+    }
+
+    function recomputeEdge(token, liveAmerican) {
+      document.querySelectorAll('[data-edge-for="' + token + '"]').forEach(cell => {
+        const model = parseFloat(cell.dataset.modelProb);
+        const fairBuild = parseFloat(cell.dataset.fairAtBuild);
+        const impliedBuild = impliedFromAmerican(cell.dataset.oddsAtBuild);
+        const impliedLive = impliedFromAmerican(liveAmerican);
+        if (!isFinite(model) || !isFinite(fairBuild) || !impliedBuild || !impliedLive) return;
+        const vigFactor = fairBuild / impliedBuild;
+        const fairLive = impliedLive * vigFactor;
+        const edge = (model - fairLive) * 100;
+        const rounded = Math.round(edge * 100) / 100;
+        if (window.__rollTo) { window.__rollTo(cell, rounded.toFixed(2) + '%'); }
+        else { cell.textContent = rounded.toFixed(2) + '%'; }
+        cell.classList.toggle('edge-pos', edge > 0);
+        cell.classList.toggle('edge-neg', edge <= 0);
+      });
+    }
+    window.__recomputeEdge = recomputeEdge;
+
 
     // ===== "More" remembers where you were =====
     // Tapping More always called showHub(), so leaving Coming Up for another
@@ -5015,6 +5061,7 @@
             document.querySelectorAll('[data-live-token="' + tok + '"]').forEach(el => {
               el.classList.remove('price-updating');
               if (window.__rollTo) { window.__rollTo(el, american); } else { el.textContent = american; }
+              if (window.__recomputeEdge) window.__recomputeEdge(tok, american);
             });
             updated++;
           }

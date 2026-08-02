@@ -1,0 +1,60 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Live method probe</title>
+<style>body{font:13px/1.5 -apple-system,system-ui;padding:16px;background:#0a0c10;color:#e6e9ef}
+pre{white-space:pre-wrap;word-break:break-all;background:#12151c;padding:10px;border-radius:8px}
+b{color:#d4af37}</style>
+<h3>Live method-of-victory probe</h3>
+<p>Run this from the deployed site so the request comes from the real origin.
+Live mode already paints winners; this checks whether the METHOD can be read
+client-side too, instead of waiting for a rebuild.</p>
+<pre id="out">running…</pre>
+<script>
+const out = document.getElementById('out');
+const log = (...a) => { out.textContent += "\n" + a.join(" "); };
+out.textContent = "";
+
+(async () => {
+  // Step 1: scoreboard -- the same call live mode already makes successfully.
+  const SB = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard";
+  let comps = [];
+  try {
+    const r = await fetch(SB);
+    log("scoreboard HTTP", r.status);
+    const j = await r.json();
+    for (const ev of (j.events || [])) {
+      for (const c of (ev.competitions || [])) {
+        comps.push({ id: c.id, name: ev.name, status: (c.status && c.status.type && c.status.type.name) || "?" });
+      }
+    }
+    log("competitions found:", comps.length);
+    comps.slice(0, 6).forEach(c => log("  ", c.id, "|", c.status, "|", (c.name || "").slice(0, 40)));
+  } catch (e) { log("scoreboard FAILED:", e.message); return; }
+
+  if (!comps.length) { log("\nNo competitions today -- run this during or just after a card."); return; }
+
+  // Step 2: the per-competition status endpoint, where the method lives.
+  // This is the call that was never individually tested -- CORS was only
+  // confirmed for the scoreboard and the core api INDEX.
+  const target = comps.find(c => c.status !== "STATUS_SCHEDULED") || comps[0];
+  const CORE = `https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/${target.id}/competitions/${target.id}/status`;
+  log("\ntrying core status for competition", target.id);
+  try {
+    const r = await fetch(CORE);
+    log("core status HTTP", r.status);
+    const j = await r.json();
+    log("top-level keys:", Object.keys(j).join(", "));
+    if (j.result) {
+      log("\nRESULT OBJECT FOUND:");
+      log(JSON.stringify(j.result).slice(0, 500));
+    } else {
+      log("\nno 'result' key -- method is not on this endpoint for this fight");
+      log(JSON.stringify(j).slice(0, 400));
+    }
+  } catch (e) {
+    log("core status FAILED:", e.message);
+    log("If this is a CORS error, method cannot be fetched client-side and");
+    log("must keep waiting for the rebuild.");
+  }
+})();
+</script>
