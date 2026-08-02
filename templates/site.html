@@ -5377,9 +5377,93 @@
         }
       }
 
+
+    // ===== Live method of victory =====
+    // The scoreboard gives the WINNER but not HOW -- its status.type.detail
+    // returns "Final", a completion state. The method lives on the core
+    // event's per-competition status, reachable client-side once one trap is
+    // avoided: ESPN publishes those $ref values as http://, and an HTTPS page
+    // blocks them as mixed content, reporting a generic "Failed to fetch"
+    // that is indistinguishable from CORS. Upgrading the scheme is the whole
+    // fix -- verified live: Submission / Rear Naked Choke, KO/TKO / Kick.
+    //
+    // Fetched ONCE per event id and cached, since methods don't change after
+    // a fight ends and the poll runs every 45s.
+    const methodCache = {};
+    let methodFetchInFlight = false;
+
+    async function fetchLiveMethods(eventId) {
+      if (!eventId || methodCache[eventId] || methodFetchInFlight) return methodCache[eventId] || null;
+      methodFetchInFlight = true;
+      try {
+        const r = await fetch(`https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/${eventId}`,
+                              { signal: AbortSignal.timeout(8000) });
+        if (!r.ok) return null;
+        const ev = await r.json();
+        const byComp = {};
+        for (const c of (ev.competitions || [])) {
+          const ref = c.status && c.status.$ref;
+          if (!ref) continue;
+          try {
+            const sr = await fetch(ref.replace(/^http:\/\//i, 'https://'),
+                                   { signal: AbortSignal.timeout(8000) });
+            if (!sr.ok) continue;
+            const st = await sr.json();
+            const res = st.result;
+            if (res && res.displayName) {
+              byComp[String(c.id)] = res.description && res.description !== res.displayName
+                ? `${res.displayName} (${res.description})`
+                : res.displayName;
+            }
+          } catch (e) { /* one competition failing must not lose the rest */ }
+        }
+        methodCache[eventId] = byComp;
+        return byComp;
+      } catch (e) {
+        return null;
+      } finally {
+        methodFetchInFlight = false;
+      }
+    }
+
+    function paintMethod(fight, methodText) {
+      if (!methodText) return false;
+      const row = document.querySelector(
+        `[data-fight-key="${CSS.escape(fight.fighter_a + '|' + fight.fighter_b)}"]`);
+      if (!row) return false;
+      const slot = row.querySelector('[data-vs-slot]');
+      if (!slot) return false;
+      // Only append -- never replace what paintResult already wrote, so a
+      // method arriving late can't clobber the winner.
+      if (slot.dataset.methodPainted === methodText) return false;
+      const base = slot.dataset.resultBase || slot.textContent;
+      slot.dataset.resultBase = base;
+      slot.textContent = base + ' \u00b7 ' + methodText;
+      slot.dataset.methodPainted = methodText;
+      return true;
+    }
+
       function applyLiveScoreboard(data) {
         let changed = false;
         let liveKey = null;
+        // Kick off the method lookup for this card; it resolves on a later
+        // tick and paints then, so it never delays the winner appearing.
+        const evId = (data.events && data.events[0] && data.events[0].id) || null;
+        if (evId) {
+          fetchLiveMethods(evId).then(byComp => {
+            if (!byComp) return;
+            for (const ev of (data.events || [])) {
+              for (const comp of (ev.competitions || [])) {
+                const cs = comp.competitors || [];
+                if (cs.length !== 2) continue;
+                const names = cs.map(c => (c.athlete && c.athlete.fullName) || '');
+                const key = canonicalKey(names[0] || '', names[1] || '');
+                const fight = schedule.find(f => canonicalKey(f.fighter_a, f.fighter_b) === key);
+                if (fight) paintMethod(fight, byComp[String(comp.id)]);
+              }
+            }
+          });
+        }
         for (const ev of (data.events || [])) {
           for (const comp of (ev.competitions || [])) {
             const cs = comp.competitors || [];
