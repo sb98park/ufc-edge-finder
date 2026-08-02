@@ -1,13 +1,14 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Live method probe</title>
+<title>Live method probe v2</title>
 <style>body{font:13px/1.5 -apple-system,system-ui;padding:16px;background:#0a0c10;color:#e6e9ef}
-pre{white-space:pre-wrap;word-break:break-all;background:#12151c;padding:10px;border-radius:8px}
-b{color:#d4af37}</style>
-<h3>Live method-of-victory probe</h3>
-<p>Run this from the deployed site so the request comes from the real origin.
-Live mode already paints winners; this checks whether the METHOD can be read
-client-side too, instead of waiting for a rebuild.</p>
+pre{white-space:pre-wrap;word-break:break-all;background:#12151c;padding:10px;border-radius:8px}</style>
+<h3>Live method-of-victory probe (v2)</h3>
+<p>v1 built the status URL by hand and got a 404 -- it used the COMPETITION id
+where the EVENT id belongs. This follows the same path results_fetcher.py
+already uses successfully server-side: fetch the core event, then follow the
+<code>$ref</code> ESPN puts on each competition's status rather than
+constructing one.</p>
 <pre id="out">running…</pre>
 <script>
 const out = document.getElementById('out');
@@ -15,46 +16,59 @@ const log = (...a) => { out.textContent += "\n" + a.join(" "); };
 out.textContent = "";
 
 (async () => {
-  // Step 1: scoreboard -- the same call live mode already makes successfully.
   const SB = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard";
-  let comps = [];
+  let eventIds = [];
   try {
     const r = await fetch(SB);
     log("scoreboard HTTP", r.status);
     const j = await r.json();
-    for (const ev of (j.events || [])) {
-      for (const c of (ev.competitions || [])) {
-        comps.push({ id: c.id, name: ev.name, status: (c.status && c.status.type && c.status.type.name) || "?" });
-      }
-    }
-    log("competitions found:", comps.length);
-    comps.slice(0, 6).forEach(c => log("  ", c.id, "|", c.status, "|", (c.name || "").slice(0, 40)));
+    // The EVENT id is on the event, not the competition -- that was the bug.
+    eventIds = (j.events || []).map(ev => ({ id: ev.id, name: ev.name }));
+    log("events found:", eventIds.length);
+    eventIds.forEach(e => log("   event", e.id, "|", (e.name || "").slice(0, 44)));
   } catch (e) { log("scoreboard FAILED:", e.message); return; }
 
-  if (!comps.length) { log("\nNo competitions today -- run this during or just after a card."); return; }
+  if (!eventIds.length) { log("\nNo events today."); return; }
 
-  // Step 2: the per-competition status endpoint, where the method lives.
-  // This is the call that was never individually tested -- CORS was only
-  // confirmed for the scoreboard and the core api INDEX.
-  const target = comps.find(c => c.status !== "STATUS_SCHEDULED") || comps[0];
-  const CORE = `https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/${target.id}/competitions/${target.id}/status`;
-  log("\ntrying core status for competition", target.id);
+  const ev = eventIds[0];
+  const CORE = `https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/${ev.id}`;
+  log("\nfetching core event", ev.id);
+  let comps = [];
   try {
     const r = await fetch(CORE);
-    log("core status HTTP", r.status);
+    log("core event HTTP", r.status);
+    if (r.status !== 200) { log("-> cannot read the core event client-side"); return; }
     const j = await r.json();
-    log("top-level keys:", Object.keys(j).join(", "));
-    if (j.result) {
-      log("\nRESULT OBJECT FOUND:");
-      log(JSON.stringify(j.result).slice(0, 500));
-    } else {
-      log("\nno 'result' key -- method is not on this endpoint for this fight");
-      log(JSON.stringify(j).slice(0, 400));
-    }
+    comps = j.competitions || [];
+    log("competitions on event:", comps.length);
   } catch (e) {
-    log("core status FAILED:", e.message);
-    log("If this is a CORS error, method cannot be fetched client-side and");
-    log("must keep waiting for the rebuild.");
+    log("core event FAILED:", e.message);
+    log("If this is a CORS error, method can't be fetched client-side.");
+    return;
   }
+
+  // Follow the $ref rather than building a URL.
+  let checked = 0;
+  for (const c of comps) {
+    if (checked >= 3) break;
+    const ref = c.status && c.status.$ref;
+    if (!ref) { log("\ncompetition", c.id, "-- no status $ref"); continue; }
+    checked++;
+    try {
+      const r = await fetch(ref);
+      const s = await r.json();
+      const res = s.result || {};
+      log("\ncompetition", c.id, "HTTP", r.status);
+      log("   completed:", (s.type && s.type.completed));
+      log("   result   :", JSON.stringify({
+        name: res.name, displayName: res.displayName,
+        abbreviation: res.abbreviation, description: res.description
+      }));
+    } catch (e) {
+      log("\ncompetition", c.id, "status FAILED:", e.message);
+      log("   (CORS on the $ref host would mean method stays server-side)");
+    }
+  }
+  log("\n-- if a result object shows a method above, live method is buildable --");
 })();
 </script>
