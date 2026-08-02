@@ -3,12 +3,12 @@
 <title>Live method probe v2</title>
 <style>body{font:13px/1.5 -apple-system,system-ui;padding:16px;background:#0a0c10;color:#e6e9ef}
 pre{white-space:pre-wrap;word-break:break-all;background:#12151c;padding:10px;border-radius:8px}</style>
-<h3>Live method-of-victory probe (v2)</h3>
-<p>v1 built the status URL by hand and got a 404 -- it used the COMPETITION id
-where the EVENT id belongs. This follows the same path results_fetcher.py
-already uses successfully server-side: fetch the core event, then follow the
-<code>$ref</code> ESPN puts on each competition's status rather than
-constructing one.</p>
+<h3>Live method-of-victory probe (v3)</h3>
+<p>v2 followed the <code>$ref</code> correctly but every fetch failed. That
+wasn't CORS: the same host served the core event fine over HTTPS. ESPN returns
+<code>$ref</code> values as <code>http://</code>, and an HTTPS page blocks
+those as mixed content -- which reports as a generic "Failed to fetch". v3
+upgrades the scheme before fetching.</p>
 <pre id="out">running…</pre>
 <script>
 const out = document.getElementById('out');
@@ -51,14 +51,21 @@ out.textContent = "";
   let checked = 0;
   for (const c of comps) {
     if (checked >= 3) break;
-    const ref = c.status && c.status.$ref;
+    let ref = c.status && c.status.$ref;
     if (!ref) { log("\ncompetition", c.id, "-- no status $ref"); continue; }
+    // ESPN returns $ref values over HTTP. On an HTTPS page the browser blocks
+    // that as MIXED CONTENT, which surfaces as a generic "Failed to fetch"
+    // and looks identical to CORS. Same host served the core event fine over
+    // HTTPS, so upgrade the scheme rather than concluding it's blocked.
+    const original = ref;
+    ref = ref.replace(/^http:\/\//i, "https://");
     checked++;
     try {
+      log("\ncompetition", c.id, original.startsWith("http://") ? "(upgraded http -> https)" : "");
       const r = await fetch(ref);
       const s = await r.json();
       const res = s.result || {};
-      log("\ncompetition", c.id, "HTTP", r.status);
+      log("   HTTP", r.status);
       log("   completed:", (s.type && s.type.completed));
       log("   result   :", JSON.stringify({
         name: res.name, displayName: res.displayName,
