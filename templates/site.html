@@ -1555,14 +1555,6 @@
   .dual-chart .label-odds { display: inline; }
   body.pct-mode .dual-chart .label-pct { display: inline; }
   body.pct-mode .dual-chart .label-odds { display: none; }
-  .odds-format-toggle { display: flex; align-items: center; gap: 8px; margin: 2px 0 16px; flex-wrap: wrap; }
-  .odds-format-toggle-label { font-size: 11px; color: var(--muted); font-weight: 600; }
-  .odds-format-pills { display: inline-flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 20px; padding: 2px; }
-  .odds-format-btn {
-    font-size: 11px; font-weight: 600; padding: 5px 13px; border-radius: 20px; border: none;
-    background: transparent; color: var(--muted); cursor: pointer; font-family: inherit;
-  }
-  .odds-format-btn.active { background: var(--accent); color: #0a0c10; }
   details.chart-toggle {
     background: var(--panel2); border: 1px solid var(--border); border-radius: 12px;
     margin: 8px 0; overflow: hidden;
@@ -2446,7 +2438,6 @@
      incidental, not designed. Apple's 44pt floor exists because thumbs are
      imprecise; min-height makes it deliberate. */
   .seg-tab { min-height: 40px; }
-  .odds-format-btn { min-height: 36px; }
   .market-group-summary { min-height: 40px; }
   .filter-chip { min-height: 32px; }
 
@@ -2468,6 +2459,20 @@
   @media (prefers-reduced-motion: reduce) {
     details.fight-card[open] > *:not(summary) { animation: none; }
   }
+  /* Filtered-empty notice. Deliberately quiet -- it explains a state the
+     reader created, so it should read as information, not as an error. */
+  .filter-empty {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    flex-wrap: wrap; padding: 18px 12px; margin: 4px 0 12px;
+    border: 1px dashed var(--border); border-radius: 12px;
+    font-size: 13px; color: var(--muted);
+  }
+  .filter-empty-reset {
+    background: none; border: 1px solid var(--border); border-radius: 999px;
+    color: var(--text); font: inherit; font-weight: 600; font-size: 12px;
+    padding: 5px 12px; cursor: pointer; min-height: 32px;
+  }
+  .filter-empty-reset:active { transform: scale(0.97); }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3861,13 +3866,6 @@
   </div>
 
   <div class="detail-section" data-section="thisweekend">
-    <div class="fight-controls" id="fight-controls">
-      <span class="fc-label">Confidence</span>
-      <button class="fc-chip" data-filter="all">All</button>
-      <button class="fc-chip" data-filter="high">High</button>
-      <button class="fc-chip" data-filter="medium">Medium</button>
-      <button class="fc-chip fc-spacer" id="fc-toggle-all">Expand all</button>
-    </div>
   {% if events %}
   {% set event = events[0] %}
   {# Event name and date removed: the countdown banner directly above now
@@ -3877,20 +3875,34 @@
      Nothing replaces the text -- the segment tabs below already label the
      content as Main Card / Prelims, so a title or fight count here would be
      a third label for the same thing. #}
-  <div class="odds-format-toggle" id="section-thisweekend">
-    <span class="odds-format-toggle-label">Moneyline movement:</span>
-    <div class="odds-format-pills" role="group" aria-label="Odds display format">
-      <button type="button" class="odds-format-btn active" data-format="odds" onclick="setOddsFormat('odds')">Odds</button>
-      <button type="button" class="odds-format-btn" data-format="pct" onclick="setOddsFormat('pct')">%</button>
-    </div>
-  </div>
   {%- set segs = [] -%}
   {%- for f in event.fights %}{% if f.segment_label not in segs %}{% set _ = segs.append(f.segment_label) %}{% endif %}{% endfor -%}
+  {# SELECTION, then refinement. The filter chips used to sit ABOVE the
+     segment tabs, which asked people to narrow a view they hadn't chosen
+     yet. iOS puts a segmented control directly under the title and filters
+     inside the content for the same reason.
+     The scroll anchor lands here now -- tapping Card should arrive at the
+     card picker, not at a filter row. #}
   {% if segs|length > 1 %}
-  <div class="seg-tabs">
+  <div class="seg-tabs" id="section-thisweekend">
     {% for seg in segs %}
     <button class="seg-tab{{ ' active' if loop.first }}" data-seg-target="seg-pane-{{ loop.index }}" onclick="switchSegTab(this)">{{ seg|title }}</button>
     {% endfor %}
+  </div>
+  <div class="fight-controls" id="fight-controls">
+    <span class="fc-label">Confidence</span>
+    <button class="fc-chip" data-filter="all">All</button>
+    <button class="fc-chip" data-filter="high">High</button>
+    <button class="fc-chip" data-filter="medium">Medium</button>
+    <button class="fc-chip fc-spacer" id="fc-toggle-all">Expand all</button>
+  </div>
+  {# Shown when a filter empties the visible segment. Without it, filtering to
+     High and switching to a card with no High picks looks like the tab broke
+     -- which is the one real cost of moving the filter below the tabs, so it
+     gets fixed here rather than left to be discovered. #}
+  <div class="filter-empty" id="filter-empty" hidden>
+    <span id="filter-empty-text"></span>
+    <button type="button" class="filter-empty-reset" id="filter-empty-reset">Show all</button>
   </div>
   {% set ns = namespace(i=0) %}
   {% for seg in segs %}
@@ -4984,16 +4996,49 @@
       const chips = Array.from(bar.querySelectorAll('[data-filter]'));
       let active = 'all';
 
+      const emptyBox = document.getElementById('filter-empty');
+      const emptyText = document.getElementById('filter-empty-text');
+
       function apply() {
         cards().forEach(card => {
           const conf = (card.dataset.confidence || '').trim();
           card.classList.toggle('fc-hidden', active !== 'all' && conf !== active);
         });
         chips.forEach(ch => ch.classList.toggle('on', ch.dataset.filter === active));
+
+        // The filter spans BOTH segments deliberately -- "High confidence" is
+        // a lens on the card, not a property of one half of it, and per-tab
+        // state would mean switching tabs silently changed two things at once.
+        // The cost is that a segment can come up empty, which below the tabs
+        // reads as a broken tab rather than an active filter. So say which it
+        // is, and offer the way out.
+        if (!emptyBox) return;
+        const pane = document.querySelector('.detail-section[data-section="thisweekend"] .seg-pane.active')
+                  || document.querySelector('.detail-section[data-section="thisweekend"]');
+        const visible = pane
+          ? Array.from(pane.querySelectorAll('.fight-card')).filter(c => !c.classList.contains('fc-hidden'))
+          : [];
+        const paneName = (document.querySelector('.detail-section[data-section="thisweekend"] .seg-tab.active') || {}).textContent;
+        if (active !== 'all' && visible.length === 0) {
+          const tier = active === 'high' ? 'High Confidence' : 'Medium Confidence';
+          emptyText.textContent = paneName
+            ? `No ${tier} picks on the ${paneName.trim().toLowerCase()}`
+            : `No ${tier} picks on this card`;
+          emptyBox.hidden = false;
+        } else {
+          emptyBox.hidden = true;
+        }
       }
       chips.forEach(ch => ch.addEventListener('click', () => {
         active = ch.dataset.filter; apply(); haptic(8);
       }));
+      const emptyReset = document.getElementById('filter-empty-reset');
+      if (emptyReset) emptyReset.addEventListener('click', () => {
+        active = 'all'; apply(); haptic(8);
+      });
+      // Re-evaluate when the segment changes -- the filter is unchanged but
+      // what it leaves visible is not.
+      window.__reapplyFightFilter = apply;
       apply();
 
       const toggle = document.getElementById('fc-toggle-all');
@@ -5242,6 +5287,9 @@
     // same staggered pattern, then clear the inline delay so it can't
     // interfere with later transitions.
     function switchSegTab(btn) {
+      // The filter's result depends on which pane is showing, so any tab
+      // change has to re-evaluate the empty state.
+      setTimeout(() => { if (window.__reapplyFightFilter) window.__reapplyFightFilter(); }, 0);
       const _bar = btn.closest('.seg-tabs');
       if (_bar && _bar.__place) {
         const _tabs = Array.from(_bar.querySelectorAll('.seg-tab'));
@@ -6005,43 +6053,11 @@
       });
     })();
 
-    // Remember collapsed/expanded section state (localStorage)
-    (function() {
-      const DETAILS_KEY_PREFIX = 'ufc-edge-finder-details-';
+    // Odds/% toggle removed. It was a display preference sitting permanently
+    // above the fight list -- prime space for a control people set once, if
+    // ever. Deleted rather than relocated: a settings screen holding one
+    // switch nobody flips is still clutter, only hidden.
 
-      document.querySelectorAll('[data-remember-id]').forEach(el => {
-        const storageKey = DETAILS_KEY_PREFIX + el.dataset.rememberId;
-        try {
-          const saved = localStorage.getItem(storageKey);
-          if (saved === 'open') el.open = true;
-          else if (saved === 'closed') el.open = false;
-        } catch (e) {}
-        el.addEventListener('toggle', () => {
-          try { localStorage.setItem(storageKey, el.open ? 'open' : 'closed'); } catch (e) {}
-        });
-      });
-    })();
-
-    // Moneyline chart display format: American odds (default) vs raw %.
-    // A single global toggle controls every chart on the page at once via
-    // a body class -- CSS handles the actual show/hide (see .label-pct /
-    // .label-odds rules), so this only needs to flip the class, sync the
-    // pill buttons' active state, and remember the choice for next visit.
-    const ODDS_FORMAT_KEY = 'ufc-edge-finder-odds-format';
-
-    function setOddsFormat(format) {
-      document.body.classList.toggle('pct-mode', format === 'pct');
-      document.querySelectorAll('.odds-format-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.format === format);
-      });
-      try { localStorage.setItem(ODDS_FORMAT_KEY, format); } catch (e) {}
-    }
-
-    (function() {
-      let saved = null;
-      try { saved = localStorage.getItem(ODDS_FORMAT_KEY); } catch (e) {}
-      if (saved === 'pct') setOddsFormat('pct');
-    })();
 
     // Scroll-triggered reveal: cards fade in as they enter view (not just
     // on load, so the effect covers the whole page, not just the first
