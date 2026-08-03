@@ -1640,7 +1640,10 @@
     .compare-table th:first-child, .compare-table td:first-child,
     .compare-table th:last-child, .compare-table td:last-child { width: 34%; }
     .compare-table th:nth-child(2), .compare-table td:nth-child(2) { width: 32%; }
-    .compare-table th, .compare-table td { white-space: normal; word-break: break-word; }
+    /* normal, not break-word. break-word splits INSIDE a word, which turned
+     "Wrestler/Grappler" into "Wrestler/Grappl" + "er". The slash is already a
+     valid break point, so if a value must wrap it now does so cleanly. */
+  .compare-table th, .compare-table td { white-space: normal; word-break: normal; overflow-wrap: break-word; }
   }
 
   .tape-block { margin-bottom: 14px; }
@@ -2492,6 +2495,10 @@
   .waterfall-block[open] .waterfall-summary-hint::after { content: "hide \25B4"; }
   .waterfall-summary-hint { font-size: 0; }
   .waterfall-summary-hint::after { font-size: 11px; }
+  /* Shrink-to-fit for the few values long enough to wrap. 10.5px keeps
+     "Wrestler/Grappler" on one line in a 94px cell while leaving every other
+     value at the table's normal 12px. */
+  .compare-table td.cmp-long { font-size: 10.5px; letter-spacing: -0.1px; }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3322,7 +3329,16 @@
     <tr><td>{{ comparison.a.height_display if comparison.a.height_display is not none else "—" }}</td><td>Height</td><td>{{ comparison.b.height_display if comparison.b.height_display is not none else "—" }}</td></tr>
     <tr><td>{{ (comparison.a.reach_in ~ '"') if comparison.a.reach_in is not none else "—" }}</td><td>Reach</td><td>{{ (comparison.b.reach_in ~ '"') if comparison.b.reach_in is not none else "—" }}</td></tr>
     <tr><td>{{ comparison.a.stance or "—" }}</td><td>Stance</td><td>{{ comparison.b.stance or "—" }}</td></tr>
-    <tr><td>{{ comparison.a.style or "—" }}</td><td>Style</td><td>{{ comparison.b.style or "—" }}</td></tr>
+    {# Long style values get a smaller size so they hold one line. Applied
+       per-VALUE rather than to the whole row: "Striker" shouldn't shrink
+       because the other corner happens to be a "Wrestler/Grappler".
+       ~94px of usable cell on a 390px phone; 17 characters at 12px needs
+       ~105px, which is why this one wrapped and shorter ones never did. #}
+    <tr>
+      <td{{ ' class="cmp-long"' | safe if comparison.a.style and comparison.a.style|length > 12 }}>{{ comparison.a.style or "—" }}</td>
+      <td>Style</td>
+      <td{{ ' class="cmp-long"' | safe if comparison.b.style and comparison.b.style|length > 12 }}>{{ comparison.b.style or "—" }}</td>
+    </tr>
     <tr>
       <td>{% if comparison.a.last_fight_date %}{{ comparison.a.last_fight_date }}{% if comparison.a.last_fight_result %}<br>({{ comparison.a.last_fight_result }} by {{ comparison.a.last_fight_method }}{% if comparison.a.last_fight_opponent %} against {{ comparison.a.last_fight_opponent }}{% endif %}){% endif %}{% else %}—{% endif %}</td>
       <td>Last Fight</td>
