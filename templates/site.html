@@ -2495,10 +2495,19 @@
   .waterfall-block[open] .waterfall-summary-hint::after { content: "hide \25B4"; }
   .waterfall-summary-hint { font-size: 0; }
   .waterfall-summary-hint::after { font-size: 11px; }
-  /* Shrink-to-fit for the few values long enough to wrap. 10.5px keeps
-     "Wrestler/Grappler" on one line in a 94px cell while leaving every other
-     value at the table's normal 12px. */
-  .compare-table td.cmp-long { font-size: 10.5px; letter-spacing: -0.1px; }
+  /* nowrap is the part that matters. Shrinking alone wasn't enough: BOTH
+     word-break: break-word AND overflow-wrap: break-word permit splitting
+     inside a token when it doesn't fit, so the text just broke one character
+     later ("Wrestler/Grapple" + "r").
+     nowrap makes wrapping impossible; the smaller size and tighter padding
+     then guarantee it fits rather than overflowing. Padding drops from 8px to
+     2px per side, which buys 12px -- more than the font reduction does.
+     17 characters at 10px is ~87px in a 106px cell. */
+  .compare-table td.cmp-long {
+    font-size: 10px; letter-spacing: -0.2px;
+    white-space: nowrap;
+    padding-left: 2px; padding-right: 2px;
+  }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
