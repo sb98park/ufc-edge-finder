@@ -2707,8 +2707,8 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      {% if fun_facts %}
       <div class="hub-group-header">Analysis</div>
+      {% if fun_facts %}
       <div class="hub-card" style="--card-accent:#2dd4bf" onclick="showSection('funfacts')" data-section-nav="funfacts" data-row="first">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Lightning bolt">
@@ -2725,7 +2725,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       {% endif %}
-      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('favorites')" data-section-nav="favorites" data-row="mid">
+      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('favorites')" data-section-nav="favorites" data-row="{{ 'mid' if fun_facts else 'first' }}">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond">
             <defs><linearGradient id="icon-favorites" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
