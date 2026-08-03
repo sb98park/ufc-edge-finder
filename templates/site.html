@@ -2461,6 +2461,12 @@
   }
   /* Filtered-empty notice. Deliberately quiet -- it explains a state the
      reader created, so it should read as information, not as an error. */
+  /* [hidden] must win. The browser's default is [hidden] { display: none },
+     but ANY explicit display rule outranks it -- so `display: flex` here made
+     the box render permanently, empty, regardless of the hidden attribute.
+     Same trap applies to every element toggled via `hidden` that also has a
+     display value. */
+  .filter-empty[hidden] { display: none; }
   .filter-empty {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     flex-wrap: wrap; padding: 18px 12px; margin: 4px 0 12px;
