@@ -2674,11 +2674,6 @@
     </div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
-        {{ scroll_value('days') }}
-        <div class="countdown-box-label">Days</div>
-      </div>
-      <div class="countdown-sep">:</div>
-      <div class="countdown-box">
         {{ scroll_value('hours') }}
         <div class="countdown-box-label">Hrs</div>
       </div>
@@ -5554,11 +5549,26 @@
         return months <= 1 ? 'In a month' : `In ${months} months`;
       }
 
-      function absoluteWhen(target) {
+      function absoluteWhen(target, relative) {
         const t = new Date(target);
-        const date = t.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         const time = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        return `${date} \u00b7 ${time}`;
+
+        // Drop what the line above already said. "This Saturday" over
+        // "Saturday, Aug 8" states the weekday twice and spends the hero's
+        // best real estate repeating itself -- so the absolute line carries
+        // only what the relative one DIDN'T.
+        const namesWeekday = /This |Next /.test(relative);
+        if (relative === 'Today') {
+          return time;                                   // the date is implied
+        }
+        if (namesWeekday) {
+          const d = t.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          return `${d} \u00b7 ${time}`;
+        }
+        // "Tomorrow" and "In N weeks" name no weekday, so it still earns its
+        // place here.
+        const d = t.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        return `${d} \u00b7 ${time}`;
       }
 
       function update() {
@@ -5692,18 +5702,19 @@
         if (diff > 86400000) {
           boxes.style.display = 'none';
           compact.hidden = false;
-          relEl.textContent = relativePhrase(target, now);
-          absEl.textContent = absoluteWhen(target);
+          const rel = relativePhrase(target, now);
+          relEl.textContent = rel;
+          absEl.textContent = absoluteWhen(target, rel);
           return;
         }
 
         compact.hidden = true;
         boxes.style.display = 'flex';
-        const days = Math.floor(diff / 86400000);
-        const hours = Math.floor((diff % 86400000) / 3600000);
+        // No days unit: this branch only runs inside 24 hours, so it could
+        // only ever read 00. Hours carries the whole remaining span.
+        const hours = Math.floor(diff / 3600000);
         const minutes = Math.floor((diff % 3600000) / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
-        updateCountdownUnit('days', days);
         updateCountdownUnit('hours', hours);
         updateCountdownUnit('mins', minutes);
         updateCountdownUnit('secs', seconds);
