@@ -823,7 +823,16 @@ def main():
     # "nan". This test explicitly excludes both None and NaN (the classic
     # "x != x" is only ever true for NaN) so templates can check
     # "is real_value" instead of relying on Jinja's default truthiness.
-    env.tests["real_value"] = lambda x: x is not None and x == x
+    # Also reject EMPTY strings. This tested only for None and NaN, so when
+    # fight-level rows started carrying `opponent: ""` -- deliberately, to
+    # stop pandas filling the gap with NaN and crashing the name normaliser --
+    # every "{{ fighter }}{% if opponent is real_value %} vs ..." rendered a
+    # trailing "vs" with nothing after it.
+    # A blank string is not a real value in any of the places this test is
+    # used, so the fix belongs here rather than at each of the four call sites.
+    env.tests["real_value"] = lambda x: (
+        x is not None and x == x and not (isinstance(x, str) and not x.strip())
+    )
 
     def clear_market_label(market, fighter):
         """
