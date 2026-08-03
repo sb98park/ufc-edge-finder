@@ -3870,11 +3870,14 @@
     </div>
   {% if events %}
   {% set event = events[0] %}
-  <div class="event-header" id="section-thisweekend">
-    <div class="event-name">{{ event.event_name }}</div>
-    <div class="event-date">{{ event.event_date|friendly_date }}</div>
-  </div>
-  <div class="odds-format-toggle">
+  {# Event name and date removed: the countdown banner directly above now
+     carries both, and repeating them cost a whole block to say nothing new.
+     The scroll anchor moves onto the next element rather than leaving an
+     empty div behind to hold it.
+     Nothing replaces the text -- the segment tabs below already label the
+     content as Main Card / Prelims, so a title or fight count here would be
+     a third label for the same thing. #}
+  <div class="odds-format-toggle" id="section-thisweekend">
     <span class="odds-format-toggle-label">Moneyline movement:</span>
     <div class="odds-format-pills" role="group" aria-label="Odds display format">
       <button type="button" class="odds-format-btn active" data-format="odds" onclick="setOddsFormat('odds')">Odds</button>
