@@ -2408,6 +2408,16 @@
   .scrub-dot { pointer-events: none; }
   /* ===== Compact countdown (outside 24h) ===== */
   .countdown-compact { padding: 2px 0 4px; }
+  .cd-venue {
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.09em;
+    margin-bottom: 5px;
+    /* Truncate rather than wrap. A long venue wrapping to two lines would
+       make the compact block taller than the countdown it replaced, which
+       defeats the point of it. */
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%;
+  }
   .cd-relative {
     font-size: 17px; font-weight: 700; color: var(--text);
     letter-spacing: -0.2px; line-height: 1.2;
@@ -2669,6 +2679,14 @@
        text in it. Relative phrase on top because that IS the answer to "how
        long?"; the absolute date below is the confirmation. #}
     <div class="countdown-compact" id="countdown-compact" hidden>
+      {# Context, headline, detail -- an editorial rhythm rather than three
+         stacked facts. Venue sits ON TOP because it's the least important of
+         the three and the eye should land on the timing first. It also closes
+         a gap: desktop showed the venue and mobile showed nothing, same
+         product with different information for no reason but width. #}
+      {% if countdown_location_short %}
+      <div class="cd-venue">{{ countdown_location_short }}</div>
+      {% endif %}
       <div class="cd-relative" id="cd-relative"></div>
       <div class="cd-absolute" id="cd-absolute"></div>
     </div>
