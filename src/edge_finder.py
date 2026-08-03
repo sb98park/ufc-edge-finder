@@ -13,6 +13,7 @@ import re
 import pandas as pd
 
 from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob
+from .method_model import method_probabilities
 from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
 
 
@@ -395,7 +396,6 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
         # were landing near 104%. The hazard model produces P(decision) as
         # the chance of surviving every round, so taking all three from it
         # makes them exhaustive by construction.
-        from src.method_model import method_probabilities
         wins_a, wins_b = max(int(a["wins"]), 1), max(int(b["wins"]), 1)
         # DENOMINATOR IS TOTAL FIGHTS, matching how the model was trained.
         # These previously divided win-methods by WINS and loss-methods by
@@ -487,7 +487,6 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
     replaced by a direct fight-level fit, validated per method and per
     scheduled length (research_method_fightlevel.py).
     """
-    from src.method_model import method_probabilities
 
     rows = []
     props = upcoming_df[upcoming_df["market"] == "FightMethod"]
