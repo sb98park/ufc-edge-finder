@@ -181,7 +181,10 @@
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
   }
-  .countdown-label { font-size: 11px; color: var(--accent2); font-weight: 600; margin-bottom: 8px; }
+  .countdown-label {
+    font-size: 16px; color: var(--text); font-weight: 700;
+    letter-spacing: -0.2px; line-height: 1.25; margin-bottom: 6px;
+  }
   .countdown-boxes { display: flex; align-items: center; justify-content: center; gap: 6px; }
   .countdown-box {
     background: #0d0f14; border: 1px solid #2a2410; border-radius: 8px;
@@ -2418,12 +2421,9 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     max-width: 100%;
   }
-  .cd-relative {
-    font-size: 17px; font-weight: 700; color: var(--text);
-    letter-spacing: -0.2px; line-height: 1.2;
-  }
   .cd-absolute {
-    font-size: 12px; color: var(--muted); margin-top: 3px; letter-spacing: 0.2px;
+    font-size: 13px; color: var(--text-soft, #c8ccd4); margin-top: 4px;
+    letter-spacing: 0.1px; font-weight: 600;
   }
 
   /* ===== Focus states =====
@@ -2687,7 +2687,6 @@
       {% if countdown_location_short %}
       <div class="cd-venue">{{ countdown_location_short }}</div>
       {% endif %}
-      <div class="cd-relative" id="cd-relative"></div>
       <div class="cd-absolute" id="cd-absolute"></div>
     </div>
     <div class="countdown-boxes" id="countdown-boxes">
@@ -5542,51 +5541,28 @@
 
 
       const compact = document.getElementById('countdown-compact');
-      const relEl = document.getElementById('cd-relative');
       const absEl = document.getElementById('cd-absolute');
 
-      // Phrased the way a person would say it, not "In N days" every time.
-      // Keyed off CALENDAR days, not elapsed hours -- an event 30 hours away
-      // can still be tomorrow, and saying "In 1 day" when you mean tomorrow
-      // is the tell that a string was computed rather than written.
-      function relativePhrase(target, now) {
-        const t = new Date(target), n = new Date(now);
-        const startOf = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-        const calDays = Math.round((startOf(t) - startOf(n)) / 86400000);
-        if (calDays <= 0) return 'Today';
-        if (calDays === 1) return 'Tomorrow';
-        // Inside the coming week, the weekday alone locates it better than a
-        // count does -- "This Saturday" needs no arithmetic to understand.
-        if (calDays <= 6) {
-          return 'This ' + t.toLocaleDateString('en-US', { weekday: 'long' });
-        }
-        if (calDays <= 13) return 'Next ' + t.toLocaleDateString('en-US', { weekday: 'long' });
-        if (calDays < 21) return 'In 2 weeks';
-        if (calDays < 28) return 'In 3 weeks';
-        const months = Math.round(calDays / 30);
-        return months <= 1 ? 'In a month' : `In ${months} months`;
-      }
 
-      function absoluteWhen(target, relative) {
+
+
+      function whenLine(target, now) {
         const t = new Date(target);
+        // Minutes kept. Start times are written "5:00 PM" everywhere else on
+        // the site and on the desktop banner, and stripping them here made
+        // one line read differently from the rest for no gain.
         const time = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const startOf = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        const calDays = Math.round((startOf(t) - startOf(new Date(now))) / 86400000);
 
-        // Drop what the line above already said. "This Saturday" over
-        // "Saturday, Aug 8" states the weekday twice and spends the hero's
-        // best real estate repeating itself -- so the absolute line carries
-        // only what the relative one DIDN'T.
-        const namesWeekday = /This |Next /.test(relative);
-        if (relative === 'Today') {
-          return time;                                   // the date is implied
-        }
-        if (namesWeekday) {
-          const d = t.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          return `${d} \u00b7 ${time}`;
-        }
-        // "Tomorrow" and "In N weeks" name no weekday, so it still earns its
-        // place here.
-        const d = t.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        return `${d} \u00b7 ${time}`;
+        // "Tomorrow" beats "Saturday, Aug 8" the day before -- it's how a
+        // person would say it, and it's the only case where the relative form
+        // is strictly more useful than the date. Beyond that the weekday and
+        // date carry it fine on their own.
+        if (calDays <= 0) return `Today \u00b7 ${time}`;
+        if (calDays === 1) return `Tomorrow \u00b7 ${time}`;
+        const date = t.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        return `${date} \u00b7 ${time}`;
       }
 
       function update() {
@@ -5720,9 +5696,7 @@
         if (diff > 86400000) {
           boxes.style.display = 'none';
           compact.hidden = false;
-          const rel = relativePhrase(target, now);
-          relEl.textContent = rel;
-          absEl.textContent = absoluteWhen(target, rel);
+          absEl.textContent = whenLine(target, now);
           return;
         }
 
