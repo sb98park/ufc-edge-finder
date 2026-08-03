@@ -98,8 +98,15 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
         + f" L{last_x:.1f},{y_at(0):.1f} Z"
     )
 
+    # FILL FROM THE VARIABLE, not a literal. This mask works by matching the
+    # background exactly and shrinking, so the chart appears to draw itself in.
+    # The moment the surrounding block's colour changed -- .units-block moved
+    # from a gold-washed gradient to flat var(--panel) -- the hardcoded
+    # #242426 stopped matching and the mask became a visible grey rectangle
+    # sliding across the graph.
+    # A CSS variable can't drift from the palette the way a literal can.
     mask_svg = (
-        f'<rect x="{pad_left}" y="{pad_top}" width="{plot_w}" height="{plot_h}" fill="#242426" '
+        f'<rect x="{pad_left}" y="{pad_top}" width="{plot_w}" height="{plot_h}" fill="var(--panel)" '
         f'class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/>'
     )
 

@@ -320,7 +320,7 @@ def build_dual_line_chart_svg(
     # documented gap in WebKit: transform animations get real hardware
     # compositing, direct SVG stroke-property animation often doesn't.
     mask_svg = (
-        f'<rect x="{left_pad}" y="{top_pad}" width="{plot_w}" height="{plot_h}" fill="#242426" '
+        f'<rect x="{left_pad}" y="{top_pad}" width="{plot_w}" height="{plot_h}" fill="var(--panel)" '
         f'class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/>'
     )
 
