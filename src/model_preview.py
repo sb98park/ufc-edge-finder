@@ -99,13 +99,52 @@ def build_full_market_projection(
     ]
     combined_first_round_rate = sum(first_round_rates) / len(first_round_rates) if first_round_rates else combined_finish_rate * 0.5
 
+    # Fight-level method distribution, so the Fight props group can always
+    # show all three answers even when a market for one of them doesn't exist.
+    # Denominators are TOTAL FIGHTS, matching how the model was trained --
+    # dividing win-methods by wins and loss-methods by losses is the skew that
+    # produced a 60% submission probability on a fight the model had no
+    # business being confident about.
+    _md = None
+    try:
+        _na = max(int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0)), 1)
+        _nb = max(int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0)), 1)
+        _koa, _kob = _get(row_a, "ko_wins", 0) / _na, _get(row_b, "ko_wins", 0) / _nb
+        _sua, _sub = _get(row_a, "sub_wins", 0) / _na, _get(row_b, "sub_wins", 0) / _nb
+        _kla, _klb = _get(row_a, "ko_losses", 0) / _na, _get(row_b, "ko_losses", 0) / _nb
+        _sla, _slb = _get(row_a, "sub_losses", 0) / _na, _get(row_b, "sub_losses", 0) / _nb
+        _gap = abs(effective_ratings.get(fighter_a, 1500)
+                   - effective_ratings.get(fighter_b, 1500)) / 400.0 if effective_ratings else 0.0
+        _md = method_probabilities(
+            ko_press=_koa * _klb + _kob * _kla,
+            sub_press=_sua * _slb + _sub * _sla,
+            ko_rate_sum=_koa + _kob, sub_rate_sum=_sua + _sub,
+            durability=_kla + _klb, elo_gap=_gap,
+            scheduled_rounds=5 if is_five_round else 3,
+        )
+        if _md:
+            _md = {k: round(v, 3) for k, v in _md.items()}
+    except (TypeError, ValueError, KeyError):
+        _md = None
+
     if is_five_round:
         # More scheduled rounds means more time for a finish to still
         # happen even after an early-rounds proxy (first_round_rate) misses
         # -- shift the "mid" line up to 3.5 and add a later 4.5 checkpoint
         # instead of 3-round-fight-calibrated 1.5/2.5.
-        rounds_mid = 0.55 * combined_finish_rate + 0.45 * combined_first_round_rate
-        rounds_late = min(0.95, combined_finish_rate + 0.15)  # by round 4.5, most finishes have happened
+        # DERIVED FROM P(finish), so these cannot contradict the method rows.
+        # The old form was `combined_finish_rate + 0.15` -- an additive proxy
+        # with nothing tying it to P(decision), which produced Under 4.5 at
+        # 66.0% on a fight the method model gave a 50.2% decision probability.
+        # Those two claims sum to 116% and cannot both hold: for a five-round
+        # fight a decision IS Over 4.5, so P(Under 4.5) <= 1 - P(decision).
+        # The share-of-finishes fractions below are NOT fitted -- they encode
+        # that finishes are front-loaded and that almost any finish lands
+        # before the 4.5 mark. They are estimates, and the identity they
+        # enforce is what actually matters here.
+        _finish = (1.0 - _md["decision"]) if _md else min(combined_finish_rate, 0.95)
+        rounds_mid = _finish * 0.72      # finish before the midpoint of round 4
+        rounds_late = _finish * 0.94     # finish before the midpoint of round 5
         rounds_rows = [
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 3.5", "model_prob": round(rounds_mid, 3)},
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 3.5", "model_prob": round(1 - rounds_mid, 3)},
@@ -113,10 +152,17 @@ def build_full_market_projection(
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 4.5", "model_prob": round(1 - rounds_late, 3)},
         ]
     else:
-        rounds_2_5 = 0.7 * combined_finish_rate + 0.3 * combined_first_round_rate
+        # Same identity for three-round fights: a decision is Over 2.5, so
+        # P(Under 2.5) <= 1 - P(decision). Derived from P(finish) for the same
+        # reason as the five-round branch above -- the previous blend of two
+        # career-rate proxies had no relationship to the method rows and could
+        # exceed the finish probability outright.
+        _finish3 = (1.0 - _md["decision"]) if _md else min(combined_finish_rate, 0.95)
+        rounds_2_5 = _finish3 * 0.86     # finish before the midpoint of round 3
+        _under_1_5 = min(combined_first_round_rate, _finish3 * 0.45)
         rounds_rows = [
-            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 1.5", "model_prob": round(combined_first_round_rate, 3)},
-            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 1.5", "model_prob": round(1 - combined_first_round_rate, 3)},
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 1.5", "model_prob": round(_under_1_5, 3)},
+            {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 1.5", "model_prob": round(1 - _under_1_5, 3)},
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 2.5", "model_prob": round(rounds_2_5, 3)},
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 2.5", "model_prob": round(1 - rounds_2_5, 3)},
         ]
@@ -311,34 +357,6 @@ def build_fight_preview(
     comparison["a"]["badges"] = factor_badges["a"]
     comparison["b"]["badges"] = factor_badges["b"]
     waterfall = build_probability_waterfall(matchup)
-
-    # Fight-level method distribution, so the Fight props group can always
-    # show all three answers even when a market for one of them doesn't exist.
-    # Denominators are TOTAL FIGHTS, matching how the model was trained --
-    # dividing win-methods by wins and loss-methods by losses is the skew that
-    # produced a 60% submission probability on a fight the model had no
-    # business being confident about.
-    _md = None
-    try:
-        _na = max(int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0)), 1)
-        _nb = max(int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0)), 1)
-        _koa, _kob = _get(row_a, "ko_wins", 0) / _na, _get(row_b, "ko_wins", 0) / _nb
-        _sua, _sub = _get(row_a, "sub_wins", 0) / _na, _get(row_b, "sub_wins", 0) / _nb
-        _kla, _klb = _get(row_a, "ko_losses", 0) / _na, _get(row_b, "ko_losses", 0) / _nb
-        _sla, _slb = _get(row_a, "sub_losses", 0) / _na, _get(row_b, "sub_losses", 0) / _nb
-        _gap = abs(effective_ratings.get(fighter_a, 1500)
-                   - effective_ratings.get(fighter_b, 1500)) / 400.0 if effective_ratings else 0.0
-        _md = method_probabilities(
-            ko_press=_koa * _klb + _kob * _kla,
-            sub_press=_sua * _slb + _sub * _sla,
-            ko_rate_sum=_koa + _kob, sub_rate_sum=_sua + _sub,
-            durability=_kla + _klb, elo_gap=_gap,
-            scheduled_rounds=5 if is_five_round else 3,
-        )
-        if _md:
-            _md = {k: round(v, 3) for k, v in _md.items()}
-    except (TypeError, ValueError, KeyError):
-        _md = None
 
     return {
         "favorite": favorite,
