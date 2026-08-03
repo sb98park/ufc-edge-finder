@@ -449,7 +449,13 @@ def main():
     # %-I not %I: the padded form rendered "07:19 PM" while the client-side
     # live-prices chip renders "7:19 PM", so the two timestamps sitting side
     # by side in the same meta row disagreed on format.
-    generated_at_short = dt.datetime.now(ZoneInfo("America/New_York")).strftime("%b %-d, %-I:%M %p ET")
+    _now_et = dt.datetime.now(ZoneInfo("America/New_York"))
+    generated_at_short = _now_et.strftime("%b %-d, %-I:%M %p ET")
+    # Time only when the build is from TODAY, which it almost always is -- the
+    # date is noise in that case. It's emitted alongside the full form and the
+    # client picks, because "today" is the READER's today, not the builder's.
+    generated_at_time_only = _now_et.strftime("%-I:%M %p ET")
+    generated_at_date = _now_et.strftime("%Y-%m-%d")
     momentum_by_key = load_momentum_by_key()
     for event in events:
         for fight in event["fights"]:
@@ -928,6 +934,8 @@ def main():
         source=source,
         generated_at=generated_at_str,
         generated_at_short=generated_at_short,
+        generated_at_time_only=generated_at_time_only,
+        generated_at_date=generated_at_date,
     )
 
     os.makedirs("docs", exist_ok=True)

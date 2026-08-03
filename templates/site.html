@@ -2678,6 +2678,20 @@
   </script>
 
   {% if countdown_target_iso %}
+  {# Sits with the BRAND, not between the banner and the fight list. It's
+     page-level metadata, so it belongs to page-level chrome -- below the
+     banner it attached to neither block and read as a divider.
+     Kept out of the footer deliberately: this line is the only thing that can
+     tell you the pipeline broke, and freshness needs to be visible before you
+     read the numbers, not after. #}
+  <div class="meta-row"
+       data-build-date="{{ generated_at_date }}"
+       data-full="Updated {{ generated_at_short }}"
+       data-short="Updated {{ generated_at_time_only }}">
+    <span class="live-dot-sm" id="price-pulse" aria-hidden="true"></span>
+    <span id="build-stamp">Updated {{ generated_at_short }}</span>
+  </div>
+
   <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}" data-espn-live-key="{{ espn_live_fight_key_json | e }}">
     <div class="countdown-info countdown-info-left">
       {% if countdown_location_short %}<div class="countdown-info-line">{{ countdown_location_short }}</div>{% endif %}
@@ -2754,10 +2768,6 @@
      product. The dot carries "prices are updating" better than a second
      timestamp did: a pulse reads as happening-now, where a time requires
      comparing it against the clock yourself. #}
-  <div class="meta-row">
-    <span class="live-dot-sm" id="price-pulse" aria-hidden="true"></span>
-    Updated {{ generated_at_short }}
-  </div>
 
   {% if live_error %}
   <div class="notice">{{ live_error }}</div>
@@ -4312,6 +4322,22 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // Time only when the build is from today -- the date is noise then. If it
+    // ISN'T today, the date appears, so the line GETTING LONGER is itself the
+    // alarm: right now a three-day-old build looks identical to a fresh one
+    // unless you stop and read the date.
+    // Evaluated client-side because "today" is the reader's today.
+    (function () {
+      const row = document.querySelector('.meta-row[data-build-date]');
+      const stamp = document.getElementById('build-stamp');
+      if (!row || !stamp) return;
+      const built = row.dataset.buildDate;
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      stamp.textContent = built === today ? row.dataset.short : row.dataset.full;
+    })();
+
 
     // ===== Units chart scrubbing =====
     // Drag (or hover on desktop) along the chart to read the cumulative
