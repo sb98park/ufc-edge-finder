@@ -10,6 +10,7 @@ import pandas as pd
 
 from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg
+from src.method_model import method_probabilities
 
 
 def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
@@ -311,9 +312,38 @@ def build_fight_preview(
     comparison["b"]["badges"] = factor_badges["b"]
     waterfall = build_probability_waterfall(matchup)
 
+    # Fight-level method distribution, so the Fight props group can always
+    # show all three answers even when a market for one of them doesn't exist.
+    # Denominators are TOTAL FIGHTS, matching how the model was trained --
+    # dividing win-methods by wins and loss-methods by losses is the skew that
+    # produced a 60% submission probability on a fight the model had no
+    # business being confident about.
+    _md = None
+    try:
+        _na = max(int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0)), 1)
+        _nb = max(int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0)), 1)
+        _koa, _kob = _get(row_a, "ko_wins", 0) / _na, _get(row_b, "ko_wins", 0) / _nb
+        _sua, _sub = _get(row_a, "sub_wins", 0) / _na, _get(row_b, "sub_wins", 0) / _nb
+        _kla, _klb = _get(row_a, "ko_losses", 0) / _na, _get(row_b, "ko_losses", 0) / _nb
+        _sla, _slb = _get(row_a, "sub_losses", 0) / _na, _get(row_b, "sub_losses", 0) / _nb
+        _gap = abs(effective_ratings.get(fighter_a, 1500)
+                   - effective_ratings.get(fighter_b, 1500)) / 400.0 if effective_ratings else 0.0
+        _md = method_probabilities(
+            ko_press=_koa * _klb + _kob * _kla,
+            sub_press=_sua * _slb + _sub * _sla,
+            ko_rate_sum=_koa + _kob, sub_rate_sum=_sua + _sub,
+            durability=_kla + _klb, elo_gap=_gap,
+            scheduled_rounds=5 if is_five_round else 3,
+        )
+        if _md:
+            _md = {k: round(v, 3) for k, v in _md.items()}
+    except (TypeError, ValueError, KeyError):
+        _md = None
+
     return {
         "favorite": favorite,
         "favorite_prob": round(favorite_prob, 3),
+        "method_distribution": _md,
         "underdog": underdog,
         "likely_method": likely_method,
         "likely_method_rate": round(method_rates[likely_method], 3),

@@ -235,6 +235,76 @@ def _split_total_rounds_fighter_field(fighter_field: str) -> set[str]:
     return {name.strip() for name in fighter_field.split(" vs ")}
 
 
+
+def _canonical_fight_methods(rows: list[dict], fight: dict) -> list[dict]:
+    """
+    Force Fight props to exactly three rows: KO/TKO, Submission, Decision.
+
+    TWO BUGS, ONE CAUSE -- the group was whatever markets happened to exist.
+
+    Duplicates: the label map sends every GoesTheDistance row to "Fight ends
+    by Decision" regardless of SELECTION, so the market's two sides both
+    rendered under that name with complementary numbers (57.5% and 42.5%).
+
+    Gaps: fight-level rows only exist for markets Polymarket published, so a
+    fight with no submission market simply had no submission row -- KO 44.8%
+    and Decision 43.4% with the remaining 11.8% unaccounted for and no
+    indication anything was missing.
+
+    Both are wrong for the same reason: this group answers ONE three-way
+    question, so it should always show three answers. Priced rows win; any
+    method without one falls back to the model's own figure with no odds,
+    which the table already renders as a dash.
+    """
+    METHODS = ("KO/TKO", "Submission", "Decision")
+
+    def method_of(r) -> str | None:
+        label = str(r.get("label") or r.get("market") or "").lower()
+        sel = str(r.get("selection") or "").lower()
+        blob = f"{label} {sel}"
+        # A complement is not an answer to the question -- "ends in finish"
+        # and "not KO" restate the others rather than adding a fourth.
+        if "not " in blob or "endsinfinish" in blob.replace(" ", ""):
+            return None
+        if "ko/tko" in blob or "kotko" in blob:
+            return "KO/TKO"
+        if "submission" in blob or "sub" in sel:
+            return "Submission"
+        if "decision" in blob or "distance" in blob:
+            return "Decision"
+        return None
+
+    by_method: dict[str, dict] = {}
+    for r in rows:
+        m = method_of(r)
+        if not m:
+            continue
+        prev = by_method.get(m)
+        # Keep the PRICED row when two land on the same method -- a model-only
+        # duplicate carries strictly less information.
+        if prev is None or (r.get("has_line") and not prev.get("has_line")):
+            by_method[m] = r
+
+    dist = (fight.get("preview") or {}).get("method_distribution")
+    out = []
+    for m in METHODS:
+        if m in by_method:
+            out.append(by_method[m])
+            continue
+        if not dist:
+            continue
+        key = {"KO/TKO": "ko", "Submission": "sub", "Decision": "decision"}[m]
+        prob = dist.get(key)
+        if prob is None:
+            continue
+        # Model-only row: no odds, no edge. Completes the three-way set so a
+        # missing market reads as "no line" rather than as a silent gap.
+        out.append({"market": f"Fight Method: {m}", "label": f"Fight ends by {m}",
+                    "selection": m, "model_prob": prob, "has_line": False,
+                    "odds_american": None, "edge_pct": None, "fighter": "", "opponent": ""})
+    return out or rows
+
+
 def group_edges_by_card(
     edges_df: pd.DataFrame,
     cards_df: pd.DataFrame,
@@ -471,6 +541,8 @@ def group_edges_by_card(
                 ("rounds", "Round props", "When it ends"),
             ):
                 rows = [r for r in merged if _group_of(r.get("market")) == gid]
+                if gid == "fight":
+                    rows = _canonical_fight_methods(rows, fight)
                 if not rows:
                     continue
                 groups.append({
