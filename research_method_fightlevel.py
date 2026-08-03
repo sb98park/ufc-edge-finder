@@ -209,6 +209,54 @@ def main():
     worst_new = calibration_by_class(p, y_te, "CALIBRATION -- direct fight-level model")
     worst_len = calibration_by_length(p, te, "CALIBRATION BY SCHEDULED LENGTH -- the subgroup check")
 
+    def reliability_by_bucket(probs, y, label):
+        """
+        Calibration in the TAIL, per class.
+
+        Mean prediction matching the base rate says the model is right ON
+        AVERAGE. It says nothing about the fights where it makes a strong
+        claim -- and those are exactly the ones that get bet. A model can
+        average 17.5% on submissions while telling you 60% on a specific
+        fight and being wrong every time it does.
+        The question here is: when the model says >40% submission, how often
+        IS it a submission?
+        """
+        print(f"\n  {label}")
+        worst = 0.0
+        edges = [(0.0, 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 1.01)]
+        for i, name in enumerate(CLASSES):
+            print(f"    {name}")
+            for lo, hi in edges:
+                m = (probs[:, i] >= lo) & (probs[:, i] < hi)
+                if m.sum() < 30:
+                    continue
+                pred, act = probs[m, i].mean(), (y[m] == i).mean()
+                worst = max(worst, abs(pred - act))
+                flag = "  <-- OFF" if abs(pred - act) > 0.10 else ""
+                print(f"      predicted {lo:.0%}-{hi:.0%}  n={m.sum():4}  "
+                      f"mean {pred:5.1%}  actual {act:5.1%}  {pred - act:+6.1%}{flag}")
+        return worst
+
+    worst_tail = reliability_by_bucket(p, y_te, "RELIABILITY BY PREDICTED BUCKET -- the tail check")
+
+    # Does clipping features to the training range fix the tail? A linear
+    # logistic extrapolates without bound, so a matchup whose sub_press sits
+    # far outside anything in training gets a confident answer built on no
+    # evidence. Winsorizing at the 1st/99th percentile keeps predictions
+    # inside the region the coefficients were actually fit on.
+    lo_q = tr[used_features].quantile(0.01)
+    hi_q = tr[used_features].quantile(0.99)
+    te_clipped = te.copy()
+    te_clipped[used_features] = te[used_features].clip(lo_q, hi_q, axis=1)
+    if not isinstance(model, tuple):
+        p_clip = model.predict_proba(te_clipped[used_features])
+        worst_clip = reliability_by_bucket(p_clip, y_te,
+                                           "RELIABILITY -- same model, features clipped to the 1st/99th training percentile")
+        print(f"\n  worst tail error: unclipped {worst_tail:.1%} | clipped {worst_clip:.1%}")
+        print("\n  training range of each feature (clip bounds):")
+        for f in used_features:
+            print(f"    {f:14} {lo_q[f]:8.3f} to {hi_q[f]:8.3f}")
+
     print(f"\n{'='*60}")
     # Gate against the BASELINE, not an absolute threshold. The first version
     # required every class within 3pp of observed -- but the base rates

@@ -66,6 +66,21 @@ INTERCEPT = [-0.285880, -0.743323, 1.029203]
 
 KO, SUB, DEC = 0, 1, 2
 
+# The 1st/99th percentile of each feature ACROSS THE TRAINING SET
+# (research_method_fightlevel.py prints these). A logistic model extrapolates
+# without bound, so an input beyond these produces a confident number built on
+# no evidence -- which is exactly how a denominator mismatch turned into a
+# 60% submission probability the model never produced once in 1,743 holdout
+# fights. Clipping bounds the damage and the warning names the cause.
+TRAINING_RANGE = {
+    "ko_press": (0.000, 0.333),
+    "sub_press": (0.000, 0.208),
+    "ko_rate_sum": (0.000, 1.348),
+    "sub_rate_sum": (0.000, 1.083),
+    "durability": (0.000, 0.808),
+    "elo_gap": (0.003, 0.469),
+}
+
 
 def method_probabilities(ko_press: float, sub_press: float, ko_rate_sum: float,
                          sub_rate_sum: float, durability: float, elo_gap: float,
@@ -86,8 +101,27 @@ def method_probabilities(ko_press: float, sub_press: float, ko_rate_sum: float,
     # scheduled_rounds is accepted but DELIBERATELY UNUSED -- see the note on
     # FEATURES. Kept in the signature so callers don't need changing, and so
     # removing it can't silently look like an oversight.
-    x = [float(ko_press), float(sub_press),
-         float(ko_rate_sum), float(sub_rate_sum), float(durability), float(elo_gap)]
+    raw = {"ko_press": float(ko_press), "sub_press": float(sub_press),
+           "ko_rate_sum": float(ko_rate_sum), "sub_rate_sum": float(sub_rate_sum),
+           "durability": float(durability), "elo_gap": float(elo_gap)}
+
+    # Clip to the fitted region, and say so. A value well outside it usually
+    # means the caller is computing the feature differently from the training
+    # harness -- a train/serve skew, which no offline metric can detect
+    # because the harness scores its own features.
+    x = []
+    for name in FEATURES:
+        lo, hi = TRAINING_RANGE[name]
+        v = raw[name]
+        # Only warn on values FAR outside, and only above -- a feature
+        # legitimately sitting at zero (two fighters with identical ratings)
+        # is a real observation, not a definition mismatch. Warning on it
+        # would train the reader to ignore the warning.
+        if v > hi * 1.5:
+            print(f"[method_model] {name}={v:.3f} is far outside the training "
+                  f"range [{lo:.3f}, {hi:.3f}] -- clipping. If this fires often, "
+                  f"the caller's feature definition has drifted from the harness.")
+        x.append(min(max(v, lo), hi))
     z = [INTERCEPT[k] + sum(c * v for c, v in zip(COEF[k], x)) for k in range(3)]
     m = max(z)                                  # subtract the max for stability
     e = [math.exp(v - m) for v in z]

@@ -324,7 +324,21 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
 
 
 
-def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
+def _rating_gap(effective_ratings, row) -> float:
+    """
+    |rating difference| / 400, matching research_survival_model exactly.
+
+    Both method paths need this and previously computed it separately -- one
+    correctly, one hardcoded to 0.0. One helper means they cannot diverge.
+    """
+    if not effective_ratings:
+        return 0.0
+    return abs(effective_ratings.get(row["fighter_a"], 1500)
+               - effective_ratings.get(row["fighter_b"], 1500)) / 400.0
+
+
+def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
+                                    effective_ratings: dict[str, float] | None = None) -> pd.DataFrame:
     """
     'Fight goes the distance' vs 'ends in a finish' -- derived the same way
     as method-of-victory (sum of both fighters' decision-win likelihood).
@@ -347,16 +361,34 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
         # makes them exhaustive by construction.
         from src.method_model import method_probabilities
         wins_a, wins_b = max(int(a["wins"]), 1), max(int(b["wins"]), 1)
-        losses_a, losses_b = max(int(_get(a, "losses", 0)), 1), max(int(_get(b, "losses", 0)), 1)
-        ko_a, ko_b = _get(a, "ko_wins", 0) / wins_a, _get(b, "ko_wins", 0) / wins_b
-        sub_a, sub_b = _get(a, "sub_wins", 0) / wins_a, _get(b, "sub_wins", 0) / wins_b
-        kol_a, kol_b = _get(a, "ko_losses", 0) / losses_a, _get(b, "ko_losses", 0) / losses_b
-        subl_a, subl_b = _get(a, "sub_losses", 0) / losses_a, _get(b, "sub_losses", 0) / losses_b
+        # DENOMINATOR IS TOTAL FIGHTS, matching how the model was trained.
+        # These previously divided win-methods by WINS and loss-methods by
+        # LOSSES, while research_survival_model.Career divides all four by
+        # total fights. For a 25-1 fighter whose single loss was a submission
+        # that made sub_lost 1.000 at inference against 0.038 in training --
+        # a 26x inflation -- which pushed sub_press to 4.6x the highest value
+        # the coefficients were ever fit on. The model then extrapolated to
+        # 60%+ submission, a figure it never once produced across 1,743
+        # holdout fights.
+        # A train/serve skew like this is invisible to every offline check:
+        # the harness scores its own features, so the model looks calibrated
+        # right up until it meets production inputs on a different scale.
+        n_a = max(int(_get(a, "wins", 0)) + int(_get(a, "losses", 0)), 1)
+        n_b = max(int(_get(b, "wins", 0)) + int(_get(b, "losses", 0)), 1)
+        ko_a, ko_b = _get(a, "ko_wins", 0) / n_a, _get(b, "ko_wins", 0) / n_b
+        sub_a, sub_b = _get(a, "sub_wins", 0) / n_a, _get(b, "sub_wins", 0) / n_b
+        kol_a, kol_b = _get(a, "ko_losses", 0) / n_a, _get(b, "ko_losses", 0) / n_b
+        subl_a, subl_b = _get(a, "sub_losses", 0) / n_a, _get(b, "sub_losses", 0) / n_b
         _dist = method_probabilities(
             ko_press=ko_a * kol_b + ko_b * kol_a,
             sub_press=sub_a * subl_b + sub_b * subl_a,
             ko_rate_sum=ko_a + ko_b, sub_rate_sum=sub_a + sub_b,
-            durability=kol_a + kol_b, elo_gap=0.0,
+            durability=kol_a + kol_b,
+            # REAL rating gap. This was hardcoded to 0.0 -- a fabricated
+            # feature, and one the model never sees in training, where the gap
+            # is always positive. The clipping warning surfaced it on the
+            # first run after being added, which is exactly what it's for.
+            elo_gap=_rating_gap(effective_ratings, row),
             scheduled_rounds=5 if str(row.get("card_position", "")).strip() == "Main Event" else 3,
         )
         if not _dist:
@@ -431,11 +463,24 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
         a, b = f_a.iloc[0], f_b.iloc[0]
 
         wins_a, wins_b = max(int(a["wins"]), 1), max(int(b["wins"]), 1)
-        losses_a, losses_b = max(int(_get(a, "losses", 0)), 1), max(int(_get(b, "losses", 0)), 1)
-        ko_a, ko_b = _get(a, "ko_wins", 0) / wins_a, _get(b, "ko_wins", 0) / wins_b
-        sub_a, sub_b = _get(a, "sub_wins", 0) / wins_a, _get(b, "sub_wins", 0) / wins_b
-        kol_a, kol_b = _get(a, "ko_losses", 0) / losses_a, _get(b, "ko_losses", 0) / losses_b
-        subl_a, subl_b = _get(a, "sub_losses", 0) / losses_a, _get(b, "sub_losses", 0) / losses_b
+        # DENOMINATOR IS TOTAL FIGHTS, matching how the model was trained.
+        # These previously divided win-methods by WINS and loss-methods by
+        # LOSSES, while research_survival_model.Career divides all four by
+        # total fights. For a 25-1 fighter whose single loss was a submission
+        # that made sub_lost 1.000 at inference against 0.038 in training --
+        # a 26x inflation -- which pushed sub_press to 4.6x the highest value
+        # the coefficients were ever fit on. The model then extrapolated to
+        # 60%+ submission, a figure it never once produced across 1,743
+        # holdout fights.
+        # A train/serve skew like this is invisible to every offline check:
+        # the harness scores its own features, so the model looks calibrated
+        # right up until it meets production inputs on a different scale.
+        n_a = max(int(_get(a, "wins", 0)) + int(_get(a, "losses", 0)), 1)
+        n_b = max(int(_get(b, "wins", 0)) + int(_get(b, "losses", 0)), 1)
+        ko_a, ko_b = _get(a, "ko_wins", 0) / n_a, _get(b, "ko_wins", 0) / n_b
+        sub_a, sub_b = _get(a, "sub_wins", 0) / n_a, _get(b, "sub_wins", 0) / n_b
+        kol_a, kol_b = _get(a, "ko_losses", 0) / n_a, _get(b, "ko_losses", 0) / n_b
+        subl_a, subl_b = _get(a, "sub_losses", 0) / n_a, _get(b, "sub_losses", 0) / n_b
 
         gap = 0.0
         if effective_ratings:
@@ -539,7 +584,7 @@ def find_all_edges(
         compute_moneyline_edges(upcoming_df, elo_ratings, fighters_df, fight_history_df),
         compute_method_edges(upcoming_df, fighters_df),
         compute_total_rounds_edges(upcoming_df, fighters_df),
-        compute_goes_the_distance_edges(upcoming_df, fighters_df),
+        compute_goes_the_distance_edges(upcoming_df, fighters_df, elo_ratings),
         compute_round_betting_edges(upcoming_df, fighters_df),
         # FightMethod was built last session and left unwired pending review,
         # then never connected -- 80 classified rows per card with no path to
