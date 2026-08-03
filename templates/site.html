@@ -41,7 +41,7 @@
      the gold, a warm bias came out dull olive, and #222 sat too light
      against a true-black page -- this is darker and effectively neutral (a
      2-point blue lift, well below the threshold where it reads as a hue). */
-    --text: #eef0f2; --text-soft: #b9bec9; --muted: #8a8f9a; --green: #3ddc84;
+    --text: #eef0f2; --text-soft: #b9bec9; --muted: #9ba1ad; --green: #3ddc84;
     --red: #ff5c5c; --accent: #d4af37; --accent2: #e8c766;
     --accent-cool: #5fb8c9;
     --font-display: 'Space Grotesk', -apple-system, Segoe UI, Roboto, sans-serif;
@@ -2406,6 +2406,58 @@
      rather than needing separate positioning maths. */
   .scrub-line { stroke: rgba(255,255,255,0.35); stroke-width: 1; pointer-events: none; }
   .scrub-dot { pointer-events: none; }
+  /* ===== Compact countdown (outside 24h) ===== */
+  .countdown-compact { padding: 2px 0 4px; }
+  .cd-relative {
+    font-size: 17px; font-weight: 700; color: var(--text);
+    letter-spacing: -0.2px; line-height: 1.2;
+  }
+  .cd-absolute {
+    font-size: 12px; color: var(--muted); margin-top: 3px; letter-spacing: 0.2px;
+  }
+
+  /* ===== Focus states =====
+     There were NONE anywhere in the stylesheet -- keyboard users had no way
+     to tell where they were. :focus-visible fires only for keyboard
+     navigation, so this is invisible to mouse and touch and costs nothing
+     for the people who never see it. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .tabbar-btn:focus-visible,
+  .seg-tab:focus-visible { outline-offset: -2px; }
+  /* Never remove the outline without replacing it. */
+  :focus:not(:focus-visible) { outline: none; }
+
+  /* ===== Touch targets =====
+     These worked only because their text happened to give them height --
+     incidental, not designed. Apple's 44pt floor exists because thumbs are
+     imprecise; min-height makes it deliberate. */
+  .seg-tab { min-height: 40px; }
+  .odds-format-btn { min-height: 36px; }
+  .market-group-summary { min-height: 40px; }
+  .filter-chip { min-height: 32px; }
+
+  /* ===== Fight card expand =====
+     The most-used interaction on the site was also the least animated --
+     content simply appeared at full size, so the tap and its result felt
+     unconnected. Animating the CHILDREN rather than the <details> element
+     avoids the usual trap: height can't transition from auto, and forcing a
+     fixed height would break on cards whose content varies.
+     A short rise and fade is enough to tie cause to effect; anything longer
+     gets in the way of a control people open repeatedly. */
+  details.fight-card[open] > *:not(summary) {
+    animation: fightCardIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes fightCardIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    details.fight-card[open] > *:not(summary) { animation: none; }
+  }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -2611,7 +2663,15 @@
       {% if countdown_main_card_time %}<div class="countdown-info-line">Main Card · {{ countdown_main_card_time }}</div>{% endif %}
     </div>
     <div class="countdown-center">
-    <div class="countdown-label" id="countdown-label">{{ icon_clock() }} {{ countdown_label }}</div>
+    <div class="countdown-label" id="countdown-label">{{ countdown_label }}</div>
+    {# COMPACT form, shown outside 24 hours. The container shrinks to fit
+       what it holds rather than keeping a grid-sized box and putting large
+       text in it. Relative phrase on top because that IS the answer to "how
+       long?"; the absolute date below is the confirmation. #}
+    <div class="countdown-compact" id="countdown-compact" hidden>
+      <div class="cd-relative" id="cd-relative"></div>
+      <div class="cd-absolute" id="cd-absolute"></div>
+    </div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
         {{ scroll_value('days') }}
@@ -2673,7 +2733,7 @@
      comparing it against the clock yourself. #}
   <div class="meta-row">
     <span class="live-dot-sm" id="price-pulse" aria-hidden="true"></span>
-    {{ icon_clock() }} Updated {{ generated_at_short }}
+    Updated {{ generated_at_short }}
   </div>
 
   {% if live_error %}
@@ -5467,6 +5527,40 @@
         return `<strong>${f.fighter_a} vs. ${f.fighter_b}</strong> — ${f.result_label}${f.result_round_time ? ' · ' + f.result_round_time : ''}`;
       }
 
+
+      const compact = document.getElementById('countdown-compact');
+      const relEl = document.getElementById('cd-relative');
+      const absEl = document.getElementById('cd-absolute');
+
+      // Phrased the way a person would say it, not "In N days" every time.
+      // Keyed off CALENDAR days, not elapsed hours -- an event 30 hours away
+      // can still be tomorrow, and saying "In 1 day" when you mean tomorrow
+      // is the tell that a string was computed rather than written.
+      function relativePhrase(target, now) {
+        const t = new Date(target), n = new Date(now);
+        const startOf = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        const calDays = Math.round((startOf(t) - startOf(n)) / 86400000);
+        if (calDays <= 0) return 'Today';
+        if (calDays === 1) return 'Tomorrow';
+        // Inside the coming week, the weekday alone locates it better than a
+        // count does -- "This Saturday" needs no arithmetic to understand.
+        if (calDays <= 6) {
+          return 'This ' + t.toLocaleDateString('en-US', { weekday: 'long' });
+        }
+        if (calDays <= 13) return 'Next ' + t.toLocaleDateString('en-US', { weekday: 'long' });
+        if (calDays < 21) return 'In 2 weeks';
+        if (calDays < 28) return 'In 3 weeks';
+        const months = Math.round(calDays / 30);
+        return months <= 1 ? 'In a month' : `In ${months} months`;
+      }
+
+      function absoluteWhen(target) {
+        const t = new Date(target);
+        const date = t.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        const time = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        return `${date} \u00b7 ${time}`;
+      }
+
       function update() {
         const now = Date.now();
 
@@ -5587,10 +5681,24 @@
           return;
         }
 
-        boxes.style.display = 'flex';
         liveHeader.style.display = 'none';
 
         const diff = target - now;
+
+        // OUTSIDE 24 HOURS: seconds ticking down for an event five days away
+        // is precision nobody can act on, and it makes the banner feel urgent
+        // while nothing is happening. Showing the date instead means the
+        // countdown, when it appears, actually signifies something.
+        if (diff > 86400000) {
+          boxes.style.display = 'none';
+          compact.hidden = false;
+          relEl.textContent = relativePhrase(target, now);
+          absEl.textContent = absoluteWhen(target);
+          return;
+        }
+
+        compact.hidden = true;
+        boxes.style.display = 'flex';
         const days = Math.floor(diff / 86400000);
         const hours = Math.floor((diff % 86400000) / 3600000);
         const minutes = Math.floor((diff % 3600000) / 60000);
