@@ -38,10 +38,32 @@ def main():
     fighters = pd.read_csv("data/fighters.csv")
     match = fighters[fighters["name"].str.lower().str.contains(needle, na=False)]
     if match.empty:
-        print(f"{needle!r} is not in fighters.csv at all.")
-        return
-    row = match.iloc[0]
-    name = row["name"]
+        # Not in the roster is the INTERESTING case, not a dead end -- it's
+        # why a fight shows no model preview at all. Fall back to the name as
+        # it appears on the card so the rest of the chain can still run and
+        # say whether ESPN knows this fighter.
+        print(f"{needle!r} is NOT in fighters.csv -- checking whether the card "
+              f"and ESPN know them.\n")
+        row, name = None, None
+        for f in ("data/fight_cards.csv", "data/future_cards.csv"):
+            try:
+                d = pd.read_csv(f)
+            except FileNotFoundError:
+                continue
+            for col in ("fighter_a", "fighter_b"):
+                hit = d[d[col].astype(str).str.lower().str.contains(needle, na=False)]
+                if not hit.empty:
+                    name = str(hit.iloc[0][col])
+                    break
+            if name:
+                break
+        if not name:
+            print("  ...and not on any tracked card either. Nothing to diagnose.")
+            return
+        print(f"  card lists them as: {name!r}")
+    else:
+        row = match.iloc[0]
+        name = row["name"]
     print(f"fighter: {name}\n")
 
     # 1. on a tracked card?
@@ -60,8 +82,12 @@ def main():
         print(f"   event date(s)     : {sorted(set(card_dates))}")
 
     # 2. qualifies for gap fill?
-    nulls = [c for c in GAP_COLS if c in fighters.columns and pd.isna(row.get(c))]
-    print(f"2. null gap columns  : {nulls or 'NONE -- backfill SKIPS them entirely'}")
+    if row is None:
+        print("2. roster row        : MISSING -- backfill never created one, so "
+              "there are no stats to build a preview from")
+    else:
+        nulls = [c for c in GAP_COLS if c in fighters.columns and pd.isna(row.get(c))]
+        print(f"2. null gap columns  : {nulls or 'NONE -- backfill SKIPS them entirely'}")
 
     # 3. athlete id from the scoreboard for those dates
     aid = None

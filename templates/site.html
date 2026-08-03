@@ -2180,10 +2180,14 @@
     /* Icon in a rounded tinted tile -- the natural home for the identity
        hues kept in the icon layer, without letting them back into the data
        colour language. */
+    /* No tinted tile. It was the last coloured element in the drawer, and
+       with the accent strips gone it stood out as the only thing arguing
+       with an otherwise monochrome list. The glyphs differ enough in shape
+       to stay scannable without a colour behind them. */
     .hub-card-icon {
       width: 30px; height: 30px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      border-radius: 8px; background: color-mix(in srgb, var(--card-accent) 18%, transparent);
+      background: none; color: var(--muted);
       margin: 0;
     }
     .hub-card-icon svg { width: 18px; height: 18px; }
@@ -2680,7 +2684,7 @@
   <div id="hub-view">
     <div class="hub-grid">
       {% if events %}
-      <div class="hub-card featured" style="--card-accent:#e10909" onclick="showSection('thisweekend')" data-section-nav="thisweekend">
+      <div class="hub-card featured" onclick="showSection('thisweekend')" data-section-nav="thisweekend">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Octagon cage">
             <defs><linearGradient id="icon-weekend" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2698,7 +2702,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       {% endif %}
-      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('track')" data-section-nav="track">
+      <div class="hub-card" onclick="showSection('track')" data-section-nav="track">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart">
             <defs><linearGradient id="icon-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2712,7 +2716,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('standout')" data-section-nav="standout">
+      <div class="hub-card" onclick="showSection('standout')" data-section-nav="standout">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame">
             <defs><linearGradient id="icon-standout" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2727,7 +2731,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-group-header">Analysis</div>
-      <div class="hub-card" style="--card-accent:#2dd4bf" onclick="showSection('funfacts')" data-section-nav="funfacts" data-row="first">
+      <div class="hub-card" onclick="showSection('funfacts')" data-section-nav="funfacts" data-row="first">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Lightning bolt">
             <defs><linearGradient id="icon-funfacts" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#99f6e4"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient></defs>
@@ -2742,7 +2746,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#2dbd6e" onclick="showSection('favorites')" data-section-nav="favorites" data-row="mid">
+      <div class="hub-card" onclick="showSection('favorites')" data-section-nav="favorites" data-row="mid">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond">
             <defs><linearGradient id="icon-favorites" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2756,7 +2760,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#8b5cf6" onclick="showSection('locks')" data-section-nav="locks">
+      <div class="hub-card" onclick="showSection('locks')" data-section-nav="locks">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Padlock">
             <defs><linearGradient id="icon-locks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
@@ -2771,7 +2775,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#1d7ace" onclick="showSection('parlays')" data-section-nav="parlays" data-row="last">
+      <div class="hub-card" onclick="showSection('parlays')" data-section-nav="parlays" data-row="last">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins">
             <defs><linearGradient id="icon-parlays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2789,7 +2793,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-group-header">Schedule</div>
-      <div class="hub-card" style="--card-accent:#b93187" onclick="showSection('coming')" data-section-nav="coming" data-row="solo">
+      <div class="hub-card" onclick="showSection('coming')" data-section-nav="coming" data-row="solo">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar">
             <defs><linearGradient id="icon-coming" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2807,7 +2811,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-group-header">About</div>
-      <div class="hub-card" style="--card-accent:#d4af37" onclick="showSection('howitworks')" data-section-nav="howitworks" data-row="first">
+      <div class="hub-card" onclick="showSection('howitworks')" data-section-nav="howitworks" data-row="first">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Sigma summation symbol">
             <defs><linearGradient id="icon-howitworks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -2820,7 +2824,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" style="--card-accent:#8a8f9a" onclick="showSection('disclaimer')" data-section-nav="disclaimer" data-row="last">
+      <div class="hub-card" onclick="showSection('disclaimer')" data-section-nav="disclaimer" data-row="last">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Information">
             <defs><linearGradient id="icon-disclaimer" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c6cad4"/><stop offset="100%" stop-color="#8a8f9a"/></linearGradient></defs>

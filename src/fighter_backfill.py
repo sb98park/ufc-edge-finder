@@ -1265,3 +1265,140 @@ def fill_missing_last_fights(fighters_path: str = "data/fighters.csv",
     if filled:
         fighters.to_csv(fighters_path, index=False)
     return filled
+
+
+def _fuzzy_espn_match(target_norm: str, id_map: dict) -> str | None:
+    """
+    Last-resort name match, for spelling variants accent folding can't reach.
+
+    ESPN lists "Manoel Sousa" where the card says "Manuel Sosa" -- two real
+    spelling differences, not diacritics. Exact and folded matching both miss,
+    and the fighter ends up with no roster row and no model preview at all.
+
+    Guarded two ways so this can never quietly match the WRONG fighter, which
+    would be far worse than no match: the best candidate must clear 0.80
+    similarity AND beat the runner-up by 0.15. On the real case that was 0.870
+    against 0.435 -- a margin of 0.435, nowhere near ambiguous. A card with two
+    genuinely similar names produces a small margin and is correctly rejected.
+    """
+    from difflib import SequenceMatcher
+    scored = sorted(((SequenceMatcher(None, target_norm, k).ratio(), k)
+                     for k in id_map), reverse=True)
+    if not scored:
+        return None
+    best_score, best_key = scored[0]
+    runner_up = scored[1][0] if len(scored) > 1 else 0.0
+    if best_score >= 0.80 and (best_score - runner_up) >= 0.15:
+        print(f"[roster]   fuzzy-matched {target_norm!r} -> {best_key!r} "
+              f"(similarity {best_score:.2f}, next best {runner_up:.2f})")
+        return id_map[best_key]
+    if best_score >= 0.80:
+        print(f"[roster]   {target_norm!r} looks like {best_key!r} ({best_score:.2f}) "
+              f"but {scored[1][1]!r} is close behind ({runner_up:.2f}) -- too "
+              f"ambiguous to match automatically")
+    return None
+
+
+def ensure_roster_rows(fighters_path: str = "data/fighters.csv",
+                       card_paths: tuple[str, ...] = ("data/fight_cards.csv", "data/future_cards.csv")) -> int:
+    """
+    Create fighters.csv rows for card fighters the main backfill never matched.
+
+    WHY THIS IS NEEDED. backfill_fighters() finds fighters by matching names
+    against the competitors of a scoreboard event it looks up BY EVENT NAME.
+    When that lookup misses, the fighter is logged as unmatched and dropped --
+    no roster row is created, so build_fight_preview() has no stats and the
+    whole fight renders with no model preview, no tale of the tape, nothing.
+    Four fighters on one card hit this.
+
+    ESPN knows them perfectly well: resolving athlete ids from the scoreboard
+    BY EVENT DATE finds them immediately (verified with
+    scripts/diagnose_last_fight.py -- Miles Johns resolved to 4010864 with a
+    full fight history). That is the same route fill_missing_last_fights()
+    uses, and the same one that fixed the last-fight gap.
+
+    Creates a row from the athlete endpoint's physicals, method splits and
+    career record. Only fills what ESPN actually returns -- a fighter with
+    partial data gets a partial row, which the preview can still use, rather
+    than a fabricated complete one.
+    """
+    try:
+        fighters = pd.read_csv(fighters_path)
+    except FileNotFoundError:
+        return 0
+
+    roster = set(fighters["name"].astype(str))
+    roster_norm = {_normalize_name(n) for n in roster}
+
+    wanted, dates = {}, set()
+    for path in card_paths:
+        try:
+            d = pd.read_csv(path)
+        except FileNotFoundError:
+            continue
+        if "event_date" in d.columns:
+            dates |= {str(x)[:10] for x in d["event_date"].dropna()}
+        for col in ("fighter_a", "fighter_b"):
+            if col not in d.columns:
+                continue
+            for n in d[col].dropna().astype(str):
+                if n in roster or _normalize_name(n) in roster_norm:
+                    continue
+                if is_placeholder_fighter_name(n):
+                    continue
+                wanted[_normalize_name(n)] = n
+
+    if not wanted:
+        print("[roster] every card fighter already has a row.")
+        return 0
+
+    print(f"[roster] {len(wanted)} card fighter(s) missing from fighters.csv: "
+          f"{sorted(wanted.values())[:8]}")
+
+    id_map = {}
+    for d in sorted(dates):
+        try:
+            r = requests.get(ESPN_SCOREBOARD_URL, params={"dates": d.replace("-", "")},
+                             headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+            if r.status_code != 200:
+                continue
+            for ev in r.json().get("events", []):
+                for comp in ev.get("competitions", []):
+                    for c in comp.get("competitors", []):
+                        ath = c.get("athlete") or {}
+                        aid = ath.get("id") or c.get("id")
+                        if ath.get("fullName") and aid:
+                            id_map[_normalize_name(ath["fullName"])] = str(aid)
+        except requests.RequestException:
+            continue
+
+    new_rows, unresolved = [], []
+    for norm, name in wanted.items():
+        aid = id_map.get(norm) or _fuzzy_espn_match(norm, id_map)
+        if not aid:
+            unresolved.append(name)
+            continue
+        physical, _ = _fetch_espn_athlete_detail(aid)
+        recs = _fetch_espn_method_records(aid)
+        last = _fetch_last_fight_from_events_map(aid, name)
+
+        row = {"name": name}
+        row.update(physical or {})
+        cw, cl = recs.pop("_career_w", None), recs.pop("_career_l", None)
+        if cw is not None:
+            row["wins"], row["losses"] = cw, cl
+        row.update(recs)
+        row.update(last or {})
+        new_rows.append(row)
+        print(f"[roster]   created {name} (espn id {aid}, "
+              f"{row.get('wins', '?')}-{row.get('losses', '?')})")
+
+    if unresolved:
+        print(f"[roster] no ESPN id for: {sorted(unresolved)}")
+    if not new_rows:
+        return 0
+
+    fighters = pd.concat([fighters, pd.DataFrame(new_rows)], ignore_index=True)
+    fighters.to_csv(fighters_path, index=False)
+    print(f"[roster] added {len(new_rows)} row(s) to {fighters_path}")
+    return len(new_rows)
