@@ -93,7 +93,14 @@
   }
   body {
     overscroll-behavior: none;
-    background: radial-gradient(circle at top, #0e1117, #000000 62%);
+    /* FLAT BLACK, no gradient. The gradient's top stop was #0e1117 -- a dark
+       blue-grey -- placed with `circle at top`, so the lit area sat exactly
+       where the Dynamic Island does. On OLED those pixels stay on and the
+       seam between screen and cutout is visible.
+       True black switches them off entirely, which is the whole reason for a
+       pure-black page: the display stops at the content rather than at the
+       bezel. The dimension the gradient added isn't worth the seam. */
+    background: #000000;
     color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif;
     /* Tabular figures site-wide: every probability, price, record and unit
        total occupies the same width, so columns align and a number doesn't
