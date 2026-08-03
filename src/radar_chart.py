@@ -96,13 +96,13 @@ def build_radar_chart_svg(
     for pct in (25, 50, 75, 100):
         pts = [point(pct, i) for i in range(n)]
         pts_str = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-        grid_svg += f'<polygon points="{pts_str}" fill="none" stroke="#2c2a26" stroke-width="1"/>'
+        grid_svg += f'<polygon points="{pts_str}" fill="none" stroke="#383838" stroke-width="1"/>'
 
     # Spoke lines from center to each axis
     spokes_svg = ""
     for i in range(n):
         x, y = point(100, i)
-        spokes_svg += f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#2c2a26" stroke-width="1"/>'
+        spokes_svg += f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#383838" stroke-width="1"/>'
 
     # Axis labels, positioned just outside the outer gridline
     labels_svg = ""
