@@ -248,7 +248,8 @@ def _extract_round_line(selection: str) -> float | None:
     return float(match.group(1)) if match else None
 
 
-def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
+def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
+                               effective_ratings: dict[str, float] | None = None) -> pd.DataFrame:
     """
     Over/Under total rounds props. A fight card often offers multiple lines
     (1.5, 2.5, 3.5) for the same fight -- these are grouped separately so
@@ -288,7 +289,42 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
         combined_finish_rate = sum(finish_rates) / len(finish_rates)
         combined_first_round_rate = sum(first_round_rates) / len(first_round_rates) if first_round_rates else None
 
-        if line is not None and line <= 1.5 and combined_first_round_rate is not None:
+        # P(finish) FROM THE METHOD MODEL, so a round total cannot contradict
+        # the method rows shown above it. The heuristic below produced Under
+        # 4.5 at 66.0% on a fight the method model gave a 50.2% decision
+        # probability -- and a decision IS Over 4.5 in a five-round fight, so
+        # those two summed to 116%.
+        # The identity is what matters; the share-of-finishes fractions are
+        # estimates encoding that finishes are front-loaded.
+        a_row = _find_fighter(fighters_df, fighters_in_fight[0])
+        b_row = _find_fighter(fighters_df, fighters_in_fight[1])
+        _md = None
+        if not a_row.empty and not b_row.empty:
+            a, b = a_row.iloc[0], b_row.iloc[0]
+            n_a = max(int(_get(a, "wins", 0)) + int(_get(a, "losses", 0)), 1)
+            n_b = max(int(_get(b, "wins", 0)) + int(_get(b, "losses", 0)), 1)
+            koa, kob = _get(a, "ko_wins", 0) / n_a, _get(b, "ko_wins", 0) / n_b
+            sua, sub_ = _get(a, "sub_wins", 0) / n_a, _get(b, "sub_wins", 0) / n_b
+            kla, klb = _get(a, "ko_losses", 0) / n_a, _get(b, "ko_losses", 0) / n_b
+            sla, slb = _get(a, "sub_losses", 0) / n_a, _get(b, "sub_losses", 0) / n_b
+            gap = 0.0
+            if effective_ratings:
+                gap = abs(effective_ratings.get(fighters_in_fight[0], 1500)
+                          - effective_ratings.get(fighters_in_fight[1], 1500)) / 400.0
+            _md = method_probabilities(
+                ko_press=koa * klb + kob * kla, sub_press=sua * slb + sub_ * sla,
+                ko_rate_sum=koa + kob, sub_rate_sum=sua + sub_,
+                durability=kla + klb, elo_gap=gap,
+                scheduled_rounds=5 if (line or 0) > 3 else 3,
+            )
+
+        if _md is not None:
+            finish = 1.0 - _md["decision"]
+            # Fraction of finishes landing before each line. Higher lines
+            # capture nearly all of them; the 1.5 line only the early ones.
+            share = {1.5: 0.45, 2.5: 0.86, 3.5: 0.72, 4.5: 0.94}.get(line, 0.86)
+            model_prob_under = finish * share
+        elif line is not None and line <= 1.5 and combined_first_round_rate is not None:
             # the literal, most verifiable case: does it end in round 1
             model_prob_under = combined_first_round_rate
         elif line is not None:
@@ -583,7 +619,7 @@ def find_all_edges(
     frames = [
         compute_moneyline_edges(upcoming_df, elo_ratings, fighters_df, fight_history_df),
         compute_method_edges(upcoming_df, fighters_df),
-        compute_total_rounds_edges(upcoming_df, fighters_df),
+        compute_total_rounds_edges(upcoming_df, fighters_df, elo_ratings),
         compute_goes_the_distance_edges(upcoming_df, fighters_df, elo_ratings),
         compute_round_betting_edges(upcoming_df, fighters_df),
         # FightMethod was built last session and left unwired pending review,
