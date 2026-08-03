@@ -2479,6 +2479,12 @@
     padding: 5px 12px; cursor: pointer; min-height: 32px;
   }
   .filter-empty-reset:active { transform: scale(0.97); }
+  /* The hint reflects state: "hide" when open, "show the math" when closed.
+     A static label contradicts the control half the time. */
+  .waterfall-block:not([open]) .waterfall-summary-hint::after { content: "show the math \25BE"; }
+  .waterfall-block[open] .waterfall-summary-hint::after { content: "hide \25B4"; }
+  .waterfall-summary-hint { font-size: 0; }
+  .waterfall-summary-hint::after { font-size: 11px; }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3490,15 +3496,21 @@
         </div>
       </div>
       {% endif %}
-      <div class="model-preview{{ ' masterpiece' if fight.result_label and fight.preview.confidence_label == 'High Confidence' and fight.winner == fight.preview.favorite else '' }}">
-        <span class="preview-label">{{ icon_sigma() }} Model Preview:</span> {{ fight.preview.narrative }}
-      </div>
       {% if fight.preview.waterfall %}
       {% set wf = fight.preview.waterfall %}
-      <details class="waterfall-block">
+      {# OPEN by default. Opening a fight card is already an explicit signal
+         that you care about this fight -- at that point the model's reasoning
+         is the primary content, not an optional extra, and a second tap to
+         reach it makes you work twice for the thing you opened the card for.
+         It cost ~216px across 7 rows, which is real but reasonable on a card
+         you chose to open; the rows are sorted by magnitude so the signal is
+         at the top either way.
+         Still a <details>, so anyone who finds it noisy can close it -- only
+         the starting state changed. #}
+      <details class="waterfall-block" open>
         <summary class="waterfall-summary">
           <span class="waterfall-summary-label">Why the model likes {{ wf.favorite }}</span>
-          <span class="waterfall-summary-hint">show the math ▾</span>
+          <span class="waterfall-summary-hint">hide ▴</span>
         </summary>
         <div class="waterfall-body">
           <div class="wf-headline">
@@ -3697,7 +3709,6 @@
           <div class="odds-compare-value model">{{ p.model_fair_odds }}</div>
         </div>
       </div>
-      <div class="standout-sub">Suggested stake: {{ p.suggested_stake_pct }}% of bankroll</div>
       {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
     </div>
     {% endfor %}

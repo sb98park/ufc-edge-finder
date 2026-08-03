@@ -589,15 +589,56 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
     )
 
 
+# Anchored on the closing "(+8.3% edge)." -- note the decimal point inside the
+# percentage, which is why this can't be written as [^.]*: the first attempt
+# used that and never matched anything with a fractional edge.
+_RESTATEMENT = re.compile(r"^(.*?edge\)\.)\s*", re.IGNORECASE)
+_RESTATEMENT_SIGNS = ("model puts", "model estimates", "is priced at", "implied")
+
+
+def _strip_restatement(text: str) -> str:
+    """
+    Drop the opening sentence, which repeats the numbers shown directly above.
+
+    Every explainer opens by restating model probability, implied probability,
+    the price and the edge -- all four of which are already in the Book Price /
+    Model / Edge block on the same card, in a form that's easier to compare.
+    What follows it is the only synthesis on a standout card: WHY the model
+    disagrees. That part stays.
+
+    The pattern is anchored on "...(+8.3% edge)." so it can only ever match the
+    generated preamble; anything that doesn't match is returned untouched
+    rather than guessed at.
+    """
+    if not text:
+        return text
+    m = _RESTATEMENT.match(text)
+    if not m:
+        return text
+    # Only strip a prefix that actually looks like the generated preamble.
+    # Matching on the "edge)." anchor alone would happily eat a sentence that
+    # merely ended that way.
+    if not any(sign in m.group(1).lower() for sign in _RESTATEMENT_SIGNS):
+        return text
+    trimmed = text[m.end():].strip()
+    if not trimmed:
+        return text            # the whole string was preamble -- keep it
+    # Follow-ons were written to continue a sentence ("That's built on...").
+    trimmed = re.sub(r"^That's built on", "Built on", trimmed)
+    return trimmed[0].upper() + trimmed[1:] if trimmed else trimmed
+
+
 def explain_edge(row: dict, fighters_df: pd.DataFrame) -> str:
     if row["market"] == "Moneyline":
-        return explain_moneyline(row, fighters_df)
+        out = explain_moneyline(row, fighters_df)
     elif row["market"].startswith("Method"):
-        return explain_method(row, fighters_df)
+        out = explain_method(row, fighters_df)
     elif row["market"].startswith("Total Rounds"):
-        return explain_total_rounds(row, fighters_df)
+        out = explain_total_rounds(row, fighters_df)
     elif row["market"].startswith("Fight Outcome"):
-        return explain_goes_the_distance(row, fighters_df)
+        out = explain_goes_the_distance(row, fighters_df)
     elif row["market"].startswith("Round Betting"):
-        return explain_round_betting(row, fighters_df)
-    return f"{row['fighter']} — {row['market']}: {row['edge_pct']:+.1f}% edge vs. the market."
+        out = explain_round_betting(row, fighters_df)
+    else:
+        return f"{row['fighter']} — {row['market']}: {row['edge_pct']:+.1f}% edge vs. the market."
+    return _strip_restatement(out)
