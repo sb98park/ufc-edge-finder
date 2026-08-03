@@ -84,6 +84,19 @@ def _normalize_name(name: str) -> str:
     data has 'Benoit Saint-Denis') don't cause a real fight to silently miss
     its match and get dumped into 'unmatched' instead.
     """
+    # Coerce first. Edge rows come from several finders with different key
+    # sets -- fight-level markets never set "opponent" -- so a DataFrame built
+    # from a mix of them fills the gap with NaN, which is a FLOAT and blows up
+    # unicodedata.normalize. Returning "" for a missing name lets the caller's
+    # set comparison simply fail to match, which is the correct outcome, and
+    # is far better than a crash three frames away from the cause.
+    if name is None or not isinstance(name, str):
+        try:
+            if pd.isna(name):
+                return ""
+        except (TypeError, ValueError):
+            pass
+        name = str(name) if name is not None else ""
     normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9 ]", " ", normalized.lower()).strip()
 
@@ -297,7 +310,9 @@ def group_edges_by_card(
             # fighter's name alone is what let a stale/unrelated row (e.g. a
             # leftover "vs a different opponent" line) get folded into the
             # wrong fight just because one name happened to overlap.
-            row_pair = {edge_dict["fighter"], edge_dict["opponent"]}
+            # Drop a missing opponent rather than admitting NaN to the set.
+            row_pair = {v for v in (edge_dict["fighter"], edge_dict["opponent"])
+                        if isinstance(v, str) and v.strip()}
         else:
             row_pair = {fighter_field}
 

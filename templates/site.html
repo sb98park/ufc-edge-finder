@@ -277,10 +277,11 @@
     cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex; flex-direction: row; align-items: center; gap: 14px; position: relative; overflow: hidden;
   }
-  .hub-card::before {
-    content: ""; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
-    background: var(--card-accent, var(--accent));
-  }
+  /* Accent strip removed: identity colour on a navigation list, the same
+     thing stripped from the fight cards and the tab bar. Nine coloured bars
+     down the left of the drawer were the loudest element left on an
+     otherwise monochrome page. The icon tile keeps a tint so rows stay
+     scannable at a glance. */
   .hub-card:active { transform: scale(0.98); }
   @media (hover: hover) {
     .hub-card:hover { transform: translateY(-2px);  }
@@ -309,7 +310,7 @@
   .hub-card.featured {
     padding: 18px 16px;
   }
-  .hub-card.featured::before { width: 4px; }
+
   .hub-card.featured .hub-card-icon { font-size: 32px; width: 34px; }
   .hub-card.featured .hub-card-icon svg { width: 32px; height: 32px; }
   .hub-card.featured .hub-card-stat { font-size: 20px; }
@@ -1277,9 +1278,6 @@
   .no-parlays { font-size: 12px; color: var(--muted); padding: 4px 0 8px; }
 
   /* Edge heatmapping - visual intensity scales with how big the model/book disagreement is */
-  .standout-card.heat-1 { border-left-color: rgba(61, 220, 132, 0.35); }
-  .standout-card.heat-2 { border-left-color: rgba(61, 220, 132, 0.65); }
-  .standout-card.heat-3 { border-left-color: #3ddc84; border-left-width: 4px; }
   tr.edge-heat-1 { background: rgba(61, 220, 132, 0.03); }
   tr.edge-heat-2 { background: rgba(61, 220, 132, 0.07); border-left: 2px solid rgba(61, 220, 132, 0.4); }
   tr.edge-heat-3 { background: rgba(61, 220, 132, 0.13); border-left: 2px solid rgba(61, 220, 132, 0.8); }
@@ -1762,7 +1760,7 @@
        navigate AWAY from the hub-card grid entirely, so highlighting
        one item there would never be seen). */
     .hub-card.rail-active { background: linear-gradient(145deg, #23283a, #242426 65%); }
-    .hub-card.rail-active::before { width: 4px; }
+  
 
     /* Content pane: always visible (mobile JS toggles this via inline
        style, but this media query wins regardless of that inline
@@ -2149,6 +2147,12 @@
          1px on the left, 2px on the right, which is the thin-then-thick
          divider. The ::after is now the only line between rows; the group's
          outer edges come from data-row first/last/solo. */
+      /* Top and bottom must be EXPLICITLY cleared, not merely omitted. The
+         global .hub-card rule sets `border: 1px solid` on all four sides, so
+         declaring only left and right here left top and bottom alive from
+         the cascade -- which is why the divider stayed 2px on the left of
+         each row and 3px past x=52 where the ::after also draws. */
+      border: none;
       border-left: 1px solid var(--border); border-right: 1px solid var(--border);
       border-radius: 0;
     }

@@ -361,6 +361,10 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
         )
         if not _dist:
             continue
+        # P(decision) from the same softmax as KO and SUB, so all three sum to
+        # 1 by construction rather than being reconciled after the fact. Safe
+        # again now the model is calibrated: decision is a FITTED class here,
+        # not "survived every round" -- which is what made it fragile before.
         goes_distance_prob = _dist["decision"]
 
         model_p = goes_distance_prob if "distance" in row["selection"].lower() and "ends" not in row["selection"].lower() else (1 - goes_distance_prob)
@@ -411,10 +415,9 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
        fights. Chaining five rounds compounds it, so a title fight's P(KO)
        is materially too high.
 
-    Hence MAIN_EVENT_SHRINK below: a blunt correction, applied only where the
-    error was measured, and deliberately NOT tuned -- it's the ratio of
-    predicted to actual finish hazard on five-round holdout rows. It makes
-    the number less wrong; it does not make it validated.
+    Both caveats are now HISTORICAL: the chained model they described was
+    replaced by a direct fight-level fit, validated per method and per
+    scheduled length (research_method_fightlevel.py).
     """
     from src.method_model import method_probabilities
 
@@ -453,13 +456,10 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
         if not dist:
             continue
 
-        # Measured on five-round holdout rows: 14.6 / 19.4. Applied to the
-        # finish probabilities only, with the remainder going to decision.
-        MAIN_EVENT_SHRINK = 0.75
-        if str(row.get("card_position", "")).strip() == "Main Event":
-            dist = {"ko": dist["ko"] * MAIN_EVENT_SHRINK,
-                    "sub": dist["sub"] * MAIN_EVENT_SHRINK,
-                    "decision": 1.0 - (dist["ko"] + dist["sub"]) * MAIN_EVENT_SHRINK}
+        # No main-event shrink. It existed to damp the old chaining, which
+        # overstated finishes badly on five-round fights. The refit model is
+        # within 2.9% on that subgroup, so applying a 0.75 factor now would
+        # double-correct an already-calibrated number.
 
         sel = str(row["selection"])
         base = dist["ko"] if "KO" in sel.upper() else dist["sub"]
@@ -470,6 +470,11 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
         rows.append({
             "fight_id": row["fight_id"],
             "fighter": f"{row['fighter_a']} vs {row['fighter_b']}",
+            # Explicit empty opponent. A fight-level market has no single
+            # opponent, but OMITTING the key makes pandas fill it with NaN
+            # when these rows are concatenated with per-fighter ones -- and
+            # NaN is a float, which crashed the name normaliser downstream.
+            "opponent": "",
             "market": f"Fight Method: {sel}",
             "odds_american": row["odds_american"],
             "model_prob": round(model_p, 3),
@@ -540,6 +545,10 @@ def find_all_edges(
         # then never connected -- 80 classified rows per card with no path to
         # the site. These are Polymarket's "Will the fight be won by KO/TKO?"
         # markets, which the hazard model prices directly.
+        # Re-enabled on the refit model. The previous chained version put 65%
+        # on submission and 8.7% on decision for a five-round main event; the
+        # direct fight-level fit is within 3pp of observed on every method AND
+        # on the five-round subgroup specifically (research_method_fightlevel.py).
         find_fight_method_edges(upcoming_df, fighters_df, elo_ratings),
         # Derived book lines LAST, so a real published line always wins if
         # both somehow exist for the same selection.

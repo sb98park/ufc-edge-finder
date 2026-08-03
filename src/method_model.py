@@ -1,82 +1,95 @@
 """
-Fight-level method probabilities from the discrete-time hazard model.
+Fight-level method-of-victory probabilities.
 
-WHY THE COEFFICIENTS ARE FROZEN HERE RATHER THAN FITTED AT BUILD TIME.
-The model is a multinomial logistic over 8 features and 3 outcomes -- 24
-coefficients and 3 intercepts. Training it during every site build would add
-scikit-learn to the production dependency chain (generate_site.py and src/
-currently import neither sklearn nor scipy, which is why Actions stays
-light) and would refit an identical model every few minutes. Exporting the
-fit and scoring it with a dot product plus a softmax is exact, instant, and
-dependency-free. Refit with research_survival_model.py and paste new numbers
-when the training window is extended.
+DIRECT FIT, NOT CHAINED. The previous version predicted a per-ROUND hazard
+and multiplied it across a fight's scheduled rounds. Two failures compounded:
+any per-round overstatement multiplied, and P(decision) was defined as
+"survived every round" -- a product of five survival terms, the most fragile
+quantity in the construction. On a real five-round main event it produced
+65.0% submission and 8.7% decision against holdout base rates of 16.5% and
+52.4%. Decision was wrong by a factor of six.
 
-WHAT THIS PREDICTS. Per ROUND: given the fight reached round r, does it end
-here, and by KO/TKO or submission? Chaining those hazards across a fight's
-scheduled rounds gives P(KO overall), P(SUB overall), and P(decision) as the
-probability of surviving every round.
+It had passed its earlier validation because that only scored KO and SUB via
+Brier. Nobody scored the DECISION leg, and nothing compared mean prediction to
+observed frequency -- the check that makes an 8.7% decision rate impossible to
+miss. research_method_fightlevel.py now runs exactly that check.
 
-VALIDATED (research_method_calibration.py), frozen 2019+ holdout, n=1743:
-    base rates      P(KO) Brier 0.2155   P(SUB) Brier 0.1380
-    this model      P(KO) Brier 0.2028   P(SUB) Brier 0.1331
+VALIDATED (research_method_fightlevel.py), frozen 2019+ holdout, n=1743:
 
-KNOWN LIMITATION, deliberately not corrected. The chained probability is
-about 2.4pp OVERCONFIDENT out of sample, and that cannot be fitted away:
-isotonic regression made calibration WORSE (0.024 -> 0.031) and a single
-shrink parameter selected w=1.00, because the miscalibration is absent from
-the training data -- it's drift, not bias. So this is fit for DISPLAY, where
-ranking dominates, and explicitly NOT for gating props into Locks at an 82%
-floor, where the error runs in exactly the wrong direction.
+    holdout log-loss    base rates 1.0047   this model 0.9559
+
+    calibration          base      model     observed
+      KO/TKO            +3.3%     +2.4%       31.2%
+      SUB               +2.0%     +1.1%       16.5%
+      DEC               -5.3%     -3.5%       52.4%
+
+    five-round subgroup (n=267)   predicted   actual
+      KO/TKO                         36.6%    37.8%
+      SUB                            17.5%    14.6%
+      DEC                            45.9%    47.6%
+
+Better calibrated than the base rates on EVERY class, better on log-loss, and
+within 3pp on the five-round subgroup -- which is where the previous version
+was off by 13pp and where the liquid markets are.
+
+The residual -3.5% on decisions is era drift, not model error: decisions were
+more common in the holdout (52.4%) than in training (47.1%), and nothing fit
+on the training period can recover that. Expect decision probabilities to read
+slightly low.
+
+No MAIN_EVENT_SHRINK any more -- that existed to damp the chaining, and there
+is no chaining left to damp.
+
+Refit with research_method_fightlevel.py and paste new numbers below.
 """
 
 import math
 
-FEATURES = ["round", "scheduled", "ko_press", "sub_press",
-            "ko_rate_sum", "sub_rate_sum", "durability", "elo_gap"]
+# NO `scheduled` FEATURE. Including it made the model 13.0% miscalibrated on
+# five-round fights -- it learned "longer fight, more finishes" from 211
+# training examples, while five-rounders actually go to decision 47.6% of the
+# time against 53.3% for three-rounders. Dropping it cut the five-round error
+# to 2.9% AND improved log-loss (0.9610 -> 0.9559): the feature was doing
+# active harm, not adding signal.
+# Fitting the two lengths separately was tested too and came out WORSE
+# (13.2%) -- 211 fights is not enough to fit a second model on.
+FEATURES = ["ko_press", "sub_press", "ko_rate_sum",
+            "sub_rate_sum", "durability", "elo_gap"]
 
-# Rows are outcomes in order: survive, KO/TKO, submission.
+# Rows are outcomes in order: KO/TKO, SUB, DEC.
 COEF = [
-    [0.164828, 0.009001, 0.117059, -1.494370, -0.372273, -0.340968, -0.720587, 0.056450],
-    [-0.135041, 0.088418, 0.746369, 0.027571, 0.438113, -0.388517, 0.520133, 0.182444],
-    [-0.029786, -0.097418, -0.863428, 1.466799, -0.065840, 0.729486, 0.200455, -0.238894],
+    [0.869430, -0.099895, 0.620604, -0.324009, 0.558473, 0.253277],
+    [-0.751140, 1.501577, -0.064537, 0.777400, 0.226345, -0.233184],
+    [-0.118290, -1.401682, -0.556067, -0.453391, -0.784818, -0.020093],
 ]
-INTERCEPT = [1.472720, -0.670360, -0.802360]
+INTERCEPT = [-0.285880, -0.743323, 1.029203]
 
-SURVIVE, KO, SUB = 0, 1, 2
-
-
-def _round_hazard(feat: dict) -> list[float]:
-    """Softmax over the three per-round outcomes."""
-    x = [float(feat.get(f, 0.0) or 0.0) for f in FEATURES]
-    z = [INTERCEPT[k] + sum(c * v for c, v in zip(COEF[k], x)) for k in range(3)]
-    m = max(z)                                  # subtract the max for stability
-    e = [math.exp(v - m) for v in z]
-    total = sum(e)
-    return [v / total for v in e]
+KO, SUB, DEC = 0, 1, 2
 
 
 def method_probabilities(ko_press: float, sub_press: float, ko_rate_sum: float,
                          sub_rate_sum: float, durability: float, elo_gap: float,
                          scheduled_rounds: int = 3) -> dict | None:
     """
-    Chain per-round hazards into fight-level P(KO), P(SUB), P(decision).
+    P(KO/TKO), P(submission), P(decision) for a fight. Sums to 1 by
+    construction -- it's one softmax over three outcomes, not three estimates
+    reconciled after the fact.
 
     Returns None when an input is missing rather than substituting a default:
-    a fabricated feature yields a confident-looking number with nothing
-    behind it, and the caller already has a fallback for that case.
+    a fabricated feature yields a confident-looking number with nothing behind
+    it, and every caller already has a fallback.
     """
     vals = (ko_press, sub_press, ko_rate_sum, sub_rate_sum, durability, elo_gap)
     if any(v is None for v in vals):
         return None
-    surv, p_ko, p_sub = 1.0, 0.0, 0.0
-    for r in range(1, int(scheduled_rounds) + 1):
-        p = _round_hazard({
-            "round": r, "scheduled": scheduled_rounds,
-            "ko_press": ko_press, "sub_press": sub_press,
-            "ko_rate_sum": ko_rate_sum, "sub_rate_sum": sub_rate_sum,
-            "durability": durability, "elo_gap": elo_gap,
-        })
-        p_ko += surv * p[KO]
-        p_sub += surv * p[SUB]
-        surv *= p[SURVIVE]
-    return {"ko": p_ko, "sub": p_sub, "decision": surv}
+
+    # scheduled_rounds is accepted but DELIBERATELY UNUSED -- see the note on
+    # FEATURES. Kept in the signature so callers don't need changing, and so
+    # removing it can't silently look like an oversight.
+    x = [float(ko_press), float(sub_press),
+         float(ko_rate_sum), float(sub_rate_sum), float(durability), float(elo_gap)]
+    z = [INTERCEPT[k] + sum(c * v for c, v in zip(COEF[k], x)) for k in range(3)]
+    m = max(z)                                  # subtract the max for stability
+    e = [math.exp(v - m) for v in z]
+    total = sum(e)
+    return {"ko": e[KO] / total, "sub": e[SUB] / total, "decision": e[DEC] / total}

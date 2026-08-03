@@ -505,6 +505,20 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     # (=1.69) is a strong signal of stale/illiquid data on a thin market --
     # trusting either side individually would show a misleading price, so
     # skip it entirely rather than risk publishing a wrong number.
+    # UNTRADED markets come back at exactly 0.5/0.5, which converts to -100
+    # on both sides. That is not a price -- it's Polymarket's placeholder for
+    # a market nobody has touched, common on a card still weeks out. Publishing
+    # it is worse than showing nothing: the model then computes an "edge"
+    # against a 50% that no one is actually offering, and a 30% projection
+    # looks like a -20% edge when there is no market to be wrong about.
+    _untouched = (
+        abs(price_a - 0.5) < 1e-9 and abs(price_b - 0.5) < 1e-9
+        and float(market.get("volumeNum") or market.get("volume") or 0) <= 0
+    )
+    if _untouched:
+        print(f"[polymarket] skipping untraded market (0.5/0.5, no volume): {question[:70]!r}")
+        return []
+
     price_sum = price_a + price_b
     if not (0.85 <= price_sum <= 1.15):
         print(f"[polymarket] skipping implausible market (prices sum to {price_sum:.2f}, not ~1.0): {question[:80]!r}")
