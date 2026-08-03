@@ -99,7 +99,7 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     )
 
     mask_svg = (
-        f'<rect x="{pad_left}" y="{pad_top}" width="{plot_w}" height="{plot_h}" fill="#2a2a2a" '
+        f'<rect x="{pad_left}" y="{pad_top}" width="{plot_w}" height="{plot_h}" fill="#242426" '
         f'class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/>'
     )
 
