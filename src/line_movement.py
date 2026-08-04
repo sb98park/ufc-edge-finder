@@ -37,8 +37,8 @@ MAX_HISTORY_POINTS = 30
 # everywhere. Safe here specifically because this chart has no direction
 # colouring: it draws in greys and one accent, so corner-red can't be
 # confused with a falling line.
-LINE_COLOR_A = "#c8443c"
-LINE_COLOR_B = "#4a7fd4"
+LINE_COLOR_A = "#d32f2f"
+LINE_COLOR_B = "#2563eb"
 
 
 def load_token_cache() -> dict:
