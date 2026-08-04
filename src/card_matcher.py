@@ -411,7 +411,7 @@ def group_edges_by_card(
             is_five_round = str(fight.get("card_position", "")).strip() == "Main Event"
             projection = build_full_market_projection(
                 fight["fighter_a"], fight["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round
-            )
+            , fight_history_df=fight_history_df)
             # A 3-round fight has no 3.5 or 4.5 line -- only main events (and
             # title fights) are scheduled for 5. If a stray one ever arrives
             # from the book, or a projection is generated for the wrong

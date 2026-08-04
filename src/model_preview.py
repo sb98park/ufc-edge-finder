@@ -57,6 +57,7 @@ def build_full_market_projection(
     fighters_df: pd.DataFrame,
     effective_ratings: dict[str, float],
     is_five_round: bool = False,
+    fight_history_df: pd.DataFrame | None = None,
 ) -> dict | None:
     """
     Model-only projections for method-of-victory (both fighters, all three
@@ -73,7 +74,13 @@ def build_full_market_projection(
     if row_a is None or row_b is None:
         return None
 
-    matchup = predict_matchup(fighter_a, fighter_b, fighters_df, effective_ratings)
+    # fight_history_df matters: it enables the recent-form adjustment, and
+    # edge_finder passes it. Without it the win probabilities constraining THIS
+    # grid differ from the ones constraining the priced grid -- and since the
+    # table shows priced KO rows beside model-only SUB/DEC rows, the mixture
+    # didn't sum to the moneyline even though each grid was internally
+    # coherent.
+    matchup = predict_matchup(fighter_a, fighter_b, fighters_df, effective_ratings, fight_history_df)
     prob_a, prob_b = matchup["prob_a"], matchup["prob_b"]
     divisional_priors = compute_divisional_method_priors(fighters_df)
 

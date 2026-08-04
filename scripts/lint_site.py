@@ -237,6 +237,76 @@ def check_probability_coherence():
         warn("prob-coherence", f"could not evaluate ({e})")
 
 
+def check_method_coherence(c):
+    """
+    Every fighter's three per-fighter method rows must sum to his win
+    probability, and never above 100%.
+
+    These are mutually exclusive outcomes -- the sums aren't a calibration
+    target, they're arithmetic. They were wrong FOUR times for four different
+    reasons: unnormalised method-given-win rates; a fix applied to only one of
+    two code paths; predict_matchup called with different arguments in each
+    path; and the projection path missing fight_history_df while the priced
+    path had it. Every version produced plausible-looking numbers, one showing
+    a 15-point edge on a submission prop that was pure arithmetic.
+
+    The FIRST version of this check regexed markup that doesn't exist and
+    reported "no rows found" -- inert, and worse than absent because it looked
+    like a pass. This one is written against the real cell structure:
+        <td class="mkt-label">Fighter &mdash; Method</td>
+        <td class="mkt-model">21.5%</td>
+    """
+    pairs = re.findall(
+        r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+        c, re.DOTALL)
+    if not pairs:
+        return fail("method-coherence",
+                    "found no market rows at all -- the pattern no longer matches the markup")
+
+    # GROUPED BY FIGHT, not by fighter. The first version summed per fighter
+    # and flagged anything over 100% -- which would NOT have caught the
+    # original failure, where the two fighters were 73.5% and 53.1%: each
+    # under 100, together 126.6%. The invariant lives on the pair, because the
+    # six outcomes are exhaustive for the FIGHT.
+    blocks = re.split(r'<details class="fight-card', c)[1:]
+    if not blocks:
+        return warn("method-coherence", "no fight cards found")
+
+    checked, seen_methods = 0, 0
+    for block in blocks:
+        key = re.search(r'data-fight-key="([^"]+)"', block)
+        rows = re.findall(
+            r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+            block, re.DOTALL)
+        total = 0.0
+        n = 0
+        for label, prob in rows:
+            label = re.sub(r"<[^>]+>", "", label).strip()
+            # Per-fighter method rows only. Fight-level rows ("Fight ends
+            # by ...") and moneylines have no dash-separated method, and
+            # counting them would double the total legitimately.
+            if not re.match(r"^.*?\s*[\u2014\u2013-]\s*(KO/TKO|Submission|Decision)$", label):
+                continue
+            total += float(prob)
+            n += 1
+        if n == 0:
+            continue
+        seen_methods += n
+        checked += 1
+        name = key.group(1) if key else "unknown fight"
+        if n == 6 and abs(total - 100.0) > 1.5:
+            fail("method-coherence",
+                 f"{name}: six method rows sum to {total:.1f}%, not 100%")
+        elif total > 101.5:
+            fail("method-coherence",
+                 f"{name}: {n} method rows already sum to {total:.1f}%")
+
+    if not checked:
+        return warn("method-coherence",
+                    f"{len(blocks)} fight cards found but none had per-fighter method rows")
+    print(f"       [method-coherence] checked {checked} fight(s), {seen_methods} method rows")
+
+
 def main():
     c = load()
     check_css_braces(c)
@@ -247,6 +317,7 @@ def main():
     check_exact_name_matching()
     check_market_string_consistency()
     check_probability_coherence()
+    check_method_coherence(c)
 
     for label, items in (("FAIL", FAILURES), ("WARN", WARNINGS)):
         for check, detail in items:
