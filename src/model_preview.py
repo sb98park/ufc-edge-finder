@@ -77,28 +77,6 @@ def build_full_market_projection(
     prob_a, prob_b = matchup["prob_a"], matchup["prob_b"]
     divisional_priors = compute_divisional_method_priors(fighters_df)
 
-    method_rows = []
-    for name, row, opp_row, win_prob in [
-        (fighter_a, row_a, row_b, prob_a), (fighter_b, row_b, row_a, prob_b)
-    ]:
-        for method in ["KO/TKO", "Submission", "Decision"]:
-            method_given_win = _method_vulnerability_blend(row, opp_row, method, divisional_priors)
-            combined_prob = win_prob * method_given_win
-            method_rows.append({
-                "fighter": name, "market": f"Method: {method}", "model_prob": round(combined_prob, 3),
-            })
-
-    combined_finish_rate = (
-        (_get(row_a, "ko_wins", 0) + _get(row_a, "sub_wins", 0)) / max(int(row_a["wins"]), 1)
-        + (_get(row_b, "ko_wins", 0) + _get(row_b, "sub_wins", 0)) / max(int(row_b["wins"]), 1)
-    ) / 2
-
-    first_round_rates = [
-        float(r["first_round_finish_pct"]) for r in (row_a, row_b)
-        if "first_round_finish_pct" in r and pd.notna(r["first_round_finish_pct"])
-    ]
-    combined_first_round_rate = sum(first_round_rates) / len(first_round_rates) if first_round_rates else combined_finish_rate * 0.5
-
     # Fight-level method distribution, so the Fight props group can always
     # show all three answers even when a market for one of them doesn't exist.
     # Denominators are TOTAL FIGHTS, matching how the model was trained --
@@ -126,6 +104,73 @@ def build_full_market_projection(
             _md = {k: round(v, 3) for k, v in _md.items()}
     except (TypeError, ValueError, KeyError):
         _md = None
+
+    # PER-FIGHTER METHODS, RECONCILED.
+    #
+    # This was `win_prob * method_given_win` with the three method_given_win
+    # values computed independently -- so they didn't sum to 1 and each
+    # fighter's methods overshot his own win probability. On a real card the
+    # six mutually exclusive outcomes summed to 126.6%, and a submission row
+    # showed 30.6% against a market implying 15.4%: an apparent 15-point edge
+    # that was arithmetic, not signal.
+    #
+    # Two things are known and trustworthy here:
+    #   rows -- each fighter's win probability, from the validated moneyline
+    #   cols -- the fight's KO/SUB/DEC split, from the validated fight-level
+    #           model (research_method_fightlevel.py)
+    # The per-fighter METHOD PREFERENCE is the only unvalidated part, so it is
+    # used as a seed and the two known margins are imposed on it by iterative
+    # proportional fitting. The result matches both by construction: each
+    # row sums to that fighter's win probability, each column to the
+    # fight-level method probability, and the whole grid to 1.
+    seed = []
+    for row, opp_row in ((row_a, row_b), (row_b, row_a)):
+        seed.append([
+            max(_method_vulnerability_blend(row, opp_row, m, divisional_priors), 1e-4)
+            for m in ("KO/TKO", "Submission", "Decision")
+        ])
+
+    targets_row = [prob_a, prob_b]
+    fight_dist = _md if _md else None
+    if fight_dist:
+        targets_col = [fight_dist["ko"], fight_dist["sub"], fight_dist["decision"]]
+    else:
+        # No validated fight-level split available: fall back to normalising
+        # each fighter's own preferences. Still coherent (rows hit the
+        # moneyline, grid sums to 1), just without the column constraint.
+        targets_col = None
+
+    grid = [r[:] for r in seed]
+    for _ in range(80):
+        for i in range(2):
+            tot = sum(grid[i]) or 1e-9
+            grid[i] = [v * targets_row[i] / tot for v in grid[i]]
+        if not targets_col:
+            break
+        for j in range(3):
+            tot = (grid[0][j] + grid[1][j]) or 1e-9
+            f = targets_col[j] / tot
+            grid[0][j] *= f
+            grid[1][j] *= f
+
+    method_rows = []
+    for i, name in enumerate((fighter_a, fighter_b)):
+        for j, method in enumerate(("KO/TKO", "Submission", "Decision")):
+            method_rows.append({
+                "fighter": name, "market": f"Method: {method}",
+                "model_prob": round(grid[i][j], 3),
+            })
+
+    combined_finish_rate = (
+        (_get(row_a, "ko_wins", 0) + _get(row_a, "sub_wins", 0)) / max(int(row_a["wins"]), 1)
+        + (_get(row_b, "ko_wins", 0) + _get(row_b, "sub_wins", 0)) / max(int(row_b["wins"]), 1)
+    ) / 2
+
+    first_round_rates = [
+        float(r["first_round_finish_pct"]) for r in (row_a, row_b)
+        if "first_round_finish_pct" in r and pd.notna(r["first_round_finish_pct"])
+    ]
+    combined_first_round_rate = sum(first_round_rates) / len(first_round_rates) if first_round_rates else combined_finish_rate * 0.5
 
     if is_five_round:
         # More scheduled rounds means more time for a finish to still
