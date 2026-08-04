@@ -41,6 +41,33 @@ LINE_COLOR_A = "#e53935"
 LINE_COLOR_B = "#3b82f6"
 
 
+def _clean_movement_label(label: str, fighter_a: str, fighter_b: str) -> str:
+    """
+    Strip the matchup and match the Fight props table's wording.
+
+    Two problems with the raw label. It prefixed every fight-level chart with
+    "A vs B", which the surrounding card already states. And it used the
+    market's internal name ("Fight Method: KO/TKO") where the table two
+    inches below says "Fight ends by KO/TKO" -- the same market under two
+    names on one screen.
+    """
+    for pair in (f"{fighter_a} vs {fighter_b}", f"{fighter_b} vs {fighter_a}"):
+        label = label.replace(f"{pair} — ", "").replace(f"{pair} - ", "").replace(pair, "")
+    label = label.strip(" -\u2014")
+
+    low = label.lower()
+    for prefix in ("fight method:", "method:", "fight outcome:"):
+        if low.startswith(prefix):
+            method = label[len(prefix):].strip()
+            mapped = {"sub": "Submission", "ko/tko": "KO/TKO",
+                      "dec": "Decision", "goes the distance": "Decision"}.get(
+                          method.lower(), method)
+            return f"Fight ends by {mapped}"
+    if low.startswith("goesthedistance") or low == "goes the distance":
+        return "Fight ends by Decision"
+    return label
+
+
 def load_token_cache() -> dict:
     """{normalized_fighter_name: clob_token_id}, persisted across runs so a
     fight's chart doesn't lose its token just because THIS run's Polymarket
@@ -171,6 +198,7 @@ def build_dual_line_chart_svg(
     points_a: list[tuple[float, float]], points_b: list[tuple[float, float]],
     name_a: str, name_b: str, width: int = 300, height: int = 170,
     implied_a: bool = False, implied_b: bool = False,
+    line_color: str | None = None, show_dot: bool = True,
 ) -> str | None:
     """
     Renders both fighters' probability history on one chart with a real
@@ -281,7 +309,12 @@ def build_dual_line_chart_svg(
         )
         return svg, round(last_p * 100), last_p
 
-    line_a_svg, pct_a, raw_a = render_line(points_a, LINE_COLOR_A)
+    # line_color lets a single-series chart take the colour of whatever it is
+    # about -- a fighter's corner for his own prop, gold for a fight-level
+    # market. Every secondary chart drew in the same colour before, so nothing
+    # on screen said whose line was moving.
+    _colour_a = line_color or LINE_COLOR_A
+    line_a_svg, pct_a, raw_a = render_line(points_a, _colour_a)
     line_b_svg, pct_b, raw_b = render_line(points_b, LINE_COLOR_B)
 
     # Pair each side's raw probability with a real complement when both
@@ -297,12 +330,12 @@ def build_dual_line_chart_svg(
         short_name_a = name_a.split()[-1] + (" ~" if implied_a else "")
         odds_a = _book_odds_label(raw_a, complement_a) if complement_a is not None else None
         legend_svg += (
-            f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{LINE_COLOR_A}"/>'
-            f'<text class="label-pct" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_A}" text-anchor="end">{short_name_a} {pct_a}%</text>'
+            (f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{_colour_a}"/>' if show_dot else '')
+            + f'<text class="label-pct" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{_colour_a}" text-anchor="end">{short_name_a} {pct_a}%</text>'
         )
         if odds_a:
             legend_svg += (
-                f'<text class="label-odds" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_A}" text-anchor="end">{short_name_a} {odds_a}</text>'
+                f'<text class="label-odds" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{_colour_a}" text-anchor="end">{short_name_a} {odds_a}</text>'
             )
         ly += 13
     if pct_b is not None:
@@ -480,8 +513,46 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
             entry = full_snapshot.get(key)
             points = _snapshot_points(entry["history"]) if entry else []
 
-        if len(points) >= 2:
-            svg = build_dual_line_chart_svg(points, [], edge["fighter"], "", width=260, height=90)
-            if svg:
-                other_charts.append({"label": f"{edge['fighter']} — {edge['market']}", "svg": svg})
+        if len(points) < 2:
+            continue
+
+        market = str(edge.get("market") or "")
+        who = str(edge.get("fighter") or "")
+
+        # COMPLEMENTS DROPPED. Polymarket lists both sides of every method
+        # market, so "Not KO/TKO" arrived alongside "KO/TKO" -- the same
+        # information inverted, doubling the list to say nothing new.
+        blob = f"{market} {edge.get('selection', '')}".lower()
+        if "not " in blob or "endsinfinish" in blob.replace(" ", ""):
+            continue
+
+        # COLOUR BY SUBJECT. Every chart drew in the same colour, so nothing
+        # said whose line was moving. A fighter's own prop takes his corner;
+        # anything about the FIGHT (rounds, method, distance) takes gold,
+        # which is the site's colour for a model/market view of the bout
+        # rather than of a man.
+        is_fight_level = ("vs" in who.lower()) or market.lower().startswith(
+            ("fight ", "total rounds", "round betting"))
+        if is_fight_level:
+            colour = "#d4af37"
+        elif _normalize_name(who) == _normalize_name(fighter_a):
+            colour = LINE_COLOR_A
+        elif _normalize_name(who) == _normalize_name(fighter_b):
+            colour = LINE_COLOR_B
+        else:
+            colour = "#d4af37"
+
+        # THE MATCHUP NAME IS DROPPED from fight-level labels: you are already
+        # inside that fight's card, so repeating both names costs a line of
+        # width to restate what the surrounding context says.
+        label = market
+        if not is_fight_level and who:
+            label = f"{who} — {market}"
+        label = _clean_movement_label(label, fighter_a, fighter_b)
+
+        svg = build_dual_line_chart_svg(points, [], edge["fighter"], "",
+                                        width=260, height=90,
+                                        line_color=colour, show_dot=False)
+        if svg:
+            other_charts.append({"label": label, "svg": svg})
     fight["other_charts"] = other_charts

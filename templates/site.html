@@ -66,10 +66,21 @@
   }
   * { box-sizing: border-box; }
   html { scrollbar-color: var(--accent) #1c1c1e; scrollbar-width: thin; scroll-behavior: smooth; }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: #1c1c1e; }
-  ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #e8c766, #a3801f); border-radius: 8px; }
-  ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #f0d97a, #d4af37); }
+  /* DESKTOP ONLY. A styled gold scrollbar reads as a web page; native apps
+     don't have one, which is why Instagram and Reddit appear to have none.
+     Scoped rather than hidden: `display: none` would kill the OS's own
+     transient indicator too, and that indicator is the only thing telling
+     you a horizontal region -- the markets table, the segment tabs -- has
+     more content sideways. Leaving mobile unstyled gets the native
+     behaviour, which appears while scrolling and fades after.
+     A pointer is a different case: it hovers, it can grab a thumb, and a
+     visible track is genuinely useful. */
+  @media (min-width: 1024px) {
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #1c1c1e; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #e8c766, #a3801f); border-radius: 8px; }
+    ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #f0d97a, #d4af37); }
+  }
   html {
     /* THE white flash on fast scrolling is not a gesture problem -- it's a
        PAINT problem, which is why blocking touchmove couldn't fix it:
@@ -1545,7 +1556,17 @@
     margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px;
   }
   .wf-total-label { font-weight: 600; color: var(--text); min-width: 0; }
-  .wf-total-prob { font-weight: 700; font-size: 17px; color: var(--accent); font-family: var(--font-display); }
+  /* CORNER-COLOURED, not gold. Gold means "model" only where it is being
+     contrasted with "market" -- inside this block there is no market number
+     to distinguish it from, so gold was separating nothing and reading as a
+     third colour in a two-colour argument.
+     The label already says "Model's Pick", which frees the colour to answer
+     WHICH FIGHTER: the bars push toward a corner and the conclusion arrives
+     in that corner's colour. Scoped under the same fav-red/fav-blue class the
+     rows use, so it can never disagree with them. */
+  .fav-red .wf-total-prob { color: var(--corner-red); }
+  .fav-blue .wf-total-prob { color: var(--corner-blue); }
+  .wf-total-prob { font-weight: 700; font-size: 17px; font-family: var(--font-display); }
   @media (max-width: 400px) {
     .waterfall-row { gap: 6px; }
     .wf-bar-cell { flex-basis: 20%; }
