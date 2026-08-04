@@ -1575,9 +1575,16 @@
   }
   details.chart-toggle summary::-webkit-details-marker { display: none; }
   .chart-toggle-body { padding: 0 12px 10px; }
+  /* Symmetric margins. This was `4px 0 10px` -- 4px above, 10px below -- so
+     the badge sat tight against the summary and loose against the waterfall
+     beneath it. .fight-body is `padding: 0 16px 16px`, no padding-top, so the
+     badge's own top margin is the ENTIRE gap above it; nothing else was
+     making up the difference.
+     Both sides are 10px now, and the waterfall's 10px top margin collapses
+     against it rather than adding, so the two gaps match. */
   .model-pick-badge {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    padding: 8px 12px; border-radius: 12px; margin: 4px 0 10px; font-size: 12px;
+    padding: 8px 12px; border-radius: 12px; margin: 10px 0; font-size: 12px;
   }
   .model-pick-badge.high { background: linear-gradient(135deg, #10251a, #1c1c1e); border: 1px solid #1e4a2f; }
   .model-pick-badge.medium { background: linear-gradient(135deg, #241f10, #1c1c1e); border: 1px solid #4a3f1e; }
