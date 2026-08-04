@@ -29,8 +29,16 @@ TOKEN_CACHE_PATH = "data/clob_token_cache.json"
 NOTABLE_MOVEMENT_THRESHOLD_PCT = 15.0
 MAX_HISTORY_POINTS = 30
 
-LINE_COLOR_A = "#d4af37"
-LINE_COLOR_B = "#8a8f9a"
+# CORNER COLOURS, matching the waterfall. Fighter A was gold and fighter B a
+# neutral grey -- so the chart said "model" in the site's colour language
+# while actually meaning "the fighter on the left", and gave the second
+# fighter no identity at all.
+# Red/blue reads as two corners, and it returns gold to meaning MODEL
+# everywhere. Safe here specifically because this chart has no direction
+# colouring: it draws in greys and one accent, so corner-red can't be
+# confused with a falling line.
+LINE_COLOR_A = "#c8443c"
+LINE_COLOR_B = "#4a7fd4"
 
 
 def load_token_cache() -> dict:

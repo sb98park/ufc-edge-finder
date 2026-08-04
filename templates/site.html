@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Octane Alpha | Quantitative UFC Analytics & Edge Detection</title>
 
 <link rel="icon" type="image/svg+xml" href="favicon.svg?v=6">
@@ -36,6 +36,19 @@
      genuinely floating rather than marginally lighter.
      The panels keep their blue lift (+11, +14) so the elevation system is
      intact: surfaces still get cooler as they rise. */
+  /* CORNER COLOURS -- which fighter, not whether something is good.
+     They are always rendered as a labelled PAIR, and that pairing is what
+     stops corner-red reading as the status red: a lone red number means
+     negative, red beside blue with two names attached means two sides.
+     Deliberately deeper and less saturated than --red (#ff5c5c) so a corner
+     never looks like a warning even at a glance.
+     This also frees --accent (gold) and --accent-cool (cyan) to mean only
+     MODEL and MARKET, which they already meant everywhere else -- using them
+     for fighters too made the same cyan mean "the book" in one place and
+     "the man on the right" in another. */
+  --corner-red: #c8443c;
+  --corner-blue: #4a7fd4;
+
   --bg: #000000; --panel: #1c1c1e; --panel2: #242426; --border: #2e2e30;
   /* #1c1c1e is Apple's own dark-mode elevated-surface value. Navy opposed
      the gold, a warm bias came out dull olive, and #222 sat too light
@@ -1439,9 +1452,9 @@
      a reader skimming rather than reading. */
   .wf-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   .wf-head-row.fav .wf-head-name,
-  .wf-head-row.fav .wf-head-pct { color: var(--accent); }
+  .wf-head-row.fav .wf-head-pct { color: var(--corner-red); }
   .wf-head-row.dog .wf-head-name,
-  .wf-head-row.dog .wf-head-pct { color: var(--accent-cool); }
+  .wf-head-row.dog .wf-head-pct { color: var(--corner-blue); }
   /* A small square in the segment colour, so the tie reads even for anyone
      who can't separate gold from cyan. */
   .wf-head-row .wf-head-name::before {
@@ -1455,8 +1468,8 @@
   .wf-head-name { max-width: 46vw; }
   .wf-head-pct { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
   .wf-head-row.fav .wf-head-pct { font-size: 17px; font-weight: 700; font-family: var(--font-display); }
-  .wf-split { height: 9px; border-radius: 4px; background: var(--accent-cool); overflow: hidden; margin: 5px 0; }
-  .wf-split-fill { display: block; height: 100%; background: var(--accent); border-radius: 4px 0 0 5px; }
+  .wf-split { height: 9px; border-radius: 4px; background: var(--corner-blue); overflow: hidden; margin: 5px 0; }
+  .wf-split-fill { display: block; height: 100%; background: var(--corner-red); border-radius: 4px 0 0 5px; }
   /* Fill animations. These are re-triggered from JS whenever the panel is
      opened (see the .waterfall-block toggle handler) because CSS
      animations do not reliably advance while an ancestor is hidden, and
@@ -1505,13 +1518,13 @@
   .wf-why { display: block; font-size: 9px; font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 1px; }
   .wf-bar-cell { flex: 0 0 26%; height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
   .wf-bar { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
-  .wf-bar.pos { background: linear-gradient(90deg, rgba(212,175,55,0.55), var(--accent)); }
-  .wf-bar.neg { background: linear-gradient(90deg, rgba(92,200,255,0.45), var(--accent-cool)); }
+  .wf-bar.pos { background: linear-gradient(90deg, rgba(200,68,60,0.5), var(--corner-red)); }
+  .wf-bar.neg { background: linear-gradient(90deg, rgba(74,127,212,0.45), var(--corner-blue)); }
   .wf-nums { flex: 0 0 62px; text-align: right; }
   .wf-delta { display: block; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .wf-delta::after { content: "pp"; font-size: 9px; font-weight: 600; opacity: 0.75; margin-left: 1px; }
-  .wf-delta.pos { color: var(--accent); }
-  .wf-delta.neg { color: var(--accent-cool); }
+  .wf-delta.pos { color: var(--corner-red); }
+  .wf-delta.neg { color: var(--corner-blue); }
   .wf-run { display: block; font-size: 9px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 1px; }
   .waterfall-total {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -1840,7 +1853,15 @@
        edge-to-edge slab -- detachment is most of what makes it read as
        glass rather than a toolbar. */
     position: fixed; left: 12px; right: 12px;
-    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    /* Placed against the HOME INDICATOR, not the screen edge.
+       safe-area-inset-bottom is 34px on a button-less iPhone; the indicator
+       line sits roughly 8px up and is about 5px tall, so its top edge is
+       ~13px from the bottom. Subtracting 12px puts the bar ~22px up -- about
+       the same gap above the indicator as the indicator has below it, which
+       is the symmetry Apple's own floating bars read as having.
+       max() keeps a sane 10px on anything without an inset (Android, older
+       iPhones, desktop), where there is no indicator to sit above. */
+    bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px));
     z-index: 90; display: flex; align-items: stretch;
     /* A TRUE CAPSULE at any height. A fixed 22px radius could only be right
        for one of the two states: a shape reads as a capsule when its radius
@@ -3582,10 +3603,6 @@
               <span class="wf-head-name">{{ wf.underdog }}</span>
               <span class="wf-head-pct">{{ wf.underdog_pct }}%</span>
             </div>
-          </div>
-          <div class="waterfall-caption">
-            Start from an even fight at 50%, then watch each factor move the number.
-            The moves add up exactly to {{ wf.favorite_pct }}%.
           </div>
           <div class="waterfall-row start">
             <span class="wf-label">Even fight<span class="wf-why">before anything is known about either man</span></span>
