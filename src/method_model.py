@@ -127,3 +127,49 @@ def method_probabilities(ko_press: float, sub_press: float, ko_rate_sum: float,
     e = [math.exp(v - m) for v in z]
     total = sum(e)
     return {"ko": e[KO] / total, "sub": e[SUB] / total, "decision": e[DEC] / total}
+
+
+def reconcile_fighter_methods(seed_a, seed_b, win_a, win_b, fight_dist, iters=80):
+    """
+    Per-fighter method probabilities that match BOTH known margins.
+
+    Returns a 2x3 grid [[ko_a, sub_a, dec_a], [ko_b, sub_b, dec_b]] where each
+    ROW sums to that fighter's win probability and each COLUMN sums to the
+    fight-level probability for that method. The whole grid therefore sums
+    to 1 -- the six outcomes are mutually exclusive and exhaustive.
+
+    WHY THIS EXISTS. The per-fighter numbers were previously produced by
+    multiplying a win probability by three independently-blended
+    method-given-win rates that didn't sum to 1. Each fighter's methods
+    overshot his own win probability, the six rows summed to 126.6% on a real
+    card, and a submission row read 30.6% against a market implying 15.4% --
+    an apparent 15-point edge that was arithmetic rather than signal.
+
+    A first fix normalised only the model-only projection path, missing that
+    edge_finder computes PRICED rows through a separate blend. The grid stayed
+    incoherent at 119.9% because the two paths disagreed. Hence this shared
+    function: one computation, both callers.
+
+    The seeds carry the only unvalidated part -- a fighter's relative
+    preference among methods. Iterative proportional fitting keeps that
+    preference's SHAPE while forcing both margins to hold exactly.
+    """
+    grid = [[max(float(v), 1e-4) for v in seed_a],
+            [max(float(v), 1e-4) for v in seed_b]]
+    rows = [float(win_a), float(win_b)]
+    cols = None
+    if fight_dist:
+        cols = [float(fight_dist["ko"]), float(fight_dist["sub"]), float(fight_dist["decision"])]
+
+    for _ in range(iters):
+        for i in range(2):
+            tot = sum(grid[i]) or 1e-9
+            grid[i] = [v * rows[i] / tot for v in grid[i]]
+        if not cols:
+            break                      # rows only: still coherent, no column target
+        for j in range(3):
+            tot = (grid[0][j] + grid[1][j]) or 1e-9
+            f = cols[j] / tot
+            grid[0][j] *= f
+            grid[1][j] *= f
+    return grid

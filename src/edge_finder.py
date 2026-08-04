@@ -13,7 +13,7 @@ import re
 import pandas as pd
 
 from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob
-from .method_model import method_probabilities
+from .method_model import method_probabilities, reconcile_fighter_methods
 from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
 
 
@@ -95,7 +95,8 @@ def compute_moneyline_edges(
     return pd.DataFrame(rows).sort_values("edge_pct", ascending=False).reset_index(drop=True)
 
 
-def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -> pd.DataFrame:
+def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
+                         elo_ratings: dict[str, float] | None = None) -> pd.DataFrame:
     """
     Method-of-victory props (KO/TKO, Submission, Decision). Prior-informed
     blend: starts at the DIVISIONAL baseline rate for that method (a
@@ -135,6 +136,50 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
                 opp_vulnerability = opp[method_loss_col[method]] / opp_losses
         return blend_method_probability(divisional_prior, own_rate, opp_vulnerability, total_wins)
 
+    # RECONCILED GRID, cached per fight. These rows previously came from an
+    # independent blend, so the priced KO rows and the model-only SUB/DEC rows
+    # disagreed: each fighter's methods overshot his win probability and the
+    # six summed to 119.9%. Fixing only the projection path left the priced
+    # rows untouched, which is why the KO numbers didn't move.
+    # One computation, shared with model_preview via method_model.
+    _grid_cache = {}
+
+    def _reconciled(fight_id, name_a, name_b):
+        if fight_id in _grid_cache:
+            return _grid_cache[fight_id]
+        ra, rb = _find_fighter(fighters_df, name_a), _find_fighter(fighters_df, name_b)
+        out = None
+        if not ra.empty and not rb.empty:
+            a, b = ra.iloc[0], rb.iloc[0]
+            matchup = predict_matchup(name_a, name_b, fighters_df, elo_ratings)
+            if matchup:
+                seeds = [
+                    [_blended_method_prob(a, rb, m) for m in ("KO/TKO", "SUB", "DEC")],
+                    [_blended_method_prob(b, ra, m) for m in ("KO/TKO", "SUB", "DEC")],
+                ]
+                n_a = max(int(_get(a, "wins", 0)) + int(_get(a, "losses", 0)), 1)
+                n_b = max(int(_get(b, "wins", 0)) + int(_get(b, "losses", 0)), 1)
+                koa, kob = _get(a, "ko_wins", 0) / n_a, _get(b, "ko_wins", 0) / n_b
+                sua, sub_ = _get(a, "sub_wins", 0) / n_a, _get(b, "sub_wins", 0) / n_b
+                kla, klb = _get(a, "ko_losses", 0) / n_a, _get(b, "ko_losses", 0) / n_b
+                sla, slb = _get(a, "sub_losses", 0) / n_a, _get(b, "sub_losses", 0) / n_b
+                gap = abs(elo_ratings.get(name_a, 1500) - elo_ratings.get(name_b, 1500)) / 400.0 if elo_ratings else 0.0
+                dist = method_probabilities(
+                    ko_press=koa * klb + kob * kla, sub_press=sua * slb + sub_ * sla,
+                    ko_rate_sum=koa + kob, sub_rate_sum=sua + sub_,
+                    durability=kla + klb, elo_gap=gap,
+                )
+                out = {
+                    name_a: dict(zip(("KO/TKO", "SUB", "DEC"),
+                                     reconcile_fighter_methods(seeds[0], seeds[1],
+                                                               matchup["prob_a"], matchup["prob_b"], dist)[0])),
+                    name_b: dict(zip(("KO/TKO", "SUB", "DEC"),
+                                     reconcile_fighter_methods(seeds[0], seeds[1],
+                                                               matchup["prob_a"], matchup["prob_b"], dist)[1])),
+                }
+        _grid_cache[fight_id] = out
+        return out
+
     for _, row in props.iterrows():
         stats = _find_fighter(fighters_df, row["selection"])
         if stats.empty:
@@ -144,6 +189,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
         # find the opponent to factor in their specific vulnerability
         opponent_name = row["fighter_b"] if row["selection"] == row["fighter_a"] else row["fighter_a"]
         opp_stats = _find_fighter(fighters_df, opponent_name)
+        _grid = _reconciled(row["fight_id"], row["fighter_a"], row["fighter_b"])
 
         if row["selection_method"] == "FINISH":
             # "Wins by finish" = KO/TKO or SUB -- these are mutually
@@ -153,7 +199,10 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
             # of the same prior-informed blend already trusted for the
             # individual KO/SUB props, rather than inventing a separate
             # "finish" prior from scratch.
-            model_p = _blended_method_prob(f, opp_stats, "KO/TKO") + _blended_method_prob(f, opp_stats, "SUB")
+            if _grid and row["selection"] in _grid:
+                model_p = _grid[row["selection"]]["KO/TKO"] + _grid[row["selection"]]["SUB"]
+            else:
+                model_p = _blended_method_prob(f, opp_stats, "KO/TKO") + _blended_method_prob(f, opp_stats, "SUB")
             model_p = min(0.97, model_p)  # same sanity ceiling style used elsewhere in this module
         else:
             total_wins = max(int(f["wins"]), 1)
@@ -165,7 +214,13 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame) -
             own_rate = rate_map.get(row["selection_method"])
             if own_rate is None:
                 continue
-            model_p = _blended_method_prob(f, opp_stats, row["selection_method"])
+            # Reconciled value when available, so this row agrees with the
+            # moneyline and with the fight-level split. The raw blend stays as
+            # a fallback for fights the reconciler can't build a grid for.
+            if _grid and row["selection"] in _grid:
+                model_p = _grid[row["selection"]][row["selection_method"]]
+            else:
+                model_p = _blended_method_prob(f, opp_stats, row["selection_method"])
 
         imp = american_to_implied_prob(row["odds_american"])
 
@@ -617,7 +672,7 @@ def find_all_edges(
 ) -> pd.DataFrame:
     frames = [
         compute_moneyline_edges(upcoming_df, elo_ratings, fighters_df, fight_history_df),
-        compute_method_edges(upcoming_df, fighters_df),
+        compute_method_edges(upcoming_df, fighters_df, elo_ratings),
         compute_total_rounds_edges(upcoming_df, fighters_df, elo_ratings),
         compute_goes_the_distance_edges(upcoming_df, fighters_df, elo_ratings),
         compute_round_betting_edges(upcoming_df, fighters_df),

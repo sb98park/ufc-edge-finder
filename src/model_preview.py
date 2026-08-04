@@ -10,7 +10,7 @@ import pandas as pd
 
 from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg
-from src.method_model import method_probabilities
+from src.method_model import method_probabilities, reconcile_fighter_methods
 
 
 def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
@@ -123,35 +123,13 @@ def build_full_market_projection(
     # proportional fitting. The result matches both by construction: each
     # row sums to that fighter's win probability, each column to the
     # fight-level method probability, and the whole grid to 1.
-    seed = []
+    seeds = []
     for row, opp_row in ((row_a, row_b), (row_b, row_a)):
-        seed.append([
-            max(_method_vulnerability_blend(row, opp_row, m, divisional_priors), 1e-4)
+        seeds.append([
+            _method_vulnerability_blend(row, opp_row, m, divisional_priors)
             for m in ("KO/TKO", "Submission", "Decision")
         ])
-
-    targets_row = [prob_a, prob_b]
-    fight_dist = _md if _md else None
-    if fight_dist:
-        targets_col = [fight_dist["ko"], fight_dist["sub"], fight_dist["decision"]]
-    else:
-        # No validated fight-level split available: fall back to normalising
-        # each fighter's own preferences. Still coherent (rows hit the
-        # moneyline, grid sums to 1), just without the column constraint.
-        targets_col = None
-
-    grid = [r[:] for r in seed]
-    for _ in range(80):
-        for i in range(2):
-            tot = sum(grid[i]) or 1e-9
-            grid[i] = [v * targets_row[i] / tot for v in grid[i]]
-        if not targets_col:
-            break
-        for j in range(3):
-            tot = (grid[0][j] + grid[1][j]) or 1e-9
-            f = targets_col[j] / tot
-            grid[0][j] *= f
-            grid[1][j] *= f
+    grid = reconcile_fighter_methods(seeds[0], seeds[1], prob_a, prob_b, _md)
 
     method_rows = []
     for i, name in enumerate((fighter_a, fighter_b)):
