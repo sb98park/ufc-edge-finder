@@ -2524,17 +2524,6 @@
     white-space: nowrap;
     padding-left: 2px; padding-right: 2px;
   }
-  /* GAP ONLY. The first version repeated "Book 41.0%" and "Model 67.3%",
-     which the dot labels already state on the track -- and its negative
-     margin pulled it straight into the model label sitting below the line.
-     The dots carry the two values; this states the one thing they don't. */
-  .edge-divergence-readout {
-    text-align: center; font-size: 11px; color: var(--muted);
-    margin-top: 4px; letter-spacing: 0.1px;
-  }
-  .edge-divergence-readout .dv-gap { font-weight: 700; font-family: var(--font-display); }
-  .edge-divergence-readout .dv-gap.pos { color: var(--green, #3ddc84); }
-  .edge-divergence-readout .dv-gap.neg { color: var(--red, #ff5c5c); }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3422,13 +3411,11 @@
           <span class="edge-divergence-label model">Model<br>{{ model_pct }}%</span>
         </div>
       </div>
-      {# Static readout. Fixed position, always legible, cannot collide with
-         the dots at any gap size -- which the floating pill did whenever the
-         model and book were close. The coloured span between the dots already
-         shows the magnitude; this just names it. #}
-      <div class="edge-divergence-readout">
-        <span class="dv-gap {{ 'pos' if edge_pct > 0 else 'neg' }}">{{ edge_pct|abs|round(1) }} pt gap</span>
-      </div>
+      {# No gap readout. The number was stated four times over: both dots
+         carry their percentages, the coloured span shows the magnitude, and
+         the card header already gives the edge -- which is the version
+         anyone actually acts on. A raw point gap was the least useful of the
+         four and cost two stacked lines of text under a 3px track. #}
     </div>
   {%- endmacro %}
 
