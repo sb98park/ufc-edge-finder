@@ -4363,6 +4363,19 @@
     });
 
     function showHub() {
+      // HOLD the back button through the transition. Its visibility is keyed
+      // off body[data-section], so changing that below removes it from the
+      // flow instantly -- the outgoing view jumped up by the button's height
+      // before it had even started sliding away.
+      // An inline display keeps it in place for the duration, then hands
+      // control back to CSS.
+      const _bb = document.getElementById('back-btn');
+      const _wasVisible = _bb && getComputedStyle(_bb).display !== 'none';
+      if (_wasVisible) {
+        _bb.style.display = 'flex';
+        setTimeout(() => { _bb.style.display = ''; }, 340);
+      }
+
       if (window.__syncTabBar) window.__syncTabBar("__hub");
       document.body.dataset.section = "__hub";
       if (window.__onSectionChange) window.__onSectionChange("__hub");
