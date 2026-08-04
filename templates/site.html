@@ -46,8 +46,8 @@
      MODEL and MARKET, which they already meant everywhere else -- using them
      for fighters too made the same cyan mean "the book" in one place and
      "the man on the right" in another. */
-  --corner-red: #d32f2f;
-  --corner-blue: #2563eb;
+  --corner-red: #e53935;
+  --corner-blue: #3b82f6;
 
   --bg: #000000; --panel: #1c1c1e; --panel2: #242426; --border: #2e2e30;
   /* #1c1c1e is Apple's own dark-mode elevated-surface value. Navy opposed
@@ -1528,10 +1528,10 @@
   .wf-bar { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
   /* "pos" means the factor pushes toward the FAVOURITE -- so the colour
      depends on which corner the favourite is in, not on the sign. */
-  .fav-red .wf-bar.pos { background: linear-gradient(90deg, rgba(211,47,47,0.5), var(--corner-red)); }
-  .fav-red .wf-bar.neg { background: linear-gradient(90deg, rgba(37,99,235,0.45), var(--corner-blue)); }
-  .fav-blue .wf-bar.pos { background: linear-gradient(90deg, rgba(37,99,235,0.45), var(--corner-blue)); }
-  .fav-blue .wf-bar.neg { background: linear-gradient(90deg, rgba(211,47,47,0.5), var(--corner-red)); }
+  .fav-red .wf-bar.pos { background: linear-gradient(90deg, rgba(229,57,53,0.5), var(--corner-red)); }
+  .fav-red .wf-bar.neg { background: linear-gradient(90deg, rgba(59,130,246,0.45), var(--corner-blue)); }
+  .fav-blue .wf-bar.pos { background: linear-gradient(90deg, rgba(59,130,246,0.45), var(--corner-blue)); }
+  .fav-blue .wf-bar.neg { background: linear-gradient(90deg, rgba(229,57,53,0.5), var(--corner-red)); }
   .wf-nums { flex: 0 0 62px; text-align: right; }
   .wf-delta { display: block; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .wf-delta::after { content: "pp"; font-size: 9px; font-weight: 600; opacity: 0.75; margin-left: 1px; }
