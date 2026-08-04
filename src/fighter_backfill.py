@@ -1299,6 +1299,72 @@ def _fuzzy_espn_match(target_norm: str, id_map: dict) -> str | None:
     return None
 
 
+def fetch_espn_fight_history(athlete_id: str, fighter_name: str) -> list[dict]:
+    """
+    EVERY completed bout for a fighter, from the site athlete endpoint.
+
+    _fetch_last_fight_from_events_map reads the same payload and keeps only
+    the most recent bout. The rest is thrown away -- and it's exactly what
+    fight_history.csv is missing.
+
+    WHY THAT MATTERS. fight_history.csv comes from a raw UFC dataset that lags
+    by weeks, and merge_results_into_history.py can only add fights the SITE
+    itself watched. Anything between those two windows is invisible: Quillan
+    Salkilld's May 2026 KO of Beneil Dariush is in neither, so the model saw
+    a 4-fight streak against a real 5 -- below the threshold for a fight fact,
+    and one streak-bonus step short in the rating.
+
+    Returns rows shaped for fight_history.csv. Scheduled bouts are excluded by
+    requiring a W/L, the same test used for last-fight -- ESPN marks some
+    upcoming fights as played, so a flag alone can't be trusted.
+    """
+    out = []
+    try:
+        resp = requests.get(SITE_ATHLETE_URL.format(athlete_id),
+                            headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            return out
+        events_map = resp.json().get("eventsMap") or {}
+    except Exception as exc:
+        print(f"[history] eventsMap fetch failed for {fighter_name}: {exc}")
+        return out
+
+    today = dt.date.today().isoformat()
+    for rec in events_map.values():
+        if not isinstance(rec, dict):
+            continue
+        date = str(rec.get("gameDate") or "")[:10]
+        if not date or date > today:
+            continue
+        result = rec.get("gameResult")
+        if isinstance(result, dict):
+            result = result.get("displayName") or result.get("abbreviation")
+        result = str(result or "").strip().upper()
+        if result not in ("W", "L", "WIN", "LOSS"):
+            continue
+        opp = rec.get("opponent")
+        if isinstance(opp, dict):
+            opp = opp.get("displayName") or opp.get("shortDisplayName") or opp.get("name")
+        if not opp:
+            continue
+        method = ""
+        status = rec.get("status")
+        if isinstance(status, dict):
+            stype = status.get("type") if isinstance(status.get("type"), dict) else status
+            m = stype.get("detail") or stype.get("description")
+            if isinstance(m, str) and m.strip().lower() not in STATUS_WORDS:
+                method = m.strip()
+        won = result.startswith("W")
+        out.append({
+            "date": date,
+            "fighter_a": fighter_name if won else str(opp).strip(),
+            "fighter_b": str(opp).strip() if won else fighter_name,
+            "winner": fighter_name if won else str(opp).strip(),
+            "method": method,
+        })
+    return out
+
+
 def ensure_roster_rows(fighters_path: str = "data/fighters.csv",
                        card_paths: tuple[str, ...] = ("data/fight_cards.csv", "data/future_cards.csv")) -> int:
     """

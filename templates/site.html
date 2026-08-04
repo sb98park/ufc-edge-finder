@@ -2524,13 +2524,14 @@
     white-space: nowrap;
     padding-left: 2px; padding-right: 2px;
   }
+  /* GAP ONLY. The first version repeated "Book 41.0%" and "Model 67.3%",
+     which the dot labels already state on the track -- and its negative
+     margin pulled it straight into the model label sitting below the line.
+     The dots carry the two values; this states the one thing they don't. */
   .edge-divergence-readout {
     text-align: center; font-size: 11px; color: var(--muted);
-    margin-top: -26px; letter-spacing: 0.1px;
+    margin-top: 4px; letter-spacing: 0.1px;
   }
-  .edge-divergence-readout .dv-book { color: var(--accent-cool); font-weight: 600; }
-  .edge-divergence-readout .dv-model { color: var(--accent2); font-weight: 600; }
-  .edge-divergence-readout .dv-sep { opacity: 0.5; margin: 0 5px; }
   .edge-divergence-readout .dv-gap { font-weight: 700; font-family: var(--font-display); }
   .edge-divergence-readout .dv-gap.pos { color: var(--green, #3ddc84); }
   .edge-divergence-readout .dv-gap.neg { color: var(--red, #ff5c5c); }
@@ -3426,10 +3427,6 @@
          model and book were close. The coloured span between the dots already
          shows the magnitude; this just names it. #}
       <div class="edge-divergence-readout">
-        <span class="dv-book">Book {{ book_pct }}%</span>
-        <span class="dv-sep">·</span>
-        <span class="dv-model">Model {{ model_pct }}%</span>
-        <span class="dv-sep">·</span>
         <span class="dv-gap {{ 'pos' if edge_pct > 0 else 'neg' }}">{{ edge_pct|abs|round(1) }} pt gap</span>
       </div>
     </div>
