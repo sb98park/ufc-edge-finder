@@ -13,7 +13,7 @@ import re
 import pandas as pd
 
 from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob
-from .method_model import method_probabilities, reconcile_fighter_methods
+from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win
 from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
 
 
@@ -161,10 +161,21 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
             # arguments have produced disagreeing numbers on the same page.
             matchup = predict_matchup(name_a, name_b, fighters_df, elo_ratings, fight_history_df)
             if matchup:
-                seeds = [
-                    [_blended_method_prob(a, rb, m) for m in ("KO/TKO", "SUB", "DEC")],
-                    [_blended_method_prob(b, ra, m) for m in ("KO/TKO", "SUB", "DEC")],
-                ]
+                # FITTED seed, matching model_preview exactly -- one source
+                # for the shape, as the totals already share one reconciler.
+                def _seed(own, opp, own_name, opp_name):
+                    n_o = max(int(_get(own, "wins", 0)) + int(_get(own, "losses", 0)), 1)
+                    n_p = max(int(_get(opp, "wins", 0)) + int(_get(opp, "losses", 0)), 1)
+                    g = ((elo_ratings.get(own_name, 1500) - elo_ratings.get(opp_name, 1500)) / 400.0
+                         if elo_ratings else 0.0)
+                    return method_given_win(
+                        own_ko_rate=_get(own, "ko_wins", 0) / n_o,
+                        own_sub_rate=_get(own, "sub_wins", 0) / n_o,
+                        opp_ko_lost=_get(opp, "ko_losses", 0) / n_p,
+                        opp_sub_lost=_get(opp, "sub_losses", 0) / n_p,
+                        elo_gap=g,
+                    )
+                seeds = [_seed(a, b, name_a, name_b), _seed(b, a, name_b, name_a)]
                 n_a = max(int(_get(a, "wins", 0)) + int(_get(a, "losses", 0)), 1)
                 n_b = max(int(_get(b, "wins", 0)) + int(_get(b, "losses", 0)), 1)
                 koa, kob = _get(a, "ko_wins", 0) / n_a, _get(b, "ko_wins", 0) / n_b

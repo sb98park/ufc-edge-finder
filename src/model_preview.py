@@ -10,7 +10,7 @@ import pandas as pd
 
 from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg
-from src.method_model import method_probabilities, reconcile_fighter_methods
+from src.method_model import method_probabilities, reconcile_fighter_methods, method_given_win
 
 
 def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
@@ -130,12 +130,23 @@ def build_full_market_projection(
     # proportional fitting. The result matches both by construction: each
     # row sums to that fighter's win probability, each column to the
     # fight-level method probability, and the whole grid to 1.
+    # FITTED seed, replacing the hand-weighted divisional blend. Same
+    # denominators as training (total fights), same signed elo gap.
     seeds = []
-    for row, opp_row in ((row_a, row_b), (row_b, row_a)):
-        seeds.append([
-            _method_vulnerability_blend(row, opp_row, m, divisional_priors)
-            for m in ("KO/TKO", "Submission", "Decision")
-        ])
+    for row, opp_row, own_name, opp_name in (
+        (row_a, row_b, fighter_a, fighter_b), (row_b, row_a, fighter_b, fighter_a)
+    ):
+        n_own = max(int(_get(row, "wins", 0)) + int(_get(row, "losses", 0)), 1)
+        n_opp = max(int(_get(opp_row, "wins", 0)) + int(_get(opp_row, "losses", 0)), 1)
+        gap = ((effective_ratings.get(own_name, 1500) - effective_ratings.get(opp_name, 1500)) / 400.0
+               if effective_ratings else 0.0)
+        seeds.append(method_given_win(
+            own_ko_rate=_get(row, "ko_wins", 0) / n_own,
+            own_sub_rate=_get(row, "sub_wins", 0) / n_own,
+            opp_ko_lost=_get(opp_row, "ko_losses", 0) / n_opp,
+            opp_sub_lost=_get(opp_row, "sub_losses", 0) / n_opp,
+            elo_gap=gap,
+        ))
     grid = reconcile_fighter_methods(seeds[0], seeds[1], prob_a, prob_b, _md)
 
     method_rows = []

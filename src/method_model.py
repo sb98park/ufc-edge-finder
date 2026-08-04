@@ -173,3 +173,73 @@ def reconcile_fighter_methods(seed_a, seed_b, win_a, win_b, fight_dist, iters=80
             grid[0][j] *= f
             grid[1][j] *= f
     return grid
+
+
+# ---------------------------------------------------------------------------
+# P(method | win) -- given a fighter wins, HOW does he win?
+#
+# This is the SEED for reconcile_fighter_methods(). It was previously a
+# hand-weighted blend of divisional priors and career rates that had never
+# been measured; the reconciliation guaranteed the totals were coherent while
+# saying nothing about whether the shape being reconciled was any good.
+#
+# VALIDATED (research_method_given_win.py), frozen 2019+ holdout, n=1743 wins:
+#
+#     holdout log-loss   base rates 1.0047   this model 0.9372
+#
+#     calibration        base      model     observed
+#       KO/TKO          +3.3%     +2.8%       31.2%
+#       SUB             +2.0%     +0.7%       16.5%
+#       DEC             -5.3%     -3.5%       52.4%
+#
+#     five-round wins (n=267)   predicted   actual
+#       KO/TKO                     35.0%     37.8%
+#       SUB                        16.8%     14.6%
+#       DEC                        48.2%     47.6%
+#
+# NO `scheduled` FEATURE, for the same reason the fight-level model dropped
+# it: including it put five-round calibration 13.2% out, because it learned
+# "longer fight, more finishes" from few five-round wins. Removing it improved
+# log-loss AND cut the subgroup error to 2.8%. Fitting the two lengths
+# separately was tested and came out worse still.
+#
+# KNOWN RESIDUAL: in the top KO bucket (predicted >60%, n=40) the model reads
+# 67.3% against an actual 77.5% -- UNDER-confident by 10pp. Small sample, and
+# it errs toward understating a KO, which suppresses edges rather than
+# inventing them. Worth rechecking as that bucket fills.
+#
+# DENOMINATORS ARE TOTAL FIGHTS, matching how the features were built in
+# training. Dividing win-methods by wins and loss-methods by losses is the
+# skew that once produced a 60% submission probability out of nothing.
+MGW_FEATURES = ["own_ko_rate", "own_sub_rate", "opp_ko_lost", "opp_sub_lost",
+                "ko_match", "sub_match", "elo_gap"]
+
+MGW_COEF = [
+    [1.144111, -0.634738, 0.984310, 0.078320, 0.987627, -0.467497, -0.582525],
+    [-0.427732, 1.904605, 0.031644, 1.739280, -0.493505, 0.210939, 0.195236],
+    [-0.716379, -1.269866, -1.015954, -1.817599, -0.494122, 0.256558, 0.387289],
+]
+MGW_INTERCEPT = [-0.163982, -0.912995, 1.076977]
+
+
+def method_given_win(own_ko_rate, own_sub_rate, opp_ko_lost, opp_sub_lost,
+                     elo_gap) -> list[float]:
+    """
+    [P(KO|win), P(SUB|win), P(DEC|win)] for one fighter against one opponent.
+
+    Sums to 1 by construction -- one softmax over three outcomes.
+
+    elo_gap is SIGNED and from this fighter's perspective
+    ((own - opponent) / 400), unlike the fight-level model which uses the
+    absolute gap. A favourite and an underdog finish differently, and the sign
+    is what carries that.
+    """
+    ko_match = own_ko_rate * opp_ko_lost
+    sub_match = own_sub_rate * opp_sub_lost
+    x = [own_ko_rate, own_sub_rate, opp_ko_lost, opp_sub_lost,
+         ko_match, sub_match, elo_gap]
+    z = [MGW_INTERCEPT[k] + sum(c * v for c, v in zip(MGW_COEF[k], x)) for k in range(3)]
+    m = max(z)
+    e = [math.exp(v - m) for v in z]
+    tot = sum(e)
+    return [v / tot for v in e]
