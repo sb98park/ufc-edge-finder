@@ -4588,25 +4588,52 @@
     // off. That also preserves a way back to the list, which matters since
     // the back button is hidden on mobile.
     const DRAWER_SECTIONS = ['funfacts', 'favorites', 'parlays', 'coming', 'howitworks', 'disclaimer'];
-    let lastDrawerSection = null;
+    // Persisted, not just held in a closure variable. A module-scope variable
+    // depends on this block having executed before the first navigation and on
+    // nothing else resetting it -- both true as far as I can tell, and the
+    // restore still wasn't happening. sessionStorage removes the whole class
+    // of question: the value survives regardless of script order, and it's
+    // inspectable when something goes wrong.
+    const DRAWER_KEY = 'octane-last-drawer-section';
+
+    function getLastDrawer() {
+      try {
+        const v = sessionStorage.getItem(DRAWER_KEY);
+        return DRAWER_SECTIONS.indexOf(v) !== -1 ? v : null;
+      } catch (e) { return null; }
+    }
+    function setLastDrawer(v) {
+      try {
+        if (v) sessionStorage.setItem(DRAWER_KEY, v);
+        else sessionStorage.removeItem(DRAWER_KEY);
+      } catch (e) { /* private mode -- memory just won't persist */ }
+    }
 
     function goToMore() {
       const current = document.body.dataset.section || '';
+      const remembered = getLastDrawer();
+      if (window.__drawerDebug) {
+        alert(`current=${current}\nremembered=${remembered}\n` +
+              `-> ${DRAWER_SECTIONS.indexOf(current) !== -1 ? 'go up to list' : (remembered ? 'restore ' + remembered : 'no memory, show list')}`);
+      }
       if (DRAWER_SECTIONS.indexOf(current) !== -1) {
         // Already inside the drawer -- go up to the list.
-        lastDrawerSection = null;
+        setLastDrawer(null);
         showHub();
         return;
       }
-      if (lastDrawerSection) {
-        showSection(lastDrawerSection);
+      if (remembered) {
+        showSection(remembered);
       } else {
         showHub();
       }
     }
     window.__rememberDrawerSection = function (id) {
-      if (DRAWER_SECTIONS.indexOf(id) !== -1) lastDrawerSection = id;
+      if (DRAWER_SECTIONS.indexOf(id) !== -1) setLastDrawer(id);
     };
+    // ?drawerdebug=1 reports what goToMore decided and why. Mobile Chrome has
+    // no console, and every branch here is silent.
+    window.__drawerDebug = location.search.indexOf('drawerdebug') !== -1;
 
 
     // ===== Segmented controls: sliding pill + finger-tracked swipe =====
