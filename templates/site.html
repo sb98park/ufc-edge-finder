@@ -72,6 +72,16 @@
   @media (min-width: 1024px) {
     html { scrollbar-color: var(--accent) #1c1c1e; scrollbar-width: thin; }
   }
+  /* Hidden entirely on mobile. Scoping the colour left the browser's DEFAULT
+     grey bar behind -- unstyled is not the same as absent.
+     Deliberately targets only the ROOT scroller: a page's vertical scrollbar
+     tells you nothing you don't already know, but a horizontal one inside the
+     markets table is the only sign there is more to the right, so those keep
+     theirs. */
+  @media (max-width: 1023px) {
+    html { scrollbar-width: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  }
   /* DESKTOP ONLY. A styled gold scrollbar reads as a web page; native apps
      don't have one, which is why Instagram and Reddit appear to have none.
      Scoped rather than hidden: `display: none` would kill the OS's own
@@ -1714,8 +1724,8 @@
   .tape-value.right { text-align: right; color: var(--muted); }
   .tape-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; flex: 1; text-align: center; }
   .tape-bar-track { display: flex; height: 6px; border-radius: 4px; overflow: hidden; background: var(--panel2); }
-  .tape-bar-a { background: linear-gradient(90deg, transparent, var(--accent2)); border-radius: 4px 0 0 3px; transition: width 1.4s ease-out; }
-  .tape-bar-b { background: linear-gradient(90deg, var(--muted), transparent); border-radius: 0 3px 3px 0; transition: width 1.4s ease-out; }
+  .tape-bar-a { background: linear-gradient(90deg, transparent, var(--corner-red)); border-radius: 4px 0 0 3px; transition: width 1.4s ease-out; }
+  .tape-bar-b { background: linear-gradient(90deg, var(--corner-blue), transparent); border-radius: 0 3px 3px 0; transition: width 1.4s ease-out; }
 
   .radar-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
   .radar-chart { display: block; max-width: 100%; height: auto; }
@@ -1735,7 +1745,12 @@
     0% { transform: scale(1); opacity: 0.55; }
     75%, 100% { transform: scale(3); opacity: 0; }
   }
-  .radar-legend-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+  /* Names in white -- they are labels, not values. The DOT carries the
+     colour, which is all the legend needs to do. */
+  .radar-legend-item { font-size: 11px; color: var(--text); display: flex; align-items: center; gap: 5px; }
+  .radar-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .radar-dot.a { background: var(--corner-red); }
+  .radar-dot.b { background: var(--corner-blue); }
   .radar-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .radar-dot.a { background: #d4af37; }
   .radar-dot.b { background: #8a8f9a; }

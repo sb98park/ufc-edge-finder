@@ -294,7 +294,7 @@ def build_dual_line_chart_svg(
         f'<text x="{left_pad + plot_w}" y="{height - 4}" font-size="9" fill="#8a8f9a" text-anchor="end">{end_label}</text>'
     )
 
-    def render_line(points, color):
+    def render_line(points, color, price_label=None):
         if len(points) < 2:
             return "", None, None
         pts_sorted = sorted(points, key=lambda p: p[0])
@@ -316,6 +316,25 @@ def build_dual_line_chart_svg(
     # on screen said whose line was moving.
     _colour_a = line_color or LINE_COLOR_A
     line_a_svg, pct_a, raw_a = render_line(points_a, _colour_a)
+
+    # Current price at the endpoint, for single-line charts. Dropping the
+    # legend removed this along with the fighter name -- but the price was the
+    # half worth keeping; what made the legend wrong was labelling a chart
+    # about the FIGHT with a fighter's name.
+    endpoint_price_svg = ""
+    if not show_legend and raw_a is not None and points_a:
+        _pts = sorted(points_a, key=lambda p: p[0])
+        _ex, _ey = x_at(_pts[-1][0]), y_at(_pts[-1][1])
+        _label = _book_odds_label(raw_a, 1 - raw_a)
+        if _label:
+            # Flipped to the left of the point when it would run off the
+            # right edge, so a late-rising line can't push it out of frame.
+            _anchor = "end" if _ex > width - 42 else "start"
+            _dx = -7 if _anchor == "end" else 7
+            endpoint_price_svg = (
+                f'<text x="{_ex + _dx:.1f}" y="{_ey - 6:.1f}" font-size="10" font-weight="700" '
+                f'fill="#eef0f2" text-anchor="{_anchor}">{_label}</text>'
+            )
     line_b_svg, pct_b, raw_b = render_line(points_b, LINE_COLOR_B)
 
     # Pair each side's raw probability with a real complement when both
@@ -375,7 +394,7 @@ def build_dual_line_chart_svg(
     return (
         f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" class="dual-chart" role="img" '
         f'aria-label="{name_a} vs {name_b} probability over time{" (one side implied)" if (implied_a or implied_b) else ""}">'
-        + grid_svg + axis_svg + line_a_svg + line_b_svg + legend_svg + x_labels_svg + mask_svg +
+        + grid_svg + axis_svg + line_a_svg + line_b_svg + legend_svg + x_labels_svg + mask_svg + endpoint_price_svg +
         '</svg>'
     )
 
