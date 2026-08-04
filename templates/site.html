@@ -361,7 +361,10 @@
   .back-btn {
     display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--border);
     border-radius: 20px; padding: 7px 14px; color: var(--text); font-size: 12px; font-weight: 600;
-    cursor: pointer; margin-bottom: 14px; width: fit-content; position: sticky; top: 8px; z-index: 50;
+    cursor: pointer; margin-bottom: 14px; width: fit-content;
+    /* Sticky so it stays reachable down a long section -- Coming Up and How
+       It Works both run several screens. */
+    position: sticky; top: 8px; z-index: 50;
   }
   .back-btn:active { background: var(--accent-cool); color: #1c1c1e; }
   .segment-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 12px; }
@@ -2043,7 +2046,20 @@
     /* The back button existed because the hub was the only way out of a
        section. With a persistent tab bar every destination is one tap away,
        so it's dead weight taking a full row at the top of every screen. */
+    /* Visible for drawer sections only. Tapping the active tab to pop to
+       root is a real iOS gesture, but nothing advertises it -- Settings still
+       shows a chevron on every drilled-in screen. Reachability isn't
+       discoverability, which is what the earlier "every destination is one
+       tap away" reasoning missed.
+       Tab destinations keep it hidden: they have their own tab, so there's no
+       parent to return to. */
     #back-btn { display: none; }
+    body[data-section="funfacts"] #back-btn,
+    body[data-section="favorites"] #back-btn,
+    body[data-section="parlays"] #back-btn,
+    body[data-section="coming"] #back-btn,
+    body[data-section="howitworks"] #back-btn,
+    body[data-section="disclaimer"] #back-btn { display: flex; }
     /* "More" should hold what the tabs DON'T -- showing Card/Edges/Locks/
        Record again just duplicates the bar directly above it. */
     .hub-card[data-section-nav="thisweekend"],
@@ -2966,7 +2982,7 @@
   </div>
 
   <div id="detail-view">
-    <div class="back-btn" id="back-btn" onclick="showHub()">← Back to Overview</div>
+    <div class="back-btn" id="back-btn" onclick="showHub()" role="button" tabindex="0">‹ More</div>
 
   <div class="detail-section" data-section="track">
   <div class="standout-title" id="section-trackrecord">{{ icon_track() }} Model Track Record</div>
@@ -4338,6 +4354,14 @@
         transitionViews(hubView, detailView, 'forward', activateAndReveal);
       }
     }
+    // A div with role="button" doesn't get Enter/Space for free the way a
+    // real <button> does. Wired here rather than converting the element,
+    // which would inherit button styling across three breakpoints.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.target && e.target.id === 'back-btn') { e.preventDefault(); showHub(); }
+    });
+
     function showHub() {
       if (window.__syncTabBar) window.__syncTabBar("__hub");
       document.body.dataset.section = "__hub";
