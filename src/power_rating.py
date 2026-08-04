@@ -71,6 +71,8 @@ def build_effective_ratings(
         history_df["fighter_b"] if "fighter_b" in history_df else pd.Series(dtype=str),
     ]).value_counts()
 
+    streaks = _current_streaks(history_df)
+
     effective = {}
     for _, row in fighters_df.iterrows():
         name = row["name"]
@@ -84,4 +86,66 @@ def build_effective_ratings(
             elo_r = elo_ratings.get(name, RATING_CENTER)
             effective[name] = weight * elo_r + (1 - weight) * stats_rating
 
+        effective[name] += _streak_bonus(n_fights_tracked, streaks.get(name, 0))
+
     return effective
+
+
+def _current_streaks(history_df: pd.DataFrame) -> dict[str, int]:
+    """Consecutive wins as at the most recent fight, per fighter."""
+    if history_df is None or history_df.empty:
+        return {}
+    if "winner" not in history_df.columns:
+        return {}
+    df = history_df
+    if "date" in df.columns:
+        df = df.sort_values("date")
+    streak: dict[str, int] = {}
+    for r in df.itertuples(index=False):
+        a = getattr(r, "fighter_a", None)
+        b = getattr(r, "fighter_b", None)
+        w = getattr(r, "winner", None)
+        if not a or not b or not w:
+            continue
+        loser = b if w == a else a
+        streak[w] = streak.get(w, 0) + 1
+        streak[loser] = 0
+    return streak
+
+
+# Validated in research_experience_adjustment.py on a frozen 2019+ holdout
+# (n=3430): Brier 0.2432 -> 0.2402, accuracy 55.9% -> 56.9%, and the
+# sign-flipped control was clearly WORSE (0.2506), so the shape is structure
+# rather than noise. Every experience cohort improved.
+#
+# WHAT THIS CORRECTS. Elo accumulates over fights, so a rating reflects how
+# many you have won more than who you beat. Measured against 5,978 closing
+# lines, the model sat 6.6% BELOW the market on fighters with 0-3 UFC fights
+# and 9.8% ABOVE it on those with 16+ -- a 16-point monotonic swing.
+#
+# ONLY THE STREAK TERM SURVIVED VALIDATION. A fight-count term was fit
+# alongside it and the sweep chose ZERO for it: the gradient against the
+# market is real, but on its own it does not convert into better
+# predictions. Being newly PROVEN -- few fights and currently winning -- is
+# what the rating lags on. That distinction only surfaced because the fix
+# was judged on outcomes rather than on closing the gap it was fit to.
+#
+# The 16+ cohort improved MOST (-0.0099) despite receiving no bonus itself,
+# because the correction lands on the risers they face. That cohort was
+# picking at 50.2% -- a coin flip -- before this.
+STREAK_K = 20
+STREAK_MAX = 6
+STREAK_APPLIES_UNDER = 8
+
+
+def _streak_bonus(n_fights: int, streak: int) -> float:
+    """
+    Rating points for a low-experience fighter on an active win streak.
+
+    Capped at six wins and restricted to fighters under nine tracked
+    fights: the cohort evidence only covers that range, and an uncapped
+    term would extrapolate into territory nothing was measured in.
+    """
+    if n_fights > STREAK_APPLIES_UNDER or streak <= 0:
+        return 0.0
+    return STREAK_K * min(int(streak), STREAK_MAX)
