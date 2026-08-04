@@ -96,7 +96,8 @@ def compute_moneyline_edges(
 
 
 def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
-                         elo_ratings: dict[str, float] | None = None) -> pd.DataFrame:
+                         elo_ratings: dict[str, float] | None = None,
+                         fight_history_df: pd.DataFrame | None = None) -> pd.DataFrame:
     """
     Method-of-victory props (KO/TKO, Submission, Decision). Prior-informed
     blend: starts at the DIVISIONAL baseline rate for that method (a
@@ -151,7 +152,14 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
         out = None
         if not ra.empty and not rb.empty:
             a, b = ra.iloc[0], rb.iloc[0]
-            matchup = predict_matchup(name_a, name_b, fighters_df, elo_ratings)
+            # SAME ARGUMENTS as compute_moneyline_edges. Omitting
+            # fight_history_df drops the recent-form adjustment, so the win
+            # probabilities used to constrain this grid differed from the
+            # moneyline shown two rows above -- each fighter's methods missed
+            # his own win probability by ~2.5pp.
+            # This is the third time two predict_matchup calls with different
+            # arguments have produced disagreeing numbers on the same page.
+            matchup = predict_matchup(name_a, name_b, fighters_df, elo_ratings, fight_history_df)
             if matchup:
                 seeds = [
                     [_blended_method_prob(a, rb, m) for m in ("KO/TKO", "SUB", "DEC")],
@@ -672,7 +680,7 @@ def find_all_edges(
 ) -> pd.DataFrame:
     frames = [
         compute_moneyline_edges(upcoming_df, elo_ratings, fighters_df, fight_history_df),
-        compute_method_edges(upcoming_df, fighters_df, elo_ratings),
+        compute_method_edges(upcoming_df, fighters_df, elo_ratings, fight_history_df),
         compute_total_rounds_edges(upcoming_df, fighters_df, elo_ratings),
         compute_goes_the_distance_edges(upcoming_df, fighters_df, elo_ratings),
         compute_round_betting_edges(upcoming_df, fighters_df),
