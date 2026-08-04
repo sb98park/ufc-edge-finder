@@ -65,7 +65,13 @@
     --t-lead: 14px; --t-h3: 17px; --t-h2: 22px; --t-h1: 34px;
   }
   * { box-sizing: border-box; }
-  html { scrollbar-color: var(--accent) #1c1c1e; scrollbar-width: thin; scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; }
+  /* scrollbar-color is the STANDARDS-track property; scoping only the
+     -webkit- pseudo-elements left this one global, which is why the gold bar
+     survived on mobile. Both have to move together. */
+  @media (min-width: 1024px) {
+    html { scrollbar-color: var(--accent) #1c1c1e; scrollbar-width: thin; }
+  }
   /* DESKTOP ONLY. A styled gold scrollbar reads as a web page; native apps
      don't have one, which is why Instagram and Reddit appear to have none.
      Scoped rather than hidden: `display: none` would kill the OS's own
@@ -1556,17 +1562,11 @@
     margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px;
   }
   .wf-total-label { font-weight: 600; color: var(--text); min-width: 0; }
-  /* CORNER-COLOURED, not gold. Gold means "model" only where it is being
-     contrasted with "market" -- inside this block there is no market number
-     to distinguish it from, so gold was separating nothing and reading as a
-     third colour in a two-colour argument.
-     The label already says "Model's Pick", which frees the colour to answer
-     WHICH FIGHTER: the bars push toward a corner and the conclusion arrives
-     in that corner's colour. Scoped under the same fav-red/fav-blue class the
-     rows use, so it can never disagree with them. */
-  .fav-red .wf-total-prob { color: var(--corner-red); }
-  .fav-blue .wf-total-prob { color: var(--corner-blue); }
-  .wf-total-prob { font-weight: 700; font-size: 17px; font-family: var(--font-display); }
+  /* WHITE. Tried gold (wrong -- gold means model-vs-market and there is no
+     market number here) then corner colour (defensible, but the fighter's
+     name sits right beside it already). White reads as the conclusion rather
+     than as one more coloured element in an argument built from colour. */
+  .wf-total-prob { font-weight: 700; font-size: 17px; color: var(--text); font-family: var(--font-display); }
   @media (max-width: 400px) {
     .waterfall-row { gap: 6px; }
     .wf-bar-cell { flex-basis: 20%; }
@@ -1677,7 +1677,10 @@
 
   .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
   .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
-  .compare-table th { color: var(--accent2); font-size: 11px; font-weight: 600; }
+  /* White. These are the two fighters' NAMES heading their columns -- gold
+     means model here and they are neither a model output nor a market one,
+     they are just labels for which column is whose. */
+  .compare-table th { color: var(--text); font-size: 11px; font-weight: 600; }
   @media (max-width: 480px) {
     /* Fixed layout + explicit column widths keeps the table within the
        viewport regardless of content length -- without this, table-layout's

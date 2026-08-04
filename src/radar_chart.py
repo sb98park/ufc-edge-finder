@@ -119,7 +119,19 @@ def build_radar_chart_svg(
     poly_a = polygon_points(metrics_a)
     poly_b = polygon_points(metrics_b)
 
-    color_a, color_b = "#d4af37", "#8a8f9a"
+    # CORNER COLOURS, matching the waterfall and the movement charts.
+    # Fighter A (listed first) is the red corner, B the blue.
+    #
+    # Gold/grey was worse than it looked: grey is the least separable colour
+    # on a charcoal panel, so fighter B effectively had no identity, and gold
+    # meant "model" everywhere else on the site.
+    #
+    # Overlap is fine here because the fills are 0.18/0.22 with solid 2px
+    # strokes -- at that opacity two strongly separated hues read as a mixed
+    # region rather than mud, and the strokes keep both outlines legible
+    # wherever they cross. If the fills were near-opaque this swap would have
+    # made overlap worse whatever colours were chosen.
+    color_a, color_b = "#e53935", "#3b82f6"
 
     return (
         f'<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" class="radar-chart" role="img" '

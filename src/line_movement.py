@@ -199,6 +199,7 @@ def build_dual_line_chart_svg(
     name_a: str, name_b: str, width: int = 300, height: int = 170,
     implied_a: bool = False, implied_b: bool = False,
     line_color: str | None = None, show_dot: bool = True,
+    show_legend: bool = True,
 ) -> str | None:
     """
     Renders both fighters' probability history on one chart with a real
@@ -326,6 +327,12 @@ def build_dual_line_chart_svg(
 
     legend_svg = ""
     ly = 10
+    # A legend distinguishes SERIES. On a single-line chart there is nothing
+    # to distinguish, so "Salkilld +259" floating over a Total Rounds chart
+    # was labelling the wrong thing entirely -- and the chart's own title
+    # already names the market.
+    if not show_legend:
+        pct_a = pct_b = None
     if pct_a is not None:
         short_name_a = name_a.split()[-1] + (" ~" if implied_a else "")
         odds_a = _book_odds_label(raw_a, complement_a) if complement_a is not None else None
@@ -552,7 +559,8 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
 
         svg = build_dual_line_chart_svg(points, [], edge["fighter"], "",
                                         width=260, height=90,
-                                        line_color=colour, show_dot=False)
+                                        line_color=colour, show_dot=False,
+                                        show_legend=False)
         if svg:
             other_charts.append({"label": label, "svg": svg})
     fight["other_charts"] = other_charts
