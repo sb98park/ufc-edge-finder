@@ -1200,6 +1200,12 @@
   .odds-compare-arrow { color: var(--muted); font-size: 15px; flex-shrink: 0; }
   .edge-divergence { margin: 14px 4px 18px; }
   .edge-divergence-track { position: relative; height: 3px; background: var(--border); border-radius: 4px; margin: 40px 6px 40px; }
+  /* Coloured by DIRECTION -- green when the model reads above the book, red
+     when below. The two-tone gradient it replaces was decorative; this
+     segment's job is to say which way the disagreement runs, and its width
+     already says how far. */
+  .edge-divergence-fill.model-high { background: var(--green, #3ddc84) !important; }
+  .edge-divergence-fill.model-low { background: var(--red, #ff5c5c) !important; }
   .edge-divergence-fill {
     position: absolute; top: 0; height: 3px; border-radius: 4px;
     background: linear-gradient(90deg, var(--accent-cool), var(--accent2));
@@ -1218,12 +1224,6 @@
   .edge-divergence-dot.model .edge-divergence-label { bottom: auto; top: 14px; }
   .edge-divergence-label.book { color: var(--accent-cool); }
   .edge-divergence-label.model { color: var(--accent2); }
-  .edge-divergence-gap-value {
-    position: absolute; top: 50%; transform: translate(-50%, -50%); z-index: 2;
-    background: var(--bg); border: 1px solid var(--border); border-radius: 20px;
-    padding: 3px 9px; white-space: nowrap;
-    font-size: 11px; color: var(--muted); font-family: var(--font-display); font-weight: 600; letter-spacing: 0.2px;
-  }
   .standout-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .rationale {
     font-size: 12px; color: var(--muted); line-height: 1.55;
@@ -2524,6 +2524,16 @@
     white-space: nowrap;
     padding-left: 2px; padding-right: 2px;
   }
+  .edge-divergence-readout {
+    text-align: center; font-size: 11px; color: var(--muted);
+    margin-top: -26px; letter-spacing: 0.1px;
+  }
+  .edge-divergence-readout .dv-book { color: var(--accent-cool); font-weight: 600; }
+  .edge-divergence-readout .dv-model { color: var(--accent2); font-weight: 600; }
+  .edge-divergence-readout .dv-sep { opacity: 0.5; margin: 0 5px; }
+  .edge-divergence-readout .dv-gap { font-weight: 700; font-family: var(--font-display); }
+  .edge-divergence-readout .dv-gap.pos { color: var(--green, #3ddc84); }
+  .edge-divergence-readout .dv-gap.neg { color: var(--red, #ff5c5c); }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -3403,14 +3413,24 @@
     {%- set gap_width = (model_pct - book_pct)|abs -%}
     <div class="edge-divergence">
       <div class="edge-divergence-track">
-        <div class="edge-divergence-fill" data-target-width="{{ gap_width }}%" style="left: {{ left_pct }}%; width: 0%;"></div>
+        <div class="edge-divergence-fill {{ 'model-high' if model_pct > book_pct else 'model-low' }}" data-target-width="{{ gap_width }}%" style="left: {{ left_pct }}%; width: 0%;"></div>
         <div class="edge-divergence-dot book" style="left: {{ book_pct }}%;">
           <span class="edge-divergence-label book">Book<br>{{ book_pct }}%</span>
         </div>
         <div class="edge-divergence-dot model" style="left: {{ model_pct }}%;">
           <span class="edge-divergence-label model">Model<br>{{ model_pct }}%</span>
         </div>
-        <div class="edge-divergence-gap-value" style="left: {{ left_pct + gap_width/2 }}%;">{{ edge_pct|round(1) }} pt gap</div>
+      </div>
+      {# Static readout. Fixed position, always legible, cannot collide with
+         the dots at any gap size -- which the floating pill did whenever the
+         model and book were close. The coloured span between the dots already
+         shows the magnitude; this just names it. #}
+      <div class="edge-divergence-readout">
+        <span class="dv-book">Book {{ book_pct }}%</span>
+        <span class="dv-sep">·</span>
+        <span class="dv-model">Model {{ model_pct }}%</span>
+        <span class="dv-sep">·</span>
+        <span class="dv-gap {{ 'pos' if edge_pct > 0 else 'neg' }}">{{ edge_pct|abs|round(1) }} pt gap</span>
       </div>
     </div>
   {%- endmacro %}
