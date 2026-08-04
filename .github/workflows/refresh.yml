@@ -45,6 +45,30 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Merge recorded results into fight history
+        # Runs BEFORE generate_site so the ratings, streak bonus, recency
+        # weighting and fun facts all see the fights immediately.
+        #
+        # This gap was invisible until a fighter's streak read 4 against a
+        # real 5: the site had been recording results to fight_results.csv
+        # and never carrying them into fight_history.csv, so it watched 52
+        # fights and then predicted the next card as though none had
+        # happened. Manual scripts get forgotten -- a 41-fight backlog is
+        # what forgetting looks like.
+        #
+        # No network: reads a file the previous run already wrote.
+        run: python scripts/merge_results_into_history.py --apply || true
+
+      - name: Backfill history gaps from ESPN
+        # Catches fights that happened between the raw dataset's cutoff and
+        # the site's own tracking window -- the range neither other source
+        # covers.
+        #
+        # NON-BLOCKING deliberately. ESPN returns 403 after a burst of calls,
+        # and a throttled backfill must not stop the site publishing odds and
+        # results. It retries with backoff and reports the block clearly.
+        run: python scripts/backfill_history_from_espn.py --apply || true
+
       - name: Generate site
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
