@@ -260,10 +260,60 @@ def build_fight_preview(
     underdog_row = row_b if favorite == fighter_a else row_a
 
     divisional_priors = compute_divisional_method_priors(fighters_df)
-    method_rates = {
-        method: _method_vulnerability_blend(favorite_row, underdog_row, method, divisional_priors)
-        for method in ["KO/TKO", "Submission", "Decision"]
-    }
+
+    # Fight-level method distribution for the Fight props group, so it can
+    # show all three answers even when a market for one is unpriced.
+    # Denominators are TOTAL FIGHTS, matching how the model was trained.
+    _md = None
+    try:
+        _na = max(int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0)), 1)
+        _nb = max(int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0)), 1)
+        _koa, _kob = _get(row_a, "ko_wins", 0) / _na, _get(row_b, "ko_wins", 0) / _nb
+        _sua, _sub = _get(row_a, "sub_wins", 0) / _na, _get(row_b, "sub_wins", 0) / _nb
+        _kla, _klb = _get(row_a, "ko_losses", 0) / _na, _get(row_b, "ko_losses", 0) / _nb
+        _sla, _slb = _get(row_a, "sub_losses", 0) / _na, _get(row_b, "sub_losses", 0) / _nb
+        _gap = abs(effective_ratings.get(fighter_a, 1500)
+                   - effective_ratings.get(fighter_b, 1500)) / 400.0 if effective_ratings else 0.0
+        _md = method_probabilities(
+            ko_press=_koa * _klb + _kob * _kla,
+            sub_press=_sua * _slb + _sub * _sla,
+            ko_rate_sum=_koa + _kob, sub_rate_sum=_sua + _sub,
+            durability=_kla + _klb, elo_gap=_gap,
+            scheduled_rounds=5 if is_five_round else 3,
+        )
+        if _md:
+            _md = {k: round(v, 3) for k, v in _md.items()}
+    except (TypeError, ValueError, KeyError):
+        _md = None
+
+    # FROM THE RECONCILED GRID -- the values the table actually shows.
+    #
+    # Reading the fitted seed instead was still wrong: reconciliation imposes
+    # the moneyline and the fight-level method split on that seed, and doing
+    # so can change WHICH method comes out highest. Seven fights on one card
+    # disagreed between headline and table for exactly that reason.
+    # The rule is the same one this codebase keeps relearning: display the
+    # number that is displayed, not an input to it.
+    def _seed_for(own_row, opp_row, own_name, opp_name):
+        n_o = max(int(_get(own_row, "wins", 0)) + int(_get(own_row, "losses", 0)), 1)
+        n_p = max(int(_get(opp_row, "wins", 0)) + int(_get(opp_row, "losses", 0)), 1)
+        g = ((effective_ratings.get(own_name, 1500) - effective_ratings.get(opp_name, 1500)) / 400.0
+             if effective_ratings else 0.0)
+        return method_given_win(
+            own_ko_rate=_get(own_row, "ko_wins", 0) / n_o,
+            own_sub_rate=_get(own_row, "sub_wins", 0) / n_o,
+            opp_ko_lost=_get(opp_row, "ko_losses", 0) / n_p,
+            opp_sub_lost=_get(opp_row, "sub_losses", 0) / n_p,
+            elo_gap=g,
+        )
+
+    _grid = reconcile_fighter_methods(
+        _seed_for(row_a, row_b, fighter_a, fighter_b),
+        _seed_for(row_b, row_a, fighter_b, fighter_a),
+        prob_a, 1.0 - prob_a, _md,
+    )
+    _fav_idx = 0 if favorite == fighter_a else 1
+    method_rates = dict(zip(["KO/TKO", "Submission", "Decision"], _grid[_fav_idx]))
     likely_method = max(method_rates, key=method_rates.get)
 
     combined_finish_rate = (
@@ -398,31 +448,6 @@ def build_fight_preview(
     comparison["a"]["badges"] = factor_badges["a"]
     comparison["b"]["badges"] = factor_badges["b"]
     waterfall = build_probability_waterfall(matchup)
-
-    # Fight-level method distribution for the Fight props group, so it can
-    # show all three answers even when a market for one is unpriced.
-    # Denominators are TOTAL FIGHTS, matching how the model was trained.
-    _md = None
-    try:
-        _na = max(int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0)), 1)
-        _nb = max(int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0)), 1)
-        _koa, _kob = _get(row_a, "ko_wins", 0) / _na, _get(row_b, "ko_wins", 0) / _nb
-        _sua, _sub = _get(row_a, "sub_wins", 0) / _na, _get(row_b, "sub_wins", 0) / _nb
-        _kla, _klb = _get(row_a, "ko_losses", 0) / _na, _get(row_b, "ko_losses", 0) / _nb
-        _sla, _slb = _get(row_a, "sub_losses", 0) / _na, _get(row_b, "sub_losses", 0) / _nb
-        _gap = abs(effective_ratings.get(fighter_a, 1500)
-                   - effective_ratings.get(fighter_b, 1500)) / 400.0 if effective_ratings else 0.0
-        _md = method_probabilities(
-            ko_press=_koa * _klb + _kob * _kla,
-            sub_press=_sua * _slb + _sub * _sla,
-            ko_rate_sum=_koa + _kob, sub_rate_sum=_sua + _sub,
-            durability=_kla + _klb, elo_gap=_gap,
-            scheduled_rounds=5 if is_five_round else 3,
-        )
-        if _md:
-            _md = {k: round(v, 3) for k, v in _md.items()}
-    except (TypeError, ValueError, KeyError):
-        _md = None
 
     return {
         "favorite": favorite,

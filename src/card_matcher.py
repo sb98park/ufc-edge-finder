@@ -416,6 +416,24 @@ def group_edges_by_card(
             # title fights) are scheduled for 5. If a stray one ever arrives
             # from the book, or a projection is generated for the wrong
             # length, it's nonsense rather than a long shot, so drop it.
+            # SINGLE SOURCE for the headline method. The preview computed its
+            # own reconciled grid, and two computations of the same thing drift
+            # -- one fight in sixty disagreed with the table it sat above.
+            # The projection is what the table renders, so the headline reads
+            # from it rather than recomputing. Duplicating a calculation to
+            # display it twice is the mistake this file keeps making.
+            if projection and fight.get("preview"):
+                fav = fight["preview"].get("favorite")
+                fav_rows = [
+                    (r["market"].split(": ", 1)[1], r["model_prob"])
+                    for r in projection.get("method_rows", [])
+                    if r.get("fighter") == fav and ": " in r.get("market", "")
+                ]
+                if fav_rows:
+                    fight["preview"]["likely_method"] = max(fav_rows, key=lambda t: t[1])[0]
+                    fight["preview"]["likely_method_rate"] = round(
+                        max(fav_rows, key=lambda t: t[1])[1], 3)
+
             max_line = 4.5 if is_five_round else 2.5
 
             def _round_line_out_of_range(e):

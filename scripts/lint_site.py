@@ -307,6 +307,57 @@ def check_method_coherence(c):
     print(f"       [method-coherence] checked {checked} fight(s), {seen_methods} method rows")
 
 
+def check_headline_matches_table(c):
+    """
+    The donut headline's method must be the favourite's highest method row.
+
+    Both come from the model; they came from DIFFERENT computations. The
+    headline used a hand-weighted divisional blend while the rows used the
+    fitted, reconciled grid, so a card could read "Gamrot by Submission" with
+    Submission at 13.5% and Decision at 32.0% two inches below.
+
+    That is the fifth instance today of two code paths computing the same
+    quantity differently. The others were caught by reading numbers on a
+    phone; this check catches it at build time.
+    """
+    blocks = re.split(r'<details class="fight-card', c)[1:]
+    if not blocks:
+        return warn("headline-vs-table", "no fight cards found")
+
+    checked = 0
+    for block in blocks:
+        m = re.search(r'by\s+(KO/TKO|Submission|Decision)', block)
+        if not m:
+            continue
+        headline_method = m.group(1)
+        fav = re.search(r'data-fight-key="([^"|]+)', block)
+        rows = re.findall(
+            r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+            block, re.DOTALL)
+        best, best_p, name_of_best = None, -1.0, None
+        per_fighter = {}
+        for label, prob in rows:
+            label = re.sub(r"<[^>]+>", "", label).strip()
+            mm = re.match(r"^(.*?)\s*[\u2014\u2013-]\s*(KO/TKO|Submission|Decision)$", label)
+            if not mm:
+                continue
+            per_fighter.setdefault(mm.group(1).strip(), []).append((mm.group(2), float(prob)))
+        if not per_fighter:
+            continue
+        # The favourite is whoever's methods sum highest -- no need to parse
+        # the headline name out of prose.
+        fav_name = max(per_fighter, key=lambda k: sum(p for _, p in per_fighter[k]))
+        top = max(per_fighter[fav_name], key=lambda t: t[1])
+        checked += 1
+        if top[0] != headline_method:
+            fail("headline-vs-table",
+                 f"{fav_name}: headline says {headline_method}, table's highest is "
+                 f"{top[0]} at {top[1]:.1f}%")
+
+    if checked:
+        print(f"       [headline-vs-table] checked {checked} fight(s)")
+
+
 def main():
     c = load()
     check_css_braces(c)
@@ -318,6 +369,7 @@ def main():
     check_market_string_consistency()
     check_probability_coherence()
     check_method_coherence(c)
+    check_headline_matches_table(c)
 
     for label, items in (("FAIL", FAILURES), ("WARN", WARNINGS)):
         for check, detail in items:
