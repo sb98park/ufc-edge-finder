@@ -310,9 +310,11 @@ def build_dual_line_chart_svg(
         svg = (
             f'<polyline points="{coords}" fill="none" stroke="{color}" stroke-width="2.5" '
             f'stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/>'
-            f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" '
-            f'class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>'
-            f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}" class="chart-draw-endpoint"/>'
+            # Just the dot, and unclassed -- it is revealed by the clip
+            # sweep reaching it, not by an opacity delay. The halo used to
+            # be emitted here too, inside the clip, where its pulse ran
+            # under the cover and was uncovered a fraction before the price.
+            f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}"/>'
         )
         return svg, round(last_p * 100), last_p
 
@@ -327,6 +329,7 @@ def build_dual_line_chart_svg(
     # legend removed this along with the fighter name -- but the price was the
     # half worth keeping; what made the legend wrong was labelling a chart
     # about the FIGHT with a fighter's name.
+    halo_svg = ""
     endpoint_price_svg = ""
     if not show_legend and raw_a is not None and points_a:
         _pts = sorted(points_a, key=lambda p: p[0])
@@ -342,9 +345,18 @@ def build_dual_line_chart_svg(
             # fade and lands WITH the finished line. Without it the price sat
             # there from the first frame while the line crawled toward it --
             # the answer arriving before the working.
+            # Both carry chart-endpoint-late: hidden until the sweep's own
+            # duration has elapsed, which is the instant the clip finishes
+            # uncovering the dot. Kept OUT of the clip because they sit to the
+            # dot's right, where the sweep would always reach them later.
             endpoint_price_svg = (
                 f'<text x="{_ex + 7:.1f}" y="{_ey + 3.5:.1f}" font-size="10" font-weight="700" '
-                f'fill="#eef0f2" text-anchor="start" class="chart-draw-endpoint">{_label}</text>'
+                f'fill="#eef0f2" text-anchor="start" class="chart-endpoint-late">{_label}</text>'
+            )
+            halo_svg = (
+                f'<circle cx="{_ex:.1f}" cy="{_ey:.1f}" r="3.5" fill="none" stroke="{_colour_a}" '
+                f'stroke-width="1.5" class="chart-endpoint-halo" '
+                f'style="transform-box: fill-box; transform-origin: center;"/>'
             )
     line_b_svg, pct_b, raw_b = render_line(points_b, LINE_COLOR_B)
 
@@ -429,8 +441,8 @@ def build_dual_line_chart_svg(
         # than timed, so no amount of earlier revealing can put them on screen
         # before the line.
         + clip_svg + grid_svg + axis_svg + x_labels_svg
-        + f'<g clip-path="url(#{clip_id})">' + line_a_svg + line_b_svg
-        + endpoint_price_svg + '</g>'
+        + f'<g clip-path="url(#{clip_id})">' + line_a_svg + line_b_svg + '</g>'
+        + halo_svg + endpoint_price_svg
         + legend_svg +
         '</svg>'
     )
