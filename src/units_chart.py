@@ -144,6 +144,10 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
          reaching its x position, which IS the moment the line arrives.
          No timing, no class state, nothing to get out of sync. -->
     <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="{trend_color}"/>
+    <!-- The HALO belongs inside too. It is a ring at the same point as the
+         dot, so leaving it outside meant a circle sat visible at the end of
+         the line before the line arrived -- indistinguishable from the dot
+         itself, which is why moving only the dot appeared to fix nothing. -->
+    <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="none" stroke="{trend_color}" stroke-width="1.5" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>
   </g>
-  <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="none" stroke="{trend_color}" stroke-width="1.5" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>
 </svg>"""

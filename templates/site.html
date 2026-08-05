@@ -1763,8 +1763,11 @@
      rather than by a delay, so the halo is the only thing left that needs
      timing -- and it should begin the instant the dot arrives, not while the
      line is still travelling toward it. */
+  /* Inside the clip now, so it cannot show before the line reaches it. The
+     delay just aligns the first pulse with the sweep completing rather than
+     starting mid-draw under the clip where nobody would see it. */
   .chart-block.revealed .chart-endpoint-halo {
-    opacity: 1; animation: endpoint-pulse 1.6s ease-out 1.62s 4;
+    opacity: 1; animation: endpoint-pulse 1.6s ease-out 1.6s 4;
   }
   @keyframes endpoint-pulse {
     0% { transform: scale(1); opacity: 0.55; }
