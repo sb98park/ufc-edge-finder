@@ -1751,6 +1751,10 @@
      while the line was still drawing, so it read as a target the line was
      travelling toward rather than as where the line ended up. */
   .chart-draw-endpoint { opacity: 0; transition: opacity 0.35s ease-out; transition-delay: 1.6s; }
+  /* The price arrives WITH the dot rather than trailing it: same delay, but
+     a shorter fade, since a short string reads as "late" at 0.35s where a
+     small dot does not. */
+  text.chart-draw-endpoint { transition: opacity 0.18s ease-out; transition-delay: 1.58s; }
   .chart-block.revealed .chart-draw-endpoint { opacity: 1; }
   .chart-endpoint-halo { opacity: 0; }
   /* Pulse begins when the line LANDS, not 0.2s before it. The mask takes
@@ -6344,6 +6348,13 @@
       // Used to let a section replay its fill animations fresh every
       // time you navigate back into it, instead of only ever playing once.
       function resetFillTarget(el) {
+        // Clear the class as well as the values. Leaving it on meant a block
+        // revealed once could never re-run its reveal -- invisible while the
+        // mask physically covered the endpoint dot, obvious the moment the
+        // mask became a clip and the dot had only its opacity delay to hide
+        // behind.
+        el.classList.remove('revealed');
+        el.querySelectorAll('.radar-chart').forEach(chart => chart.classList.remove('revealed'));
         const affected = el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .ring-progress, .edge-divergence-fill');
         affected.forEach(node => { node.style.transition = 'none'; });
 
