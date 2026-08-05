@@ -4,10 +4,10 @@ Jamahal Hill,Light Heavyweight,77.0,79.0,Orthodox,12,2,7.0,1.0,4.0,1.0,0.0,1.0,4
 Ilia Topuria,Lightweight,67.0,69.0,Orthodox,16,1,8.0,4.0,4.0,1.0,0.0,0.0,52.0,35.0,80.0,2026-06-14,0.38,,Loss,KO/TKO,0.0,,,,Justin Gaethje,Georgia,0.0,False,False,1.727,5.61,4.618,1.611
 Max Holloway,Welterweight,71.0,69.0,Orthodox,27,7,15.0,0.0,12.0,3.0,0.0,4.0,49.0,15.0,75.0,2026-07-11,0.27,34.0,W,KO/TKO,0.0,,,,Conor McGregor,USA,0.0,False,False,0.225,7.839,4.561,0.209
 Islam Makhachev,Welterweight,70.0,70.0,Southpaw,26,1,4.0,15.0,7.0,0.0,1.0,0.0,47.0,62.0,88.0,2025-11-15,0.37,34.0,W,DEC,0.0,,,,Jack Della Maddalena,Russia,0.0,False,False,3.102,2.143,1.516,2.851
-Charles Oliveira,Lightweight,70.0,74.0,Orthodox,34,10,10.0,21.0,3.0,3.0,3.0,4.0,44.0,38.0,55.0,2026-03-07,0.46,,,,0.0,,,,,Brazil,0.0,False,False,2.288,2.666,3.525,0.918
+Charles Oliveira,Lightweight,70.0,74.0,Orthodox,34,10,10.0,21.0,3.0,3.0,3.0,4.0,44.0,38.0,55.0,2026-03-07,0.46,,W,DEC,0.0,,,,Max Holloway,Brazil,0.0,False,False,2.288,2.666,3.525,0.918
 Leon Edwards,Welterweight,73.0,74.0,Orthodox,22,3,9.0,4.0,9.0,1.0,1.0,1.0,46.0,32.0,78.0,2025-11-15,0.3,,L,KO/TKO,0.0,,,,Carlos Prates,UK,0.0,False,False,1.251,2.088,2.664,1.379
 Belal Muhammad,Welterweight,71.0,74.0,Orthodox,24,3,4.0,6.0,14.0,1.0,0.0,2.0,42.0,48.0,82.0,2025-11-22,0.21,,L,DEC,0.0,,,,Ian Machado Garry,USA,0.0,False,False,1.985,4.334,4.426,1.905
-Sean Strickland,Middleweight,73.0,76.0,Orthodox,29,6,10.0,1.0,18.0,2.0,1.0,3.0,51.0,18.0,65.0,2026-02-21,0.19,,,,0.0,,,,,USA,0.0,False,False,0.664,7.192,4.952,0.297
+Sean Strickland,Middleweight,73.0,76.0,Orthodox,29,6,10.0,1.0,18.0,2.0,1.0,3.0,51.0,18.0,65.0,2026-02-21,0.19,,W,KO/TKO,0.0,,,,Anthony Hernandez,USA,0.0,False,False,0.664,7.192,4.952,0.297
 Dricus Du Plessis,Middleweight,73.0,75.0,Orthodox,24,3,12.0,8.0,4.0,1.0,1.0,1.0,45.0,40.0,72.0,2026-07-18,0.3,32.0,W,DEC,0.0,,,,Kamaru Usman,South Africa,0.0,False,False,1.899,3.392,3.005,1.829
 Tom Aspinall,Heavyweight,77.0,79.0,Orthodox,15,3,13.0,2.0,0.0,1.0,0.0,2.0,50.0,30.0,70.0,2025-10-25,0.5,,NC,Eye Poke,0.0,,,,Ciryl Gane,UK,0.0,False,False,2.616,,,
 Conor McGregor,Welterweight,69.0,74.0,Southpaw,22,7,19.0,1.0,2.0,3.0,2.0,2.0,49.0,8.0,60.0,2026-07-11,0.45,37.0,L,KO/TKO,0.0,,,,Max Holloway,Ireland,0.0,False,False,0.66,,,
@@ -36,8 +36,8 @@ Jared Cannonier,Middleweight,71.0,76.0,Southpaw,18,10,12.0,1.0,5.0,4.0,1.0,5.0,4
 Christian Leroy Duncan,Middleweight,73.0,76.0,Orthodox,15,2,7.0,2.0,6.0,1.0,0.0,1.0,48.0,20.0,60.0,2026-07-18,0.3,27.0,W,DEC,0.0,,,,Jared Cannonier,UK,0.0,False,False,0.427,4.411,2.652,0.5
 Magomed Ankalaev,Light Heavyweight,75.0,76.0,Southpaw,21,2,8.0,3.0,10.0,1.0,0.0,1.0,43.0,22.0,78.0,2025-10-04,0.18,34.0,L,KO/TKO,0.0,,,,Alex Pereira,Russia,0.0,False,False,0.794,3.89,3.005,0.696
 Khalil Rountree Jr.,Light Heavyweight,73.0,79.0,Orthodox,15,7,11.0,0.0,4.0,4.0,0.0,3.0,55.0,15.0,50.0,2025-10-04,0.4,36.0,L,KO/TKO,0.0,,,,Jiri Prochazka,USA,0.0,False,False,0.0,4.281,4.62,0.0
-Umar Nurmagomedov,Bantamweight,67.0,68.0,Orthodox,20,1,6.0,7.0,7.0,0.0,1.0,0.0,44.0,48.0,85.0,2026-01-24,0.2,29.0,,,0.0,,,,,Russia,0.0,False,False,4.029,3.425,2.004,4.15
-David Martinez,Bantamweight,66.0,67.0,Orthodox,14,1,6.0,4.0,4.0,0.0,1.0,0.0,46.0,35.0,70.0,2026-02-28,0.25,26.0,,,0.0,,,,,,0.0,False,False,0.866,4.602,2.858,0.995
+Umar Nurmagomedov,Bantamweight,67.0,68.0,Orthodox,20,1,6.0,7.0,7.0,0.0,1.0,0.0,44.0,48.0,85.0,2026-01-24,0.2,29.0,W,DEC,0.0,,,,Deiveson Figueiredo,Russia,0.0,False,False,4.029,3.425,2.004,4.15
+David Martinez,Bantamweight,66.0,67.0,Orthodox,14,1,6.0,4.0,4.0,0.0,1.0,0.0,46.0,35.0,70.0,2026-02-28,0.25,26.0,W,DEC,0.0,,,,Marlon Vera,,0.0,False,False,0.866,4.602,2.858,0.995
 Ian Machado Garry,Welterweight,73.0,77.0,Southpaw,17,1,4.0,2.0,11.0,0.0,1.0,0.0,52.0,30.0,80.0,2025-11-22,0.1,28.0,W,DEC,0.0,,,,Belal Muhammad,Ireland,0.0,False,False,0.924,4.299,2.649,1.041
 Mackenzie Dern,Strawweight,63.0,66.0,Orthodox,16,5,1.0,9.0,6.0,0.0,3.0,2.0,42.0,20.0,55.0,2025-10-25,0.15,33.0,W,DEC,0.0,,,,Virna Jandiroba,USA,0.0,False,False,0.926,3.592,4.042,1.218
 Gillian Robertson,Strawweight,65.0,65.0,Orthodox,17,8,1.0,11.0,5.0,2.0,3.0,3.0,38.0,45.0,60.0,2026-03-14,0.25,29.0,W,DEC,0.0,,,,Amanda Lemos,Canada,0.0,False,False,2.76,3.39,2.668,3.094
@@ -116,89 +116,89 @@ Jan Blachowicz,Light Heavyweight,74.0,78.0,Orthodox,29,12,9.0,9.0,11.0,3.0,2.0,7
 Navajo Stirling,Light Heavyweight,76.0,79.0,Orthodox,11,0,7.0,0.0,4.0,0.0,0.0,0.0,,,,2026-08-01,,28.0,W,KO/TKO,,,,,Jan Blachowicz,New Zealand,0.0,True,True,0.961,5.984,2.511,1.387
 Daniel Rodriguez,Welterweight,73.0,74.0,Southpaw,20,6,9.0,4.0,7.0,2.0,1.0,3.0,,,,2026-08-01,,39.0,L,KO/TKO,,,,,Uroš Medić,USA,0.0,True,True,0.185,6.692,5.355,0.189
 Uroš Medić,Welterweight,73.0,71.0,Southpaw,14,3,12.0,2.0,0.0,1.0,2.0,0.0,,,,2026-08-01,,33.0,W,KO/TKO,,,,,Daniel Rodriguez,Serbia,0.0,True,True,0.36,,,
-Steven Asplund,Heavyweight,77.0,78.0,Orthodox,7,2,6.0,0.0,1.0,0.0,1.0,1.0,,,,2026-03-14,,28.0,L,,,,,,Vitor Petrino,USA,,True,True,0.0,,,
-Guilherme Pat,Heavyweight,77.0,81.0,Orthodox,6,1,4.0,0.0,2.0,0.0,0.0,1.0,,,,2026-04-04,,32.0,L,,,,,,Thomas Petersen,Brazil,,True,True,0.0,,,
-Diego Ferreira,Lightweight,69.0,74.0,Orthodox,19,7,5.0,7.0,7.0,4.0,0.0,3.0,,,,2025-09-13,,41.0,L,,,,,,Alexander Hernandez,Brazil,,True,True,0.818,4.399,3.627,0.809
+Steven Asplund,Heavyweight,77.0,78.0,Orthodox,7,2,6.0,0.0,1.0,0.0,1.0,1.0,,,,2026-03-14,,28.0,L,nan,,,,,Vitor Petrino,USA,,True,True,0.0,,,
+Guilherme Pat,Heavyweight,77.0,81.0,Orthodox,6,1,4.0,0.0,2.0,0.0,0.0,1.0,,,,2026-04-04,,32.0,L,nan,,,,,Thomas Petersen,Brazil,,True,True,0.0,,,
+Diego Ferreira,Lightweight,69.0,74.0,Orthodox,19,7,5.0,7.0,7.0,4.0,0.0,3.0,,,,2025-09-13,,41.0,L,KO/TKO,,,,,Alexander Hernandez,Brazil,,True,True,0.818,4.399,3.627,0.809
 Billy Quarantillo,Lightweight,70.0,70.0,Orthodox,18,7,8.0,5.0,5.0,3.0,1.0,3.0,,,,2024-12-15,,37.0,L,,,,,,Cub Swanson,USA,,True,True,1.59,7.048,6.484,1.786
-Louie Sutherland,Heavyweight,75.0,76.0,Orthodox,11,5,8.0,0.0,3.0,1.0,1.0,0.0,,,,2026-05-02,,32.0,W,,,,,,Tai Tuivasa,England,,True,True,4.945,,,
+Louie Sutherland,Heavyweight,75.0,76.0,Orthodox,11,5,8.0,0.0,3.0,1.0,1.0,0.0,,,,2026-05-02,,32.0,W,nan,,,,,Tai Tuivasa,England,,True,True,4.945,,,
 José Montanha,Heavyweight,76.0,,,6,1,,,,,,,,,,2025-08-30,,29.0,W,,,,,,Bruno de Jesus,Brazil,,True,True,,,,
-Bruno Lopes,Light Heavyweight,74.0,74.0,Orthodox,14,3,6.0,5.0,3.0,2.0,0.0,0.0,,,,2026-03-28,,33.0,L,,,,,,Navajo Stirling,Brazil,,True,True,2.894,,,
-Diyar Nurgozhay,Light Heavyweight,74.0,74.0,Southpaw,11,2,6.0,2.0,3.0,0.0,2.0,0.0,,,,2026-03-07,,29.0,W,,,,,,Rafael Tobias,Kazakhstan,,True,True,1.858,5.187,2.746,1.449
-Amanda Lemos,Women's Strawweight,64.0,65.0,Southpaw,15,6,8.0,3.0,4.0,1.0,2.0,3.0,,,,2026-03-14,,39.0,L,,,,,,Gillian Robertson,Brazil,,True,True,1.021,1.678,2.124,0.976
-Alexia Thainara,Women's Strawweight,64.0,67.0,Orthodox,14,1,0.0,8.0,6.0,0.0,1.0,0.0,,,,2026-03-28,,30.0,W,,,,,,Bruna Brasil,Brazil,,True,True,5.212,,,
-Mateusz Gamrot,Lightweight,70.0,70.5,Southpaw,26,4,8.0,6.0,12.0,0.0,1.0,3.0,,,,2026-04-11,,35.0,W,,,,,,Esteban Ribovics,Poland,,True,True,5.224,3.399,2.682,5.215
-Quillan Salkilld,Lightweight,72.0,75.0,Orthodox,12,1,5.0,4.0,3.0,0.0,1.0,0.0,,,,2026-05-02,,26.0,W,,,,,,Beneil Dariush,Australia,,True,True,6.164,,,
+Bruno Lopes,Light Heavyweight,74.0,74.0,Orthodox,14,3,6.0,5.0,3.0,2.0,0.0,0.0,,,,2026-03-28,,33.0,L,nan,,,,,Navajo Stirling,Brazil,,True,True,2.894,,,
+Diyar Nurgozhay,Light Heavyweight,74.0,74.0,Southpaw,11,2,6.0,2.0,3.0,0.0,2.0,0.0,,,,2026-03-07,,29.0,W,DEC,,,,,Rafael Tobias,Kazakhstan,,True,True,1.858,5.187,2.746,1.449
+Amanda Lemos,Women's Strawweight,64.0,65.0,Southpaw,15,6,8.0,3.0,4.0,1.0,2.0,3.0,,,,2026-03-14,,39.0,L,nan,,,,,Gillian Robertson,Brazil,,True,True,1.021,1.678,2.124,0.976
+Alexia Thainara,Women's Strawweight,64.0,67.0,Orthodox,14,1,0.0,8.0,6.0,0.0,1.0,0.0,,,,2026-03-28,,30.0,W,nan,,,,,Bruna Brasil,Brazil,,True,True,5.212,,,
+Mateusz Gamrot,Lightweight,70.0,70.5,Southpaw,26,4,8.0,6.0,12.0,0.0,1.0,3.0,,,,2026-04-11,,35.0,W,nan,,,,,Esteban Ribovics,Poland,,True,True,5.224,3.399,2.682,5.215
+Quillan Salkilld,Lightweight,72.0,75.0,Orthodox,12,1,5.0,4.0,3.0,0.0,1.0,0.0,,,,2026-05-02,,26.0,W,nan,,,,,Beneil Dariush,Australia,,True,True,6.164,,,
 Neil Magny,Welterweight,75.0,80.0,Orthodox,31,14,9.0,5.0,17.0,4.0,7.0,3.0,,,,2025-12-14,,38.0,L,,,,,,Yaroslav Amosov,USA,,True,True,2.168,2.786,2.826,1.757
-Ramiz Brahimaj,Welterweight,70.0,72.0,Orthodox,13,6,1.0,12.0,0.0,1.0,0.0,5.0,,,,2026-02-21,,33.0,L,,,,,,Punahele Soriano,USA,,True,True,1.994,2.343,2.636,2.279
-Vicente Luque,Middleweight,71.0,75.5,Orthodox,24,12,11.0,10.0,3.0,2.0,3.0,7.0,,,,2026-04-11,,34.0,W,,,,,,Kelvin Gastelum,Brazil,,True,True,0.887,3.373,5.664,1.077
-Tresean Gore,Middleweight,72.0,75.0,Switch,7,4,2.0,4.0,1.0,2.0,0.0,2.0,,,,2026-04-04,,32.0,W,,,,,,Azamat Bekoev,USA,,True,True,1.912,2.578,8.127,1.02
-Chidi Njokuani,Welterweight,75.0,80.0,Orthodox,25,12,15.0,1.0,9.0,5.0,4.0,3.0,,,,2026-02-21,,37.0,L,,,,,,Carlos Leal,USA,,True,True,0.0,6.357,4.445,0.0
-Geoff Neal,Welterweight,71.0,75.0,Southpaw,16,8,10.0,2.0,4.0,3.0,2.0,3.0,,,,2026-02-21,,35.0,L,,,,,,Uroš Medić,USA,,True,True,0.546,4.867,5.96,0.559
-Jeremiah Wells,Welterweight,69.0,74.0,Switch,13,4,5.0,4.0,4.0,0.0,1.0,3.0,,,,2025-11-01,,39.0,W,,,,,,Themba Gorimbo,USA,,True,True,3.064,2.183,1.246,3.026
-Myktybek Orolbai,Welterweight,70.0,74.0,Orthodox,16,2,7.0,6.0,3.0,0.0,0.0,2.0,,,,2026-03-14,,28.0,W,,,,,,Chris Curtis,Kyrgyzstan,,True,True,8.773,3.331,3.487,5.008
-Edson Barboza,Lightweight,71.0,75.0,Orthodox,24,14,14.0,1.0,9.0,5.0,2.0,7.0,,,,2025-12-06,,40.0,L,,,,,,Jalin Turner,Brazil,,True,True,0.431,4.482,6.385,0.356
-Esteban Ribovics,Lightweight,70.0,69.0,Orthodox,15,3,7.0,5.0,3.0,0.0,1.0,2.0,,,,2026-04-11,,30.0,L,,,,,,Mateusz Gamrot,Argentina,,True,True,0.353,8.591,7.178,0.238
-Dustin Stoltzfus,Middleweight,72.0,75.0,Orthodox,16,8,3.0,6.0,7.0,2.0,2.0,4.0,,,,2025-09-13,,34.0,L,,,,,,Kelvin Gastelum,USA,,True,True,2.026,3.322,3.172,1.987
-Mansur Abdul-Malik,Middleweight,74.0,79.5,Orthodox,9,1,7.0,2.0,0.0,1.0,0.0,0.0,,,,2026-03-28,,28.0,L,,,,,,Yousri Belgaroui,USA,,True,True,2.053,,,
-Jalin Turner,Lightweight,75.0,77.0,Southpaw,15,9,11.0,4.0,0.0,4.0,1.0,4.0,,,,2025-12-06,,31.0,W,,,,,,Edson Barboza,USA,,True,True,0.635,5.937,4.64,0.488
-Kauê Fernandes,Lightweight,69.0,73.0,Orthodox,11,2,6.0,2.0,3.0,0.0,0.0,1.0,,,,2025-09-06,,31.0,W,,,,,,Harry Hardwick,Brazil,,True,True,1.181,4.849,1.592,1.239
+Ramiz Brahimaj,Welterweight,70.0,72.0,Orthodox,13,6,1.0,12.0,0.0,1.0,0.0,5.0,,,,2026-02-21,,33.0,L,DEC,,,,,Punahele Soriano,USA,,True,True,1.994,2.343,2.636,2.279
+Vicente Luque,Middleweight,71.0,75.5,Orthodox,24,12,11.0,10.0,3.0,2.0,3.0,7.0,,,,2026-04-11,,34.0,W,nan,,,,,Kelvin Gastelum,Brazil,,True,True,0.887,3.373,5.664,1.077
+Tresean Gore,Middleweight,72.0,75.0,Switch,7,4,2.0,4.0,1.0,2.0,0.0,2.0,,,,2026-04-04,,32.0,W,nan,,,,,Azamat Bekoev,USA,,True,True,1.912,2.578,8.127,1.02
+Chidi Njokuani,Welterweight,75.0,80.0,Orthodox,25,12,15.0,1.0,9.0,5.0,4.0,3.0,,,,2026-02-21,,37.0,L,DEC,,,,,Carlos Leal,USA,,True,True,0.0,6.357,4.445,0.0
+Geoff Neal,Welterweight,71.0,75.0,Southpaw,16,8,10.0,2.0,4.0,3.0,2.0,3.0,,,,2026-02-21,,35.0,L,KO/TKO,,,,,Uroš Medić,USA,,True,True,0.546,4.867,5.96,0.559
+Jeremiah Wells,Welterweight,69.0,74.0,Switch,13,4,5.0,4.0,4.0,0.0,1.0,3.0,,,,2025-11-01,,39.0,W,DEC,,,,,Themba Gorimbo,USA,,True,True,3.064,2.183,1.246,3.026
+Myktybek Orolbai,Welterweight,70.0,74.0,Orthodox,16,2,7.0,6.0,3.0,0.0,0.0,2.0,,,,2026-03-14,,28.0,W,nan,,,,,Chris Curtis,Kyrgyzstan,,True,True,8.773,3.331,3.487,5.008
+Edson Barboza,Lightweight,71.0,75.0,Orthodox,24,14,14.0,1.0,9.0,5.0,2.0,7.0,,,,2025-12-06,,40.0,L,KO/TKO,,,,,Jalin Turner,Brazil,,True,True,0.431,4.482,6.385,0.356
+Esteban Ribovics,Lightweight,70.0,69.0,Orthodox,15,3,7.0,5.0,3.0,0.0,1.0,2.0,,,,2026-04-11,,30.0,L,nan,,,,,Mateusz Gamrot,Argentina,,True,True,0.353,8.591,7.178,0.238
+Dustin Stoltzfus,Middleweight,72.0,75.0,Orthodox,16,8,3.0,6.0,7.0,2.0,2.0,4.0,,,,2025-09-13,,34.0,L,DEC,,,,,Kelvin Gastelum,USA,,True,True,2.026,3.322,3.172,1.987
+Mansur Abdul-Malik,Middleweight,74.0,79.5,Orthodox,9,1,7.0,2.0,0.0,1.0,0.0,0.0,,,,2026-03-28,,28.0,L,nan,,,,,Yousri Belgaroui,USA,,True,True,2.053,,,
+Jalin Turner,Lightweight,75.0,77.0,Southpaw,15,9,11.0,4.0,0.0,4.0,1.0,4.0,,,,2025-12-06,,31.0,W,KO/TKO,,,,,Edson Barboza,USA,,True,True,0.635,5.937,4.64,0.488
+Kauê Fernandes,Lightweight,69.0,73.0,Orthodox,11,2,6.0,2.0,3.0,0.0,0.0,1.0,,,,2025-09-06,,31.0,W,KO/TKO,,,,,Harry Hardwick,Brazil,,True,True,1.181,4.849,1.592,1.239
 Erin Blanchfield,Flyweight,64.0,66.0,Orthodox,14,2,2.0,5.0,7.0,0.0,0.0,2.0,,,,,,27.0,,,,,,,,USA,,True,True,1.958,5.039,4.629,1.563
 Jasmine Jasudavicius,Flyweight,67.0,68.0,Orthodox,15,4,2.0,4.0,9.0,1.0,0.0,3.0,,,,,,37.0,,,,,,,,Canada,,True,True,2.488,3.665,3.477,2.754
-Junior Tafa,Light Heavyweight,75.0,75.0,Orthodox,7,6,7.0,0.0,0.0,2.0,3.0,1.0,,,,2026-06-06,,29.0,L,,,,,,Iwo Baraniewski,Australia,,True,True,0.0,3.806,2.723,0.0
-Ce Liu,Light Heavyweight,77.0,77.5,,3,1,3.0,0.0,0.0,1.0,0.0,0.0,,,,2026-05-23,,29.0,W,,,,,,Igor Barabanov,China,,True,True,,,,
-Kai Asakura,Bantamweight,68.0,69.0,Orthodox,22,6,14.0,3.0,5.0,3.0,2.0,1.0,,,,2026-05-30,,32.0,W,,,,,,Cameron Smotherman,Japan,,True,True,0.0,,,
-Aoriqileng,Bantamweight,67.0,69.0,Orthodox,26,13,9.0,1.0,16.0,2.0,3.0,8.0,,,,2026-05-30,,33.0,L,,,,,,Cody Haddon,China,,True,True,1.107,3.603,3.64,0.952
-Rei Tsuruya,Flyweight,66.0,68.0,Orthodox,11,1,4.0,5.0,2.0,0.0,0.0,1.0,,,,2026-05-30,,24.0,W,,,,,,Luis Gurule,Japan,,True,True,3.602,,,
-Kevin Borjas,Flyweight,65.0,68.0,Orthodox,11,5,8.0,0.0,3.0,2.0,0.0,2.0,,,,2026-06-20,,28.0,W,,,,,,Andre Lima,Peru,,True,True,0.0,3.143,5.619,0.0
+Junior Tafa,Light Heavyweight,75.0,75.0,Orthodox,7,6,7.0,0.0,0.0,2.0,3.0,1.0,,,,2026-06-06,,29.0,L,nan,,,,,Iwo Baraniewski,Australia,,True,True,0.0,3.806,2.723,0.0
+Ce Liu,Light Heavyweight,77.0,77.5,,3,1,3.0,0.0,0.0,1.0,0.0,0.0,,,,2026-05-23,,29.0,W,nan,,,,,Igor Barabanov,China,,True,True,,,,
+Kai Asakura,Bantamweight,68.0,69.0,Orthodox,22,6,14.0,3.0,5.0,3.0,2.0,1.0,,,,2026-05-30,,32.0,W,nan,,,,,Cameron Smotherman,Japan,,True,True,0.0,,,
+Aoriqileng,Bantamweight,67.0,69.0,Orthodox,26,13,9.0,1.0,16.0,2.0,3.0,8.0,,,,2026-05-30,,33.0,L,nan,,,,,Cody Haddon,China,,True,True,1.107,3.603,3.64,0.952
+Rei Tsuruya,Flyweight,66.0,68.0,Orthodox,11,1,4.0,5.0,2.0,0.0,0.0,1.0,,,,2026-05-30,,24.0,W,nan,,,,,Luis Gurule,Japan,,True,True,3.602,,,
+Kevin Borjas,Flyweight,65.0,68.0,Orthodox,11,5,8.0,0.0,3.0,2.0,0.0,2.0,,,,2026-06-20,,28.0,W,nan,,,,,Andre Lima,Peru,,True,True,0.0,3.143,5.619,0.0
 Alex Perez,Flyweight,66.0,65.5,Orthodox,26,10,7.0,7.0,12.0,2.0,6.0,2.0,,,,2026-05-30,,34.0,D,,,,,,Sumudaerji,USA,,True,True,2.128,4.636,3.275,1.896
 Sumudaerji,Flyweight,68.0,72.0,Southpaw,19,7,13.0,1.0,5.0,0.0,3.0,1.0,,,,2026-05-30,,30.0,D,,,,,,Alex Perez,China,,True,True,0.762,4.252,2.012,1.211
-Yan Xiaonan,Women's Strawweight,65.0,63.0,Orthodox,19,5,8.0,1.0,10.0,1.0,1.0,3.0,,,,2025-04-12,,37.0,L,,,,,,Virna Jandiroba,China,,True,True,0.845,3.29,2.483,0.689
-Denise Gomes,Women's Strawweight,62.0,63.0,Orthodox,12,3,7.0,0.0,5.0,1.0,0.0,2.0,,,,2025-11-08,,26.0,W,,,,,,Tecia Pennington,Brazil,,True,True,1.694,4.091,3.11,2.074
-Song Yadong,Bantamweight,68.0,67.0,Orthodox,23,9,9.0,4.0,10.0,2.0,0.0,7.0,,,,2026-05-30,,28.0,W,,,,,,Deiveson Figueiredo,China,,True,True,0.815,4.12,4.029,1.224
-Trevor Peek,Featherweight,69.0,70.0,Switch,9,3,8.0,0.0,1.0,0.0,0.0,3.0,,,,2024-09-07,,31.0,L,,,,,,Yanal Ashmouz,USA,,True,True,1.385,,,
-Kurtis Campbell,Featherweight,69.0,72.0,Switch,8,1,5.0,1.0,2.0,1.0,0.0,0.0,,,,2026-03-21,,23.0,L,,,,,,Danny Silva,England,,True,True,,,,
-Michael Page,Middleweight,75.0,79.0,Switch,25,3,13.0,3.0,9.0,1.0,0.0,2.0,,,,2026-03-21,,39.0,W,,,,,,Sam Patterson,default,,True,True,0.0,2.219,1.751,0.0
-Nursulton Ruziboev,Middleweight,77.0,76.0,Orthodox,37,9,13.0,21.0,3.0,1.0,1.0,7.0,,,,2026-06-27,,32.0,W,,,,,,Andrey Pulyaev,Uzbekistan,,True,True,1.361,2.573,2.546,0.668
-Ryan Spann,Heavyweight,77.0,79.0,Orthodox,24,11,7.0,14.0,3.0,5.0,3.0,3.0,,,,2026-04-25,,34.0,W,,,,,,Marcus Buchecha,USA,,True,True,1.215,,,
-Mario Pinto,Heavyweight,77.0,79.0,Orthodox,12,0,7.0,1.0,4.0,0.0,0.0,0.0,,,,2026-03-21,,28.0,W,,,,,,Felipe Franco,Portugal,,True,True,2.515,,,
-Henrique da Silva Lopes,Heavyweight,75.0,,,5,2,5.0,0.0,0.0,1.0,1.0,0.0,,,,2019-08-23,,41.0,L,,,,,,Hugo Cunha,Brazil,,True,True,,,,
-Dan Hooker,Lightweight,72.0,75.0,Switch,24,14,11.0,7.0,6.0,4.0,4.0,6.0,,,,2026-01-31,,36.0,L,,,,,,Benoît Saint Denis,New Zealand,,False,True,0.679,4.307,4.704,0.397
-Salahdine Parnasse,Lightweight,68.0,69.0,,23,2,8.0,7.0,8.0,1.0,0.0,1.0,,,,2026-05-16,,28.0,W,,,,,,Kenneth Cross,France,,False,True,,,,
+Yan Xiaonan,Women's Strawweight,65.0,63.0,Orthodox,19,5,8.0,1.0,10.0,1.0,1.0,3.0,,,,2025-04-12,,37.0,L,DEC,,,,,Virna Jandiroba,China,,True,True,0.845,3.29,2.483,0.689
+Denise Gomes,Women's Strawweight,62.0,63.0,Orthodox,12,3,7.0,0.0,5.0,1.0,0.0,2.0,,,,2025-11-08,,26.0,W,DEC,,,,,Tecia Pennington,Brazil,,True,True,1.694,4.091,3.11,2.074
+Song Yadong,Bantamweight,68.0,67.0,Orthodox,23,9,9.0,4.0,10.0,2.0,0.0,7.0,,,,2026-05-30,,28.0,W,nan,,,,,Deiveson Figueiredo,China,,True,True,0.815,4.12,4.029,1.224
+Trevor Peek,Featherweight,69.0,70.0,Switch,9,3,8.0,0.0,1.0,0.0,0.0,3.0,,,,2024-09-07,,31.0,L,DEC,,,,,Yanal Ashmouz,USA,,True,True,1.385,,,
+Kurtis Campbell,Featherweight,69.0,72.0,Switch,8,1,5.0,1.0,2.0,1.0,0.0,0.0,,,,2026-03-21,,23.0,L,nan,,,,,Danny Silva,England,,True,True,,,,
+Michael Page,Middleweight,75.0,79.0,Switch,25,3,13.0,3.0,9.0,1.0,0.0,2.0,,,,2026-03-21,,39.0,W,nan,,,,,Sam Patterson,default,,True,True,0.0,2.219,1.751,0.0
+Nursulton Ruziboev,Middleweight,77.0,76.0,Orthodox,37,9,13.0,21.0,3.0,1.0,1.0,7.0,,,,2026-06-27,,32.0,W,nan,,,,,Andrey Pulyaev,Uzbekistan,,True,True,1.361,2.573,2.546,0.668
+Ryan Spann,Heavyweight,77.0,79.0,Orthodox,24,11,7.0,14.0,3.0,5.0,3.0,3.0,,,,2026-04-25,,34.0,W,nan,,,,,Marcus Buchecha,USA,,True,True,1.215,,,
+Mario Pinto,Heavyweight,77.0,79.0,Orthodox,12,0,7.0,1.0,4.0,0.0,0.0,0.0,,,,2026-03-21,,28.0,W,nan,,,,,Felipe Franco,Portugal,,True,True,2.515,,,
+Henrique da Silva Lopes,Heavyweight,75.0,,,5,2,5.0,0.0,0.0,1.0,1.0,0.0,,,,2019-08-23,,41.0,L,nan,,,,,Hugo Cunha,Brazil,,True,True,,,,
+Dan Hooker,Lightweight,72.0,75.0,Switch,24,14,11.0,7.0,6.0,4.0,4.0,6.0,,,,2026-01-31,,36.0,L,KO/TKO,,,,,Benoît Saint Denis,New Zealand,,False,True,0.679,4.307,4.704,0.397
+Salahdine Parnasse,Lightweight,68.0,69.0,,23,2,8.0,7.0,8.0,1.0,0.0,1.0,,,,2026-05-16,,28.0,W,nan,,,,,Kenneth Cross,France,,False,True,,,,
 Stephanie Luciano,Women's Strawweight,66.0,65.0,Orthodox,8,2,2.0,2.0,4.0,0.0,0.0,2.0,,,,2026-08-01,,26.0,W,SUB,,,,,Marina Spasić,Brazil,0.0,True,True,,4.982,3.205,1.715
 Marina Spasić,Women's Strawweight,64.0,,,7,2,6.0,0.0,1.0,0.0,1.0,1.0,,,,2026-08-01,,32.0,L,SUB,,,,,Stephanie Luciano,Serbia,0.0,True,True,,,,
 Alexander Poppeck,Heavyweight,74.0,,Orthodox,21,6,13.0,1.0,7.0,2.0,2.0,2.0,,,,2026-08-01,,34.0,L,KO/TKO,,,,,Jovan Leka,Germany,0.0,True,True,,,,
 Borislav Nikolic,Bantamweight,69.0,72.0,Orthodox,16,2,7.0,8.0,2.0,0.0,1.0,1.0,,,,2026-08-01,,33.0,W,DEC,,,,,Mark Vologdin,Serbia,0.0,True,True,,,,
 Milos Janicic,Lightweight,71.0,72.5,,19,4,11.0,8.0,0.0,1.0,1.0,2.0,,,,2026-08-01,,29.0,L,SUB,,,,,Noah Gugnon,Montenegro,0.0,True,True,,,,
 Noah Gugnon,Lightweight,70.0,68.5,,10,2,6.0,4.0,0.0,1.0,0.0,1.0,,,,2026-08-01,,25.0,W,SUB,,,,,Milos Janicic,France,0.0,True,True,,,,
-Billy Ray Goff,Welterweight,70.0,72.0,Switch,9,4,7.0,0.0,2.0,1.0,1.0,2.0,,,,2025-05-31,,28.0,L,,,,,,Ramiz Brahimaj,USA,,False,True,,,,
-Ty Miller,Welterweight,74.0,77.0,Orthodox,7,0,3.0,0.0,4.0,0.0,0.0,0.0,,,,2026-01-24,,26.0,W,,,,,,Adam Fugitt,USA,,False,True,,,,
-Juliana Miller,Women's Flyweight,67.0,66.0,Orthodox,5,4,1.0,3.0,1.0,1.0,0.0,3.0,,,,2026-02-21,,30.0,L,,,,,,Carli Judice,USA,,False,True,,,,
-Ravena Oliveira,Women's Flyweight,65.0,65.0,Orthodox,7,4,6.0,1.0,0.0,1.0,2.0,1.0,,,,2026-03-21,,29.0,L,,,,,,Shanelle Dyer,Brazil,,False,True,,,,
-Darren Elkins,Featherweight,70.0,71.0,Orthodox,29,12,9.0,6.0,14.0,5.0,1.0,6.0,,,,2025-04-12,,42.0,L,,,,,,Julian Erosa,USA,,False,True,,,,
-Yadier del Valle,Featherweight,69.0,69.0,Southpaw,10,1,2.0,4.0,4.0,0.0,0.0,1.0,,,,2026-02-21,,29.0,L,,,,,,Jordan Leavitt,Cuba,,False,True,,,,
-Eric McConico,Middleweight,72.0,77.0,Southpaw,11,4,4.0,3.0,4.0,4.0,0.0,0.0,,,,2026-04-25,,36.0,W,,,,,,Rodolfo Vieira,USA,,False,True,,,,
-Donte Johnson,Middleweight,68.0,74.0,Southpaw,8,0,6.0,1.0,1.0,0.0,0.0,0.0,,,,2026-03-07,,27.0,W,,,,,,Cody Brundage,USA,,False,True,,,,
-Sean Woodson,Featherweight,74.0,78.0,Orthodox,13,2,4.0,1.0,8.0,1.0,1.0,0.0,,,,2025-04-12,,34.0,L,,,,,,Dan Ige,USA,,,True,,,,
-Jack Jenkins,Featherweight,67.0,68.0,Switch,14,4,6.0,3.0,5.0,1.0,3.0,0.0,,,,2025-09-27,,32.0,W,,,,,,Ramon Taveras,Australia,,,True,,,,
-Luis Felipe Dias,Middleweight,71.0,74.0,Orthodox,18,5,9.0,8.0,1.0,2.0,1.0,2.0,,,,2026-05-30,,31.0,W,,,,,,Yi Sak Lee,Brazil,,,True,,,,
-Matthieu Letho Duclos,Middleweight,75.0,77.0,Orthodox,6,3,5.0,0.0,1.0,2.0,1.0,0.0,,,,2024-08-28,,31.0,L,,,,,,Marco Tulio,France,,,True,,,,
-Morgan Charrière,Featherweight,68.0,69.0,Orthodox,21,12,13.0,3.0,5.0,1.0,1.0,10.0,,,,2025-12-14,,30.0,L,,,,,,Melquizael Costa,France,,,True,,,,
-Felipe Lima,Featherweight,66.0,68.0,Orthodox,14,2,4.0,3.0,7.0,0.0,1.0,1.0,,,,2025-06-28,,28.0,L,,,,,,Payton Talbott,Brazil,,,True,,,,
-Nathaniel Wood,Featherweight,66.0,69.0,Orthodox,23,6,8.0,5.0,10.0,2.0,2.0,2.0,,,,2026-03-21,,33.0,W,,,,,,Losene Keita,England,,,True,,,,
-Mairon Santos,Featherweight,67.0,72.0,Orthodox,18,1,9.0,0.0,9.0,1.0,0.0,0.0,,,,2025-12-06,,26.0,W,,,,,,Muhammad Naimov,Brazil,,,True,,,,
-Miles Johns,,67.0,68.0,Orthodox,15,5,4.0,2.0,9.0,1.0,2.0,2.0,,,,2025-11-08,,32.0,L,,,,,,Daniel Marcos,,,,,,,,
-Manoel Sousa,,69.0,70.0,Orthodox,14,1,9.0,3.0,2.0,0.0,0.0,1.0,,,,2026-03-14,,29.0,W,,,,,,Bolaji Oki,,,,,,,,
-Jessie Rosas,,69.0,,,8,1,2.0,4.0,2.0,0.0,1.0,0.0,,,,2026-06-07,,23.0,W,,,,,,Erick Ruano,,,,,,,,
-Richie Miranda,,69.0,74.0,,13,1,5.0,3.0,5.0,0.0,0.0,1.0,,,,2026-05-22,,,W,,,,,,Robert Varricchio,,,,,,,,
-Brandon Moreno,,67.0,70.0,Orthodox,23,10,5.0,11.0,7.0,1.0,0.0,9.0,,,,2026-02-28,,32.0,L,,,,,,Lone'er Kavanagh,,,,,,,,
-Tim Elliott,,67.0,66.0,Southpaw,22,14,3.0,8.0,11.0,1.0,6.0,7.0,,,,2026-05-02,,39.0,L,,,,,,Steve Erceg,,,,,,,,
-Curtis Blaydes,,76.0,80.0,Orthodox,19,6,13.0,0.0,6.0,5.0,0.0,1.0,,,,2026-04-11,,35.0,L,,,,,,Josh Hokit,,,,,,,,
-Manon Fiorot,,67.0,65.0,Orthodox,13,2,7.0,0.0,6.0,0.0,0.0,2.0,,,,2025-10-18,,36.0,W,,,,,,Jasmine Jasudavicius,,,,,,,,
-Kelvin Gastelum,,69.0,71.5,Southpaw,21,11,6.0,6.0,9.0,0.0,4.0,7.0,,,,2026-04-11,,34.0,L,,,,,,Vicente Luque,,,,,,,,
-JJ Aldrich,,65.0,67.5,Southpaw,15,7,3.0,0.0,12.0,1.0,2.0,4.0,,,,2026-04-18,,33.0,W,,,,,,Jamey-Lyn Horth,,,,,,,,
-Joseph Morales,,66.0,68.0,Switch,15,2,2.0,8.0,5.0,1.0,0.0,1.0,,,,2025-11-08,,31.0,W,,,,,,Matt Schnell,,,,,,,,
-Édgar Cháirez,,67.0,71.0,Orthodox,14,6,4.0,9.0,1.0,0.0,2.0,4.0,,,,2026-06-06,,30.0,W,,,,,,Bruno Silva,,,,,,,,
-Waldo Cortes Acosta,,76.0,78.0,Orthodox,17,3,9.0,1.0,7.0,0.0,0.0,3.0,,,,2026-05-09,,34.0,L,,,,,,Alexander Volkov,,,,,,,,
-Alexa Grasso,,65.0,66.0,Orthodox,17,5,5.0,2.0,10.0,0.0,1.0,4.0,,,,2026-03-28,,32.0,W,,,,,,Maycee Barber,,,,,,,,
-Yousri Belgaroui,,78.0,79.0,Orthodox,10,3,8.0,0.0,2.0,0.0,0.0,3.0,,,,2026-03-28,,34.0,W,,,,,,Mansur Abdul-Malik,,,,,,,,
-Regina Tarin,,67.0,66.0,Southpaw,8,0,4.0,2.0,2.0,0.0,0.0,0.0,,,,2026-02-28,,21.0,W,,,,,,Ernesta Kareckaite,,,,,,,,
+Billy Ray Goff,Welterweight,70.0,72.0,Switch,9,4,7.0,0.0,2.0,1.0,1.0,2.0,,,,2025-05-31,,28.0,L,SUB,,,,,Ramiz Brahimaj,USA,,False,True,,,,
+Ty Miller,Welterweight,74.0,77.0,Orthodox,7,0,3.0,0.0,4.0,0.0,0.0,0.0,,,,2026-01-24,,26.0,W,KO/TKO,,,,,Adam Fugitt,USA,,False,True,,,,
+Juliana Miller,Women's Flyweight,67.0,66.0,Orthodox,5,4,1.0,3.0,1.0,1.0,0.0,3.0,,,,2026-02-21,,30.0,L,DEC,,,,,Carli Judice,USA,,False,True,,,,
+Ravena Oliveira,Women's Flyweight,65.0,65.0,Orthodox,7,4,6.0,1.0,0.0,1.0,2.0,1.0,,,,2026-03-21,,29.0,L,nan,,,,,Shanelle Dyer,Brazil,,False,True,,,,
+Darren Elkins,Featherweight,70.0,71.0,Orthodox,29,12,9.0,6.0,14.0,5.0,1.0,6.0,,,,2025-04-12,,42.0,L,KO/TKO,,,,,Julian Erosa,USA,,False,True,,,,
+Yadier del Valle,Featherweight,69.0,69.0,Southpaw,10,1,2.0,4.0,4.0,0.0,0.0,1.0,,,,2026-02-21,,29.0,L,DEC,,,,,Jordan Leavitt,Cuba,,False,True,,,,
+Eric McConico,Middleweight,72.0,77.0,Southpaw,11,4,4.0,3.0,4.0,4.0,0.0,0.0,,,,2026-04-25,,36.0,W,nan,,,,,Rodolfo Vieira,USA,,False,True,,,,
+Donte Johnson,Middleweight,68.0,74.0,Southpaw,8,0,6.0,1.0,1.0,0.0,0.0,0.0,,,,2026-03-07,,27.0,W,DEC,,,,,Cody Brundage,USA,,False,True,,,,
+Sean Woodson,Featherweight,74.0,78.0,Orthodox,13,2,4.0,1.0,8.0,1.0,1.0,0.0,,,,2025-04-12,,34.0,L,KO/TKO,,,,,Dan Ige,USA,,,True,,,,
+Jack Jenkins,Featherweight,67.0,68.0,Switch,14,4,6.0,3.0,5.0,1.0,3.0,0.0,,,,2025-09-27,,32.0,W,DEC,,,,,Ramon Taveras,Australia,,,True,,,,
+Luis Felipe Dias,Middleweight,71.0,74.0,Orthodox,18,5,9.0,8.0,1.0,2.0,1.0,2.0,,,,2026-05-30,,31.0,W,nan,,,,,Yi Sak Lee,Brazil,,,True,,,,
+Matthieu Letho Duclos,Middleweight,75.0,77.0,Orthodox,6,3,5.0,0.0,1.0,2.0,1.0,0.0,,,,2024-08-28,,31.0,L,nan,,,,,Marco Tulio,France,,,True,,,,
+Morgan Charrière,Featherweight,68.0,69.0,Orthodox,21,12,13.0,3.0,5.0,1.0,1.0,10.0,,,,2025-12-14,,30.0,L,nan,,,,,Melquizael Costa,France,,,True,,,,
+Felipe Lima,Featherweight,66.0,68.0,Orthodox,14,2,4.0,3.0,7.0,0.0,1.0,1.0,,,,2025-06-28,,28.0,L,DEC,,,,,Payton Talbott,Brazil,,,True,,,,
+Nathaniel Wood,Featherweight,66.0,69.0,Orthodox,23,6,8.0,5.0,10.0,2.0,2.0,2.0,,,,2026-03-21,,33.0,W,nan,,,,,Losene Keita,England,,,True,,,,
+Mairon Santos,Featherweight,67.0,72.0,Orthodox,18,1,9.0,0.0,9.0,1.0,0.0,0.0,,,,2025-12-06,,26.0,W,KO/TKO,,,,,Muhammad Naimov,Brazil,,,True,,,,
+Miles Johns,,67.0,68.0,Orthodox,15,5,4.0,2.0,9.0,1.0,2.0,2.0,,,,2025-11-08,,32.0,L,SUB,,,,,Daniel Marcos,,,,,,,,
+Manoel Sousa,,69.0,70.0,Orthodox,14,1,9.0,3.0,2.0,0.0,0.0,1.0,,,,2026-03-14,,29.0,W,nan,,,,,Bolaji Oki,,,,,,,,
+Jessie Rosas,,69.0,,,8,1,2.0,4.0,2.0,0.0,1.0,0.0,,,,2026-06-07,,23.0,W,nan,,,,,Erick Ruano,,,,,,,,
+Richie Miranda,,69.0,74.0,,13,1,5.0,3.0,5.0,0.0,0.0,1.0,,,,2026-05-22,,,W,nan,,,,,Robert Varricchio,,,,,,,,
+Brandon Moreno,,67.0,70.0,Orthodox,23,10,5.0,11.0,7.0,1.0,0.0,9.0,,,,2026-02-28,,32.0,L,DEC,,,,,Lone'er Kavanagh,,,,,,,,
+Tim Elliott,,67.0,66.0,Southpaw,22,14,3.0,8.0,11.0,1.0,6.0,7.0,,,,2026-05-02,,39.0,L,nan,,,,,Steve Erceg,,,,,,,,
+Curtis Blaydes,,76.0,80.0,Orthodox,19,6,13.0,0.0,6.0,5.0,0.0,1.0,,,,2026-04-11,,35.0,L,nan,,,,,Josh Hokit,,,,,,,,
+Manon Fiorot,,67.0,65.0,Orthodox,13,2,7.0,0.0,6.0,0.0,0.0,2.0,,,,2025-10-18,,36.0,W,KO/TKO,,,,,Jasmine Jasudavicius,,,,,,,,
+Kelvin Gastelum,,69.0,71.5,Southpaw,21,11,6.0,6.0,9.0,0.0,4.0,7.0,,,,2026-04-11,,34.0,L,nan,,,,,Vicente Luque,,,,,,,,
+JJ Aldrich,,65.0,67.5,Southpaw,15,7,3.0,0.0,12.0,1.0,2.0,4.0,,,,2026-04-18,,33.0,W,nan,,,,,Jamey-Lyn Horth,,,,,,,,
+Joseph Morales,,66.0,68.0,Switch,15,2,2.0,8.0,5.0,1.0,0.0,1.0,,,,2025-11-08,,31.0,W,SUB,,,,,Matt Schnell,,,,,,,,
+Édgar Cháirez,,67.0,71.0,Orthodox,14,6,4.0,9.0,1.0,0.0,2.0,4.0,,,,2026-06-06,,30.0,W,nan,,,,,Bruno Silva,,,,,,,,
+Waldo Cortes Acosta,,76.0,78.0,Orthodox,17,3,9.0,1.0,7.0,0.0,0.0,3.0,,,,2026-05-09,,34.0,L,nan,,,,,Alexander Volkov,,,,,,,,
+Alexa Grasso,,65.0,66.0,Orthodox,17,5,5.0,2.0,10.0,0.0,1.0,4.0,,,,2026-03-28,,32.0,W,nan,,,,,Maycee Barber,,,,,,,,
+Yousri Belgaroui,,78.0,79.0,Orthodox,10,3,8.0,0.0,2.0,0.0,0.0,3.0,,,,2026-03-28,,34.0,W,nan,,,,,Mansur Abdul-Malik,,,,,,,,
+Regina Tarin,,67.0,66.0,Southpaw,8,0,4.0,2.0,2.0,0.0,0.0,0.0,,,,2026-02-28,,21.0,W,DEC,,,,,Ernesta Kareckaite,,,,,,,,

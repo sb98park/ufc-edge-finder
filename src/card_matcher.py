@@ -11,6 +11,7 @@ import pandas as pd
 
 from src.rationale import explain_edge, explain_favorite_pick
 from src.model_preview import build_fight_preview, build_full_market_projection
+from src.method_model import finish_share_before
 from src.odds_utils import implied_prob_to_american, format_american_odds
 
 
@@ -236,6 +237,73 @@ def _split_total_rounds_fighter_field(fighter_field: str) -> set[str]:
 
 
 
+def _reconcile_round_props(rows: list[dict], fight: dict,
+                           decision_shown: float | None = None) -> list[dict]:
+    """
+    Recompute every round total from the SAME distribution the fight props
+    show, so the two groups can't contradict each other.
+
+    They were computed independently: edge_finder ran its own
+    method_probabilities for the round lines while the displayed decision came
+    from the preview's distribution. Different inputs, different answers -- on
+    one card the round props implied a 51% finish rate beside a method row
+    reading 77% decision, and on another the decision row said 100% while the
+    rounds said the fight ended early two thirds of the time.
+
+    A decision necessarily means the fight passed the last half-round mark, so
+    these are not two estimates to be averaged; one is derived from the other.
+    Deriving it here -- at display time, from the object being displayed -- is
+    the same fix that stopped the headline disagreeing with its own table.
+    """
+    # The DISPLAYED decision first -- that is the number the reader compares
+    # against, and the only one guaranteed to be on screen. The preview's
+    # distribution is the fallback for fights whose Fight props group has no
+    # decision row at all.
+    decision = decision_shown
+    if decision is None:
+        dist = (fight.get("preview") or {}).get("method_distribution")
+        if not dist:
+            print(f"[rounds] no decision probability available for "
+                  f"{fight.get('fighter_a')} vs {fight.get('fighter_b')} -- "
+                  f"round totals left as computed")
+            return rows
+        decision = float(dist.get("decision", 0.0))
+    # Guard the value however it arrived. The clamp in method_model bounds
+    # the MODEL, but this figure can also come from a priced row -- and a
+    # thin market can quote something at 1.00, which would zero every Under
+    # line the same way.
+    finish = max(1.0 - float(decision), 0.02)
+    scheduled = 5 if str(fight.get("card_position", "")).strip() == "Main Event" else 3
+
+    out = []
+    matched = 0
+    for r in rows:
+        # Match on MARKET and LABEL both, and search rather than anchor.
+        # The first version anchored on the label alone; whatever the label
+        # actually holds for these rows, it didn't match, so every row fell
+        # through untouched and the numbers didn't move at all.
+        blob = f"{r.get('market') or ''} {r.get('label') or ''}"
+        m = re.search(r"(Under|Over)\s*([\d.]+)", blob, re.IGNORECASE)
+        if not m or "round" not in blob.lower():
+            out.append(r)
+            continue
+        matched += 1
+        side, line = m.group(1).capitalize(), float(m.group(2))
+        under = finish * finish_share_before(line, scheduled)
+        new = dict(r)
+        new["model_prob"] = round(under if side == "Under" else 1.0 - under, 4)
+        # The edge moves with it -- a stale edge beside a corrected
+        # probability is worse than either alone.
+        if new.get("has_line") and new.get("book_fair_prob") is not None:
+            new["edge_pct"] = round((new["model_prob"] - float(new["book_fair_prob"])) * 100, 2)
+        out.append(new)
+    if not matched and rows:
+        print(f"[rounds] no round rows matched for "
+              f"{fight.get('fighter_a')} vs {fight.get('fighter_b')} -- "
+              f"labels were {[r.get('market') for r in rows][:3]}")
+    return out
+
+
 def _canonical_fight_methods(rows: list[dict], fight: dict) -> list[dict]:
     """
     Force Fight props to exactly three rows: KO/TKO, Submission, Decision.
@@ -274,6 +342,15 @@ def _canonical_fight_methods(rows: list[dict], fight: dict) -> list[dict]:
             return "Decision"
         return None
 
+    # Cap any single method before display. A fight-level method row reached
+    # 100.0% on one card -- from a thinly-priced market, so the model's own
+    # clamp couldn't reach it -- and a certainty on screen is wrong on its own
+    # terms as well as breaking everything derived from it.
+    # Applied HERE because this is what renders: bounding the model alone left
+    # the displayed number untouched.
+    METHOD_CAP = 0.97          # anything above this is treated as certainty
+    METHOD_FLOOR = 0.015       # ...and fixed by lifting the others, not lowering it
+
     by_method: dict[str, dict] = {}
     for r in rows:
         m = method_of(r)
@@ -302,6 +379,27 @@ def _canonical_fight_methods(rows: list[dict], fight: dict) -> list[dict]:
         out.append({"market": f"Fight Method: {m}", "label": f"Fight ends by {m}",
                     "selection": m, "model_prob": prob, "has_line": False,
                     "odds_american": None, "edge_pct": None, "fighter": "", "opponent": ""})
+
+    # FLOOR each method, then renormalise. A row reached 100.0% on one card --
+    # priced, so the model's own clamp couldn't reach it.
+    #
+    # A cap doesn't work here and the reason is worth recording: capping the
+    # leader to 0.97 while the other two sit at zero gives a total of 0.97, and
+    # renormalising divides straight back to 1.0. Lifting the OTHERS off zero
+    # is what actually removes the certainty, and it leaves a normal
+    # distribution essentially unchanged.
+    vals = [r.get("model_prob") for r in out]
+    nums = [v for v in vals if isinstance(v, (int, float))]
+    if nums and max(nums) > METHOD_CAP:
+        floored = [max(float(v), METHOD_FLOOR) if isinstance(v, (int, float)) else v
+                   for v in vals]
+        total = sum(v for v in floored if isinstance(v, (int, float)))
+        if total > 0:
+            for r, v in zip(out, floored):
+                if isinstance(v, (int, float)):
+                    r["model_prob"] = round(v / total, 4)
+                    if r.get("has_line") and r.get("book_fair_prob") is not None:
+                        r["edge_pct"] = round((r["model_prob"] - float(r["book_fair_prob"])) * 100, 2)
     return out or rows
 
 
@@ -553,6 +651,7 @@ def group_edges_by_card(
                 return "fighter"          # Moneyline and per-fighter Method
 
             groups = []
+            _decision_shown = None
             for gid, gname, gsub in (
                 ("fighter", "Fighter props", "Who wins, and how"),
                 ("fight", "Fight props", "How the fight ends, regardless of winner"),
@@ -561,6 +660,18 @@ def group_edges_by_card(
                 rows = [r for r in merged if _group_of(r.get("market")) == gid]
                 if gid == "fight":
                     rows = _canonical_fight_methods(rows, fight)
+                    # Capture what the Fight props group will actually SHOW.
+                    # Reading the preview's distribution instead left 15 of 41
+                    # fights untouched, silently: those have a priced decision
+                    # market, so a number appeared on screen while the preview
+                    # object's distribution was None and the rounds pass
+                    # returned early without saying so.
+                    for _r in rows:
+                        if str(_r.get("label") or "").strip() == "Fight ends by Decision":
+                            _decision_shown = _r.get("model_prob")
+                            break
+                elif gid == "rounds":
+                    rows = _reconcile_round_props(rows, fight, _decision_shown)
                 if not rows:
                     continue
                 groups.append({

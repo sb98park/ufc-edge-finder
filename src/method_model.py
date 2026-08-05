@@ -126,7 +126,25 @@ def method_probabilities(ko_press: float, sub_press: float, ko_rate_sum: float,
     m = max(z)                                  # subtract the max for stability
     e = [math.exp(v - m) for v in z]
     total = sum(e)
-    return {"ko": e[KO] / total, "sub": e[SUB] / total, "decision": e[DEC] / total}
+    p = [e[KO] / total, e[SUB] / total, e[DEC] / total]
+
+    # CLAMPED AWAY FROM CERTAINTY. A softmax on extreme inputs will happily
+    # return 1.000, and one card produced exactly that: decision 100.0%, which
+    # then made P(finish) zero and collapsed every Under line to 0.0%.
+    #
+    # No fight is certain, and more to the point the training set contains no
+    # certain fight -- the holdout's most confident decision bucket ran 60-70%
+    # and hit 71.6%. A prediction at 1.0 is extrapolation past anything the
+    # coefficients ever saw, not a strong opinion.
+    #
+    # The floor is per-class and small: it bounds the damage without
+    # meaningfully moving a normal prediction. Renormalised after, so the
+    # three still sum to 1.
+    FLOOR = 0.015
+    p = [max(v, FLOOR) for v in p]
+    tot = sum(p)
+    p = [v / tot for v in p]
+    return {"ko": p[KO], "sub": p[SUB], "decision": p[DEC]}
 
 
 def reconcile_fighter_methods(seed_a, seed_b, win_a, win_b, fight_dist, iters=80):

@@ -1468,3 +1468,100 @@ def ensure_roster_rows(fighters_path: str = "data/fighters.csv",
     fighters.to_csv(fighters_path, index=False)
     print(f"[roster] added {len(new_rows)} row(s) to {fighters_path}")
     return len(new_rows)
+
+
+def fill_last_fight_methods(fighters_path: str = "data/fighters.csv",
+                            history_path: str = "data/fight_history.csv") -> int:
+    """
+    Fill last_fight_method from fight_history.csv.
+
+    WHY LOCAL DATA IS THE PRIMARY SOURCE HERE. ESPN's eventsMap carries the
+    date, opponent and result but reports status as "Final" -- a completion
+    state, not a method. That string is correctly filtered out (it once
+    produced "W by Final against X"), which left the field empty and rendered
+    as "L by None".
+
+    fight_history.csv already knows the method for 8,400+ fights, costs no
+    network call, and can't be rate-limited. It should have been consulted
+    first; ESPN is the fallback for anything history hasn't caught up on.
+
+    Matches on an unordered accent-folded name pair plus date -- the same key
+    used by every other join here, because the two sources disagree about
+    which fighter is listed first.
+    """
+    try:
+        fighters = pd.read_csv(fighters_path)
+        history = pd.read_csv(history_path)
+    except FileNotFoundError:
+        return 0
+    if "last_fight_method" not in fighters.columns:
+        fighters["last_fight_method"] = None
+
+    lookup = {}
+    for r in history.itertuples(index=False):
+        method = str(getattr(r, "method", "") or "").strip()
+        if not method or method.lower() in STATUS_WORDS:
+            continue
+        key = (frozenset({_normalize_name(r.fighter_a), _normalize_name(r.fighter_b)}),
+               str(r.date)[:10])
+        lookup[key] = method
+
+    # Also index by fighter + date, so a HALF-RECORD can be completed.
+    # Some rows arrive with a last_fight_date and nothing else -- no result,
+    # no opponent -- which my first version silently skipped because it
+    # couldn't build a name-pair key. Oliveira, Strickland and Umar
+    # Nurmagomedov were all in that state: a date on screen with no fight
+    # attached to it.
+    by_fighter_date = {}
+    for r in history.itertuples(index=False):
+        d = str(r.date)[:10]
+        winner = _normalize_name(str(getattr(r, "winner", "") or ""))
+        for own, other in ((r.fighter_a, r.fighter_b), (r.fighter_b, r.fighter_a)):
+            own_n = _normalize_name(str(own))
+            by_fighter_date[(own_n, d)] = {
+                "opponent": str(other),
+                "result": "W" if winner == own_n else ("L" if winner else None),
+                "method": str(getattr(r, "method", "") or "").strip() or None,
+            }
+
+    filled, completed, still_missing = 0, 0, 0
+    for i, row in fighters.iterrows():
+        date = row.get("last_fight_date")
+        if not isinstance(date, str) or not date.strip():
+            continue
+        name_n = _normalize_name(str(row["name"]))
+        opp = row.get("last_fight_opponent")
+        have_method = isinstance(row.get("last_fight_method"), str) and row["last_fight_method"].strip()
+        have_opp = isinstance(opp, str) and opp.strip()
+        have_result = isinstance(row.get("last_fight_result"), str) and row["last_fight_result"].strip()
+        if have_method and have_opp and have_result:
+            continue
+
+        rec = by_fighter_date.get((name_n, str(date)[:10]))
+        if rec:
+            wrote = False
+            if not have_opp and rec["opponent"]:
+                fighters.at[i, "last_fight_opponent"] = rec["opponent"]; wrote = True
+            if not have_result and rec["result"]:
+                fighters.at[i, "last_fight_result"] = rec["result"]; wrote = True
+            if not have_method and rec["method"] and rec["method"].lower() not in STATUS_WORDS:
+                fighters.at[i, "last_fight_method"] = rec["method"]; filled += 1; wrote = True
+            if wrote:
+                completed += 1
+            continue
+
+        # Fall back to the name-pair key when the date doesn't line up but the
+        # opponent is known -- the two sources sometimes differ by a day.
+        if have_opp and not have_method:
+            method = lookup.get((frozenset({name_n, _normalize_name(opp)}), str(date)[:10]))
+            if method:
+                fighters.at[i, "last_fight_method"] = method
+                filled += 1
+                continue
+        still_missing += 1
+
+    if filled or completed:
+        fighters.to_csv(fighters_path, index=False)
+    print(f"[methods] filled {filled} method(s), completed {completed} partial "
+          f"last-fight record(s) from history; {still_missing} still unknown")
+    return filled

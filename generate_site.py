@@ -32,7 +32,7 @@ from src.track_record import log_predictions, compute_track_record, load_momentu
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
 from src.card_discovery import discover_and_append_new_cards, normalize_existing_card_order, resync_tracked_card_order, deduplicate_tracked_fights
-from src.fighter_backfill import backfill_fighters, fill_missing_last_fights, ensure_roster_rows
+from src.fighter_backfill import backfill_fighters, fill_missing_last_fights, ensure_roster_rows, fill_last_fight_methods
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
 from src.units_chart import build_units_timeseries_svg
@@ -180,6 +180,17 @@ def main():
                                  (f"{DATA_DIR}/fight_cards.csv", f"{DATA_DIR}/future_cards.csv"))
     except Exception as e:
         print(f"[generate_site] last-fight fill failed, continuing: {e}")
+
+    # LAST, after fill_missing_last_fights -- that can set a new last fight,
+    # and running the method fill before it would leave those blank. Reads
+    # local history rather than ESPN: the eventsMap reports status as "Final",
+    # a completion state rather than a method, which is why this field was
+    # empty and rendered as "L by None".
+    try:
+        fill_last_fight_methods(f"{DATA_DIR}/fighters.csv", f"{DATA_DIR}/fight_history.csv")
+    except Exception as e:
+        print(f"[generate_site] last-fight method fill failed, continuing: {e}")
+
 
     fighters_df = pd.read_csv(f"{DATA_DIR}/fighters.csv")
     history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
@@ -820,6 +831,29 @@ def main():
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
     env.filters["friendly_date"] = _format_friendly_date
+
+    def _method_display(value):
+        """
+        Dataset shorthand to the words used everywhere else on the page.
+
+        fight_history.csv stores "DEC" and "SUB" because that is how the raw
+        UFC dataset encodes them, so a last-fight line read "W by DEC against
+        Max Holloway" while the market table two inches below said "Decision".
+        Mapped at DISPLAY time rather than in the data: the stored codes are
+        what the model reads, and rewriting them in place would mean every
+        consumer needed to know about both forms.
+        Anything unrecognised passes through -- ESPN returns full phrases
+        like "Submission (rear-naked choke)" and those are already readable.
+        """
+        if not isinstance(value, str) or not value.strip():
+            return value
+        return {
+            "dec": "Decision", "decision": "Decision",
+            "sub": "Submission", "submission": "Submission",
+            "ko": "KO/TKO", "tko": "KO/TKO", "ko/tko": "KO/TKO",
+        }.get(value.strip().lower(), value.strip())
+
+    env.filters["method_display"] = _method_display
     env.globals["donut_svg"] = build_donut_svg
     env.globals["damage_svg"] = build_damage_silhouette_svg
 

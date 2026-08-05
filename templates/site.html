@@ -3453,9 +3453,9 @@
       <td{{ ' class="cmp-long"' | safe if comparison.b.style and comparison.b.style|length > 12 }}>{{ comparison.b.style or "—" }}</td>
     </tr>
     <tr>
-      <td>{% if comparison.a.last_fight_date %}{{ comparison.a.last_fight_date }}{% if comparison.a.last_fight_result %}<br>({{ comparison.a.last_fight_result }} by {{ comparison.a.last_fight_method }}{% if comparison.a.last_fight_opponent %} against {{ comparison.a.last_fight_opponent }}{% endif %}){% endif %}{% else %}—{% endif %}</td>
+      <td>{% if comparison.a.last_fight_date %}{{ comparison.a.last_fight_date }}{% if comparison.a.last_fight_result %}<br>({{ comparison.a.last_fight_result }}{# "by" only when a method is actually known. The manual history backfill records results without methods, and printing the absence gave "L by None" -- worse than saying nothing, because it looks like a value. #}{% if comparison.a.last_fight_method is real_value %} by {{ comparison.a.last_fight_method | method_display }}{% endif %}{% if comparison.a.last_fight_opponent %} against {{ comparison.a.last_fight_opponent }}{% endif %}){% endif %}{% else %}—{% endif %}</td>
       <td>Last Fight</td>
-      <td>{% if comparison.b.last_fight_date %}{{ comparison.b.last_fight_date }}{% if comparison.b.last_fight_result %}<br>({{ comparison.b.last_fight_result }} by {{ comparison.b.last_fight_method }}{% if comparison.b.last_fight_opponent %} against {{ comparison.b.last_fight_opponent }}{% endif %}){% endif %}{% else %}—{% endif %}</td>
+      <td>{% if comparison.b.last_fight_date %}{{ comparison.b.last_fight_date }}{% if comparison.b.last_fight_result %}<br>({{ comparison.b.last_fight_result }}{# "by" only when a method is actually known. The manual history backfill records results without methods, and printing the absence gave "L by None" -- worse than saying nothing, because it looks like a value. #}{% if comparison.b.last_fight_method is real_value %} by {{ comparison.b.last_fight_method | method_display }}{% endif %}{% if comparison.b.last_fight_opponent %} against {{ comparison.b.last_fight_opponent }}{% endif %}){% endif %}{% else %}—{% endif %}</td>
     </tr>
   </table></div>
   {% endif %}

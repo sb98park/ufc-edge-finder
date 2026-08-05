@@ -399,6 +399,48 @@ def check_round_props_monotonic(c):
         print(f"       [round-monotonic] checked {checked} fight(s)")
 
 
+def check_distance_vs_rounds(c):
+    """
+    Over (the widest line) must be at least P(decision), on every fight.
+
+    A decision means the fight reached the final bell, so it is necessarily
+    Over the last half-round mark. The gap between them is the finishes that
+    land in that final 2:30 -- small, but never negative.
+
+    Nothing guarded this. The two figures come from different code paths (the
+    method model and the round-total finder), and every previous disagreement
+    on this card started exactly that way: two paths computing related
+    quantities without a check tying them together.
+    """
+    blocks = re.split(r'<details class="fight-card', c)[1:]
+    checked = 0
+    for block in blocks:
+        rows = re.findall(
+            r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+            block, re.DOTALL)
+        decision, overs = None, []
+        for label, prob in rows:
+            label = re.sub(r"<[^>]+>", "", label).strip()
+            if label == "Fight ends by Decision":
+                decision = float(prob)
+            m = re.match(r"^Total Rounds Over ([\d.]+)$", label)
+            if m:
+                overs.append((float(m.group(1)), float(prob)))
+        if decision is None or not overs:
+            continue
+        checked += 1
+        widest_line, widest_over = max(overs)
+        key = re.search(r'data-fight-key="([^"]+)"', block)
+        name = key.group(1) if key else "unknown fight"
+        # Tolerance covers rounding only; a real inversion is far larger.
+        if widest_over < decision - 1.0:
+            fail("distance-vs-rounds",
+                 f"{name}: Over {widest_line} is {widest_over:.1f}% but decision is "
+                 f"{decision:.1f}% -- a decision is necessarily over the last line")
+    if checked:
+        print(f"       [distance-vs-rounds] checked {checked} fight(s)")
+
+
 def main():
     c = load()
     check_css_braces(c)
@@ -412,6 +454,7 @@ def main():
     check_method_coherence(c)
     check_headline_matches_table(c)
     check_round_props_monotonic(c)
+    check_distance_vs_rounds(c)
 
     for label, items in (("FAIL", FAILURES), ("WARN", WARNINGS)):
         for check, detail in items:
