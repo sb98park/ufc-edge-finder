@@ -221,7 +221,13 @@ def build_dual_line_chart_svg(
     min_p, max_p = max(0.0, min_p - pad), min(1.0, max_p + pad)
     range_p = (max_p - min_p) or 0.1
 
-    left_pad, right_pad, top_pad, bottom_pad = 36, 10, 30, 22
+    # right_pad reserves room for the endpoint price on single-line charts.
+    # At 10px the last data point sat almost at the frame edge, so the label
+    # had to flip left and landed ON the line -- unreadable exactly where the
+    # line is most interesting. Widening the gutter lets it always sit to the
+    # RIGHT of the dot, on empty background.
+    left_pad, top_pad, bottom_pad = 36, 30, 22
+    right_pad = 44 if not show_legend else 10
     plot_w = width - left_pad - right_pad
     plot_h = height - top_pad - bottom_pad
 
@@ -327,13 +333,14 @@ def build_dual_line_chart_svg(
         _ex, _ey = x_at(_pts[-1][0]), y_at(_pts[-1][1])
         _label = _book_odds_label(raw_a, 1 - raw_a)
         if _label:
-            # Flipped to the left of the point when it would run off the
-            # right edge, so a late-rising line can't push it out of frame.
-            _anchor = "end" if _ex > width - 42 else "start"
-            _dx = -7 if _anchor == "end" else 7
+            # ALWAYS to the right, never flipped. The gutter above guarantees
+            # the space, so the label can't overlap the line no matter where
+            # the series ends. Vertically centred on the point rather than
+            # raised, so it doesn't collide with the top gridline on a chart
+            # that finishes high.
             endpoint_price_svg = (
-                f'<text x="{_ex + _dx:.1f}" y="{_ey - 6:.1f}" font-size="10" font-weight="700" '
-                f'fill="#eef0f2" text-anchor="{_anchor}">{_label}</text>'
+                f'<text x="{_ex + 7:.1f}" y="{_ey + 3.5:.1f}" font-size="10" font-weight="700" '
+                f'fill="#eef0f2" text-anchor="start">{_label}</text>'
             )
     line_b_svg, pct_b, raw_b = render_line(points_b, LINE_COLOR_B)
 
