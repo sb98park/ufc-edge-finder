@@ -422,9 +422,16 @@ def build_dual_line_chart_svg(
         f'aria-label="{name_a} vs {name_b} probability over time{" (one side implied)" if (implied_a or implied_b) else ""}">'
         # Grid and axes first and UNCLIPPED -- they are the backdrop and are
         # there from the first frame. Only the lines sit inside the clip.
+        # Grid and axes render immediately. The lines, their endpoint dots and
+        # the price all sit INSIDE the clip, so each is uncovered exactly when
+        # the sweep reaches it -- the dot as the line lands, the price a beat
+        # later because it sits to the right of the dot. Structural rather
+        # than timed, so no amount of earlier revealing can put them on screen
+        # before the line.
         + clip_svg + grid_svg + axis_svg + x_labels_svg
-        + f'<g clip-path="url(#{clip_id})">' + line_a_svg + line_b_svg + '</g>'
-        + legend_svg + endpoint_price_svg +
+        + f'<g clip-path="url(#{clip_id})">' + line_a_svg + line_b_svg
+        + endpoint_price_svg + '</g>'
+        + legend_svg +
         '</svg>'
     )
 

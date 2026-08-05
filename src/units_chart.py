@@ -137,7 +137,13 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
   <g clip-path="url(#units-reveal)">
     <path d="{fill_path}" fill="url(#units-ts-fill)" stroke="none"/>
     <polyline points="{poly_points}" fill="none" stroke="{trend_color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- INSIDE the clip. The dot was outside it, hidden only by an opacity
+         delay -- which works right up until the block was revealed earlier
+         than the reader scrolled to it, and then the dot simply sat there
+         waiting for the line. Inside, it is uncovered by the clip edge
+         reaching its x position, which IS the moment the line arrives.
+         No timing, no class state, nothing to get out of sync. -->
+    <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="{trend_color}"/>
   </g>
-  <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="{trend_color}" class="chart-draw-endpoint"/>
   <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="none" stroke="{trend_color}" stroke-width="1.5" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>
 </svg>"""
