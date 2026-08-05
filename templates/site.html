@@ -1720,8 +1720,8 @@
   .tape-block { margin-bottom: 14px; }
   .tape-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 3px; }
   .tape-value { font-size: 12px; font-weight: 600; width: 50px; }
-  .tape-value.left { text-align: left; color: var(--accent2); }
-  .tape-value.right { text-align: right; color: var(--muted); }
+  .tape-value.left { text-align: left; color: var(--text); }
+  .tape-value.right { text-align: right; color: var(--text); }
   .tape-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; flex: 1; text-align: center; }
   .tape-bar-track { display: flex; height: 6px; border-radius: 4px; overflow: hidden; background: var(--panel2); }
   .tape-bar-a { background: linear-gradient(90deg, transparent, var(--corner-red)); border-radius: 4px 0 0 3px; transition: width 1.4s ease-out; }
@@ -1735,11 +1735,17 @@
   .chart-draw-line { /* renders normally now - visibility controlled by chart-reveal-mask instead */ }
   .chart-reveal-mask { transform: scaleX(1); transition: transform 1.6s ease-out; }
   .chart-block.revealed .chart-reveal-mask { transform: scaleX(0); }
-  .chart-draw-endpoint { opacity: 0; transition: opacity 0.35s ease-out; transition-delay: 1.4s; }
+  /* Delay matches the reveal mask's 1.6s exactly. At 1.4s the dot arrived
+     while the line was still drawing, so it read as a target the line was
+     travelling toward rather than as where the line ended up. */
+  .chart-draw-endpoint { opacity: 0; transition: opacity 0.35s ease-out; transition-delay: 1.6s; }
   .chart-block.revealed .chart-draw-endpoint { opacity: 1; }
   .chart-endpoint-halo { opacity: 0; }
+  /* Pulse begins when the line LANDS, not 0.2s before it. The mask takes
+     1.6s; this waited 1.4s, so the halo started while the line was still
+     travelling toward the point it was meant to be marking. */
   .chart-block.revealed .chart-endpoint-halo {
-    opacity: 1; animation: endpoint-pulse 1.8s ease-out 1.4s 4;
+    opacity: 1; animation: endpoint-pulse 1.8s ease-out 1.6s 4;
   }
   @keyframes endpoint-pulse {
     0% { transform: scale(1); opacity: 0.55; }
@@ -1751,9 +1757,10 @@
   .radar-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
   .radar-dot.a { background: var(--corner-red); }
   .radar-dot.b { background: var(--corner-blue); }
+  /* Duplicate of the rule above -- it redefined .radar-dot.a/.b in gold and
+     grey further down the sheet, so the corner colours set earlier never
+     took effect. Colours removed; only the sizing it also carried is kept. */
   .radar-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .radar-dot.a { background: #d4af37; }
-  .radar-dot.b { background: #8a8f9a; }
   .compare-table td:nth-child(2) { text-align: center; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
   .compare-table tr:last-child td { border-bottom: none; }
 

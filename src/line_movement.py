@@ -338,9 +338,13 @@ def build_dual_line_chart_svg(
             # the series ends. Vertically centred on the point rather than
             # raised, so it doesn't collide with the top gridline on a chart
             # that finishes high.
+            # Same class as the endpoint dot, so it inherits the delayed
+            # fade and lands WITH the finished line. Without it the price sat
+            # there from the first frame while the line crawled toward it --
+            # the answer arriving before the working.
             endpoint_price_svg = (
                 f'<text x="{_ex + 7:.1f}" y="{_ey + 3.5:.1f}" font-size="10" font-weight="700" '
-                f'fill="#eef0f2" text-anchor="start">{_label}</text>'
+                f'fill="#eef0f2" text-anchor="start" class="chart-draw-endpoint">{_label}</text>'
             )
     line_b_svg, pct_b, raw_b = render_line(points_b, LINE_COLOR_B)
 
