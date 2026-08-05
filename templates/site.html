@@ -367,7 +367,11 @@
 
   .favorite-card {
     background: var(--panel2);
-    border: 1px solid var(--border); border-left: 3px solid #3ddc84; border-radius: 12px; padding: 14px 16px;
+    /* No green left strip. It was the last of the identity-colour bars,
+       matching the ones removed from the fight cards, the drawer and the
+       standout props -- and green means "positive" elsewhere, so on a card
+       that is already a positive pick it stated the obvious twice. */
+    border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   .favorite-card:active { transform: scale(0.98); }
@@ -1604,10 +1608,6 @@
     font-size: 12px; color: #b9bec9; line-height: 1.6;
     white-space: normal;
   }
-  .model-preview.masterpiece {
-    border-left: 3px solid #3ddc84;
-  }
-  .preview-label { color: var(--accent); font-weight: 600; }
   .chart-block {
     background: var(--panel2); border: 1px solid var(--border); border-radius: 12px;
     padding: 10px 12px; margin: 8px 0; text-align: center;
@@ -2662,6 +2662,13 @@
     white-space: nowrap;
     padding-left: 2px; padding-right: 2px;
   }
+  /* Top gap MIRRORS the tab bar's bottom offset -- the same formula, so the
+     space above the wordmark equals the space below the pill.
+     Set as its own rule at the end rather than editing the five `body`
+     padding declarations scattered across the breakpoints: each of those
+     resets padding wholesale, so a change to one is silently undone by the
+     next. */
+  body { padding-top: max(10px, calc(env(safe-area-inset-top, 0px) - 12px)); }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
