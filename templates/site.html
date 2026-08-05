@@ -1739,7 +1739,16 @@
      whole chart appeared to slide in rather than the line being drawn.
      Still a transform, so it keeps the hardware compositing that the mask was
      chosen for over stroke-dashoffset. */
-  .chart-reveal-clip { transform: scaleX(0); transition: transform 1.6s ease-out; }
+  /* LINEAR, not ease-out. The dot is uncovered when the sweep passes its x
+     position, and the price and pulse are timed to that point -- but under
+     ease-out the clip covers 96.8% of its distance at only 86% of the
+     duration, so the dot appeared at 1.377s while the delay computed from
+     geometry said 1.548s. A 171ms gap, which is exactly the "micro delay"
+     that survived two attempts to remove it.
+     Linear makes distance proportional to time, so the computed delay is
+     exact -- and a constant-speed draw is the right feel for a line being
+     drawn anyway. */
+  .chart-reveal-clip { transform: scaleX(0); transition: transform 1.6s linear; }
   .chart-block.revealed .chart-reveal-clip { transform: scaleX(1); }
   /* Kept for any chart still emitting the old element. */
   .chart-reveal-mask { transform: scaleX(1); transition: transform 1.6s ease-out; }
