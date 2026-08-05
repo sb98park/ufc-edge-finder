@@ -1755,7 +1755,11 @@
      is uncovered by the sweep, a beat after the dot because it sits to the
      dot's right. */
   .chart-block.revealed .chart-draw-endpoint { opacity: 1; }
-  .chart-endpoint-halo { opacity: 0; }
+  /* No opacity gate. The halo sits inside the clip, so the sweep hides it --
+     and an opacity rule on top meant a stale `revealed` could show the ring
+     before the line reached it. The class now carries the pulse and nothing
+     else. */
+  .chart-endpoint-halo { opacity: 1; }
   /* Pulse begins when the line LANDS, not 0.2s before it. The mask takes
      1.6s; this waited 1.4s, so the halo started while the line was still
      travelling toward the point it was meant to be marking. */

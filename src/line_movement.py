@@ -441,8 +441,8 @@ def build_dual_line_chart_svg(
         # than timed, so no amount of earlier revealing can put them on screen
         # before the line.
         + clip_svg + grid_svg + axis_svg + x_labels_svg
-        + f'<g clip-path="url(#{clip_id})">' + line_a_svg + line_b_svg + '</g>'
-        + halo_svg + endpoint_price_svg
+        + f'<g clip-path="url(#{clip_id})">' + line_a_svg + line_b_svg + halo_svg + '</g>'
+        + endpoint_price_svg
         + legend_svg +
         '</svg>'
     )
