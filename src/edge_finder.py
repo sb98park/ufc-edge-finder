@@ -13,7 +13,7 @@ import re
 import pandas as pd
 
 from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob
-from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win
+from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
 from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
 
 
@@ -344,7 +344,21 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
     REFERENCE_LINE = 2.5
     ADJUSTMENT_PER_ROUND = 0.15
 
+    # Scheduled length PER FIGHT, derived once. It was inferred from the LINE
+    # (`5 if line > 3 else 3`), which is wrong: a five-round fight is offered
+    # 2.5 lines too, so its 2.5 got the three-round share (0.865) while its
+    # 3.5 got the five-round one (0.805) -- and Under 2.5 came out HIGHER than
+    # Under 3.5 on the same fight.
+    # card_position is authoritative; the widest line offered is the fallback,
+    # since a 3.5 or 4.5 line only exists on a five-round bout.
+    _sched_by_fight = {}
+    for fid, g in props.groupby("fight_id"):
+        pos = str(g.get("card_position", pd.Series([""])).iloc[0] or "").strip()
+        widest = g["_line"].dropna().max() if g["_line"].notna().any() else 0
+        _sched_by_fight[fid] = 5 if (pos == "Main Event" or (widest or 0) > 3) else 3
+
     for (fight_id, line), group in props.groupby(["fight_id", "_line"]):
+        scheduled = _sched_by_fight.get(fight_id, 3)
         fighters_in_fight = group["fighter_a"].iloc[0], group["fighter_b"].iloc[0]
         finish_rates = []
         first_round_rates = []
@@ -390,14 +404,14 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 ko_press=koa * klb + kob * kla, sub_press=sua * slb + sub_ * sla,
                 ko_rate_sum=koa + kob, sub_rate_sum=sua + sub_,
                 durability=kla + klb, elo_gap=gap,
-                scheduled_rounds=5 if (line or 0) > 3 else 3,
+                scheduled_rounds=scheduled,
             )
 
         if _md is not None:
             finish = 1.0 - _md["decision"]
             # Fraction of finishes landing before each line. Higher lines
             # capture nearly all of them; the 1.5 line only the early ones.
-            share = {1.5: 0.45, 2.5: 0.86, 3.5: 0.72, 4.5: 0.94}.get(line, 0.86)
+            share = finish_share_before(line, scheduled)
             model_prob_under = finish * share
         elif line is not None and line <= 1.5 and combined_first_round_rate is not None:
             # the literal, most verifiable case: does it end in round 1

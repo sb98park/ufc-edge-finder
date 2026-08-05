@@ -243,3 +243,44 @@ def method_given_win(own_ko_rate, own_sub_rate, opp_ko_lost, opp_sub_lost,
     e = [math.exp(v - m) for v in z]
     tot = sum(e)
     return [v / tot for v in e]
+
+
+
+# Share of FINISHES that land before each half-round mark, by scheduled
+# length. Finishes are front-loaded, so these are cumulative and strictly
+# increasing -- which is the property that matters.
+#
+# The previous form was a dict lookup keyed on the line with a default, and a
+# 0.5 line wasn't in it: it fell through to the default and came out at 0.86,
+# the same value as Under 2.5. A card showed "Under 0.5  51.3%" beside
+# "Under 2.5  51.3%", which is impossible -- a fight ending in the first 150
+# seconds cannot be as likely as one ending any time in three rounds.
+#
+# Built from a per-round distribution instead, so every line is derived from
+# the same shape and monotonicity holds by construction rather than by the
+# author remembering to check.
+_ROUND_FINISH_SHARE = {
+    3: [0.40, 0.33, 0.27],
+    5: [0.30, 0.24, 0.19, 0.15, 0.12],
+}
+
+
+def finish_share_before(line: float, scheduled_rounds: int = 3) -> float:
+    """
+    Fraction of a fight's finishes that occur before `line` rounds elapse.
+
+    "Under 2.5" means the fight ends before the midpoint of round 3: all
+    finishes in rounds 1 and 2, plus roughly half of round 3's.
+
+    The per-round shares are ESTIMATES -- front-loaded, which is the real
+    pattern, but not fitted. What they guarantee is ordering: P(Under 0.5) <
+    P(Under 1.5) < P(Under 2.5), which is arithmetic rather than a modelling
+    claim and was being violated.
+    """
+    shares = _ROUND_FINISH_SHARE.get(int(scheduled_rounds), _ROUND_FINISH_SHARE[3])
+    full = int(line)                      # complete rounds below the line
+    total = sum(shares[:full])
+    if full < len(shares):
+        # The .5 puts the line mid-round, so half that round's finishes count.
+        total += shares[full] * 0.5
+    return min(total, 1.0)

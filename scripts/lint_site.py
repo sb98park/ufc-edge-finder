@@ -358,6 +358,47 @@ def check_headline_matches_table(c):
         print(f"       [headline-vs-table] checked {checked} fight(s)")
 
 
+def check_round_props_monotonic(c):
+    """
+    Within a fight, P(Under X) must increase with X.
+
+    Pure arithmetic: a fight ending before 0.5 rounds also ended before 1.5.
+    It was violated by a dict lookup keyed on the line with a default -- 0.5
+    wasn't a key, so it fell through and produced the SAME value as 2.5. A
+    card showed "Under 0.5  51.3%" beside "Under 2.5  51.3%", which reads as
+    a plausible number and is impossible.
+    """
+    blocks = re.split(r'<details class="fight-card', c)[1:]
+    checked = 0
+    for block in blocks:
+        rows = re.findall(
+            r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+            block, re.DOTALL)
+        unders = []
+        for label, prob in rows:
+            label = re.sub(r"<[^>]+>", "", label).strip()
+            m = re.match(r"^Total Rounds Under ([\d.]+)$", label)
+            if m:
+                unders.append((float(m.group(1)), float(prob)))
+        if len(unders) < 2:
+            continue
+        checked += 1
+        unders.sort()
+        key = re.search(r'data-fight-key="([^"]+)"', block)
+        name = key.group(1) if key else "unknown fight"
+        for (l1, p1), (l2, p2) in zip(unders, unders[1:]):
+            if p2 < p1 - 0.05:
+                fail("round-monotonic",
+                     f"{name}: Under {l1} is {p1:.1f}% but Under {l2} is {p2:.1f}% "
+                     f"-- a longer line cannot be less likely")
+            elif abs(p2 - p1) < 0.05:
+                fail("round-monotonic",
+                     f"{name}: Under {l1} and Under {l2} are both {p1:.1f}% "
+                     f"-- distinct lines cannot share a probability")
+    if checked:
+        print(f"       [round-monotonic] checked {checked} fight(s)")
+
+
 def main():
     c = load()
     check_css_braces(c)
@@ -370,6 +411,7 @@ def main():
     check_probability_coherence()
     check_method_coherence(c)
     check_headline_matches_table(c)
+    check_round_props_monotonic(c)
 
     for label, items in (("FAIL", FAILURES), ("WARN", WARNINGS)):
         for check, detail in items:

@@ -10,7 +10,7 @@ import pandas as pd
 
 from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg
-from src.method_model import method_probabilities, reconcile_fighter_methods, method_given_win
+from src.method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
 
 
 def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
@@ -184,8 +184,8 @@ def build_full_market_projection(
         # before the 4.5 mark. They are estimates, and the identity they
         # enforce is what actually matters here.
         _finish = (1.0 - _md["decision"]) if _md else min(combined_finish_rate, 0.95)
-        rounds_mid = _finish * 0.72      # finish before the midpoint of round 4
-        rounds_late = _finish * 0.94     # finish before the midpoint of round 5
+        rounds_mid = _finish * finish_share_before(3.5, 5)
+        rounds_late = _finish * finish_share_before(4.5, 5)
         rounds_rows = [
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 3.5", "model_prob": round(rounds_mid, 3)},
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 3.5", "model_prob": round(1 - rounds_mid, 3)},
@@ -199,8 +199,8 @@ def build_full_market_projection(
         # career-rate proxies had no relationship to the method rows and could
         # exceed the finish probability outright.
         _finish3 = (1.0 - _md["decision"]) if _md else min(combined_finish_rate, 0.95)
-        rounds_2_5 = _finish3 * 0.86     # finish before the midpoint of round 3
-        _under_1_5 = min(combined_first_round_rate, _finish3 * 0.45)
+        rounds_2_5 = _finish3 * finish_share_before(2.5, 3)
+        _under_1_5 = _finish3 * finish_share_before(1.5, 3)
         rounds_rows = [
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 1.5", "model_prob": round(_under_1_5, 3)},
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 1.5", "model_prob": round(1 - _under_1_5, 3)},
