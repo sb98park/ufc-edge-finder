@@ -397,15 +397,34 @@ def build_dual_line_chart_svg(
     # across multiple rounds of testing, which lines up with a known,
     # documented gap in WebKit: transform animations get real hardware
     # compositing, direct SVG stroke-property animation often doesn't.
-    mask_svg = (
-        f'<rect x="{left_pad}" y="{top_pad}" width="{plot_w}" height="{plot_h}" fill="var(--panel)" '
-        f'class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/>'
+    # CLIP THE LINES, don't cover the chart.
+    #
+    # This was an opaque panel-coloured rect painted LAST over the whole plot
+    # area, shrinking to reveal what was beneath. It hid everything under it,
+    # not just the lines -- so the gridlines, the axes and the labels all
+    # animated in together and the effect read as a box sliding away rather
+    # than a line being drawn.
+    #
+    # A clipPath applies to the line group only. Grid, axes and labels render
+    # immediately and never move; the line is revealed left to right beneath a
+    # clip rect whose scaleX animates -- still a transform, so it keeps the
+    # hardware compositing the mask was chosen for.
+    clip_id = f"reveal-{abs(hash((width, height, len(points_a), len(points_b), name_a, name_b))) % 10**8}"
+    clip_svg = (
+        f'<defs><clipPath id="{clip_id}">'
+        f'<rect x="{left_pad}" y="{top_pad - 4}" width="{plot_w + right_pad}" height="{plot_h + 8}" '
+        f'class="chart-reveal-clip" style="transform-box: fill-box; transform-origin: left center;"/>'
+        f'</clipPath></defs>'
     )
 
     return (
         f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" class="dual-chart" role="img" '
         f'aria-label="{name_a} vs {name_b} probability over time{" (one side implied)" if (implied_a or implied_b) else ""}">'
-        + grid_svg + axis_svg + line_a_svg + line_b_svg + legend_svg + x_labels_svg + mask_svg + endpoint_price_svg +
+        # Grid and axes first and UNCLIPPED -- they are the backdrop and are
+        # there from the first frame. Only the lines sit inside the clip.
+        + clip_svg + grid_svg + axis_svg + x_labels_svg
+        + f'<g clip-path="url(#{clip_id})">' + line_a_svg + line_b_svg + '</g>'
+        + legend_svg + endpoint_price_svg +
         '</svg>'
     )
 

@@ -105,9 +105,15 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     # #242426 stopped matching and the mask became a visible grey rectangle
     # sliding across the graph.
     # A CSS variable can't drift from the palette the way a literal can.
+    # CLIP THE LINE, don't cover the chart -- same change as the movement
+    # charts. The mask was an opaque rect painted over the whole plot area,
+    # so the gridlines and axis labels animated in with the line and the
+    # effect read as a box sliding away rather than a line being drawn.
     mask_svg = (
-        f'<rect x="{pad_left}" y="{pad_top}" width="{plot_w}" height="{plot_h}" fill="var(--panel)" '
-        f'class="chart-reveal-mask" style="transform-box: fill-box; transform-origin: right center;"/>'
+        f'<defs><clipPath id="units-reveal">'
+        f'<rect x="{pad_left}" y="{pad_top - 6}" width="{plot_w + 12}" height="{plot_h + 12}" '
+        f'class="chart-reveal-clip" style="transform-box: fill-box; transform-origin: left center;"/>'
+        f'</clipPath></defs>'
     )
 
     # Expose the plotted coordinates so the client can map a finger or cursor
@@ -127,9 +133,11 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
       <stop offset="100%" stop-color="{trend_color}" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <path d="{fill_path}" fill="url(#units-ts-fill)" stroke="none"/>
-  <polyline points="{poly_points}" fill="none" stroke="{trend_color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  {mask_svg}
+  <g clip-path="url(#units-reveal)">
+    <path d="{fill_path}" fill="url(#units-ts-fill)" stroke="none"/>
+    <polyline points="{poly_points}" fill="none" stroke="{trend_color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
   <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="{trend_color}" class="chart-draw-endpoint"/>
   <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="none" stroke="{trend_color}" stroke-width="1.5" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>
-  {mask_svg}
 </svg>"""

@@ -1733,8 +1733,20 @@
   .radar-chart.revealed .radar-polygon { transform: scale(1); }
   .radar-legend { display: flex; gap: 16px; margin-top: 4px; }
   .chart-draw-line { /* renders normally now - visibility controlled by chart-reveal-mask instead */ }
+  /* The clip rect starts at zero width and opens to full, revealing the line
+     left to right. Replaces a panel-coloured rect that was painted OVER the
+     whole plot and shrank -- that hid the gridlines and labels too, so the
+     whole chart appeared to slide in rather than the line being drawn.
+     Still a transform, so it keeps the hardware compositing that the mask was
+     chosen for over stroke-dashoffset. */
+  .chart-reveal-clip { transform: scaleX(0); transition: transform 1.6s ease-out; }
+  .chart-block.revealed .chart-reveal-clip { transform: scaleX(1); }
+  /* Kept for any chart still emitting the old element. */
   .chart-reveal-mask { transform: scaleX(1); transition: transform 1.6s ease-out; }
   .chart-block.revealed .chart-reveal-mask { transform: scaleX(0); }
+  @media (prefers-reduced-motion: reduce) {
+    .chart-reveal-clip { transition: none; transform: scaleX(1); }
+  }
   /* Delay matches the reveal mask's 1.6s exactly. At 1.4s the dot arrived
      while the line was still drawing, so it read as a target the line was
      travelling toward rather than as where the line ended up. */
