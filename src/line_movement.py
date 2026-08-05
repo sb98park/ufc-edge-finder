@@ -310,11 +310,22 @@ def build_dual_line_chart_svg(
         svg = (
             f'<polyline points="{coords}" fill="none" stroke="{color}" stroke-width="2.5" '
             f'stroke-linejoin="round" stroke-linecap="round" class="chart-draw-line"/>'
-            # Just the dot, and unclassed -- it is revealed by the clip
-            # sweep reaching it, not by an opacity delay. The halo used to
-            # be emitted here too, inside the clip, where its pulse ran
-            # under the cover and was uncovered a fraction before the price.
+            # Dot AND halo, both revealed by the clip sweep reaching this
+            # point rather than by an opacity delay.
+            #
+            # The halo was briefly pulled out of here while chasing a
+            # duplicate emission, which silently took the pulse off the
+            # DUAL moneyline chart too -- that chart draws both fighters
+            # through this same function, and was the one place the pulse
+            # had always been correct.
+            #
+            # The delay is per-LINE, so each fighter's dot pulses as its
+            # own line lands rather than both waiting on the slower one.
             f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="{color}"/>'
+            f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="3.5" fill="none" stroke="{color}" '
+            f'stroke-width="1.5" class="chart-endpoint-halo" '
+            f'style="transform-box: fill-box; transform-origin: center; '
+            f'animation-delay: {1.6 * (end_x - left_pad) / max(plot_w + 6, 1):.3f}s"/>'
         )
         return svg, round(last_p * 100), last_p
 
@@ -361,12 +372,10 @@ def build_dual_line_chart_svg(
                 f'fill="#eef0f2" text-anchor="start" class="chart-endpoint-late" '
                 f'style="transition-delay: {_reveal_at:.3f}s">{_label}</text>'
             )
-            halo_svg = (
-                f'<circle cx="{_ex:.1f}" cy="{_ey:.1f}" r="3.5" fill="none" stroke="{_colour_a}" '
-                f'stroke-width="1.5" class="chart-endpoint-halo" '
-                f'style="transform-box: fill-box; transform-origin: center; '
-                f'animation-delay: {_reveal_at:.3f}s"/>'
-            )
+            # render_line already emits the halo alongside the dot, inside
+            # the clip. Emitting a second one here is what caused the
+            # duplicate that took three passes to track down.
+            halo_svg = ""
     line_b_svg, pct_b, raw_b = render_line(points_b, LINE_COLOR_B)
 
     # Pair each side's raw probability with a real complement when both
