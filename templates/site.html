@@ -1774,9 +1774,17 @@
      uncovers the dot. These sit to the dot's right, so they can't be inside
      the clip without trailing it. */
   .chart-endpoint-late { opacity: 0; }
+  /* No transition-delay here -- each chart sets its own inline, computed
+     from where its dot actually sits along the sweep. A flat value trailed
+     the dot by ~50ms because the clip runs 6px past the line so the dot's
+     edge isn't shaved. */
   .chart-block.revealed .chart-endpoint-late {
-    opacity: 1; transition: opacity 0.12s ease-out; transition-delay: 1.6s;
+    opacity: 1; transition: opacity 0.12s ease-out;
   }
+  /* The 1.6s here is the FALLBACK, used by the units chart. The movement
+     charts set animation-delay inline from their own geometry, and an inline
+     style outranks this rule -- no `inherit` needed, which would have taken
+     the parent's value rather than the element's own. */
   .chart-block.revealed .chart-endpoint-halo {
     opacity: 1; animation: endpoint-pulse 1.6s ease-out 1.6s 4;
   }

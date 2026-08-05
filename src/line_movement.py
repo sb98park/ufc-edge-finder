@@ -345,18 +345,27 @@ def build_dual_line_chart_svg(
             # fade and lands WITH the finished line. Without it the price sat
             # there from the first frame while the line crawled toward it --
             # the answer arriving before the working.
-            # Both carry chart-endpoint-late: hidden until the sweep's own
-            # duration has elapsed, which is the instant the clip finishes
-            # uncovering the dot. Kept OUT of the clip because they sit to the
-            # dot's right, where the sweep would always reach them later.
+            # Delay computed from the GEOMETRY, not assumed.
+            #
+            # The clip is 6px wider than the line so the dot's edge isn't
+            # shaved, which means the sweep uncovers the dot at ~96.8% of its
+            # travel -- 1.548s, not 1.600s. A flat 1.6s delay on the price
+            # therefore trailed the dot by ~50ms, which is small enough to
+            # look like a mistake rather than a beat.
+            # Deriving it removes the gap exactly and survives any change to
+            # the padding or the chart width.
+            _sweep = 1.6
+            _reveal_at = _sweep * (_ex - left_pad) / max(plot_w + 6, 1)
             endpoint_price_svg = (
                 f'<text x="{_ex + 7:.1f}" y="{_ey + 3.5:.1f}" font-size="10" font-weight="700" '
-                f'fill="#eef0f2" text-anchor="start" class="chart-endpoint-late">{_label}</text>'
+                f'fill="#eef0f2" text-anchor="start" class="chart-endpoint-late" '
+                f'style="transition-delay: {_reveal_at:.3f}s">{_label}</text>'
             )
             halo_svg = (
                 f'<circle cx="{_ex:.1f}" cy="{_ey:.1f}" r="3.5" fill="none" stroke="{_colour_a}" '
                 f'stroke-width="1.5" class="chart-endpoint-halo" '
-                f'style="transform-box: fill-box; transform-origin: center;"/>'
+                f'style="transform-box: fill-box; transform-origin: center; '
+                f'animation-delay: {_reveal_at:.3f}s"/>'
             )
     line_b_svg, pct_b, raw_b = render_line(points_b, LINE_COLOR_B)
 
