@@ -2662,13 +2662,19 @@
     white-space: nowrap;
     padding-left: 2px; padding-right: 2px;
   }
-  /* A plain value now the status bar is opaque. This mirrored the tab bar's
-     safe-area formula, which made sense while the view extended under the
-     status bar -- with an opaque bar the inset is already accounted for and
-     subtracting from it just moved the header around unpredictably.
+  /* MUST clear the status bar explicitly.
+     viewport-fit=cover extends the view into the safe areas whatever the
+     status-bar style is -- setting it to "black" changes its colour, not the
+     geometry. A flat 12px therefore put the wordmark under the clock.
+     The gap MIRRORS the tab bar's, correctly understood: the bar sits 22px
+     off the screen bottom, but the home indicator occupies the first ~13px
+     of that, so it really clears the indicator by ~9px. The same 9px here
+     clears the status bar.
+     Matching the raw 22px instead would put the header inside the status bar
+     -- which is the overlap this replaces.
      Its own rule at the end because the five `body` padding declarations
      across the breakpoints each reset padding wholesale. */
-  body { padding-top: 12px; }
+  body { padding-top: calc(env(safe-area-inset-top, 0px) + 9px); }
 
   /* Every section fills the viewport. Short ones -- Locks, More -- didn't
      scroll, so mobile browsers kept the URL bar expanded and the fixed tab
