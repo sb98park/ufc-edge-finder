@@ -166,7 +166,13 @@ def share_card(out):
 # no scaling and no fallback, so a missing size means the white default. These
 # cover every iPhone still on a current iOS.
 SPLASH_SIZES = [
-    (1290, 2796, 430, 932, 3),   # 15/14 Pro Max
+    # The 16 Pro pair is easy to miss: they are NOT the same dimensions as the
+    # 15 Pro pair. 402x874 and 440x956 are unique to that generation, and a
+    # missing size means iOS silently falls back to a white screen -- which is
+    # exactly how this list first shipped without them.
+    (1206, 2622, 402, 874, 3),   # 16 Pro
+    (1320, 2868, 440, 956, 3),   # 16 Pro Max
+    (1290, 2796, 430, 932, 3),   # 15/14 Pro Max, 16 Plus
     (1179, 2556, 393, 852, 3),   # 15/14 Pro
     (1284, 2778, 428, 926, 3),   # 13/12 Pro Max
     (1170, 2532, 390, 844, 3),   # 13/12, 14
