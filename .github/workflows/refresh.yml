@@ -29,6 +29,14 @@ concurrency:
 
 permissions:
   contents: write
+  # Artifact-based Pages deployment needs these two. The branch-source
+  # deployment this replaces required neither -- it cloned the repo instead,
+  # which is exactly the problem: 288 commits a day each rewriting a 4.2MB
+  # index.html had grown the pack to 157MB, and the Pages builder timed out
+  # cloning it. Uploading only the 4.2MB of output makes deployment time
+  # independent of history size.
+  pages: write
+  id-token: write
 
 jobs:
   refresh:
@@ -36,6 +44,11 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          # Shallow. The job needs the current files, not 157MB of history --
+          # and a full clone of a repo that gains ~100MB a month was adding
+          # minutes to every one of the 288 daily runs.
+          fetch-depth: 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -92,6 +105,11 @@ jobs:
         # have run clean across a few weeks of real builds.
         run: python scripts/lint_site.py || true
 
+      - name: Upload the built site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
@@ -123,3 +141,14 @@ jobs:
           # concurrency queue) instead of failing on a non-fast-forward.
           git pull --rebase origin main
           git push
+
+  deploy:
+    needs: refresh
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
