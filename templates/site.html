@@ -2662,13 +2662,21 @@
     white-space: nowrap;
     padding-left: 2px; padding-right: 2px;
   }
-  /* Top gap MIRRORS the tab bar's bottom offset -- the same formula, so the
-     space above the wordmark equals the space below the pill.
-     Set as its own rule at the end rather than editing the five `body`
-     padding declarations scattered across the breakpoints: each of those
-     resets padding wholesale, so a change to one is silently undone by the
-     next. */
-  body { padding-top: max(10px, calc(env(safe-area-inset-top, 0px) - 12px)); }
+  /* A plain value now the status bar is opaque. This mirrored the tab bar's
+     safe-area formula, which made sense while the view extended under the
+     status bar -- with an opaque bar the inset is already accounted for and
+     subtracting from it just moved the header around unpredictably.
+     Its own rule at the end because the five `body` padding declarations
+     across the breakpoints each reset padding wholesale. */
+  body { padding-top: 12px; }
+
+  /* Every section fills the viewport. Short ones -- Locks, More -- didn't
+     scroll, so mobile browsers kept the URL bar expanded and the fixed tab
+     bar sat noticeably higher than on the scrollable tabs. Giving every
+     section a floor makes the bar land in the same place throughout. */
+  @media (max-width: 1023px) {
+    #detail-view, #hub-view { min-height: calc(100vh - 160px); }
+  }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -2684,7 +2692,11 @@
      uses. It matches on exact device dimensions with no scaling and no
      fallback, so every current iPhone size is listed explicitly. #}
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  {# NOT black-translucent. That extends the web view under the status bar,
+     so the header rides up beneath the clock and every layout has to
+     compensate with safe-area padding. "black" keeps the bar opaque and the
+     content below it -- same colour, none of the overlap. #}
   <meta name="apple-mobile-web-app-title" content="Octane Alpha">
   <link rel="manifest" href="/manifest.json?v=6">
   <link rel="apple-touch-startup-image" href="/splash-1290x2796.png?v=6"
