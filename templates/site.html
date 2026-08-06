@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  {# maximum-scale + user-scalable stop pinch-zoom. iOS Safari IGNORES these
+     in a normal browser tab (deliberately, since iOS 10) but honours them in
+     a standalone home-screen app -- which is the context where zooming makes
+     the thing feel like a web page rather than an app. #}
 <title>Octane Alpha | Quantitative UFC Analytics & Edge Detection</title>
 
 <link rel="icon" type="image/svg+xml" href="favicon.svg?v=6">
@@ -66,6 +70,10 @@
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
+  /* Removes double-tap-to-zoom, which survives the viewport meta and also
+     costs every tap a ~300ms wait while the browser decides whether a second
+     one is coming. `manipulation` keeps scrolling and panning intact. */
+  body { touch-action: manipulation; }
   /* scrollbar-color is the STANDARDS-track property; scoping only the
      -webkit- pseudo-elements left this one global, which is why the gold bar
      survived on mobile. Both have to move together. */
