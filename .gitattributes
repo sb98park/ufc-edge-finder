@@ -10,5 +10,9 @@
 #   git config merge.ours.driver true
 # After that, `git pull --rebase origin main` resolves conflicts on these files
 # automatically, with no manual --ours/--theirs step needed ever again.
-docs/* merge=ours
-data/* merge=ours
+# `docs/*` matches files directly in docs/ ONLY -- a single asterisk does not
+# cross a directory boundary. The moment the build started writing
+# docs/movements/*.html, twenty files fell outside the pattern and every pull
+# conflicted on all of them. `**` matches at any depth.
+docs/** merge=ours
+data/** merge=ours
