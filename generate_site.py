@@ -9,6 +9,8 @@ disagreements. Run by GitHub Actions on a schedule; can also run locally:
 import datetime as dt
 import json
 import os
+import re
+import unicodedata
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -928,6 +930,22 @@ def main():
         ],
     }
 
+    # Stable id for the deferred movement fragments, assigned BEFORE render so
+    # the page and the files on disk use the same value by construction.
+    #
+    # fight_id looked like the obvious key and isn't present on every fight --
+    # in the template that would have rendered an empty URL and failed
+    # silently at fetch time rather than at build time. Derived from the two
+    # names instead, which every fight has.
+    def _movements_id(fight):
+        raw = f"{fight.get('fighter_a', '')}-vs-{fight.get('fighter_b', '')}"
+        slug = unicodedata.normalize("NFKD", raw).encode("ascii", "ignore").decode()
+        return re.sub(r"[^a-z0-9]+", "-", slug.lower()).strip("-") or "fight"
+
+    for _ev in list(events) + list(future_events):
+        for _f in _ev.get("fights", []):
+            _f["movements_id"] = _movements_id(_f)
+
     html = template.render(
         events=events,
         future_events=future_events,
@@ -976,7 +994,43 @@ def main():
     with open(OUTPUT_PATH, "w") as f:
         f.write(html)
 
+    # Secondary movement charts, one fragment per fight, fetched when the
+    # reader opens that fight's "other line movements".
+    #
+    # These were 2.76MB of a 4.26MB page -- 93% of it -- for 11-15 charts per
+    # fight sitting inside a collapsed <details>. Written as the SAME
+    # Python-rendered SVG rather than re-implemented in JS, so the two can't
+    # diverge the way every other duplicated calculation here has.
+    #
+    # Stale fragments are cleared first: a fight dropping off the card would
+    # otherwise leave its file behind forever, and the directory only ever
+    # grows in a repo that already has a size problem.
+    mv_dir = os.path.join("docs", "movements")
+    if os.path.isdir(mv_dir):
+        for old in os.listdir(mv_dir):
+            if old.endswith(".html"):
+                os.remove(os.path.join(mv_dir, old))
+    os.makedirs(mv_dir, exist_ok=True)
+
+    written = total = 0
+    for ev in list(events) + list(future_events):
+        for fight in ev.get("fights", []):
+            charts = fight.get("other_charts") or []
+            if not charts:
+                continue
+            frag = "".join(
+                f'<div class="chart-block">'
+                f'<div class="chart-label">{c["label"]}</div>{c["svg"]}</div>'
+                for c in charts
+            )
+            path = os.path.join(mv_dir, f'{fight["movements_id"]}.html')
+            with open(path, "w") as f:
+                f.write(frag)
+            written += 1
+            total += len(frag)
+
     print(f"Wrote {OUTPUT_PATH} ({len(events)} events, {len(future_events)} future events, {len(standout_props)} standout props flagged)")
+    print(f"Wrote {written} movement fragment(s), {total/1e6:.2f}MB deferred out of the page")
 
 
 if __name__ == "__main__":

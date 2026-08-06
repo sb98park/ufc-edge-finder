@@ -3790,15 +3790,16 @@
       </div>
       {% endif %}
       {% if fight.other_charts %}
-      <details class="chart-toggle">
+      {# FETCHED ON OPEN, not shipped in the page.
+         These 11-15 charts per fight were 2.76MB of the 4.26MB document --
+         about 93% of it, for content sitting inside a collapsed <details>
+         that most readers never open. The page now carries a URL; the markup
+         is the SAME Python-rendered SVG, just written to its own file, so
+         there's no second renderer to drift out of step. #}
+      <details class="chart-toggle" data-movements="/movements/{{ fight.movements_id }}.html">
         <summary>{{ icon_barchart() }} View other line movements ({{ fight.other_charts | length }})<span class="chevron">▶</span></summary>
         <div class="chart-toggle-body">
-          {% for chart in fight.other_charts %}
-          <div class="chart-block">
-            <div class="chart-label">{{ chart.label }}</div>
-            {{ chart.svg | safe }}
-          </div>
-          {% endfor %}
+          <div class="chart-placeholder-text movements-pending">Loading…</div>
         </div>
       </details>
       {% endif %}
@@ -4572,6 +4573,34 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // Loads a fight's secondary movement charts the first time its section is
+    // opened. Keeping them out of the document took it from 4.26MB to roughly
+    // 1.5MB -- the difference between a page that deploys and one that times
+    // out, and a noticeably faster first paint on a phone.
+    document.addEventListener('toggle', (e) => {
+      const d = e.target;
+      if (!d.matches || !d.matches('details.chart-toggle[data-movements]')) return;
+      if (!d.open || d.dataset.loaded) return;
+      d.dataset.loaded = '1';
+      const body = d.querySelector('.chart-toggle-body');
+      fetch(d.dataset.movements)
+        .then(r => r.ok ? r.text() : Promise.reject(r.status))
+        .then(html => {
+          body.innerHTML = html;
+          // Charts animate via .chart-block.revealed, and these arrive after
+          // the observer has already swept the page -- so reveal them here.
+          body.querySelectorAll('.chart-block').forEach(el => {
+            if (window.__resetAndRewatch) window.__resetAndRewatch(el);
+            else el.classList.add('revealed');
+          });
+        })
+        .catch(() => {
+          body.innerHTML = '<div class="chart-placeholder-text">' +
+            'Couldn\'t load these charts — try again in a moment.</div>';
+          d.dataset.loaded = '';
+        });
+    }, true);
 
     // Time only when the build is from today -- the date is noise then. If it
     // ISN'T today, the date appears, so the line GETTING LONGER is itself the
