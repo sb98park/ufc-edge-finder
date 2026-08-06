@@ -4604,6 +4604,30 @@
     }
     initDesktopLayoutIfNeeded();
 
+    // Pinch-zoom off. The viewport meta alone doesn't do it -- iOS has
+    // ignored user-scalable=no since iOS 10, standalone included, so the
+    // pinch has to be cancelled at the event level.
+    //
+    // gesturestart/change/end are Safari's own MULTI-touch events. Cancelling
+    // them can't affect the single-touch handlers this page relies on: the
+    // segmented-control drag, the units-chart scrub and the tab-bar swipe all
+    // run off touchmove, which still fires normally.
+    //
+    // passive: false is required -- a passive listener cannot preventDefault,
+    // and these default to passive on touch events.
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(evt => {
+      document.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
+    });
+
+    // Belt and braces for double-tap, which is a separate mechanism from
+    // pinch and survives touch-action on some iOS versions.
+    let __lastTap = 0;
+    document.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - __lastTap < 300) e.preventDefault();
+      __lastTap = now;
+    }, { passive: false });
+
     // Loads a fight's secondary movement charts the first time its section is
     // opened. Keeping them out of the document took it from 4.26MB to roughly
     // 1.5MB -- the difference between a page that deploys and one that times
