@@ -75,6 +75,15 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Launch images and the manifest are fetched by iOS at APP LAUNCH,
+    // before any session cookie is presented. Gated, they'd return login
+    // HTML where a PNG was expected -- and iOS, getting no usable image,
+    // falls back to the white screen these exist to replace.
+    // Prefix-matched rather than listing eight filenames, so adding a device
+    // size never needs a worker change.
+    if (path.startsWith("/splash-") || path === "/manifest.json") {
+      return fetch(request);
+    }
     if (PUBLIC_PATHS.includes(path)) {
       return fetch(request);
     }

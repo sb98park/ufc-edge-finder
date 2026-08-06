@@ -23,7 +23,7 @@ import os
 import subprocess
 import tempfile
 
-INK = "#0a0c10"
+INK = "#000000"   # matches the site background exactly (was #0a0c10)
 GOLD = "#d4af37"
 WHITE = "#ffffff"
 
@@ -161,6 +161,116 @@ def share_card(out):
     return render(svg, out, 1200, 630)
 
 
+# (device-px width, height, CSS width, CSS height, pixel ratio)
+# iOS picks a startup image by matching device dimensions EXACTLY -- there is
+# no scaling and no fallback, so a missing size means the white default. These
+# cover every iPhone still on a current iOS.
+SPLASH_SIZES = [
+    (1290, 2796, 430, 932, 3),   # 15/14 Pro Max
+    (1179, 2556, 393, 852, 3),   # 15/14 Pro
+    (1284, 2778, 428, 926, 3),   # 13/12 Pro Max
+    (1170, 2532, 390, 844, 3),   # 13/12, 14
+    (1242, 2688, 414, 896, 3),   # XS Max, 11 Pro Max
+    (1125, 2436, 375, 812, 3),   # X, XS, 11 Pro
+    (828, 1792, 414, 896, 2),    # XR, 11
+    (750, 1334, 375, 667, 2),    # SE 2nd/3rd gen, 8
+]
+
+
+def splash(out, w, h):
+    """
+    Launch image for an iOS home-screen app, drawn with Pillow.
+
+    THE MARK IS THE REAL ONE. A first version approximated it as a closed
+    octagon with a gold apex across the top edges -- close enough to look
+    deliberate and wrong enough to be a different logo. It is actually an
+    OPEN arc (the octagon's top five edges, p[3] through p[0], never closed
+    at the base) with a gold chevron at 32,74 -> 50,38 -> 68,74: an A peak
+    with no crossbar. Both paths are lifted straight from apex_svg so the two
+    can't drift.
+
+    VERTICALLY CENTRED ON THE INK. The mark's drawn area spans y 13.04 to 74
+    on its 100-unit grid, not 0 to 100, so centring the coordinate box leaves
+    a visible gap beneath. The lockup is positioned so the space above the
+    mark's topmost ink equals the space below the wordmark's baseline.
+
+    Drawn directly rather than rasterised: every other asset here goes through
+    wkhtmltoimage, which a launch image shouldn't require.
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        print(f"  {out}  SKIPPED (Pillow not installed -- committed copy kept)")
+        return False
+
+    img = Image.new("RGB", (w, h), INK)
+    d = ImageDraw.Draw(img)
+
+    M = min(w, h) * 0.26          # mark box, in px
+    sc = M / 100.0
+    Y_SHIFT = 50 - (13.04 + 74.0) / 2
+    INK_TOP, INK_BOT = 13.04 + Y_SHIFT, 74.0 + Y_SHIFT
+
+    fsize = max(int(w * 0.056), 16)
+    font = None
+    for path in ("/System/Library/Fonts/Supplemental/HelveticaNeue.ttc",
+                 "/System/Library/Fonts/Helvetica.ttc",
+                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"):
+        try:
+            font = ImageFont.truetype(path, fsize)
+            break
+        except OSError:
+            continue
+    if font is None:
+        font = ImageFont.load_default()
+
+    a, b = "OCTANE ", "ALPHA"
+    wa, wb = d.textlength(a, font=font), d.textlength(b, font=font)
+    tb = d.textbbox((0, 0), a + b, font=font)
+    text_h = tb[3] - tb[1]
+    gap = M * 0.30                # mark ink bottom -> text top
+
+    block = (INK_BOT - INK_TOP) * sc + gap + text_h
+    margin = (h - block) / 2      # equal above the mark and below the text
+
+    mx = (w - M) / 2
+    my = margin - INK_TOP * sc    # so the mark's INK starts at `margin`
+
+    def P(x, y):
+        return (mx + x * sc, my + (y + Y_SHIFT) * sc)
+
+    stroke = max(int(4.6 * sc), 2)
+    pts = octagon_points(50, 50, 40)
+    # Open arc: p[3] -> p[0], exactly the path apex_svg strokes in white.
+    arc = [P(pts[i][0], pts[i][1]) for i in (3, 4, 5, 6, 7, 0)]
+    d.line(arc, fill=WHITE, width=stroke, joint="curve")
+    # The A peak, no crossbar.
+    d.line([P(32, 74), P(50, 38), P(68, 74)], fill=GOLD, width=stroke, joint="curve")
+
+    ty = margin + (INK_BOT - INK_TOP) * sc + gap - tb[1]
+    tx = (w - (wa + wb)) / 2
+    d.text((tx, ty), a, font=font, fill=WHITE)
+    d.text((tx + wa, ty), b, font=font, fill=GOLD)
+
+    # SECOND PASS. The first placement centres on font METRICS, which include
+    # a descender allowance no glyph in "OCTANE ALPHA" actually uses -- so the
+    # drawn ink sat a few pixels high. Measuring what was really rendered and
+    # shifting by the difference makes the two margins equal exactly, at any
+    # screen size and whatever font the machine resolves.
+    bbox = img.convert("L").point(lambda v: 255 if v > 8 else 0).getbbox()
+    if bbox:
+        drift = ((h - bbox[3]) - bbox[1]) / 2
+        if abs(drift) >= 1:
+            shifted = Image.new("RGB", (w, h), INK)
+            shifted.paste(img.crop((0, bbox[1], w, bbox[3])),
+                          (0, int(round(bbox[1] + drift))))
+            img = shifted
+
+    img.save(out, "PNG", optimize=True)
+    print(f"  {out}  {w}x{h}")
+    return True
+
+
 def main():
     os.makedirs("docs", exist_ok=True)
     # (filename, px, stroke, padding, background)
@@ -173,6 +283,9 @@ def main():
         ("docs/icon-512.png", 512, 4.6, 0.0, None),
         ("docs/apple-touch-icon.png", 180, 5.2, 0.16, INK),
     ]
+    for w, h, _cw, _ch, _r in SPLASH_SIZES:
+        splash(f"docs/splash-{w}x{h}.png", w, h)
+
     ok = 0
     for path, size, stroke, pad, bg in jobs:
         if render_downsampled(apex_svg, path, size, stroke, pad, bg):
