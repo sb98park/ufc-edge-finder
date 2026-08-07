@@ -477,6 +477,18 @@ def group_edges_by_card(
             "weight_class_color": WEIGHT_CLASS_COLORS.get(row["weight_class"], "#8a8f9a"),
             "is_womens_division": bool(row.get("is_womens_division", False)),
             "cancelled": str(row.get("cancelled", "")).strip().lower() == "true",
+            # Parsed the same way as `cancelled` above: these come back from
+            # CSV as strings, and an all-empty flag column reads as float
+            # NaN, so neither `bool(...)` nor a truthiness test works
+            # directly. replaced_fighter is the DEPARTED fighter's name, set
+            # alongside the flag by card_discovery's replacement detection,
+            # and shown as the badge's tooltip.
+            "replacement": str(row.get("replacement", "")).strip().lower() == "true",
+            "replaced_fighter": (
+                str(row.get("replaced_fighter", "")).strip()
+                if str(row.get("replaced_fighter", "")).strip().lower() not in ("", "nan")
+                else ""
+            ),
             "fighter_a": row["fighter_a"],
             "fighter_b": row["fighter_b"],
             "fighters": {row["fighter_a"], row["fighter_b"]},

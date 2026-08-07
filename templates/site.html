@@ -1461,6 +1461,32 @@
     background: #241f10; border-radius: 12px; padding: 2px 7px; display: inline-block; margin-bottom: 3px;
     white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
   }
+  /* Deliberately a SIBLING of .card-position: same slot, same pill, same
+     9px uppercase type, same max-width -- so it reads as the same class of
+     label as MAIN EVENT rather than a new kind of thing. Only the colour
+     differs, and that difference is the whole point.
+     NOT RED, though a replacement feels alarming enough to want it. Red is
+     spoken for twice over on this page: .cancelled-banner is red, and the
+     design system reserves red semantically for "incorrect pick". A red
+     Replacement badge would sit directly under a red FIGHT CANCELLED
+     banner on the neighbouring card while meaning something completely
+     different -- and on this very card that is the literal layout, since
+     the cancelled bout and its replacement are adjacent.
+     Neutral grey instead, per the system's own rule that identity and
+     structural labels go monochrome and carry recognition through icon and
+     position rather than hue. Amber was the only unclaimed caution colour
+     and was rejected for sitting too close to the gold of the Main Event
+     badge it would often appear beside. */
+  .replacement-badge {
+    color: #c3c8d2; font-size: 9px; font-weight: 600; text-transform: uppercase;
+    background: #23262d; border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px; padding: 2px 7px; display: inline-flex; align-items: center; gap: 3px;
+    margin-bottom: 3px;
+    white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
+  }
+  /* 9px badge type; the icon has to come down to match or it drags the
+     pill taller than .card-position and the two stop looking like siblings. */
+  .replacement-badge .inline-icon { width: 11px; height: 11px; flex: none; }
   .no-edges { color: var(--muted); font-size: 12px; padding: 0 16px 14px; }
 
   .result-text { font-size: 9px !important; font-weight: 700 !important; color: var(--green) !important; letter-spacing: 0.3px; }
@@ -2733,12 +2759,51 @@
      across the breakpoints each reset padding wholesale. */
   body { padding-top: calc(env(safe-area-inset-top, 0px) + 9px); }
 
-  /* Every section fills the viewport. Short ones -- Locks, More -- didn't
-     scroll, so mobile browsers kept the URL bar expanded and the fixed tab
-     bar sat noticeably higher than on the scrollable tabs. Giving every
-     section a floor makes the bar land in the same place throughout. */
+  /* Every section fills the viewport EXACTLY, no more and no less.
+     Short ones (Locks, More) didn't scroll at all, so mobile browsers kept
+     the URL bar expanded and the fixed tab bar sat noticeably higher than
+     on the scrollable tabs. Giving every section a floor makes the bar
+     land in the same place throughout.
+     THIS WAS `min-height: calc(100vh - 160px)` ON THE VIEWS DIRECTLY, and
+     that overshot. The 160px was meant to stand in for the surrounding
+     chrome but undercounted it: body's own padding is
+     `safe-area-top + 9px` on top (~68px on a notched iPhone) and
+     `92px + safe-area-bottom` underneath (~126px), so the floor alone
+     forced 100vh - 160 + 68 + 126 = 100vh + 34px, PLUS the header and
+     countdown above it. That excess existed no matter how little content a
+     section had, which is why "More" -- with nothing to scroll to -- still
+     scrolled, and why every section overshot at the bottom.
+     No single constant could fix it either, because the chrome above the
+     views differs per section (the countdown renders on Card only).
+     So: let the layout compute it. body becomes a flex column that is
+     exactly one viewport tall, and the view soaks up whatever is left over
+     after the real header, real countdown and real padding have taken
+     their share. Nothing to keep in sync, and it stays correct if any of
+     that chrome changes height later.
+     100dvh, not 100vh: in a Safari TAB, 100vh is the LARGER viewport (the
+     one with the URL bar hidden), which reintroduces exactly this overshoot
+     for browser users even though the two are identical in the installed
+     app. 100vh first as a fallback for anything without dvh support.
+     SAFE FOR MARGIN COLLAPSING, which is the usual hazard when a block
+     container becomes flex: body's in-flow children (.page-header,
+     .countdown-card, .notice) all declare margin-BOTTOM only and no
+     margin-top, so collapsed max(bottom, 0) and flex's additive
+     bottom + 0 produce identical spacing. .whats-new-banner and #splash
+     are position:fixed and out of flow entirely.
+     Mobile only -- the desktop rail at 1024px+ has its own flex layout on
+     #app-shell and is deliberately untouched. */
   @media (max-width: 1023px) {
-    #detail-view, #hub-view { min-height: calc(100vh - 160px); }
+    body {
+      display: flex; flex-direction: column;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+    /* `1 0 auto`, not `1`: shorthand `flex: 1` sets flex-basis to 0, which
+       makes the view's height a share of free space rather than its own
+       content. Sections taller than the viewport (the fight list) must be
+       free to exceed it. Grow to fill, never shrink below content. */
+    #app-shell { flex: 1 0 auto; display: flex; flex-direction: column; }
+    #detail-view { flex: 1 0 auto; }
   }
   /* ===== Animated splash ===== */
   /* EVERYWHERE, mobile and desktop.
@@ -2957,6 +3022,20 @@
 
 {% macro icon_target() -%}
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Redline gauge"><defs><linearGradient id="hi-target" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M4,20 A9,9 0 1,1 22,20" stroke="url(#hi-target)" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.45"/><line x1="13" y1="20" x2="18.5" y2="9.5" stroke="url(#hi-target)" stroke-width="2" stroke-linecap="round"/><circle cx="13" cy="20" r="2.2" fill="url(#hi-target)"/><circle cx="19.7" cy="7.3" r="1.3" fill="url(#hi-target)" opacity="0.7"/></svg>
+{%- endmacro %}
+
+{# The ONE deliberately non-gold icon in the set. Every other icon here uses
+   the gold hi-<n> gradient because gold is the site's identity accent, but
+   this one sits inside the neutral Replacement badge, where the whole point
+   is that it does NOT claim a semantic colour. Gold would read as "model
+   says something", red would collide with both the CANCELLED banner and
+   red's reserved meaning of "incorrect pick". Grey says "structural fact
+   about the booking", which is what a replacement is.
+   Two arrows curving past each other -- the standard swap idiom, and
+   legible at the 9px badge size where anything more detailed turns to
+   mush. Same 26x26 box, same 1.8 stroke, same round caps as the rest. #}
+{% macro icon_swap() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Replacement"><defs><linearGradient id="hi-swap" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#d8dbe2"/><stop offset="100%" stop-color="#9aa1ad"/></linearGradient></defs><path d="M5 9.5 H17.5" stroke="url(#hi-swap)" stroke-width="1.8" stroke-linecap="round"/><path d="M14.2 6.2 L17.5 9.5 L14.2 12.8" stroke="url(#hi-swap)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 16.5 H8.5" stroke="url(#hi-swap)" stroke-width="1.8" stroke-linecap="round"/><path d="M11.8 13.2 L8.5 16.5 L11.8 19.8" stroke="url(#hi-swap)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
 {%- endmacro %}
 
 {% macro empty_state(icon_svg, headline, description) %}
@@ -3747,6 +3826,15 @@
           <div class="matchup-vs-top">
             {% if fight.card_position in ('Main Event', 'Co-Main Event') %}
             <div class="card-position">{{ fight.card_position }}</div>
+            {% endif %}
+            {# Fight-level, not fighter-level, on purpose. A replacement
+               changes the matchup itself, and both fighters are affected --
+               the one who kept his slot prepared for a different opponent,
+               and the one who stepped in did so on short notice. The
+               per-fighter part of this lives in the MODEL, via the
+               short_notice flag on the incoming fighter only. #}
+            {% if fight.replacement %}
+            <div class="replacement-badge" {% if fight.replaced_fighter %}title="Replaces {{ fight.replaced_fighter }}"{% endif %}>{{ icon_swap() }}Replacement</div>
             {% endif %}
           </div>
           {% if fight.result_label %}

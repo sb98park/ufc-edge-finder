@@ -34,6 +34,8 @@ are still correct -- only the segment label could be off.
 """
 
 import datetime as dt
+import re
+import unicodedata
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -313,8 +315,29 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
     if df.empty or "event_name" not in df.columns:
         return 0
 
+    def _fold(name) -> str:
+        """
+        Accent- and punctuation-insensitive name key.
+
+        GUARD AGAINST A DESTRUCTIVE FALSE POSITIVE, not a nicety. The
+        replacement path below treats "a tracked fighter now appears against
+        a different opponent" as definitive evidence, and acts on it by
+        cancelling a fight and VOIDING ITS PREDICTION. Plain .lower() means
+        ESPN writing "José Montanha" where we hold "Jose Montanha" makes the
+        stored pairing look orphaned AND makes the fighter look like he's
+        been rebooked -- inventing a replacement that never happened and
+        voiding a live pick. This card carries both "José Montanha" and
+        "Guilherme Pat", so that is a live risk today, not a hypothetical.
+        Same NFKD-strip approach already used by card_matcher._normalize_name
+        and edge_finder._fold_name.
+        """
+        if name is None:
+            return ""
+        folded = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode()
+        return re.sub(r"[^a-z0-9 ]", " ", folded.lower()).strip()
+
     def _key(row: dict) -> frozenset:
-        return frozenset({str(row["fighter_a"]).strip().lower(), str(row["fighter_b"]).strip().lower()})
+        return frozenset({_fold(row["fighter_a"]), _fold(row["fighter_b"])})
 
     def _loose_name(name: str) -> tuple:
         # First + last word only, e.g. "Jose Miguel Delgado" -> ("jose", "delgado") --
@@ -323,14 +346,31 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
         # card is a much rarer collision than a middle name being present in one
         # data source and missing in another, which is a real, confirmed case in
         # this project's own data (see this function's docstring).
-        parts = str(name).strip().lower().split()
-        return (parts[0], parts[-1]) if parts else (str(name).strip().lower(),)
+        parts = _fold(name).split()
+        return (parts[0], parts[-1]) if parts else (_fold(name),)
 
     def _loose_key(row: dict) -> frozenset:
         return frozenset({_loose_name(row["fighter_a"]), _loose_name(row["fighter_b"])})
 
     corrected = 0
+    # Ordering is not the only reason to write. The orphan-streak counter,
+    # the cancelled flag and the replacement flags all live in these rows,
+    # and a run can change them while leaving the ORDER identical -- which is
+    # exactly what happens in the commonest case, an orphan that is already
+    # the last row. The original code only wrote when the order changed, so
+    # in that case _orphan_streak was recomputed from nothing every run,
+    # never got past 1, and the grace threshold below could never be reached:
+    # a genuinely-removed fight would be re-appended forever instead of
+    # eventually being marked cancelled. Tracked separately so `corrected`
+    # keeps its meaning as the count of REORDERED events in the return value.
+    mutated = False
     reordered_groups = []
+    # Accumulated across all events, applied once at the end. Both writes
+    # touch files other than this one, so they're batched rather than done
+    # per-row: one read/write of each, and nothing is written at all on a
+    # run where nothing changed.
+    short_notice_targets: set[str] = set()
+    newly_cancelled: list[tuple[str, str]] = []
     for event_name, group in df.groupby("event_name", sort=False):
         rows = group.to_dict("records")
         event_date = rows[0].get("event_date")
@@ -397,17 +437,61 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
             # current lineup confirms this specific pairing is genuinely
             # gone -- a fighter replacement (e.g. an opponent pulling out
             # and being replaced), not a transient gap in this one fetch.
-            fresh_fighter_names = {str(n).strip().lower() for fresh in fresh_rows for n in (fresh["fighter_a"], fresh["fighter_b"])}
+            #
+            # THIS USED TO DROP THE ROW, which was the wrong call: the fight
+            # simply vanished off the card. A cancelled bout is information
+            # -- someone who looked at this card yesterday should see WHAT
+            # happened rather than wonder where it went -- and it's exactly
+            # the case scripts/mark_fight_cancelled.py existed to handle by
+            # hand. So the old pairing is now marked cancelled and PINNED
+            # (kept, with its banner), and the replacement bout that ESPN
+            # already gave us is flagged so the card can say so.
+            fresh_by_fighter = {}
+            for fresh in fresh_rows:
+                for n in (fresh["fighter_a"], fresh["fighter_b"]):
+                    fresh_by_fighter.setdefault(_fold(n), []).append(fresh)
+            # The fresh rows as they actually sit in new_order, so flags set
+            # here land on the dicts that get written, not on throwaway copies.
+            in_order_by_key = {_key(r): r for r in new_order}
+
             confirmed_replaced = [
                 r for r in orphaned
-                if str(r["fighter_a"]).strip().lower() in fresh_fighter_names
-                or str(r["fighter_b"]).strip().lower() in fresh_fighter_names
+                if _fold(r["fighter_a"]) in fresh_by_fighter
+                or _fold(r["fighter_b"]) in fresh_by_fighter
             ]
             genuinely_orphaned = [r for r in orphaned if r not in confirmed_replaced]
+
+            for r in confirmed_replaced:
+                mutated = True
+                r["cancelled"] = True
+                r.pop("_orphan_streak", None)
+                # Whichever side of the old pairing is still on the card kept
+                # his slot; the other side is the one who withdrew. Flagging
+                # the NEW bout needs both: the departed fighter's name for the
+                # badge tooltip, and the incoming fighter for short notice.
+                for kept, departed in ((r["fighter_a"], r["fighter_b"]),
+                                       (r["fighter_b"], r["fighter_a"])):
+                    for new_bout in fresh_by_fighter.get(_fold(kept), []):
+                        target = in_order_by_key.get(_key(new_bout), new_bout)
+                        target["replacement"] = True
+                        target["replaced_fighter"] = departed
+                        # The incoming fighter is the one in the new pairing
+                        # who wasn't in the old one. He is short-notice BY
+                        # DEFINITION; the fighter who kept his slot is not --
+                        # he had a full camp and merely changed opponent.
+                        # This asymmetry is not cosmetic: matchup_model
+                        # applies SHORT_NOTICE_PENALTY as a DIFFERENCE
+                        # between the two fighters, so flagging both would
+                        # cancel to exactly zero adjustment.
+                        for n in (new_bout["fighter_a"], new_bout["fighter_b"]):
+                            if _fold(n) not in (_fold(kept), _fold(departed)):
+                                short_notice_targets.add(str(n).strip())
+                newly_cancelled.append((str(r["fighter_a"]).strip(), str(r["fighter_b"]).strip()))
+
             if confirmed_replaced:
                 print(f"[card_discovery] {len(confirmed_replaced)} previously-tracked fight(s) for {event_name!r} "
                       f"confirmed replaced (a fighter from each now appears against a different opponent in "
-                      f"ESPN's current card) -- dropping: "
+                      f"ESPN's current card) -- marking CANCELLED and flagging the replacement bout: "
                       f"{[(r['fighter_a'], r['fighter_b']) for r in confirmed_replaced]}")
 
             # Neither fighter shows up anywhere in this run's fresh data --
@@ -423,18 +507,34 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
             ORPHAN_STREAK_LIMIT = 3
             still_within_grace, exceeded_grace = [], []
             for r in genuinely_orphaned:
+                mutated = True
                 r["_orphan_streak"] = int(r.get("_orphan_streak", 0)) + 1
                 (exceeded_grace if r["_orphan_streak"] > ORPHAN_STREAK_LIMIT else still_within_grace).append(r)
             if exceeded_grace:
+                # Also cancelled-not-dropped now, for the same reason as
+                # above. This path stays behind the streak grace because,
+                # unlike the replacement case, total absence has no
+                # corroborating evidence -- it looks identical whether the
+                # bout was scrapped or ESPN briefly served a short card.
+                for r in exceeded_grace:
+                    mutated = True
+                    r["cancelled"] = True
+                    r.pop("_orphan_streak", None)
+                    newly_cancelled.append((str(r["fighter_a"]).strip(), str(r["fighter_b"]).strip()))
                 print(f"[card_discovery] {len(exceeded_grace)} previously-tracked fight(s) for {event_name!r} "
                       f"missing from ESPN's current card across {ORPHAN_STREAK_LIMIT}+ consecutive successful "
-                      f"resyncs now -- no longer treating as a transient gap, dropping: "
+                      f"resyncs now -- no longer treating as a transient gap, marking CANCELLED: "
                       f"{[(r['fighter_a'], r['fighter_b']) for r in exceeded_grace]}")
             if still_within_grace:
                 print(f"[card_discovery] {len(still_within_grace)} previously-tracked fight(s) for {event_name!r} "
                       f"not found in ESPN's current card -- keeping them, appended, rather than dropping "
                       f"data that might just be a transient gap")
-            orphaned = still_within_grace
+            # Both cancelled sets are pinned from here on, exactly like a
+            # hand-marked cancellation: they're EXPECTED to be absent from
+            # ESPN, so on the next run they land in pinned_cancelled above
+            # and never re-enter this branch. That's what makes this
+            # idempotent across a 5-minute cron.
+            orphaned = still_within_grace + confirmed_replaced + exceeded_grace
         new_order.extend(orphaned)
         new_order.extend(pinned_cancelled)
 
@@ -444,9 +544,102 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
 
         reordered_groups.append(pd.DataFrame(new_order))
 
-    if corrected:
+    if corrected or mutated:
         pd.concat(reordered_groups, ignore_index=True).to_csv(future_cards_path, index=False)
+    if short_notice_targets:
+        _flag_short_notice(short_notice_targets)
+    if newly_cancelled:
+        _void_predictions_for(newly_cancelled)
     return corrected
+
+
+def _flag_short_notice(names: set[str], fighters_path: str = "data/fighters.csv") -> int:
+    """
+    Set short_notice=1 for fighters who stepped into a bout as a replacement.
+
+    matchup_model reads this column and applies SHORT_NOTICE_PENALTY (70 Elo,
+    literature-derived, ~10pp at even odds). Only ever SETS the flag -- never
+    clears it, because clearing is already handled elsewhere once the
+    fighter's bout result is logged, and a resync has no business deciding a
+    fighter is no longer short-notice.
+
+    Idempotent: a fighter already flagged is skipped, so the 5-minute cron
+    doesn't rewrite fighters.csv on every pass.
+    """
+    try:
+        fighters = pd.read_csv(fighters_path)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        return 0
+    if "name" not in fighters.columns:
+        return 0
+    if "short_notice" not in fighters.columns:
+        fighters["short_notice"] = 0
+
+    def _fold(v) -> str:
+        folded = unicodedata.normalize("NFKD", str(v)).encode("ascii", "ignore").decode()
+        return re.sub(r"[^a-z0-9 ]", " ", folded.lower()).strip()
+
+    wanted = {_fold(n) for n in names}
+    mask = fighters["name"].map(_fold).isin(wanted)
+    # Only rows not already flagged -- this is what makes it idempotent.
+    already = pd.to_numeric(fighters["short_notice"], errors="coerce").fillna(0) > 0
+    to_set = mask & ~already
+    if not to_set.any():
+        return 0
+    fighters.loc[to_set, "short_notice"] = 1
+    fighters.to_csv(fighters_path, index=False)
+    print(f"[card_discovery] flagged {int(to_set.sum())} fighter(s) short_notice=1 after a replacement: "
+          f"{list(fighters.loc[to_set, 'name'])}")
+    return int(to_set.sum())
+
+
+def _void_predictions_for(pairs: list[tuple[str, str]],
+                          predictions_path: str = "data/predictions_log.csv") -> int:
+    """
+    Void the predictions belonging to fights just marked cancelled.
+
+    Same effect as scripts/mark_fight_cancelled.py's second step: track_record
+    skips voided rows entirely, so the pick never enters accuracy,
+    confidence-tier, lock or units math in either direction -- exactly as if
+    it had never been made. The Locks display still shows it, flagged
+    cancelled, because it genuinely WAS the lock; only the stats treat it as
+    nonexistent.
+
+    This is the one genuinely destructive thing the resync does, which is why
+    the two callers above are held to different standards of evidence: the
+    replacement path acts immediately because a fighter being rebooked
+    against someone else is corroborating evidence, while plain absence has
+    to survive the orphan-streak grace first.
+
+    Idempotent: rows already voided are left alone.
+    """
+    try:
+        preds = pd.read_csv(predictions_path)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        return 0
+    if preds.empty or "fighter_a" not in preds.columns:
+        return 0
+    if "voided" not in preds.columns:
+        preds["voided"] = False
+    # An all-empty flag column reads back from CSV as float64 (all-NaN), and
+    # pandas 2.x raises when assigning bool True into float64 -- same coercion
+    # scripts/mark_fight_cancelled.py already does for this exact reason.
+    preds["voided"] = preds["voided"].astype("object")
+
+    def _fold(v) -> str:
+        folded = unicodedata.normalize("NFKD", str(v)).encode("ascii", "ignore").decode()
+        return re.sub(r"[^a-z0-9 ]", " ", folded.lower()).strip()
+
+    targets = {frozenset({_fold(a), _fold(b)}) for a, b in pairs}
+    row_keys = preds.apply(lambda r: frozenset({_fold(r["fighter_a"]), _fold(r["fighter_b"])}), axis=1)
+    already = preds["voided"].astype(str).str.strip().str.lower() == "true"
+    to_void = row_keys.isin(targets) & ~already
+    if not to_void.any():
+        return 0
+    preds.loc[to_void, "voided"] = True
+    preds.to_csv(predictions_path, index=False)
+    print(f"[card_discovery] voided {int(to_void.sum())} prediction(s) for newly-cancelled fight(s)")
+    return int(to_void.sum())
 
 
 def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
