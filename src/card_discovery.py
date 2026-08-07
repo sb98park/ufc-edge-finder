@@ -391,6 +391,43 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
         before_snapshot = [(_key(r), r["card_position"]) for r in rows]
         matched_keys = set()
         new_order = []
+        # A hand-entered bout WINS over ESPN's version of the same fighter.
+        #
+        # Pinning a manual row protects it from being dropped, but on its own
+        # that isn't enough: if ESPN lists the same fighter against a
+        # different opponent, that ESPN bout doesn't match anything we hold,
+        # so it gets appended as an ADDITIONAL fight and the card shows the
+        # fighter twice. Real case: ESPN had Sutherland against the wrong
+        # opponent entirely (a different, real fighter who shares part of the
+        # correct opponent's name), so correcting our row would have produced
+        # two Sutherland bouts rather than one right one.
+        #
+        # The whole reason a row gets entered by hand is that a human has
+        # better information than the feed for that specific bout, so ESPN's
+        # competing version of it is suppressed until the human's row is
+        # removed or the feed agrees. Scoped to the FIGHTERS in manual rows,
+        # not the whole card, so every other bout still resyncs normally.
+        manual_fighters = {
+            _fold(n)
+            for r in rows
+            if str(r.get("manually_added", "")).strip().lower() == "true"
+            for n in (r["fighter_a"], r["fighter_b"])
+        }
+        manual_keys = {
+            _key(r) for r in rows
+            if str(r.get("manually_added", "")).strip().lower() == "true"
+        }
+        if manual_fighters:
+            suppressed = [
+                f for f in fresh_rows
+                if _key(f) not in manual_keys
+                and ({_fold(f["fighter_a"]), _fold(f["fighter_b"])} & manual_fighters)
+            ]
+            if suppressed:
+                print(f"[card_discovery] ignoring {len(suppressed)} ESPN bout(s) for {event_name!r} that "
+                      f"contradict a hand-entered row: "
+                      f"{[(r['fighter_a'], r['fighter_b']) for r in suppressed]}")
+                fresh_rows = [f for f in fresh_rows if f not in suppressed]
         for fresh in fresh_rows:
             key = _key(fresh)
             existing_row = existing_by_key.get(key)
@@ -552,7 +589,36 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
             # idempotent across a 5-minute cron.
             orphaned = still_within_grace + confirmed_replaced + exceeded_grace
         new_order.extend(orphaned)
-        new_order.extend(pinned)
+        # Pinned rows go back where they WERE, not onto the end.
+        #
+        # `new_order.extend(pinned)` was wrong in a way that only shows up
+        # once a pinned row needs to sit in a specific place: pinned rows are
+        # precisely the ones ESPN can't order for us (cancelled bouts it has
+        # dropped, hand-added bouts it hasn't published), so appending them
+        # is not "ESPN's order" -- it's no order at all. Any hand-set
+        # position would be silently undone on the next 5-minute refresh.
+        #
+        # Anchored to the row that preceded it rather than to a raw index:
+        # the surrounding card genuinely does get reordered by ESPN, so an
+        # index from the old file can point somewhere meaningless in the new
+        # one, whereas "after Sousa vs Miranda" survives the fights around it
+        # moving. Falls back to appending when the anchor itself is gone.
+        original_order = [_key(r) for r in rows]
+        for p in pinned:
+            try:
+                pos = original_order.index(_key(p))
+            except ValueError:
+                new_order.append(p)
+                continue
+            anchor = original_order[pos - 1] if pos > 0 else None
+            if anchor is None:
+                new_order.insert(0, p)
+                continue
+            anchor_positions = [i for i, r in enumerate(new_order) if _key(r) == anchor]
+            if anchor_positions:
+                new_order.insert(anchor_positions[0] + 1, p)
+            else:
+                new_order.append(p)
 
         if [(_key(r), r["card_position"]) for r in new_order] != before_snapshot:
             corrected += 1
