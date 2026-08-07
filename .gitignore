@@ -9,4 +9,24 @@
 # to build, so deployments got slower until they stopped finishing.
 #
 # Untracked here, still written to disk, still uploaded as the artifact.
-docs/
+docs/index.html
+docs/movements/
+
+# ...but the BRAND ASSETS stay tracked. They are generated ONCE by
+# scripts/generate_brand_assets.py, not on every build, and that script needs
+# Pillow -- which the workflow doesn't install and this machine doesn't have.
+#
+# Ignoring all of docs/ removed the only copy of them: the runner rebuilt
+# index.html and movements/ from source, uploaded an artifact with no launch
+# images in it, and iOS -- finding no matching size -- fell back to the white
+# screen the whole feature exists to replace.
+#
+# They cost ~200KB total and change perhaps twice a year, so committing them
+# has none of the problems that made the 4MB-per-run index.html untenable.
+!docs/splash-*.png
+!docs/favicon*
+!docs/icon-*.png
+!docs/apple-touch-icon.png
+!docs/og-share-card.png
+!docs/manifest.json
+!docs/.nojekyll

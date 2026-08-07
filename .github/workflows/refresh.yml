@@ -169,7 +169,12 @@ jobs:
           # data/ still IS committed -- it's genuine state the next run
           # needs: recorded results, the odds snapshot, the token cache,
           # the predictions log.
-          git add -A -- data/
+          # data/ plus docs/ -- .gitignore decides what within docs/ is
+          # eligible, so the per-build index.html and movements/ are excluded
+          # while the brand assets (which change perhaps twice a year) are
+          # kept. Staging docs/ wholesale here would have been wrong before
+          # that ignore existed; with it, this is the safe form.
+          git add -A -- data/ docs/
           git diff --staged --quiet || git commit -m "Auto-refresh site [skip ci]"
           # Rebase onto whatever landed on the remote while this run was
           # working (a manual push, or a run that slipped past the
