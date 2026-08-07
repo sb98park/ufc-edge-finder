@@ -441,6 +441,76 @@ def check_distance_vs_rounds(c):
         print(f"       [distance-vs-rounds] checked {checked} fight(s)")
 
 
+# Observed frequencies on the 2019+ holdout (research_method_fightlevel.py
+# and research_method_given_win.py). Not targets -- reference points.
+BASE_RATES = {
+    "Fight ends by KO/TKO": 0.312,
+    "Fight ends by Submission": 0.165,
+    "Fight ends by Decision": 0.524,
+}
+
+
+def check_plausibility(c):
+    """
+    Warn when a model output sits far outside its historical base rate.
+
+    THE GAP THIS FILLS. Every other check here tests arithmetic -- methods
+    summing to 1, Under rising with the line, the headline matching its table.
+    Those catch impossible numbers. They do not catch numbers that are merely
+    absurd, and today's expensive failures were all in that second category:
+    65% submission on a fight (base rate 16.5%), 100% decision, 60.6%
+    submission against a market at 15.4%. Each was internally consistent and
+    obviously wrong to anyone who knows the sport.
+
+    A machine can't know Makhachev doesn't submit people two thirds of the
+    time. It CAN know that 65% is four times the base rate and say so.
+
+    WARNS rather than fails, deliberately. A genuine outlier exists -- some
+    fights really are 60% KO -- and a check that blocks the build on an
+    unusual-but-correct number would get muted within a week. The job here is
+    to put it in front of a human, not to decide.
+    """
+    blocks = re.split(r'<details class="fight-card', c)[1:]
+    flagged = checked = 0
+    for block in blocks:
+        key = re.search(r'data-fight-key="([^"]+)"', block)
+        name = key.group(1) if key else "unknown fight"
+        for label, prob in re.findall(
+                r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+                block, re.DOTALL):
+            label = re.sub(r"<[^>]+>", "", label).strip()
+            base = BASE_RATES.get(label)
+            if base is None:
+                continue
+            checked += 1
+            p = float(prob) / 100.0
+            # TWO tests, because either alone has a blind spot.
+            #
+            # The RATIO catches a rare outcome inflated out of proportion --
+            # 65% submission against a 16.5% base rate is 3.9x and obviously
+            # wrong. A flat percentage-point threshold can't do that, since
+            # 5pp is enormous at 16.5% and noise at 52%.
+            #
+            # The CEILING catches what the ratio misses: 100% decision is only
+            # 1.9x its 52.4% base rate and sails through, yet no fight is
+            # certain. Any method above 85% deserves a look whatever its base
+            # rate, and the floor does the same for a near-zero.
+            ratio = p / base if base else 0
+            reason = None
+            if p >= 0.85:
+                reason = f"{p:.1%} -- no fight is that certain"
+            elif p <= 0.02:
+                reason = f"{p:.1%} -- effectively ruled out"
+            elif ratio >= 2.5 or ratio <= 0.35:
+                reason = f"{p:.1%}, {ratio:.1f}x the {base:.1%} base rate"
+            if reason:
+                flagged += 1
+                warn("plausibility",
+                     f"{name}: {label} is {reason} -- worth an eye before betting it")
+    if checked:
+        print(f"       [plausibility] checked {checked} row(s), {flagged} worth a look")
+
+
 def main():
     c = load()
     check_css_braces(c)
@@ -455,6 +525,7 @@ def main():
     check_headline_matches_table(c)
     check_round_props_monotonic(c)
     check_distance_vs_rounds(c)
+    check_plausibility(c)
 
     for label, items in (("FAIL", FAILURES), ("WARN", WARNINGS)):
         for check, detail in items:

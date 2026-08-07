@@ -14,5 +14,8 @@
 # cross a directory boundary. The moment the build started writing
 # docs/movements/*.html, twenty files fell outside the pattern and every pull
 # conflicted on all of them. `**` matches at any depth.
-docs/** merge=ours
+# docs/ is no longer tracked (see .gitignore) -- the built site is published
+# from an artifact, so there is nothing left there to conflict over. That
+# removes the whole class of merge conflict this driver existed for on the
+# generated HTML; data/ still needs it, being real state the workflow rewrites.
 data/** merge=ours
