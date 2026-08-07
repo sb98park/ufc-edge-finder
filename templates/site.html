@@ -2692,6 +2692,12 @@
     #detail-view, #hub-view { min-height: calc(100vh - 160px); }
   }
   /* ===== Animated splash ===== */
+  /* EVERYWHERE, mobile and desktop.
+     Briefly hidden on desktop on the theory that a browser tab doesn't need
+     a brand moment -- but desktop never had the static launch image (those
+     are iOS-only), so it always went straight into the draw, which is the
+     version worth keeping. The black launch image now gives mobile the same
+     thing. */
   #splash {
     position: fixed; inset: 0; z-index: 9999;
     background: #000000;

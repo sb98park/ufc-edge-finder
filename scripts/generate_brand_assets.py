@@ -185,94 +185,26 @@ SPLASH_SIZES = [
 
 def splash(out, w, h):
     """
-    Launch image for an iOS home-screen app, drawn with Pillow.
+    Launch image for an iOS home-screen app: PURE BLACK, nothing else.
 
-    THE MARK IS THE REAL ONE. A first version approximated it as a closed
-    octagon with a gold apex across the top edges -- close enough to look
-    deliberate and wrong enough to be a different logo. It is actually an
-    OPEN arc (the octagon's top five edges, p[3] through p[0], never closed
-    at the base) with a gold chevron at 32,74 -> 50,38 -> 68,74: an A peak
-    with no crossbar. Both paths are lifted straight from apex_svg so the two
-    can't drift.
+    It carried the mark and wordmark at first, which meant the app showed a
+    static mark and then the in-page overlay drew the SAME mark again -- a
+    visible seam, and a redraw that makes no sense to watch.
 
-    VERTICALLY CENTRED ON THE INK. The mark's drawn area spans y 13.04 to 74
-    on its 100-unit grid, not 0 to 100, so centring the coordinate box leaves
-    a visible gap beneath. The lockup is positioned so the space above the
-    mark's topmost ink equals the space below the wordmark's baseline.
+    Black gives the animation nothing to collide with. iOS paints black, the
+    page paints black, and the mark draws itself once. The handover is
+    invisible because there is nothing to hand over.
 
-    Drawn directly rather than rasterised: every other asset here goes through
-    wkhtmltoimage, which a launch image shouldn't require.
+    Still generated per device rather than dropped entirely: iOS matches
+    launch images on exact dimensions, and without a match it falls back to a
+    WHITE screen -- which is the thing this exists to prevent.
     """
     try:
-        from PIL import Image, ImageDraw, ImageFont
+        from PIL import Image
     except ImportError:
         print(f"  {out}  SKIPPED (Pillow not installed -- committed copy kept)")
         return False
-
-    img = Image.new("RGB", (w, h), INK)
-    d = ImageDraw.Draw(img)
-
-    M = min(w, h) * 0.26          # mark box, in px
-    sc = M / 100.0
-    Y_SHIFT = 50 - (13.04 + 74.0) / 2
-    INK_TOP, INK_BOT = 13.04 + Y_SHIFT, 74.0 + Y_SHIFT
-
-    fsize = max(int(w * 0.056), 16)
-    font = None
-    for path in ("/System/Library/Fonts/Supplemental/HelveticaNeue.ttc",
-                 "/System/Library/Fonts/Helvetica.ttc",
-                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"):
-        try:
-            font = ImageFont.truetype(path, fsize)
-            break
-        except OSError:
-            continue
-    if font is None:
-        font = ImageFont.load_default()
-
-    a, b = "OCTANE ", "ALPHA"
-    wa, wb = d.textlength(a, font=font), d.textlength(b, font=font)
-    tb = d.textbbox((0, 0), a + b, font=font)
-    text_h = tb[3] - tb[1]
-    gap = M * 0.30                # mark ink bottom -> text top
-
-    block = (INK_BOT - INK_TOP) * sc + gap + text_h
-    margin = (h - block) / 2      # equal above the mark and below the text
-
-    mx = (w - M) / 2
-    my = margin - INK_TOP * sc    # so the mark's INK starts at `margin`
-
-    def P(x, y):
-        return (mx + x * sc, my + (y + Y_SHIFT) * sc)
-
-    stroke = max(int(4.6 * sc), 2)
-    pts = octagon_points(50, 50, 40)
-    # Open arc: p[3] -> p[0], exactly the path apex_svg strokes in white.
-    arc = [P(pts[i][0], pts[i][1]) for i in (3, 4, 5, 6, 7, 0)]
-    d.line(arc, fill=WHITE, width=stroke, joint="curve")
-    # The A peak, no crossbar.
-    d.line([P(32, 74), P(50, 38), P(68, 74)], fill=GOLD, width=stroke, joint="curve")
-
-    ty = margin + (INK_BOT - INK_TOP) * sc + gap - tb[1]
-    tx = (w - (wa + wb)) / 2
-    d.text((tx, ty), a, font=font, fill=WHITE)
-    d.text((tx + wa, ty), b, font=font, fill=GOLD)
-
-    # SECOND PASS. The first placement centres on font METRICS, which include
-    # a descender allowance no glyph in "OCTANE ALPHA" actually uses -- so the
-    # drawn ink sat a few pixels high. Measuring what was really rendered and
-    # shifting by the difference makes the two margins equal exactly, at any
-    # screen size and whatever font the machine resolves.
-    bbox = img.convert("L").point(lambda v: 255 if v > 8 else 0).getbbox()
-    if bbox:
-        drift = ((h - bbox[3]) - bbox[1]) / 2
-        if abs(drift) >= 1:
-            shifted = Image.new("RGB", (w, h), INK)
-            shifted.paste(img.crop((0, bbox[1], w, bbox[3])),
-                          (0, int(round(bbox[1] + drift))))
-            img = shifted
-
-    img.save(out, "PNG", optimize=True)
+    Image.new("RGB", (w, h), INK).save(out, "PNG", optimize=True)
     print(f"  {out}  {w}x{h}")
     return True
 
