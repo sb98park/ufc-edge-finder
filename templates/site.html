@@ -22,13 +22,13 @@
      subset of them, just early. #}
 <title>Octane Alpha | Quantitative UFC Analytics & Edge Detection</title>
 
-<link rel="icon" type="image/svg+xml" href="favicon.svg?v=6">
-<link rel="icon" type="image/x-icon" href="favicon.ico?v=6">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=6">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=6">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=6">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=6">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=6">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=7">
+<link rel="icon" type="image/x-icon" href="favicon.ico?v=7">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=7">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=7">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=7">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=7">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=7">
 
 <meta property="og:title" content="Octane Alpha | Quantitative UFC Analytics & Edge Detection">
 <meta property="og:description" content="Model probability vs. live sportsbook lines. Real fight predictions, tracked publicly, checked against the market -- misses included.">
@@ -6616,6 +6616,24 @@
         // transform-based pattern already used for the radar chart --
         // no separate JS animation needed here at all.
         el.classList.add('revealed');
+
+        // Waterfall ("Why the model likes X") fill/stagger. Its CSS
+        // (.waterfall-block[open] .wf-bar etc., further up the stylesheet)
+        // was built for a panel that STARTS COLLAPSED and replays on its own
+        // 'toggle' event -- but it now ships open by default, so that
+        // 'toggle' event never fires and the animation was going stale
+        // before anyone ever saw it play. Reusing the exact reflow-restart
+        // trick from that original toggle handler here, keyed off the same
+        // scroll-into-view moment as every other fill on the page, is what
+        // actually makes it visible: this fires the first time the fight
+        // card is opened and scrolled to, which is also the first time this
+        // content has real layout at all.
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        el.querySelectorAll('.wf-bar, .wf-nums, .wf-split-fill').forEach(node => {
+          node.style.animation = 'none';
+          void node.offsetWidth;        // force reflow so the restart takes
+          node.style.animation = '';    // back to the stylesheet's animation
+        });
       }
 
       // Instantly undoes a fill target back to its "not yet revealed"
@@ -6656,7 +6674,7 @@
           obs.unobserve(entry.target);
         });
       }, { threshold: 0.15 });
-      document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card, .standout-card, .lock-pick-card').forEach(el => fillObserver.observe(el));
+      document.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .favorite-card, .standout-card, .lock-pick-card, .waterfall-block').forEach(el => fillObserver.observe(el));
       window.__fillObserver = fillObserver;
 
       // The donuts get their own observer rather than joining fillObserver:
