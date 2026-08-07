@@ -1540,7 +1540,16 @@
   .wf-split.fav-blue { background: var(--corner-red); }
   .wf-split.fav-red .wf-split-fill { background: var(--corner-red); }
   .wf-split.fav-blue .wf-split-fill { background: var(--corner-blue); }
-  .wf-split-fill { display: block; height: 100%; border-radius: 4px 0 0 5px; }
+  /* Left radii MUST match .wf-split's exactly. This was `4px 0 0 5px` -- a
+     1px-larger bottom-left than the 4px track beneath it, so the fill
+     curved away from that corner harder than the track did and let a
+     sliver of track colour show through. Since the track is painted in the
+     UNDERDOG's colour and this fill is the favourite's, that sliver read as
+     a speck of the opposing corner's colour at the far left of the bar.
+     The right side stays square: the track's own overflow:hidden does the
+     rounding there, and giving the fill a right radius would round the
+     LIVE EDGE of the fill mid-bar, which is wrong at any width below 100%. */
+  .wf-split-fill { display: block; height: 100%; border-radius: 4px 0 0 4px; }
   /* Fill animations. These are re-triggered from JS whenever the panel is
      opened (see the .waterfall-block toggle handler) because CSS
      animations do not reliably advance while an ancestor is hidden, and
