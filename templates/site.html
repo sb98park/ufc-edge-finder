@@ -6723,6 +6723,40 @@
       }
       window.__isInViewport = isInViewport;
 
+      // How much of an element is actually on screen, 0..1.
+      function visibleRatio(el) {
+        const rect = el.getBoundingClientRect();
+        if (rect.height <= 0 || rect.width <= 0) return 0;
+        const top = Math.max(rect.top, 0);
+        const bottom = Math.min(rect.bottom, window.innerHeight);
+        return Math.max(0, bottom - top) / rect.height;
+      }
+
+      // isInViewport() counts ANY sliver as visible, but fillObserver waits
+      // for 0.15 -- so the immediate path and the observer path disagreed
+      // about what "visible" means. That only ever mattered for the
+      // waterfall: it's the one fill block sitting at the TOP of a fight
+      // card's content, so opening a card routinely left a few pixels of it
+      // peeking onto the screen, which fired its whole staggered animation
+      // before the reader had scrolled down to it -- finished, and so
+      // apparently static, by the time it was actually looked at. Every
+      // other fill block sits further down the card, stays properly below
+      // the fold, and reaches the observer normally, which is why they all
+      // behave correctly and this one didn't.
+      // Scoped to .waterfall-block deliberately: the other blocks are
+      // working as intended and nothing about their timing should shift.
+      function isVisibleEnough(el) {
+        if (el.classList && el.classList.contains('waterfall-block')) {
+          // Pixel fallback guards the case where the block is taller than
+          // the viewport and a ratio threshold could never be met -- half a
+          // screenful of it showing is unambiguously "you can see this".
+          const rect = el.getBoundingClientRect();
+          const visiblePx = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+          return visibleRatio(el) >= 0.15 || visiblePx >= window.innerHeight * 0.5;
+        }
+        return isInViewport(el);
+      }
+
       // Reset, then either reveal right away (already on-screen) or hand
       // off to the observer for later (still below the fold) -- this is
       // the shared logic for both fight-card expansion and section
@@ -6730,7 +6764,7 @@
       function resetAndRewatch(el) {
         resetFillTarget(el);
         requestAnimationFrame(() => {
-          if (isInViewport(el)) {
+          if (isVisibleEnough(el)) {
             revealFillTarget(el);
             fillObserver.unobserve(el);
           } else {
