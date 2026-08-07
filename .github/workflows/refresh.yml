@@ -41,6 +41,8 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.cadence.outputs.build }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -58,7 +60,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Decide whether this run needs to build
+        id: cadence
+        # A manual run or a push always builds; only the CRON is throttled.
+        # Skipping sets an output the later steps check, rather than failing
+        # the job -- a red X every few minutes would train everyone to ignore
+        # the Actions tab, which is where today's real failures were hiding.
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "reason=manual or push -- always builds" >> $GITHUB_OUTPUT
+            echo "build=yes" >> $GITHUB_OUTPUT
+          elif python scripts/should_refresh.py; then
+            echo "build=yes" >> $GITHUB_OUTPUT
+          else
+            echo "build=no" >> $GITHUB_OUTPUT
+          fi
+
       - name: Merge recorded results into fight history
+        if: steps.cadence.outputs.build == 'yes' 
         # Runs BEFORE generate_site so the ratings, streak bonus, recency
         # weighting and fun facts all see the fights immediately.
         #
@@ -73,6 +92,7 @@ jobs:
         run: python scripts/merge_results_into_history.py --apply || true
 
       - name: Backfill history gaps from ESPN
+        if: steps.cadence.outputs.build == 'yes'
         # Catches fights that happened between the raw dataset's cutoff and
         # the site's own tracking window -- the range neither other source
         # covers.
@@ -83,6 +103,7 @@ jobs:
         run: python scripts/backfill_history_from_espn.py --apply || true
 
       - name: Generate site
+        if: steps.cadence.outputs.build == 'yes'
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           # Both optional -- unset until the Cloudflare Worker relay
@@ -94,6 +115,7 @@ jobs:
         run: python generate_site.py
 
       - name: Lint rendered output
+        if: steps.cadence.outputs.build == 'yes'
         # Gates the COMMIT, not the generation -- a page that fails these
         # checks never reaches the repo, so a stray brace or an undeferred
         # init can't ship the way both previously did.
@@ -106,11 +128,13 @@ jobs:
         run: python scripts/lint_site.py || true
 
       - name: Upload the built site
+        if: steps.cadence.outputs.build == 'yes'
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
 
       - name: Commit and push if changed
+        if: steps.cadence.outputs.build == 'yes'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -144,6 +168,7 @@ jobs:
 
   deploy:
     needs: refresh
+    if: needs.refresh.outputs.build == 'yes' 
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -277,9 +277,24 @@ def method_given_win(own_ko_rate, own_sub_rate, opp_ko_lost, opp_sub_lost,
 # Built from a per-round distribution instead, so every line is derived from
 # the same shape and monotonicity holds by construction rather than by the
 # author remembering to check.
+# MEASURED, not assumed (research_finish_timing.py):
+#   3-round, n=4107 finishes
+#   5-round, n=470 finishes
+#
+# The previous values were written to be "front-loaded", which was the right
+# shape and the wrong magnitude -- badly so. Round 1 accounts for 54.7% of
+# three-round finishes, not the 40% assumed, and round 3 for 14.4% rather than
+# 27%. Fights that get finished get finished EARLY, far more than a plausible-
+# looking curve suggested.
+#
+# The error ran one way on every line: Under 1.5 on a three-rounder was 13.6
+# points understated, so the site showed negative edges on Under bets that
+# were genuinely positive. P(finish) itself was never affected -- that comes
+# from the validated fight-level model -- so this only ever misallocated
+# finishes BETWEEN lines, which is precisely where round props are priced.
 _ROUND_FINISH_SHARE = {
-    3: [0.40, 0.33, 0.27],
-    5: [0.30, 0.24, 0.19, 0.15, 0.12],
+    3: [0.547, 0.308, 0.144],
+    5: [0.368, 0.272, 0.181, 0.106, 0.072],
 }
 
 
