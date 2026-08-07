@@ -1540,16 +1540,21 @@
   .wf-split.fav-blue { background: var(--corner-red); }
   .wf-split.fav-red .wf-split-fill { background: var(--corner-red); }
   .wf-split.fav-blue .wf-split-fill { background: var(--corner-blue); }
-  /* Left radii MUST match .wf-split's exactly. This was `4px 0 0 5px` -- a
-     1px-larger bottom-left than the 4px track beneath it, so the fill
-     curved away from that corner harder than the track did and let a
-     sliver of track colour show through. Since the track is painted in the
-     UNDERDOG's colour and this fill is the favourite's, that sliver read as
-     a speck of the opposing corner's colour at the far left of the bar.
-     The right side stays square: the track's own overflow:hidden does the
-     rounding there, and giving the fill a right radius would round the
-     LIVE EDGE of the fill mid-bar, which is wrong at any width below 100%. */
-  .wf-split-fill { display: block; height: 100%; border-radius: 4px 0 0 4px; }
+  /* NO radius of its own -- .wf-split already has `border-radius: 4px` plus
+     `overflow: hidden`, so it clips this fill to the correct rounded shape
+     on its own.
+     Two rounded shapes stacked on top of each other cannot be made to
+     coincide perfectly: each curve gets its own antialiased edge, those
+     edge pixels are semi-transparent, and the track's colour blends through
+     them. Since the track is painted in the UNDERDOG's colour, that showed
+     as a faint speck of the opposing corner at the far left of the bar --
+     invisible on a 3x phone screen, visible at 1x/2x on a desktop display.
+     Matching the radii exactly (the previous fix, from `5px` to `4px`)
+     reduced it but could never remove it for that reason.
+     With square corners here the fill covers the whole corner region
+     opaquely, the track's clip provides the single rounded edge, and there
+     is no second layer left underneath to bleed through at any DPR. */
+  .wf-split-fill { display: block; height: 100%; border-radius: 0; }
   /* Fill animations. These are re-triggered from JS whenever the panel is
      opened (see the .waterfall-block toggle handler) because CSS
      animations do not reliably advance while an ancestor is hidden, and
