@@ -40,20 +40,35 @@ def check_css_braces(c):
     A stray } silently kills EVERY rule after it. Cost ~8 rounds: the CSS was
     verifiably present in the file and simply never applied, which looked
     exactly like a deploy problem.
+
+    Checks EVERY <style> block, not just the first. This used to be a
+    re.search for one block, which was correct while the page had exactly
+    one -- then a second, tiny <style> was added at the very top of <head>
+    (the one-rule black background that has to paint before anything
+    network-bound resolves). That block became the first match, it is
+    trivially balanced, and so this check started passing instantly without
+    ever looking at the real stylesheet below it. A silently-vacuous check
+    is worse than no check, because it still reports a pass.
     """
-    css = re.search(r"<style>(.*?)</style>", c, re.DOTALL)
-    if not css:
+    blocks = re.findall(r"<style>(.*?)</style>", c, re.DOTALL)
+    if not blocks:
         return fail("css-braces", "no <style> block found")
-    body = re.sub(r"/\*.*?\*/", " ", css.group(1), flags=re.DOTALL)
-    opens, closes = body.count("{"), body.count("}")
-    if opens != closes:
-        return fail("css-braces", f"{opens} open vs {closes} close")
-    depth = 0
-    for i, ch in enumerate(body):
-        depth += (ch == "{") - (ch == "}")
-        if depth < 0:
-            line = body[:i].count("\n") + 1
-            return fail("css-braces", f"stray closing brace near line {line} of the style block")
+    for idx, raw in enumerate(blocks):
+        body = re.sub(r"/\*.*?\*/", " ", raw, flags=re.DOTALL)
+        where = f"block {idx + 1} of {len(blocks)}"
+        opens, closes = body.count("{"), body.count("}")
+        if opens != closes:
+            fail("css-braces", f"{where}: {opens} open vs {closes} close")
+            continue
+        depth = 0
+        for i, ch in enumerate(body):
+            depth += (ch == "{") - (ch == "}")
+            if depth < 0:
+                line = body[:i].count("\n") + 1
+                fail("css-braces",
+                     f"{where}: stray closing brace near line {line} of that style block")
+                break
+    print(f"       [css-braces] checked {len(blocks)} style block(s)")
 
 
 def check_js_syntax(c):

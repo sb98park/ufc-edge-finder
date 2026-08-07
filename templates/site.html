@@ -1550,8 +1550,19 @@
      The split bar deliberately starts at an even 50% rather than 0 --
      that IS the story the rows below tell: an even fight, then evidence
      moving it. */
+  /* DURATIONS, and how they relate to the rest of the page: the tape bars
+     are a single 1.4s width transition where every bar moves at once. These
+     are staggered instead, so total elapsed time is duration + the last
+     row's delay -- which is why they were originally kept short. At 0.55s
+     with a 0.07s stagger the whole thing finished in ~1.2s and read as a
+     flicker rather than a build. Roughly doubled: ~1.0s per bar with a
+     0.14s stagger, so a 7-row waterfall now resolves over ~2.1s and each
+     row is individually legible as it fills.
+     The three animations below MUST keep the same relative pacing -- the
+     numbers are meant to land just behind their own bar, so if you retune
+     wfBarFill, retune wfNumsIn with it. */
   .waterfall-block[open] .wf-split-fill {
-    animation: wfSplitFill 0.55s cubic-bezier(0.22,1,0.36,1) both;
+    animation: wfSplitFill 1s cubic-bezier(0.22,1,0.36,1) both;
   }
   @keyframes wfSplitFill { from { width: 50%; } to { width: var(--wf-final); } }
   /* scaleX rather than animating width: it stays on the compositor and
@@ -1559,7 +1570,7 @@
      so bars grow outward from the axis they hang off. */
   .waterfall-block[open] .wf-bar {
     transform-origin: left center;
-    animation: wfBarFill 0.55s cubic-bezier(0.22,1,0.36,1) both;
+    animation: wfBarFill 1s cubic-bezier(0.22,1,0.36,1) both;
     animation-delay: var(--wf-delay, 0s);
   }
   @keyframes wfBarFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
@@ -1567,7 +1578,7 @@
      follows bar -> number, row by row, instead of all numbers appearing
      at once against still-growing bars. */
   .waterfall-block[open] .wf-nums {
-    animation: wfNumsIn 0.35s ease-out both;
+    animation: wfNumsIn 0.6s ease-out both;
     animation-delay: var(--wf-delay, 0s);
   }
   @keyframes wfNumsIn { from { opacity: 0; } to { opacity: 1; } }
@@ -3867,7 +3878,7 @@
             <span class="wf-nums"><span class="wf-run">50.0%</span></span>
           </div>
           {% for r in wf.rows %}
-          <div class="waterfall-row {{ r.kind }}" style="--wf-delay: {{ (loop.index0 * 0.07 + 0.25)|round(2) }}s">
+          <div class="waterfall-row {{ r.kind }}" style="--wf-delay: {{ (loop.index0 * 0.14 + 0.25)|round(2) }}s">
             <span class="wf-label">{{ r.label }}<span class="wf-why">{{ r.why }}</span></span>
             <span class="wf-bar-cell">
               <span class="wf-bar {{ 'pos' if r.delta_pp >= 0 else 'neg' }}"
