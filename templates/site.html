@@ -4590,7 +4590,7 @@
           // measure yet) and gets handled by that card's own toggle
           // listener once actually expanded.
           if (window.__resetAndRewatch) {
-            document.querySelectorAll(`.detail-section[data-section="${id}"] .tape-block, .detail-section[data-section="${id}"] .model-pick-badge, .detail-section[data-section="${id}"] .radar-block, .detail-section[data-section="${id}"] .chart-block, .detail-section[data-section="${id}"] .favorite-card, .detail-section[data-section="${id}"] .standout-card, .detail-section[data-section="${id}"] .lock-pick-card`).forEach(el => {
+            document.querySelectorAll(`.detail-section[data-section="${id}"] .tape-block, .detail-section[data-section="${id}"] .model-pick-badge, .detail-section[data-section="${id}"] .radar-block, .detail-section[data-section="${id}"] .chart-block, .detail-section[data-section="${id}"] .favorite-card, .detail-section[data-section="${id}"] .standout-card, .detail-section[data-section="${id}"] .lock-pick-card, .detail-section[data-section="${id}"] .waterfall-block`).forEach(el => {
               if (el.offsetParent === null) return;
               window.__resetAndRewatch(el);
             });
@@ -6750,7 +6750,15 @@
       document.querySelectorAll('details.fight-card').forEach(card => {
         card.addEventListener('toggle', () => {
           if (!card.open) return;
-          card.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block').forEach(resetAndRewatch);
+          // .waterfall-block included here for the same reason as the rest:
+          // it sits inside this collapsed <details> too, so the observer
+          // alone can't be trusted to notice it appearing. It previously
+          // relied on its OWN 'toggle' event, which stopped firing once the
+          // panel shipped open-by-default -- and the scroll-observer path
+          // added alongside this comment works on desktop but NOT on iOS
+          // Safari, which is precisely the unreliability this explicit
+          // handler exists to remove.
+          card.querySelectorAll('.tape-block, .model-pick-badge, .radar-block, .chart-block, .waterfall-block').forEach(resetAndRewatch);
         });
       });
     })();
