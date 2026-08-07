@@ -427,8 +427,24 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
         # neither drop path below should ever touch them -- the whole
         # point of the cancelled flag is keeping the fight visible on our
         # card with a cancellation banner instead of silently vanishing.
-        pinned_cancelled = [r for r in orphaned if str(r.get("cancelled", "")).strip().lower() == "true"]
-        orphaned = [r for r in orphaned if r not in pinned_cancelled]
+        #
+        # MANUALLY-ADDED fights are pinned for the mirror-image reason, and
+        # this is not optional. ESPN can lag a genuine late booking by days
+        # -- both of this card's late additions were reported by every MMA
+        # outlet while ESPN's feed still showed the old lineup. A fight
+        # entered by hand to cover that gap is, by definition, one ESPN
+        # doesn't list yet, so without this it would look orphaned on the
+        # very next resync, climb the orphan streak, and be auto-marked
+        # CANCELLED within about fifteen minutes of being added -- with its
+        # prediction voided. The hand-entered flag is a statement that a
+        # human has better information than the feed, so the feed's silence
+        # is not evidence against it.
+        pinned = [
+            r for r in orphaned
+            if str(r.get("cancelled", "")).strip().lower() == "true"
+            or str(r.get("manually_added", "")).strip().lower() == "true"
+        ]
+        orphaned = [r for r in orphaned if r not in pinned]
         if orphaned:
             # A fighter from an orphaned row appearing anywhere in the FRESH
             # data (with a different opponent, necessarily, since it didn't
@@ -536,7 +552,7 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
             # idempotent across a 5-minute cron.
             orphaned = still_within_grace + confirmed_replaced + exceeded_grace
         new_order.extend(orphaned)
-        new_order.extend(pinned_cancelled)
+        new_order.extend(pinned)
 
         if [(_key(r), r["card_position"]) for r in new_order] != before_snapshot:
             corrected += 1

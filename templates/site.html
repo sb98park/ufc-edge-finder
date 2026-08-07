@@ -2195,7 +2195,19 @@
      The pressed state is already expressed by the indicator's 1.12 scale,
      which is both subtler and correctly shaped. */
   /* Content must clear the fixed bar or the last card is unreachable. */
-  body { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  /* Clears the floating tab bar, derived from the bar's OWN geometry rather
+     than guessed. The bar sits `max(10px, safe-area-bottom - 12px)` off the
+     bottom (22px on a notched iPhone) and stands ~64px tall expanded
+     (11 + 10 padding, 23px icon, 4px gap, 14px label, 2px border), so its
+     top edge is ~86px up. 76px + the bar's own offset lands content ~12px
+     clear of it.
+     WAS `92px + safe-area-bottom` = 126px on an iPhone, which cleared the
+     bar by ~40px rather than 12 and was the last of the bottom deadspace:
+     on any section long enough to scroll, that surplus is pure extra
+     scrollable height below the content. It wasn't visible on the short
+     sections (More) because body's 100dvh floor absorbs it there, which is
+     exactly why More came out perfect while everything else still overran. */
+  body { padding-bottom: calc(max(10px, env(safe-area-inset-bottom, 0px) - 12px) + 76px); }
   @media (min-width: 1024px) {
     .mobile-tabbar { display: none; }
     body { padding-bottom: 0; }
