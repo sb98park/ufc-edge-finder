@@ -388,6 +388,29 @@ def _canonical_fight_methods(rows: list[dict], fight: dict) -> list[dict]:
     # renormalising divides straight back to 1.0. Lifting the OTHERS off zero
     # is what actually removes the certainty, and it leaves a normal
     # distribution essentially unchanged.
+    # OVERRIDE model_prob from `dist` on every fight-level row.
+    #
+    # These rows arrive from edge_finder carrying their own model_prob, and
+    # this function preferred whatever was already there -- so the Fight props
+    # group showed one distribution while the per-fighter grid, reconciled
+    # against `dist`, showed another. On one card that was 56.4% decision
+    # beside per-fighter columns summing to 22.6% for the same fight.
+    #
+    # `dist` is the same distribution the per-fighter rows are reconciled to,
+    # so taking it here makes the two halves agree by construction rather than
+    # by both happening to compute the same thing. Odds and the priced flag
+    # are kept; only the model number is unified, and the edge recomputed with
+    # it so it can't be left describing the old value.
+    if dist:
+        key = {"KO/TKO": "ko", "Submission": "sub", "Decision": "decision"}
+        for r in out:
+            k = key.get(str(r.get("selection") or "").strip()) or \
+                key.get(str(r.get("label") or "").replace("Fight ends by ", "").strip())
+            if k and dist.get(k) is not None:
+                r["model_prob"] = round(float(dist[k]), 4)
+                if r.get("has_line") and r.get("book_fair_prob") is not None:
+                    r["edge_pct"] = round((r["model_prob"] - float(r["book_fair_prob"])) * 100, 2)
+
     vals = [r.get("model_prob") for r in out]
     nums = [v for v in vals if isinstance(v, (int, float))]
     if nums and max(nums) > METHOD_CAP:
