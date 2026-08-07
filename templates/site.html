@@ -7,6 +7,19 @@
      in a normal browser tab (deliberately, since iOS 10) but honours them in
      a standalone home-screen app -- which is the context where zooming makes
      the thing feel like a web page rather than an app. #}
+<style>html,body{background:#000000}</style>
+  {# FIRST thing in <head>, before even the title/icons, and years before the
+     big stylesheet block further down. This is the ONLY thing standing
+     between the iOS launch image and the real page on a standalone-app cold
+     launch -- the Google Fonts stylesheet a few lines down is render-blocking,
+     so without this, the browser has nothing to paint but its own default
+     background for a frame while that fetch is in flight. That's the flash:
+     launch image -> (unstyled default paint, briefly) -> real black splash.
+     A two-property inline rule can't be blocked by anything network-bound,
+     so it paints on the very first frame no matter how slow fonts.googleapis
+     is that day. The full :root/html/body rules later in the big <style>
+     block are unaffected and still apply once they load -- this is a strict
+     subset of them, just early. #}
 <title>Octane Alpha | Quantitative UFC Analytics & Edge Detection</title>
 
 <link rel="icon" type="image/svg+xml" href="favicon.svg?v=6">
@@ -31,7 +44,18 @@
 <meta name="twitter:image" content="https://octanealpha.com/og-share-card.png?v=6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+  {# Loaded async (preload -> swap to stylesheet on completion) rather than as
+     a plain blocking <link rel="stylesheet">. A blocking font fetch was the
+     other half of the splash-flash bug: even with the inline background rule
+     above, the page still can't PAINT until every render-blocking resource in
+     <head> resolves, so a slow fonts.googleapis response would delay the
+     first frame regardless. Nothing here needs the real font before the
+     splash clears -- the wordmark reads fine in the fallback face for under
+     a second -- so there's no reason for it to block anything. `display=swap`
+     (already present) still governs the swap itself once it loads. #}
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
     /* --bg is TRUE BLACK, panels are not. On OLED a #0a0c10 page still lights
