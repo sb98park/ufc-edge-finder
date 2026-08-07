@@ -30,3 +30,5 @@ docs/movements/
 !docs/og-share-card.png
 !docs/manifest.json
 !docs/.nojekyll
+__pycache__/
+.DS_Store
