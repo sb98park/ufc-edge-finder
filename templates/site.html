@@ -1317,6 +1317,17 @@
   .movement-tag.notable { border: 1px solid currentColor; }
 
   .parlay-section-title { font-size: 15px; margin: 28px 0 10px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  /* The 28px top margin exists to separate the SECOND and later parlay
+     headings (Bankroll, Lotto, Moonshot) from the cards above them. At the
+     very top of a section there is nothing above to separate from, so it is
+     pure dead space -- and it showed up only on Edges because that is the
+     one section whose first heading is a .parlay-section-title. Every other
+     section opens with .standout-title or .section-title, both of which
+     declare margin-bottom only.
+     :first-child rather than a per-section override, so this stays correct
+     if the conditional notice above it renders (the title is then no longer
+     first, correctly keeps its margin, and the notice does the separating). */
+  .detail-section > .parlay-section-title:first-child { margin-top: 0; }
   .parlay-section-title.bankroll { color: var(--green); }
   .parlay-section-title.lotto { color: var(--muted); }
   .parlay-section-title.moonshot { color: #ffb347; }
