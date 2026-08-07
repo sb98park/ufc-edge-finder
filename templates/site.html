@@ -2691,6 +2691,42 @@
   @media (max-width: 1023px) {
     #detail-view, #hub-view { min-height: calc(100vh - 160px); }
   }
+  /* ===== Animated splash ===== */
+  #splash {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #000000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px;
+    /* Fades itself out; `visibility` so it stops taking hit-tests the moment
+       it goes, rather than swallowing the first tap. */
+    transition: opacity 0.45s ease-out, visibility 0s linear 0.45s;
+  }
+  #splash.done { opacity: 0; visibility: hidden; }
+
+  /* The mark draws itself: dashoffset from full length to zero. The lengths
+     are the real path lengths (153.1 and 80.5 units on the 100-unit grid),
+     so the stroke arrives exactly as the path ends rather than easing into
+     an approximation. */
+  #splash-arc { stroke-dasharray: 154; stroke-dashoffset: 154; animation: splash-draw 0.75s ease-out forwards; }
+  #splash-peak { stroke-dasharray: 81; stroke-dashoffset: 81; animation: splash-draw 0.55s ease-out 0.4s forwards; }
+  @keyframes splash-draw { to { stroke-dashoffset: 0; } }
+
+  #splash-word {
+    font-family: var(--font-display); font-size: 17px; font-weight: 700;
+    letter-spacing: 0.09em;
+    opacity: 0; animation: splash-word 0.5s ease-out 0.7s forwards;
+  }
+  #splash-word span:first-child { color: #ffffff; }
+  #splash-word span:last-child { color: #d4af37; }
+  @keyframes splash-word { to { opacity: 1; } }
+
+  /* Reduced motion: no drawing, no fade-in -- just the finished mark, then
+     the overlay clears. The point is to skip animation, not to skip the
+     brand moment. */
+  @media (prefers-reduced-motion: reduce) {
+    #splash-arc, #splash-peak { animation: none; stroke-dashoffset: 0; }
+    #splash-word { animation: none; opacity: 1; }
+  }
 </style>
 <script>
   /* Runs BEFORE the body parses. Previously #detail-view carried an inline
@@ -2735,6 +2771,25 @@
         media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 </head>
 <body>
+  {# ANIMATED SPLASH.
+     iOS launch images are static PNGs -- that's a platform limit, not a
+     choice. This picks up where the PNG hands over: identical mark, identical
+     black, so the handover is invisible and the whole thing reads as one
+     continuous splash that happens to start moving.
+     Paths and the y-shift are lifted from generate_brand_assets.apex_svg, so
+     the drawn mark and the static one can't diverge. #}
+  <div id="splash" aria-hidden="true">
+    <svg viewBox="0 0 100 100" width="96" height="96">
+      <path id="splash-arc" d="M13.04,71.79 L13.04,41.17 L34.69,19.52 L65.31,19.52 L86.96,41.17 L86.96,71.79"
+            fill="none" stroke="#ffffff" stroke-width="4.6"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <path id="splash-peak" d="M32.00,80.48 L50.00,44.48 L68.00,80.48"
+            fill="none" stroke="#d4af37" stroke-width="4.6"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div id="splash-word"><span>OCTANE </span><span>ALPHA</span></div>
+  </div>
+
 {% macro scroll_value(id) %}
     <div class="digit-pair">
       <div class="scroll-digit" id="sd-{{ id }}-tens"><div class="track"><div class="num">-</div></div></div>
@@ -4603,6 +4658,34 @@
       }
     }
     initDesktopLayoutIfNeeded();
+
+    // Clears the splash. Three rules, and the third is the important one.
+    //
+    //  - waits for the animation to READ (1.15s covers the draw plus the
+    //    wordmark), so it never flashes past on a warm cache
+    //  - waits for the page to be usable, so it doesn't hand over to a
+    //    half-painted screen
+    //  - REMOVES ITSELF REGARDLESS after 3s
+    //
+    // That last one matters more than the effect: a full-screen overlay that
+    // fails to clear is a bricked app, and it would fail exactly when
+    // something else has already gone wrong. A timer that can't be stopped by
+    // an exception elsewhere is the difference between a nice touch and a
+    // liability.
+    (function () {
+      const el = document.getElementById('splash');
+      if (!el) return;
+      const clear = () => el.classList.add('done');
+      const MIN = 1150;
+      const started = performance.now();
+      const whenReady = () => {
+        const wait = Math.max(0, MIN - (performance.now() - started));
+        setTimeout(clear, wait);
+      };
+      if (document.readyState === 'complete') whenReady();
+      else window.addEventListener('load', whenReady, { once: true });
+      setTimeout(clear, 3000);   // hard ceiling, unconditional
+    })();
 
     // Pinch-zoom off. The viewport meta alone doesn't do it -- iOS has
     // ignored user-scalable=no since iOS 10, standalone included, so the
