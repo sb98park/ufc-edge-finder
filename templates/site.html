@@ -4679,8 +4679,7 @@
     }
 
     function showSection(id) {
-      if (window.__syncTabBar) window.__syncTabBar(id);
-      document.body.dataset.section = id;
+      if (window.__syncTabBar) window.__syncTabBar(id);      document.body.dataset.section = id;
       if (window.__rememberDrawerSection) window.__rememberDrawerSection(id);
       if (window.__onSectionChange) window.__onSectionChange(id);
       const alreadyInDetail = detailView.style.display === 'block';
@@ -4853,19 +4852,68 @@
       setTimeout(clear, 3000);   // hard ceiling, unconditional
     })();
 
-    // Registers the shell-caching service worker (docs/sw.js) that fixes the
-    // standalone-launch gray flash -- see that file for the full explanation.
-    // Fully fenced off on purpose: registration runs after `load`, so it can
-    // never compete with anything above for the browser's attention during
-    // first paint, and a failure here (older Safari, private browsing, an
-    // offline first visit) is swallowed rather than surfaced -- the site
-    // works exactly as it does today without a service worker, this can only
-    // make repeat launches faster, never break anything if it doesn't run.
+    // Registers docs/sw.js. That file NO LONGER CACHES ANYTHING -- it exists
+    // purely to neutralise the caching service worker that shipped before
+    // it, and registering is what makes a browser fetch the replacement and
+    // stop running the old one. See docs/sw.js for the full history.
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
       });
     }
+
+    // showSection is defined above as a plain function declaration, so it
+    // isn't reachable from the resume handler below without this.
+    window.__showSection = showSection;
+
+    // Reload the page when you come back to a long-abandoned session.
+    //
+    // Live prices already re-fetch on visibilitychange, but almost
+    // everything else here is BAKED IN AT BUILD TIME -- the "Updated"
+    // timestamp, model probabilities, the card itself, cancellations and
+    // replacements. None of that can change without a page load, so an app
+    // left open in the background for hours shows hours-old analysis with a
+    // freshly-updated price sitting next to it, which is worse than either
+    // being stale on its own.
+    //
+    // Only after a LONG absence, and only when the tab is actually hidden
+    // in between. Reloading on every return would be hostile: it discards
+    // scroll position and every open fight card, and someone flicking away
+    // for ten seconds has lost nothing worth reloading for. Fifteen minutes
+    // is comfortably longer than the ~5-minute build cadence, so a reload
+    // reliably brings back something genuinely newer rather than an
+    // identical page.
+    (function() {
+      const STALE_AFTER_MS = 15 * 60 * 1000;
+      let hiddenAt = null;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          hiddenAt = Date.now();
+          return;
+        }
+        if (hiddenAt === null || Date.now() - hiddenAt < STALE_AFTER_MS) return;
+        hiddenAt = null;
+        // Carry the current section through the reload. Without this the
+        // reload silently bounces you back to the default tab, which reads
+        // as the app losing your place rather than refreshing.
+        const section = document.body.dataset.section;
+        if (section && section !== '__hub') {
+          try { sessionStorage.setItem('oa-resume-section', section); } catch (e) {}
+        }
+        location.reload();
+      });
+
+      // Restore that section on the way back in.
+      try {
+        const resume = sessionStorage.getItem('oa-resume-section');
+        if (resume) {
+          sessionStorage.removeItem('oa-resume-section');
+          window.addEventListener('load', () => {
+            if (window.__showSection) window.__showSection(resume);
+          });
+        }
+      } catch (e) {}
+    })();
 
     // Pinch-zoom off. The viewport meta alone doesn't do it -- iOS has
     // ignored user-scalable=no since iOS 10, standalone included, so the
