@@ -6535,7 +6535,14 @@
           const el = document.createElement('span');
           el.className = 'vs-text result-text';
           el.textContent = fight.result_label + (fight.result_round_time ? ' \u00b7 ' + fight.result_round_time : '');
-          slot.replaceWith(el);   // no data-vs-slot: never paint the same fight twice
+          // data-result-slot, NOT data-vs-slot. Dropping data-vs-slot is what
+          // stops this fight being painted again -- but paintMethod looked
+          // for that same attribute to find where to append the method, so
+          // once the winner was painted the method could never land. The
+          // lookup ran, succeeded, and wrote nowhere. Two attributes for two
+          // jobs: "still needs a winner" vs "here is the result line".
+          el.setAttribute('data-result-slot', '');
+          slot.replaceWith(el);
         }
         // Winner/loser emphasis, matching what the server build renders. The
         // baked path gets this from fight.winner at build time; live results
@@ -6601,9 +6608,23 @@
             const st = await sr.json();
             const res = st.result;
             if (res && res.displayName) {
-              byComp[String(c.id)] = res.description && res.description !== res.displayName
+              let label = res.description && res.description !== res.displayName
                 ? `${res.displayName} (${res.description})`
                 : res.displayName;
+              // ROUND comes off the same status object as the method, so it
+              // costs no extra request. Appended only for a stoppage: on a
+              // decision the round is always the last one and adds nothing,
+              // while on a KO or submission it's most of what you want to
+              // know. displayClock is included when ESPN gives a real one --
+              // it reads 0:00 on some finishes, which would be misleading.
+              const isDecision = /decision/i.test(res.displayName || '');
+              if (!isDecision && st.period) {
+                const clock = String(st.displayClock || '').trim();
+                label += clock && clock !== '0:00'
+                  ? ` \u00b7 R${st.period} ${clock}`
+                  : ` \u00b7 R${st.period}`;
+              }
+              byComp[String(c.id)] = label;
             }
           } catch (e) { /* one competition failing must not lose the rest */ }
         }
@@ -6621,7 +6642,9 @@
       const row = document.querySelector(
         `[data-fight-key="${CSS.escape(fight.fighter_a + '|' + fight.fighter_b)}"]`);
       if (!row) return false;
-      const slot = row.querySelector('[data-vs-slot]');
+      // Either the pre-result slot (method arrived first, unusual) or the
+      // result line paintResult left behind (the normal case).
+      const slot = row.querySelector('[data-result-slot]') || row.querySelector('[data-vs-slot]');
       if (!slot) return false;
       // Only append -- never replace what paintResult already wrote, so a
       // method arriving late can't clobber the winner.
