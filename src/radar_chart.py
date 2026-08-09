@@ -1,72 +1,132 @@
 """
-Radar/spider chart for the Tale of the Tape: overlays both fighters' core
-model metrics on one chart so the stylistic matchup reads at a glance.
+Radar/spider chart for the Tale of the Tape: overlays both fighters' method
+profiles on one chart so the SHAPE of the likely fight reads at a glance.
 
-Six axes, all fully populated for the whole roster:
-  - Striking Accuracy    (strike_accuracy_pct)
-  - Grappling Offense    (control_time_pct if populated, else td_accuracy_pct)
-  - Grappling Defense    (td_defense_pct)
-  - Finishing Ability    (career finish rate: KO+Sub wins / total wins)
-  - Experience           (career fight count, scaled to a 0-100 veteran curve)
-  - Durability           (how rarely they've been finished, i.e. inverse finish-loss rate)
+Six axes, every one computed from the fight RECORD:
+  - KO Threat              (ko_wins / wins)
+  - Submission Threat      (sub_wins / wins)
+  - Distance Rate          ((dec_wins + dec_losses) / total fights)
+  - KO Resistance          (1 - ko_losses / losses, shrunk toward the mean)
+  - Submission Resistance  (1 - sub_losses / losses, shrunk toward the mean)
+  - Experience             (career fight count on a veteran curve)
 
-Experience and Durability were originally a single averaged "Exp/Dur" axis;
-split into two separate axes on request, since the underlying calculation
-was already computing them independently before averaging them together --
-no new data or logic was needed, just exposing both instead of blending them.
+WHY THESE AND NOT THE PREVIOUS SET. The chart used to plot Striking Accuracy,
+Grappling Offense and Grappling Defense, sourced from strike_accuracy_pct /
+td_accuracy_pct / control_time_pct / td_defense_pct. A coverage audit
+(scripts/audit_radar_coverage.py) found those columns present for 0 of 25
+fighters on a live card and roughly 29% of the roster -- and NOT because of
+debutants: established names sat at zero too, because nothing in the automated
+pipeline writes them (src/scraper.py does, and it is explicitly manual).
+Half the chart was therefore drawn at zero for both fighters in every bout,
+which conveys nothing while looking like it conveys something.
 
-Axis labels are spelled out in full rather than abbreviated (e.g.
-"Grappling Offense" instead of "Gr. Off.") -- the chart is rendered at a
-fixed size on every single fight (see model_preview.py's one call site,
-which never overrides the default `size`), so there's no real space
-constraint forcing abbreviation, and the shorthand risked being unclear to
-users without an MMA background.
+Record-derived axes have near-total coverage by construction: anyone with a
+Wikipedia page has a W-L record and its method splits. Verified on the same
+card at 24-25 of 25 for every axis here.
 
-Striking Defense and Striking Volume (SLpM/SApM) were both considered and
-left out deliberately -- neither is real data this roster has. Striking
-Defense specifically would need opponent-strikes-landed-against data no
-source here provides; faking that axis would be worse than leaving it out.
+IT ALSO STOPS DUPLICATING THE WATERFALL ABOVE IT. "Why the model likes X"
+already decomposes rating gap, striking, wrestling, sub threat, recent form,
+height and durability -- i.e. WHO WINS. These axes answer a different
+question, HOW THE FIGHT GOES, which is what method, round and total props
+actually price.
+
+MISSING DATA IS RETURNED AS None, NEVER ZERO. The previous version coerced
+absent inputs with `or 0`, so a fighter nobody has data on was drawn at the
+origin -- indistinguishable from, and read as, the worst fighter on the card.
+A debutant scored 0 for striking AND 100 for durability simultaneously, both
+purely from absence. None renders as a break in the polygon and a greyed
+axis label instead.
 """
 
 import math
 
-AXIS_LABELS = ["Striking Accuracy", "Grappling Offense", "Grappling Defense", "Finishing Ability", "Experience", "Durability"]
+AXIS_LABELS = ["KO Threat", "Submission Threat", "Distance Rate",
+               "KO Resistance", "Submission Resistance", "Experience"]
+
+# Shrinkage for the two resistance axes. Without it, one decision loss scores
+# a perfect 100 chin and outranks a fighter with a real sample -- the single
+# noisiest thing in the old chart. Equivalent to SHRINK_K notional prior
+# fights at the league-ish finish-loss rate, so small samples are pulled
+# toward the middle and only a real record moves the needle.
+SHRINK_K = 3.0
+PRIOR_FINISH_LOSS_RATE = 0.5
 
 
-def _experience_score(row: dict) -> float:
-    total_fights = (row.get("wins") or 0) + (row.get("losses") or 0)
+def _pct(numerator, denominator) -> float | None:
+    if denominator in (None, "") or float(denominator) <= 0:
+        return None
+    return round(float(numerator) / float(denominator) * 100, 1)
+
+
+def _num(row: dict, key: str):
+    """Value, or None. Deliberately does NOT default to 0 -- see module docstring."""
+    v = row.get(key)
+    if v is None or v == "":
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return None if f != f else f          # NaN
+
+
+def _experience_score(row: dict) -> float | None:
+    w, l = _num(row, "wins"), _num(row, "losses")
+    if w is None and l is None:
+        return None
+    total_fights = (w or 0) + (l or 0)
     return round(min(100.0, total_fights * 4.0), 1)  # ~25 fights = veteran-level 100
 
 
-def _durability_score(row: dict) -> float:
-    losses = row.get("losses") or 0
+def _resistance_score(row: dict, loss_key: str) -> float | None:
+    """
+    How rarely they're finished THIS way, shrunk toward the prior by sample.
+
+    Returns None rather than a number when the split isn't known -- a fighter
+    with recorded losses but no method breakdown is unmeasured, not durable.
+    """
+    losses = _num(row, "losses")
+    finished = _num(row, loss_key)
+    if losses is None or finished is None:
+        return None
     if losses <= 0:
-        return 100.0  # undefeated -- no data on how they take a loss, don't penalize
-    finish_loss_rate = ((row.get("ko_losses") or 0) + (row.get("sub_losses") or 0)) / losses
-    return round((1 - finish_loss_rate) * 100, 1)
+        # Undefeated: genuinely no evidence either way. The prior IS the
+        # honest answer here, not 100 -- an unbeaten fighter has not
+        # demonstrated a chin, they have demonstrated not having been tested.
+        return round((1 - PRIOR_FINISH_LOSS_RATE) * 100, 1)
+    rate = (finished + SHRINK_K * PRIOR_FINISH_LOSS_RATE) / (losses + SHRINK_K)
+    return round((1 - rate) * 100, 1)
 
 
-def _finish_rate_score(row: dict) -> float:
-    wins = row.get("wins") or 0
-    if wins <= 0:
-        return 0.0
-    finishes = (row.get("ko_wins") or 0) + (row.get("sub_wins") or 0)
-    return round(finishes / wins * 100, 1)
+def _distance_rate(row: dict) -> float | None:
+    dw, dl = _num(row, "dec_wins"), _num(row, "dec_losses")
+    w, l = _num(row, "wins"), _num(row, "losses")
+    if dw is None or dl is None or w is None or l is None:
+        return None
+    total = w + l
+    return _pct(dw + dl, total)
 
 
-def compute_radar_metrics(row: dict) -> list[float]:
-    """Returns [striking_acc, grappling_off, grappling_def, finishing, experience, durability], each 0-100."""
-    striking_acc = float(row.get("strike_accuracy_pct") or 0)
+def compute_radar_metrics(row: dict) -> list[float | None]:
+    """
+    [ko_threat, sub_threat, distance_rate, ko_resistance, sub_resistance, experience].
 
-    control_time = row.get("control_time_pct")
-    grappling_off = float(control_time) if control_time not in (None, "") else float(row.get("td_accuracy_pct") or 0)
+    Each 0-100, or None where the underlying record doesn't support a value.
+    Callers MUST handle None rather than coercing it -- that coercion is the
+    bug this rewrite exists to remove.
+    """
+    wins = _num(row, "wins")
+    ko_threat = _pct(_num(row, "ko_wins"), wins) if _num(row, "ko_wins") is not None else None
+    sub_threat = _pct(_num(row, "sub_wins"), wins) if _num(row, "sub_wins") is not None else None
 
-    grappling_def = float(row.get("td_defense_pct") or 0)
-    finishing = _finish_rate_score(row)
-    experience = _experience_score(row)
-    durability = _durability_score(row)
-
-    return [striking_acc, grappling_off, grappling_def, finishing, experience, durability]
+    return [
+        ko_threat,
+        sub_threat,
+        _distance_rate(row),
+        _resistance_score(row, "ko_losses"),
+        _resistance_score(row, "sub_losses"),
+        _experience_score(row),
+    ]
 
 
 def build_radar_chart_svg(
@@ -88,7 +148,12 @@ def build_radar_chart_svg(
         return cx + r * math.cos(a), cy + r * math.sin(a)
 
     def polygon_points(metrics):
-        pts = [point(v, i) for i, v in enumerate(metrics)]
+        # None vertices are SKIPPED, not plotted at zero. The polygon closes
+        # across the gap, which reads as "this axis isn't measured for this
+        # fighter" rather than "this fighter scores zero here". Plotting the
+        # origin instead is precisely the bug this rewrite removes: it made
+        # absence indistinguishable from the worst possible score.
+        pts = [point(v, i) for i, v in enumerate(metrics) if v is not None]
         return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
 
     # Gridlines at 25/50/75/100%
@@ -114,7 +179,14 @@ def build_radar_chart_svg(
             anchor = "start"
         elif math.cos(a) < -0.3:
             anchor = "end"
-        labels_svg += f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="8.5" fill="#8a8f9a" text-anchor="{anchor}" dominant-baseline="middle">{label}</text>'
+        # An axis neither fighter has data for is dimmed and marked, so the
+        # gap in the polygons above is explained rather than looking like a
+        # rendering fault. Half-known axes keep the normal colour -- the
+        # break in one polygon already carries that.
+        both_missing = metrics_a[i] is None and metrics_b[i] is None
+        fill = "#4a4d54" if both_missing else "#8a8f9a"
+        text = f"{label} \u2014" if both_missing else label
+        labels_svg += f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="8.5" fill="{fill}" text-anchor="{anchor}" dominant-baseline="middle">{text}</text>'
 
     poly_a = polygon_points(metrics_a)
     poly_b = polygon_points(metrics_b)

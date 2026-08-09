@@ -805,6 +805,28 @@ def _group_results_by_event(matched: list[dict]) -> list[dict]:
 
     billing_rank = {"Main Event": 0, "Co-Main Event": 1, "Main Card": 2, "Prelims": 3, "Early Prelims": 4}
 
+    def _card_display_order() -> dict:
+        """
+        {pair_key: position} from the card files, which are already stored
+        main-event-first -- so ascending position IS "last fight of the night
+        at the top", with no inference required.
+        """
+        order = {}
+        for path in ("data/fight_cards.csv", "data/future_cards.csv"):
+            if not os.path.exists(path):
+                continue
+            try:
+                with open(path, newline="") as f:
+                    for row in csv.DictReader(f):
+                        key = _pair_key(row.get("fighter_a", ""), row.get("fighter_b", ""))
+                        if key not in order:
+                            order[key] = len(order)
+            except (OSError, csv.Error):
+                continue
+        return order
+
+    card_order = _card_display_order()
+
     def _sort_within_event(entries: list[dict]) -> list[dict]:
         # LATEST FIGHT FIRST. Billing rank alone only orders the GROUPS --
         # five fights all sharing "Main Card" (rank 2) came out in whatever
@@ -816,6 +838,22 @@ def _group_results_by_event(matched: list[dict]) -> list[dict]:
         # pass preserves the date order inside each equal rank.
         # Missing card_position still falls back to rank 99 rather than
         # being scattered to an arbitrary spot.
+        # PREFER THE CARD FILE'S OWN ORDER when it covers every fight here.
+        # The date_added fallback below can't order fights within a segment:
+        # date_added is a DATE, not a timestamp, so every fight from one night
+        # ties and the "stable sort preserves date order" reasoning has no
+        # order to preserve. What survives is fight_results.csv's insertion
+        # order, which is the order fights FINISHED -- earliest first, the
+        # exact reverse of what this function is supposed to produce.
+        # Older cards happened to look right only because their results were
+        # written in card order rather than as they concluded.
+        # Requires ALL entries to be found, so a partially-covered event
+        # falls back wholesale rather than interleaving two different
+        # orderings, which would be worse than either alone.
+        keys = [_pair_key(e.get("fighter_a", ""), e.get("fighter_b", "")) for e in entries]
+        if card_order and all(k in card_order for k in keys):
+            return sorted(entries, key=lambda e: card_order[_pair_key(e.get("fighter_a", ""), e.get("fighter_b", ""))])
+
         by_recency = sorted(entries, key=lambda e: str(e.get("date_added") or ""), reverse=True)
         return sorted(by_recency, key=lambda e: billing_rank.get(e.get("card_position"), 99))
 

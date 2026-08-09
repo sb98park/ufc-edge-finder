@@ -565,8 +565,17 @@ def submission_threat_adjustment(row_a: pd.Series, row_b: pd.Series) -> float:
     """
     wins_a = int(_get(row_a, "wins", 0))
     wins_b = int(_get(row_b, "wins", 0))
-    sub_rate_a = (_get(row_a, "sub_wins", 0) / wins_a) if wins_a else 0.0
-    sub_rate_b = (_get(row_b, "sub_wins", 0) / wins_b) if wins_b else 0.0
+    # A MISSING sub_wins IS NOT ZERO SUBMISSIONS. Defaulting it to 0 scores a
+    # fighter whose method splits never backfilled as having no submission
+    # game at all, and hands the difference to the opponent -- so a grappler
+    # with an incomplete row is read as the LESS dangerous grappler. Both
+    # corners need the split or the term says nothing.
+    have_a = row_a.get("sub_wins") is not None and pd.notna(row_a.get("sub_wins"))
+    have_b = row_b.get("sub_wins") is not None and pd.notna(row_b.get("sub_wins"))
+    if not (have_a and have_b and wins_a and wins_b):
+        return 0.0
+    sub_rate_a = _get(row_a, "sub_wins", 0) / wins_a
+    sub_rate_b = _get(row_b, "sub_wins", 0) / wins_b
     return (sub_rate_a - sub_rate_b) * SUBMISSION_THREAT_SCALE
 
 
@@ -585,13 +594,46 @@ def style_matchup_adjustment(
     strike_acc_a = _get(row_a, "strike_accuracy_pct", 45)
     strike_acc_b = _get(row_b, "strike_accuracy_pct", 45)
 
+    def _has(row, col) -> bool:
+        """True only when the column holds a real number for this fighter."""
+        v = row.get(col)
+        return v is not None and v != "" and pd.notna(v)
+
+    # A DIFFERENTIAL BETWEEN A REAL NUMBER AND A DEFAULT IS NOT A DIFFERENTIAL.
+    #
+    # The _get defaults above exist so a missing column can't crash the model,
+    # and when NEITHER fighter has the data they cancel harmlessly: 45 - 45 and
+    # max(0, 20 - 65) are both zero. The dangerous case is asymmetry. An
+    # established fighter at 52% accuracy against a debutant defaulted to 45%
+    # produces a 7-point "striking edge" that is an artifact of who has a data
+    # file, not of anything either man does in a cage -- and it always favours
+    # the fighter with more history, which is a bias dressed as a signal.
+    #
+    # That case is not hypothetical: strike_accuracy_pct / td_accuracy_pct /
+    # td_defense_pct sit at ~29% roster coverage (0 of 25 on one live card),
+    # because their only source is the manual ufcstats scraper, and ufcstats
+    # now sits behind a JavaScript challenge that requests+BeautifulSoup
+    # cannot pass. Coverage will stay partial even if that is ever solved:
+    # ufcstats records UFC bouts only, so debutants have nothing there by
+    # definition, and every card has debutants.
+    #
+    # So each term requires BOTH fighters to have real data or it contributes
+    # nothing. Today that makes these terms inert, exactly as they already
+    # were in practice. If the data ever returns they light up on their own
+    # for the fights that can support them, and stay correctly silent on the
+    # ones that can't -- no follow-up change needed.
+    striking_data_ok = _has(row_a, "strike_accuracy_pct") and _has(row_b, "strike_accuracy_pct")
+    td_acc_data_ok = _has(row_a, "td_accuracy_pct") and _has(row_b, "td_accuracy_pct")
+    td_def_data_ok = _has(row_a, "td_defense_pct") and _has(row_b, "td_defense_pct")
+
     # Striking: accuracy differential, PLUS volume differential (SLpM - SApM)
     # when that data exists. A high-output fighter who lands 45% of a high
     # volume typically outpoints a low-output 60%-accurate fighter on
     # judges' cards -- accuracy alone misses this real, well-documented
     # dynamic. Falls back to accuracy-only when strike-volume data isn't
     # populated yet (graceful no-op, not a guessed number).
-    striking_adj = ((strike_acc_a - strike_acc_b) / 100.0) * STRIKING_ADVANTAGE_SCALE
+    striking_adj = (((strike_acc_a - strike_acc_b) / 100.0) * STRIKING_ADVANTAGE_SCALE
+                    if striking_data_ok else 0.0)
     slpm_a, sapm_a = _stat(row_a, "slpm"), _stat(row_a, "sapm")
     slpm_b, sapm_b = _stat(row_b, "slpm"), _stat(row_b, "sapm")
     volume_adj = 0.0
@@ -624,20 +666,27 @@ def style_matchup_adjustment(
         # Testing the clipping removal on its own made things slightly worse,
         # so the clipping was never the real problem; the input was.
         wrestling_adj = (float(td_rate_a) - float(td_rate_b)) * TD_RATE_ADVANTAGE_SCALE
-    elif pd.notna(ctrl_a) and pd.notna(ctrl_b):
+    elif pd.notna(ctrl_a) and pd.notna(ctrl_b) and td_def_data_ok:
+        # td_def_data_ok is required as well: this branch compares each
+        # fighter's REAL control time against the OTHER's takedown defence,
+        # so a defaulted 65 on one side manufactures the same phantom edge
+        # the striking term above guards against.
         # Fallback for fighters with no tracked cage time yet (debutants, and
         # anyone the stats backfill couldn't name-match). Unchanged prior
         # behaviour rather than a guessed rate.
         wrestling_edge_a = max(0.0, float(ctrl_a) - td_def_b) / 100.0
         wrestling_edge_b = max(0.0, float(ctrl_b) - td_def_a) / 100.0
         wrestling_adj = (wrestling_edge_a - wrestling_edge_b) * WRESTLING_ADVANTAGE_SCALE
-    else:
+    elif td_acc_data_ok and td_def_data_ok:
         # Wrestling: A's takedown accuracy vs. B's takedown defense, and vice versa.
         # Only counts as an "edge" if the attacker's accuracy actually exceeds
         # the defender's defense rate -- otherwise no stylistic advantage either way.
         wrestling_edge_a = max(0.0, td_acc_a - td_def_b) / 100.0
         wrestling_edge_b = max(0.0, td_acc_b - td_def_a) / 100.0
         wrestling_adj = (wrestling_edge_a - wrestling_edge_b) * WRESTLING_ADVANTAGE_SCALE
+    else:
+        # No wrestling data either side can support. Zero, not a guess.
+        wrestling_adj = 0.0
 
     # Durability: how often has each been finished before (by any method)?
     # A high finish-loss rate against someone with strong finishing tools
@@ -646,7 +695,17 @@ def style_matchup_adjustment(
     losses_b = max(int(_get(row_b, "losses", 0)), 1) if _get(row_b, "losses", 0) else 1
     finish_loss_rate_a = (_get(row_a, "ko_losses", 0) + _get(row_a, "sub_losses", 0)) / losses_a if _get(row_a, "losses", 0) else 0
     finish_loss_rate_b = (_get(row_b, "ko_losses", 0) + _get(row_b, "sub_losses", 0)) / losses_b if _get(row_b, "losses", 0) else 0
-    durability_adj = (finish_loss_rate_b - finish_loss_rate_a) * DURABILITY_SCALE
+    # Same guard, and this one was the most backwards of the three: with
+    # ko_losses/sub_losses defaulting to 0, a fighter whose method splits are
+    # simply unknown computes a finish-loss rate of zero -- a PERFECT chin --
+    # and is handed a durability edge over an opponent with a real, honest
+    # record of having been stopped. Unmeasured was scoring better than
+    # measured.
+    durability_data_ok = all(
+        _has(r, c) for r in (row_a, row_b) for c in ("losses", "ko_losses", "sub_losses")
+    )
+    durability_adj = ((finish_loss_rate_b - finish_loss_rate_a) * DURABILITY_SCALE
+                      if durability_data_ok else 0.0)
 
     layoff_adj_a = layoff_penalty(row_a)
     layoff_adj_b = layoff_penalty(row_b)
