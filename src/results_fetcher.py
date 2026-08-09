@@ -72,7 +72,28 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-BASE_HEADERS = {"User-Agent": "Mozilla/5.0 (personal research script; Octane Alpha)"}
+# NO User-Agent override, so requests sends its own "python-requests/x.y.z".
+# That is not laziness -- ESPN specifically rejects this project's custom
+# string. Measured against the live scoreboard endpoint, same minute, same IP:
+#     curl/8.7.1                                    -> 200
+#     python-requests/2.32.3                        -> 200
+#     OctaneAlpha/1.0                               -> 403
+#     Mozilla/5.0                                   -> 403
+#     Mozilla/5.0 (personal research script; ...)   -> 403   <- what this was
+# Recognised library tokens pass; browser-impersonating strings and unknown
+# custom ones are refused. It is NOT rate limiting (200s and 403s interleaved
+# in one burst) and NOT the "Mozilla/5.0" prefix alone (a bare OctaneAlpha/1.0
+# failed too), both of which were guessed before the table above settled it.
+# So: send the truth about what this is, and it works.
+BASE_HEADERS = {}
+
+# Wikipedia wants the OPPOSITE of ESPN. Its API policy asks for a descriptive
+# agent identifying the tool and a contact route, and a generic library token
+# is what it discourages -- so the tertiary fallback below gets its own header
+# rather than sharing the ESPN-shaped one above.
+WIKIPEDIA_HEADERS = {
+    "User-Agent": "OctaneAlpha/1.0 (personal MMA analytics project; contact via GitHub repo) results-fetcher"
+}
 REQUEST_TIMEOUT = 12
 REQUEST_DELAY_SECONDS = 1.5
 EVENTS_LIST_URL = "https://www.ufcstats.com/statistics/events/completed"
@@ -852,7 +873,7 @@ def _fetch_from_wikipedia(event_name: str) -> list[dict]:
     """
     search_params = {"action": "opensearch", "search": event_name, "namespace": "0", "limit": "1", "format": "json"}
     try:
-        search_resp = requests.get(WIKIPEDIA_OPENSEARCH_URL, params=search_params, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        search_resp = requests.get(WIKIPEDIA_OPENSEARCH_URL, params=search_params, headers=WIKIPEDIA_HEADERS, timeout=REQUEST_TIMEOUT)
         search_resp.raise_for_status()
         search_data = search_resp.json()
     except (requests.RequestException, ValueError) as e:
@@ -867,7 +888,7 @@ def _fetch_from_wikipedia(event_name: str) -> list[dict]:
     url = urls[0]
 
     try:
-        resp = requests.get(url, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp = requests.get(url, headers=WIKIPEDIA_HEADERS, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
     except requests.RequestException as e:
         print(f"[results_fetcher] wikipedia fallback: could not fetch {url}: {e}")
