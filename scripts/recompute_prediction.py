@@ -17,9 +17,20 @@ remain visible. A record that shows "this was corrected, here's why" is more
 trustworthy than one that silently reads as if the error never happened --
 and the whole reason to bother is trustworthiness.
 
+WHOLE-CARD MODE (--event) exists for a second, narrower case: the logged
+predictions for an entire card drifted away from what was actually published
+BEFORE the fights, so the log no longer matches what anyone saw. That is the
+same class of problem as a bad input -- the log is wrong about the past --
+and it is NOT a licence to re-run a card after seeing results and keep the
+better numbers. The audit note goes into every row it touches, so a card
+"corrected" for the wrong reason is visible as such forever.
+
 Usage:
-    python3 scripts/recompute_prediction.py "Vologdin"          # dry run
+    python3 scripts/recompute_prediction.py "Vologdin"          # dry run, one fight
     python3 scripts/recompute_prediction.py "Vologdin" --apply
+    python3 scripts/recompute_prediction.py --event "Gamrot"    # dry run, whole card
+    python3 scripts/recompute_prediction.py --event "Gamrot" --apply
+    ... optionally --note "why this correction was made"
 """
 
 import datetime as dt
@@ -38,8 +49,16 @@ LOG = "data/predictions_log.csv"
 
 
 def main():
-    args = [a for a in sys.argv[1:] if a != "--apply"]
-    apply = "--apply" in sys.argv
+    argv = sys.argv[1:]
+    apply = "--apply" in argv
+    event_mode = "--event" in argv
+    note = ""
+    if "--note" in argv:
+        ni = argv.index("--note")
+        if ni + 1 < len(argv):
+            note = argv[ni + 1]
+            argv = argv[:ni] + argv[ni + 2:]
+    args = [a for a in argv if a not in ("--apply", "--event")]
     if not args:
         print(__doc__)
         sys.exit(1)
@@ -58,11 +77,22 @@ def main():
                        if not _ud.combining(ch))
 
     needle_folded = _fold(needle)
-    mask = (log["fighter_a"].map(lambda v: needle_folded in _fold(v)) |
-            log["fighter_b"].map(lambda v: needle_folded in _fold(v)))
-    if not mask.any():
-        print(f"No logged prediction matching {args[0]!r}.")
-        sys.exit(1)
+    if event_mode:
+        # Match the EVENT, not a fighter, so one run covers a whole card.
+        mask = log["event_name"].map(lambda v: needle_folded in _fold(v))
+        if not mask.any():
+            print(f"No logged predictions for an event matching {args[0]!r}. Events in the log:")
+            for name in log["event_name"].dropna().unique():
+                print(f"  - {name}")
+            sys.exit(1)
+        print(f"EVENT MODE: {int(mask.sum())} logged prediction(s) across "
+              f"{log.loc[mask, 'event_name'].nunique()} event(s) matching {args[0]!r}.\n")
+    else:
+        mask = (log["fighter_a"].map(lambda v: needle_folded in _fold(v)) |
+                log["fighter_b"].map(lambda v: needle_folded in _fold(v)))
+        if not mask.any():
+            print(f"No logged prediction matching {args[0]!r}.")
+            sys.exit(1)
 
     fighters = pd.read_csv("data/fighters.csv")
     history = pd.read_csv("data/fight_history.csv")
@@ -118,7 +148,7 @@ def main():
         # probability stays in the history so the change is auditable.
         hist.append({
             "prob": new_prob, "date": now,
-            "note": f"corrected from {old_prob:.3f} after opponent record fix",
+            "note": note or f"corrected from {old_prob:.3f} after opponent record fix",
         })
         log.at[i, "favorite"] = new_fav
         log.at[i, "favorite_prob"] = new_prob

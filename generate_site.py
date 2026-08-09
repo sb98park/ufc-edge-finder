@@ -687,15 +687,35 @@ def main():
     results_coverage = None
     if events:
         this_weekend_fights = events[0]["fights"]
-        total_fights = len(this_weekend_fights)
-        confirmed_fights = sum(1 for f in this_weekend_fights if f.get("result_label"))
+        # CANCELLED fights are excluded from BOTH sides of this count. They
+        # can never produce a result, so counting one as outstanding leaves
+        # the banner stuck at "12/13 results confirmed -- some may still be
+        # pending" permanently, for a fight that is not pending and never
+        # will be. Worse, it makes a genuinely complete card look incomplete,
+        # which is exactly the alarm this banner exists to raise and trains
+        # the reader to ignore it. Seen live on the Johns vs Rosas
+        # cancellation.
+        def _is_cancelled(v):
+            # `not v` is WRONG here and was wrong in the first version of this
+            # fix: read straight from CSV the column is the STRING "False",
+            # which is truthy, so every non-cancelled fight was dropped and
+            # the banner read 0/0. Test the value, not its presence -- the
+            # same trap already documented in recompute_prediction.py for
+            # is_lock_of_week.
+            if isinstance(v, bool):
+                return v
+            return str(v).strip().lower() == "true"
+
+        scoreable_fights = [f for f in this_weekend_fights if not _is_cancelled(f.get("cancelled"))]
+        total_fights = len(scoreable_fights)
+        confirmed_fights = sum(1 for f in scoreable_fights if f.get("result_label"))
         if total_fights:
             results_coverage = {"confirmed": confirmed_fights, "total": total_fights}
         summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
         if summary_path and total_fights:
             missing = [
                 f"{f['fighter_a']} vs {f['fighter_b']}"
-                for f in this_weekend_fights if not f.get("result_label")
+                for f in scoreable_fights if not f.get("result_label")
             ]
             with open(summary_path, "a") as f:
                 f.write(f"### Results coverage: {confirmed_fights}/{total_fights} — {events[0]['event_name']}\n")
