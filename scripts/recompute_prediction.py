@@ -101,6 +101,37 @@ def main():
     except FileNotFoundError:
         weight_hist = None
 
+    # The card rows, for is_five_round and fight_weight_class. Without these
+    # this script was running a DIFFERENT MODEL than the site: card_matcher
+    # passes is_five_round (main events are 5 rounds, which changes the
+    # method/finish distribution), fight_weight_class, and fight_history_df
+    # (which enables the recent-form adjustment -- model_preview carries a
+    # comment about that argument being dropped once before and the headline
+    # pick silently running less informed than the markets table). Omitting
+    # them here meant a "correction" produced numbers that matched neither
+    # the old logged pick NOR what the site displays -- a third answer,
+    # which is the worst possible outcome for a tool whose whole job is
+    # making the log agree with reality.
+    card_rows = []
+    for path in ("data/fight_cards.csv", "data/future_cards.csv"):
+        try:
+            card_rows.append(pd.read_csv(path))
+        except FileNotFoundError:
+            pass
+    cards = pd.concat(card_rows, ignore_index=True) if card_rows else pd.DataFrame()
+
+    def _card_context(a, b):
+        """card_position and weight_class for this pairing, or (False, None)."""
+        if cards.empty:
+            return False, None
+        want = frozenset({_fold(a), _fold(b)})
+        for _, cr in cards.iterrows():
+            if frozenset({_fold(cr.get("fighter_a")), _fold(cr.get("fighter_b"))}) == want:
+                five = str(cr.get("card_position", "")).strip() == "Main Event"
+                wc = cr.get("weight_class")
+                return five, (None if pd.isna(wc) else wc)
+        return False, None
+
     elo = EloRatingSystem()
     elo.build_from_history(history)
     eff = build_effective_ratings(fighters, elo.ratings, history)
@@ -112,8 +143,15 @@ def main():
         # build_fight_preview, not predict_matchup: the log stores favorite /
         # favorite_prob / confidence_label, which are the preview's shape.
         # predict_matchup returns raw prob_a / prob_b and no label.
+        is_five_round, fight_wc = _card_context(a, b)
+        # EXACTLY the arguments card_matcher.py passes. If that call ever
+        # gains a parameter, it has to be mirrored here or this script
+        # silently drifts back into recomputing a different model.
         preview = build_fight_preview(a, b, fighters, eff,
-                                      weight_class_history_df=weight_hist)
+                                      is_five_round=is_five_round,
+                                      weight_class_history_df=weight_hist,
+                                      fight_weight_class=fight_wc,
+                                      fight_history_df=history)
         if not preview:
             print(f"  {a} vs {b}: no preview produced -- check both fighters exist in fighters.csv")
             continue
