@@ -576,6 +576,13 @@ def main():
                 winner_last = result["winner"].strip().split()[-1].upper()
                 fight["winner"] = result["winner"]
                 fight["result_label"] = f"{winner_last} BY {result['method']}".strip()
+                # Method on its own, for the card's result line. The winner is
+                # already carried by the arrow beside their name, so repeating
+                # it in the middle spends the widest slot on the card
+                # restating what the arrow just said. result_label keeps the
+                # winner because it's used where there IS no arrow (what's-new
+                # feed, countdown ticker).
+                fight["result_method"] = str(result["method"]).strip().upper()
                 fight["result_round_time"] = (
                     f"R{result['end_round']} {result['end_time']}"
                     if result["end_round"] and result["end_time"] else None

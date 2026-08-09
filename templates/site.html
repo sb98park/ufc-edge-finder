@@ -1451,9 +1451,20 @@
   }
   .winner-check svg { width: 65%; height: 65%; }
   .winner-check-inline {
-    display: none; align-items: center; justify-content: center; background: var(--green); border-radius: 50%;
+    display: none; align-items: center; justify-content: center;
     width: 13px; height: 13px; flex-shrink: 0;
   }
+  /* Points AT the winner rather than sitting on them. The element is
+     rendered on the inside edge of the winner's name (after it in the left
+     corner, before it in the right), so the default left-pointing triangle
+     aims outward at the name it belongs to, and the right corner flips.
+     Replaced a green circled checkmark: a check reads as "verified" or
+     "correct", which on this site already means the MODEL was right -- a
+     different claim entirely from who won the fight, and one that was
+     actively misleading on fights the model called wrong. An arrow only
+     points. */
+  .winner-check-inline svg { width: 100%; height: 100%; display: block; }
+  .matchup-fighter.right .winner-check-inline svg { transform: rotate(180deg); }
   .winner-check-inline svg { width: 65%; height: 65%; }
   .matchup-name-wrap { display: flex; align-items: center; gap: 5px; }
   .matchup-fighter.right .matchup-name-wrap { justify-content: flex-end; }
@@ -3858,7 +3869,7 @@
           {{ fighter_avatar(fight.fighter_a, is_winner=(fight.winner == fight.fighter_a)) }}
           <div class="matchup-name-wrap">
             <span class="matchup-name">{{ fight.fighter_a }}</span>
-            {% if fight.winner == fight.fighter_a %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>{% endif %}
+            {% if fight.winner == fight.fighter_a %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5 L7 12 L15 19 Z" fill="var(--green)"/></svg></div>{% endif %}
           </div>
         </div>
         <div class="matchup-vs">
@@ -3877,7 +3888,11 @@
             {% endif %}
           </div>
           {% if fight.result_label %}
-          <span class="vs-text result-text">{{ fight.result_label }}{% if fight.result_round_time %} · {{ fight.result_round_time }}{% endif %}</span>
+          {# Method and round only. The green arrow beside the winner's name
+             already says who won, so naming them again here spent the widest
+             slot on the card restating it -- and made the line long enough to
+             wrap on a phone. #}
+          <span class="vs-text result-text" data-result-slot>{{ fight.result_method or fight.result_label }}{% if fight.result_round_time %} · {{ fight.result_round_time }}{% endif %}</span>
           {% else %}
           <span class="vs-text" data-vs-slot>VS</span>
           {% endif %}
@@ -3885,7 +3900,7 @@
         </div>
         <div class="matchup-fighter right{% if fight.winner %}{{ ' won' if fight.winner == fight.fighter_b else ' lost' }}{% endif %}">
           <div class="matchup-name-wrap">
-            {% if fight.winner == fight.fighter_b %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>{% endif %}
+            {% if fight.winner == fight.fighter_b %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5 L7 12 L15 19 Z" fill="var(--green)"/></svg></div>{% endif %}
             <span class="matchup-name">{{ fight.fighter_b }}</span>
           </div>
           {{ fighter_avatar(fight.fighter_b, is_winner=(fight.winner == fight.fighter_b)) }}
@@ -6534,7 +6549,12 @@
           // ever the row you were most likely to be watching.
           const el = document.createElement('span');
           el.className = 'vs-text result-text';
-          el.textContent = fight.result_label + (fight.result_round_time ? ' \u00b7 ' + fight.result_round_time : '');
+          // "FINAL" as a placeholder, replaced by paintMethod the moment the
+          // method resolves (a second or two later, from a different
+          // endpoint). Deliberately NOT "X def. Y": the arrow beside the
+          // winner already carries that, and the long form is what made the
+          // live rows read so differently from the baked ones.
+          el.textContent = 'FINAL';
           // data-result-slot, NOT data-vs-slot. Dropping data-vs-slot is what
           // stops this fight being painted again -- but paintMethod looked
           // for that same attribute to find where to append the method, so
@@ -6563,7 +6583,7 @@
             if (wrap && !wrap.querySelector('.winner-check-inline')) {
               const check = document.createElement('div');
               check.className = 'winner-check-inline';
-              check.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+              check.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5 L7 12 L15 19 Z" fill="var(--green)"/></svg>';
               // Left corner puts the check after the name, right corner
               // before it, so it always sits on the inside edge -- same as
               // the server-rendered markup.
@@ -6649,9 +6669,11 @@
       // Only append -- never replace what paintResult already wrote, so a
       // method arriving late can't clobber the winner.
       if (slot.dataset.methodPainted === methodText) return false;
-      const base = slot.dataset.resultBase || slot.textContent;
-      slot.dataset.resultBase = base;
-      slot.textContent = base + ' \u00b7 ' + methodText;
+      // REPLACES the "FINAL" placeholder rather than appending to it. The old
+      // behaviour appended to whatever was there, which built up
+      // "X def. Y · Submission (RNC) · R2 2:56" -- three restatements of one
+      // outcome across the narrowest column on the card.
+      slot.textContent = methodText;
       slot.dataset.methodPainted = methodText;
       return true;
     }
