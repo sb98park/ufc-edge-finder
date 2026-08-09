@@ -150,6 +150,25 @@ def build_fight_schedule(
         main_event_start_et = _shift(event_start_time_et, _MAIN_EVENT_OFFSET_MIN)
     main_event_start_str = main_event_start_et or DEFAULT_MAIN_EVENT_START
 
+    # CANCELLED FIGHTS NEVER ENTER THE SCHEDULE. They occupy no slot on the
+    # night, so including them shifted every later fight's estimate by one
+    # slot AND made each subsequent confirmation look like this bout had been
+    # skipped by the results fetcher -- which is what produced the recurring
+    # "still unconfirmed despite a later result already landing" warning on a
+    # deliberately-cancelled bout, on every ~5-minute refresh.
+    # Filtering HERE rather than downstream is the point: the schedule entries
+    # built below are fresh dicts carrying only fighter names, card_position
+    # and timestamps, so `cancelled` does not survive into them and any later
+    # filter would be testing a key that is always absent. That is exactly how
+    # the first version of this fix silently did nothing.
+    def _is_cancelled(f) -> bool:
+        v = f.get("cancelled")
+        if isinstance(v, bool):
+            return v
+        return str(v).strip().lower() == "true"
+
+    fights = [f for f in fights if not _is_cancelled(f)]
+
     chronological = sorted(fights, key=lambda f: _SEGMENT_ORDER.get(f.get("card_position"), 2))
 
     early_prelims = [f for f in chronological if f.get("card_position") == "Early Prelims"][::-1]
@@ -308,11 +327,14 @@ def apply_live_corrections(
     """
     now = now or dt.datetime.now(dt.timezone(dt.timedelta(hours=-4)))
 
+    # Cancelled fights were already removed in build_fight_schedule, before
+    # these entries were constructed -- see the note there.
+    scheduled = schedule
     remaining = [
-        f for f in schedule
+        f for f in scheduled
         if frozenset({f["fighter_a"].strip().lower(), f["fighter_b"].strip().lower()}) not in finished_keys
     ]
-    confirmed_count = len(schedule) - len(remaining)
+    confirmed_count = len(scheduled) - len(remaining)
 
     state = {"confirmed_count": 0, "last_confirmed_at": None}
     if os.path.exists(SCHEDULE_STATE_PATH):
@@ -364,9 +386,9 @@ def apply_live_corrections(
         # the live fight could possibly have confirmed yet. Stuck fights
         # are dropped from live/next consideration entirely rather than
         # dragged forward into a fabricated future time.
-        chrono_index = {id(f): i for i, f in enumerate(schedule)}
+        chrono_index = {id(f): i for i, f in enumerate(scheduled)}
         latest_confirmed_index = max(
-            (i for i, f in enumerate(schedule)
+            (i for i, f in enumerate(scheduled)
              if frozenset({f["fighter_a"].strip().lower(), f["fighter_b"].strip().lower()}) in finished_keys),
             default=-1,
         )
