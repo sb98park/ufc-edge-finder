@@ -79,7 +79,14 @@ import unicodedata
 
 import pandas as pd
 
+# BOTH card files. fight_cards.csv is only the CURRENT card; anything further
+# out lives in future_cards.csv, and late additions are at least as likely
+# there -- the UFC.com cross-check found one on a card five weeks away. The
+# original version read only the first file and reported the event as
+# nonexistent, listing the one event it could see.
 FIGHT_CARDS = "data/fight_cards.csv"
+FUTURE_CARDS = "data/future_cards.csv"
+CARD_FILES = [FIGHT_CARDS, FUTURE_CARDS]
 FIGHTERS = "data/fighters.csv"
 
 
@@ -147,13 +154,28 @@ def main():
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
 
-    cards = pd.read_csv(FIGHT_CARDS)
-    event_rows = cards[cards["event_name"].astype(str).str.strip() == args.event.strip()]
-    if event_rows.empty:
-        print(f"No rows found for event {args.event!r}. Events currently in {FIGHT_CARDS}:")
-        for name in cards["event_name"].dropna().unique():
-            print(f"  - {name}")
+    # Find which file holds the event, and write back to that same one.
+    target_path, cards, event_rows = None, None, None
+    for path in CARD_FILES:
+        try:
+            df = pd.read_csv(path)
+        except (FileNotFoundError, pd.errors.EmptyDataError):
+            continue
+        rows = df[df["event_name"].astype(str).str.strip() == args.event.strip()]
+        if not rows.empty:
+            target_path, cards, event_rows = path, df, rows
+            break
+    if event_rows is None:
+        print(f"No rows found for event {args.event!r}. Events available:")
+        for path in CARD_FILES:
+            try:
+                df = pd.read_csv(path)
+            except (FileNotFoundError, pd.errors.EmptyDataError):
+                continue
+            for name in df["event_name"].dropna().unique():
+                print(f"  - {name}   [{path}]")
         sys.exit(1)
+    print(f"(event found in {target_path})")
 
     pair = {_fold(args.fighter_a), _fold(args.fighter_b)}
     existing = cards.apply(lambda r: {_fold(r["fighter_a"]), _fold(r["fighter_b"])} == pair, axis=1)
@@ -228,7 +250,7 @@ def main():
             pending_roster.append(row)
 
     if not already_on_card:
-        print(f"Would add to {args.event!r}:")
+        print(f"Would add to {args.event!r} in {target_path}:")
         for k in ("fighter_a", "fighter_b", "weight_class", "card_position",
                   "replacement", "replaced_fighter", "manually_added"):
             if k in new_row and new_row.get(k) not in (None, ""):
@@ -254,8 +276,8 @@ def main():
         # against ESPN on the next run anyway, and until then last is the safe
         # place -- it can't displace a fight whose position IS confirmed.
         cards = pd.concat([cards, pd.DataFrame([new_row])], ignore_index=True)
-        cards.to_csv(FIGHT_CARDS, index=False)
-        print(f"\nAdded to {FIGHT_CARDS}.")
+        cards.to_csv(target_path, index=False)
+        print(f"\nAdded to {target_path}.")
 
     # BEFORE the short-notice step, deliberately. The flag is set by matching
     # a name in fighters.csv, so if the incoming fighter's row is being

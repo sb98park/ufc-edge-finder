@@ -85,6 +85,33 @@ MIN_SIG_STRIKES_ATT = 100    # ~2 fights' worth of output
 MIN_TD_ATT = 5               # own attempts, for accuracy
 MIN_TD_ATT_FACED = 5         # opponents' attempts, for defence
 
+# CONCENTRATION GUARD REMOVED after measuring what it cost.
+#
+# It rejected a rate when one fight supplied more than half a denominator.
+# Motivated by Curtis Blaydes: 22 fights, 20 takedown attempts faced, 13 of
+# them from ONE opponent, giving 35% takedown defence for a decorated
+# wrestler. Measured across the roster, it threw out 58 of the 174 fighters
+# who cleared the floor for td_defense_pct -- a THIRD. At these denominators
+# (5-25 attempts) one fight contributing three of five is already 60%, so it
+# fired on ordinary careers, not outliers.
+#
+# And the case that motivated it turned out to be a real measurement. The
+# statistic is defence WHEN SOMEONE ATTEMPTS a takedown. Blaydes' reputation
+# is that opponents don't shoot on him -- ~1 attempt per fight across 22
+# fights -- and that avoidance is a different quantity from what happens when
+# they do commit, where he has been taken down 13 times. The number honestly
+# reports the second. It read as wrong because it was being asked the first
+# question.
+#
+# Kept: the minimum-denominator floors, which target thin samples directly.
+# The avoidance signal (attempts faced per fight) is worth surfacing on its
+# own rather than smuggling into a defence rate.
+# Why each column came back empty, tallied across the run. Coverage alone
+# cannot separate "too few attempts" from "one fight dominated" -- and the two
+# call for opposite fixes (lower the floor vs loosen the concentration rule),
+# so a single coverage number is not enough to calibrate either.
+REJECT_TALLY = {"floor": {}, "concentration": {}}
+
 
 def _fold(v) -> str:
     s = unicodedata.normalize("NFKD", str(v)).encode("ascii", "ignore").decode()
@@ -246,6 +273,9 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
 
     tot = {k: 0.0 for k in ("ssl", "ssa", "tdl", "tda", "opp_tdl", "opp_tda", "kd",
                             "opp_ssl", "opp_kd")}
+    # Per-fight denominators, so concentration is measured rather than assumed
+    # even when the total looks healthy.
+    per_fight = {"ssa": [], "tda": [], "opp_tda": []}
     wtot = dict(tot)
     fights = 0
     now = dt.datetime.now()
@@ -300,24 +330,36 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
         for k, v in pairs.items():
             tot[k] += v
             wtot[k] += v * weight
+        for k in per_fight:
+            per_fight[k].append(pairs[k])
 
     if fights < MIN_FIGHTS_FOR_STATS:
         return None
 
-    def pct(n, d, floor):
-        """Percentage, or None when the denominator is too small to mean anything."""
-        return round(n / d * 100, 1) if d and d >= floor else None
+    def _tally_def(total):
+        """Record that td_defense_pct fell under the floor, then return None."""
+        REJECT_TALLY["floor"]["opp_tda"] = REJECT_TALLY["floor"].get("opp_tda", 0) + 1
+        return None
+
+    def pct(n, d, floor, key=None):
+        """Percentage, or None when the sample is too small OR too concentrated."""
+        if not d or d < floor:
+            if key:
+                REJECT_TALLY["floor"][key] = REJECT_TALLY["floor"].get(key, 0) + 1
+            return None
+        return round(n / d * 100, 1)
 
     return {
         "espn_fights": fights,
-        "strike_accuracy_pct": pct(tot["ssl"], tot["ssa"], MIN_SIG_STRIKES_ATT),
-        "td_accuracy_pct": pct(tot["tdl"], tot["tda"], MIN_TD_ATT),
+        "strike_accuracy_pct": pct(tot["ssl"], tot["ssa"], MIN_SIG_STRIKES_ATT, "ssa"),
+        "td_accuracy_pct": pct(tot["tdl"], tot["tda"], MIN_TD_ATT, "tda"),
         # Defence is the complement of the opponents' success rate. None when
         # too few takedowns were attempted against them -- that is "untested",
         # not "100% defence", the same absence-is-not-a-number rule the model
         # now enforces.
         "td_defense_pct": (round(100 - tot["opp_tdl"] / tot["opp_tda"] * 100, 1)
-                           if tot["opp_tda"] >= MIN_TD_ATT_FACED else None),
+                           if tot["opp_tda"] >= MIN_TD_ATT_FACED
+                           else _tally_def(tot["opp_tda"])),
         # Recency-weighted variants use the UNWEIGHTED denominator for the
         # threshold test: weighting shrinks old fights toward zero, so an
         # otherwise-adequate sample could fail a weighted floor purely for
@@ -413,6 +455,12 @@ def main():
 
     print(f"\n{len(updates)} with stats | {len(missing_id)} without an ESPN id | "
           f"{len(no_stats)} with an id but no usable stats")
+    print("\nWHY COLUMNS CAME BACK EMPTY")
+    labels = {"ssa": "strike_accuracy_pct", "tda": "td_accuracy_pct", "opp_tda": "td_defense_pct"}
+    print(f"  {'column':<22}{'too few':>10}")
+    for key, label in labels.items():
+        print(f"  {label:<22}{REJECT_TALLY['floor'].get(key, 0):>10}")
+    print("  All rejections are now sample-size only; the concentration guard was removed.")
     if missing_id[:10]:
         print(f"  no id: {missing_id[:10]}")
 
@@ -432,8 +480,16 @@ def main():
         if name not in idx:
             continue      # from-history target with no roster row; cache is the point
         for c, v in s.items():
-            if v is not None:
-                fighters.at[idx[name], c] = v
+            # WRITE None TOO. Skipping it meant a value could never be
+            # CLEARED: once written, a stat survived even after a later run
+            # judged it unusable. Curtis Blaydes kept a 35.0 takedown defence
+            # that the concentration guard had just rejected, so the guard
+            # looked broken when it was the write that was.
+            # Safe because this script is now the sole source of these
+            # columns -- the ufcstats scraper that used to fill them is dead
+            # behind a JS challenge -- so there is no other writer whose work
+            # a None could erase.
+            fighters.at[idx[name], c] = v if v is not None else None
     fighters.to_csv(FIGHTERS, index=False)
     print(f"\nWrote {len(updates)} fighter(s) to {FIGHTERS}.")
 
