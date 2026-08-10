@@ -273,7 +273,15 @@ def _reconcile_round_props(rows: list[dict], fight: dict,
     # thin market can quote something at 1.00, which would zero every Under
     # line the same way.
     finish = max(1.0 - float(decision), 0.02)
-    scheduled = 5 if str(fight.get("card_position", "")).strip() == "Main Event" else 3
+    # THIRD place deriving fight length, and the one that actually renders the
+    # round rows. A title fight is five rounds wherever it sits, so this has to
+    # agree with the other two or the table contradicts itself: on a title
+    # CO-MAIN this read 3, and finish_share_before on a 3-round table returns
+    # 0.999 for BOTH Under 3.5 and Under 4.5 -- there are no rounds 4 or 5 in
+    # that table to tell them apart -- so two distinct lines came out sharing
+    # one probability. lint_site.py's round-monotonic check caught it.
+    scheduled = 5 if (str(fight.get("card_position", "")).strip() == "Main Event"
+                      or bool(fight.get("is_title_fight"))) else 3
 
     out = []
     matched = 0
@@ -444,7 +452,13 @@ def group_edges_by_card(
     fights = []
     for _, row in cards_df.iterrows():
         preview = None
-        is_five_round = str(row.get("card_position", "")).strip() == "Main Event"
+        # A TITLE FIGHT IS FIVE ROUNDS WHEREVER IT SITS ON THE CARD, including
+        # in the co-main slot -- which happens whenever a card carries two
+        # belts. Deriving this from card_position alone silently modelled such
+        # a fight as three rounds: wrong round distribution, wrong finish
+        # probability, wrong Over/Under lines, and no error anywhere to notice.
+        is_five_round = (str(row.get("card_position", "")).strip() == "Main Event"
+                         or str(row.get("is_title_fight", "")).strip().lower() == "true")
         if fighters_df is not None and effective_ratings is not None:
             try:
                 preview = build_fight_preview(
@@ -477,6 +491,7 @@ def group_edges_by_card(
             "weight_class_color": WEIGHT_CLASS_COLORS.get(row["weight_class"], "#8a8f9a"),
             "is_womens_division": bool(row.get("is_womens_division", False)),
             "cancelled": str(row.get("cancelled", "")).strip().lower() == "true",
+            "is_title_fight": str(row.get("is_title_fight", "")).strip().lower() == "true",
             # Parsed the same way as `cancelled` above: these come back from
             # CSV as strings, and an all-empty flag column reads as float
             # NaN, so neither `bool(...)` nor a truthiness test works
@@ -541,7 +556,9 @@ def group_edges_by_card(
         # something to look at beyond moneyline
         if fighters_df is not None and effective_ratings is not None:
             live_markets = {e["market"] for e in fight["edges"]}
-            is_five_round = str(fight.get("card_position", "")).strip() == "Main Event"
+            # Same rule as above -- see the note there.
+            is_five_round = (str(fight.get("card_position", "")).strip() == "Main Event"
+                             or bool(fight.get("is_title_fight")))
             projection = build_full_market_projection(
                 fight["fighter_a"], fight["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round
             , fight_history_df=fight_history_df)

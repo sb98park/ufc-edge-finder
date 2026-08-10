@@ -1499,6 +1499,24 @@
      position rather than hue. Amber was the only unclaimed caution colour
      and was rejected for sitting too close to the gold of the Main Event
      badge it would often appear beside. */
+  /* Ranks ABOVE the Main Event pill, and says so by inverting it: filled gold
+     with dark text where .card-position is gold text on dark. Same hue, so no
+     new colour enters the system, but a filled pill outranks an outlined one
+     at a glance -- which is the actual hierarchy, since a title fight is the
+     most important thing on any card it appears on.
+     Shown ALONGSIDE the position pill rather than replacing it, because the
+     two say different things and a card can carry two belts: this weekend the
+     second one sits in the CO-MAIN slot, where "TITLE FIGHT" alone would lose
+     the position and "CO-MAIN EVENT" alone would lose the belt. */
+  .title-fight-badge {
+    color: #1a1607; font-size: 9px; font-weight: 800; text-transform: uppercase;
+    background: linear-gradient(180deg, #f0d97a, #d4af37);
+    border-radius: 12px; padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;
+    margin-bottom: 3px; letter-spacing: 0.4px;
+    white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
+  }
+  .title-fight-badge .inline-icon { width: 12px; height: 12px; flex: none; }
+
   .replacement-badge {
     color: #c3c8d2; font-size: 9px; font-weight: 600; text-transform: uppercase;
     background: #23262d; border: 1px solid rgba(255,255,255,0.10);
@@ -3088,6 +3106,10 @@
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Replacement"><defs><linearGradient id="hi-swap" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#d8dbe2"/><stop offset="100%" stop-color="#9aa1ad"/></linearGradient></defs><path d="M5 9.5 H17.5" stroke="url(#hi-swap)" stroke-width="1.8" stroke-linecap="round"/><path d="M14.2 6.2 L17.5 9.5 L14.2 12.8" stroke="url(#hi-swap)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 16.5 H8.5" stroke="url(#hi-swap)" stroke-width="1.8" stroke-linecap="round"/><path d="M11.8 13.2 L8.5 16.5 L11.8 19.8" stroke="url(#hi-swap)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
 {%- endmacro %}
 
+{% macro icon_belt() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Title fight"><defs><linearGradient id="hi-belt" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3a2f10"/><stop offset="100%" stop-color="#241f10"/></linearGradient></defs><rect x="2.5" y="9.5" width="21" height="7" rx="1.6" fill="none" stroke="url(#hi-belt)" stroke-width="1.8"/><ellipse cx="13" cy="13" rx="4.6" ry="5.4" fill="none" stroke="url(#hi-belt)" stroke-width="1.8"/><circle cx="13" cy="13" r="1.5" fill="url(#hi-belt)"/></svg>
+{%- endmacro %}
+
 {% macro empty_state(icon_svg, headline, description) %}
 <div class="empty-state">
   <div class="empty-state-icon">{{ icon_svg }}</div>
@@ -3874,6 +3896,9 @@
         </div>
         <div class="matchup-vs">
           <div class="matchup-vs-top">
+            {% if fight.is_title_fight %}
+            <div class="title-fight-badge">{{ icon_belt() }}Title Fight</div>
+            {% endif %}
             {% if fight.card_position in ('Main Event', 'Co-Main Event') %}
             <div class="card-position">{{ fight.card_position }}</div>
             {% endif %}

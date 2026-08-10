@@ -513,7 +513,9 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
             # is always positive. The clipping warning surfaced it on the
             # first run after being added, which is exactly what it's for.
             elo_gap=_rating_gap(effective_ratings, row),
-            scheduled_rounds=5 if str(row.get("card_position", "")).strip() == "Main Event" else 3,
+            # Title fights are five rounds wherever they sit -- see card_matcher.
+            scheduled_rounds=5 if (str(row.get("card_position", "")).strip() == "Main Event"
+                                   or bool(row.get("is_title_fight"))) else 3,
         )
         if not _dist:
             continue
@@ -619,7 +621,9 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
             sub_rate_sum=sub_a + sub_b,
             durability=kol_a + kol_b,
             elo_gap=gap,
-            scheduled_rounds=5 if str(row.get("card_position", "")).strip() == "Main Event" else 3,
+            # Title fights are five rounds wherever they sit -- see card_matcher.
+            scheduled_rounds=5 if (str(row.get("card_position", "")).strip() == "Main Event"
+                                   or bool(row.get("is_title_fight"))) else 3,
         )
         if not dist:
             continue
