@@ -24,7 +24,7 @@ from src.card_matcher import (
     assign_canonical_fight_ids, group_unmatched_by_fight,
 )
 from src.power_rating import build_effective_ratings
-from src.odds_utils import format_american_odds
+from src.odds_utils import implied_prob_to_american, format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays, build_moonshot_parlays
 from src.line_movement import (
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
@@ -859,6 +859,12 @@ def main():
 
     env = Environment(loader=FileSystemLoader("templates"))
     env.filters["american"] = format_american_odds
+    # Probability -> the price at which a bet on it breaks even, i.e. the
+    # model's own fair line. Both existing helpers already exist; this just
+    # composes them so a template can render the Model column in the same
+    # unit as the Odds column beside it.
+    env.filters["fair_odds"] = lambda p: (
+        format_american_odds(implied_prob_to_american(float(p))) if p is not None else "")
     env.filters["friendly_date"] = _format_friendly_date
 
     def _method_display(value):

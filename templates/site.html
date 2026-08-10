@@ -736,6 +736,34 @@
     padding: 4px 9px; border-radius: 10px; max-width: 100%;
     border: 1px solid transparent; overflow-wrap: anywhere;
   }
+  /* WIDTH IS RESERVED, NOT INHERITED FROM CONTENT. The odds string is never
+     wider than the widest percentage (5 chars vs "100.0%"'s 6), but a table
+     column sizes to ITS OWN widest cell -- so a group whose percentages all
+     happen to be short ("5.0%") could still widen when switched to "+1900".
+     Pinning the cell at 5.2ch with tabular figures makes the toggle a pure
+     text swap with zero reflow, which is the hard requirement here: this
+     table must never scroll sideways on a phone. */
+  .mkt-model, .mkt-model-head {
+    min-width: 5.2ch;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  /* Affordance: visible enough to be discovered, quiet enough not to shout.
+     The unit marker doubles as the state indicator -- % or the fair price --
+     so the header always says which mode you are in. */
+  .mkt-model-head { cursor: pointer; user-select: none; white-space: nowrap; }
+  .mkt-model-head .unit-hint {
+    font-size: 8px; opacity: 0.55; margin-left: 3px;
+    border-bottom: 1px dotted currentColor; padding-bottom: 1px;
+  }
+  .mkt-model-head:hover .unit-hint,
+  .mkt-model-head:focus-visible .unit-hint { opacity: 0.9; }
+  .mkt-model-head:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+
+  .spotlight-chip-row { justify-content: center; }
+  /* Corner tint binds a chip to a fighter without repeating the legend. */
+  .spotlight-chip.side-a { box-shadow: inset 3px 0 0 var(--red); }
+  .spotlight-chip.side-b { box-shadow: inset 3px 0 0 var(--blue); }
   .spotlight-chip.good { color: #7ee2a8; background: rgba(126,226,168,0.10); border-color: rgba(126,226,168,0.28); }
   .spotlight-chip.bad  { color: #ff8f8f; background: rgba(255,92,92,0.10);  border-color: rgba(255,92,92,0.28); }
   .spotlight-chip .pct { opacity: 0.72; font-weight: 500; }
@@ -771,6 +799,34 @@
     padding: 4px 9px; border-radius: 10px; max-width: 100%;
     border: 1px solid transparent; overflow-wrap: anywhere;
   }
+  /* WIDTH IS RESERVED, NOT INHERITED FROM CONTENT. The odds string is never
+     wider than the widest percentage (5 chars vs "100.0%"'s 6), but a table
+     column sizes to ITS OWN widest cell -- so a group whose percentages all
+     happen to be short ("5.0%") could still widen when switched to "+1900".
+     Pinning the cell at 5.2ch with tabular figures makes the toggle a pure
+     text swap with zero reflow, which is the hard requirement here: this
+     table must never scroll sideways on a phone. */
+  .mkt-model, .mkt-model-head {
+    min-width: 5.2ch;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  /* Affordance: visible enough to be discovered, quiet enough not to shout.
+     The unit marker doubles as the state indicator -- % or the fair price --
+     so the header always says which mode you are in. */
+  .mkt-model-head { cursor: pointer; user-select: none; white-space: nowrap; }
+  .mkt-model-head .unit-hint {
+    font-size: 8px; opacity: 0.55; margin-left: 3px;
+    border-bottom: 1px dotted currentColor; padding-bottom: 1px;
+  }
+  .mkt-model-head:hover .unit-hint,
+  .mkt-model-head:focus-visible .unit-hint { opacity: 0.9; }
+  .mkt-model-head:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+
+  .spotlight-chip-row { justify-content: center; }
+  /* Corner tint binds a chip to a fighter without repeating the legend. */
+  .spotlight-chip.side-a { box-shadow: inset 3px 0 0 var(--red); }
+  .spotlight-chip.side-b { box-shadow: inset 3px 0 0 var(--blue); }
   .spotlight-chip.good { color: #7ee2a8; background: rgba(126,226,168,0.10); border-color: rgba(126,226,168,0.28); }
   .spotlight-chip.bad  { color: #ff8f8f; background: rgba(255,92,92,0.10);  border-color: rgba(255,92,92,0.28); }
   .spotlight-chip .pct { opacity: 0.72; font-weight: 500; }
@@ -3825,7 +3881,7 @@
   {% endif %}
   {% endmacro %}
 
-  {% macro tale_of_the_tape(comparison, radar_svg) %}
+  {% macro tale_of_the_tape(comparison, radar_svg, chips=None) %}
   {% if comparison %}
   <div class="market-group-label">{{ icon_ruler() }} Tale of the Tape</div>
   {% if radar_svg %}
@@ -3835,6 +3891,19 @@
       <span class="radar-legend-item"><span class="radar-dot a"></span>{{ comparison.a.name }}</span>
       <span class="radar-legend-item"><span class="radar-dot b"></span>{{ comparison.b.name }}</span>
     </div>
+    {# Chips live INSIDE the radar block, directly under the legend, because
+       they annotate the radar -- they name the extreme the chart can only
+       imply. Floating after the comparison bars left them attached to
+       nothing. Tinted to the corner colour the legend just established, so
+       which fighter a chip describes is carried by colour rather than
+       repeated in text. #}
+    {% if chips %}
+    <div class="spotlight-chip-row">
+      {% for c in chips %}
+      <div class="spotlight-chip {{ c.tone }} side-{{ c.side }}">{{ c.fighter }}: {{ c.text }} <span class="pct">({{ c.percentile_label }} pct)</span></div>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
   {% endif %}
   <div class="tape-block">
@@ -4124,8 +4193,7 @@
         </div>
       </details>
       {% endif %}
-      {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg) }}
-      {{ spotlight_chips(fight.preview.spotlight_chips) }}
+      {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg, fight.preview.spotlight_chips) }}
       {{ fighter_compare_table(fight.preview.comparison) }}
       {% endif %}
 
@@ -4175,11 +4243,24 @@
           <span class="chevron">▶</span>
         </summary>
         <div class="table-scroll"><table>
-          <tr><th>Market</th><th>Model</th><th>Odds</th><th>Edge %</th></tr>
+          {# The Model header toggles the whole column between probability and
+             the model's own fair price. The Odds column beside it is already
+             American, so in probability mode the reader is comparing 62.0%
+             against -130 and doing the conversion in their head -- which is
+             the one thing this table exists to save them. #}
+          <tr><th>Market</th><th class="mkt-model-head" data-unit-toggle
+                  title="Tap to switch between model probability and the model's fair price"
+                  role="button" tabindex="0">Model<span class="unit-hint">%</span></th><th>Odds</th><th>Edge %</th></tr>
           {% for row in g.rows %}
           <tr class="{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}">
             <td class="mkt-label">{{ row.label or row.market }}{% if row.market == 'Moneyline' and row.has_line %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
-            <td class="mkt-model">{{ (row.model_prob*100)|round(1) }}%</td>
+            {# BOTH representations ship in the markup. Swapping textContent
+               from a data attribute is instant and cannot fail; recomputing
+               client-side would duplicate the odds maths in a second place
+               and risk the two disagreeing. #}
+            <td class="mkt-model"
+                data-pct="{{ (row.model_prob*100)|round(1) }}%"
+                data-odds="{{ row.model_prob | fair_odds }}">{{ (row.model_prob*100)|round(1) }}%</td>
             {% if row.has_line %}
             <td>{{ odds_cell(row) }}</td>
             {# Inputs for LIVE edge recalculation. edge = model - book_FAIR,
@@ -5016,6 +5097,54 @@
           });
         }
       } catch (e) {}
+    })();
+
+    // Model column unit toggle: probability <-> the model's fair price.
+    //
+    // PAGE-WIDE AND STICKY. A bettor thinks in one unit; making them re-tap
+    // per fight, and again on the next card, would be irritating enough that
+    // the feature goes unused. Persisted in localStorage, so the choice
+    // survives navigation and sessions.
+    //
+    // Pure textContent swap from data attributes already in the markup --
+    // no recomputation, so there is no second copy of the odds maths to
+    // drift, and no reflow because the cells are width-pinned in CSS.
+    (function() {
+      const KEY = 'oa-model-unit';
+      let unit = 'pct';
+      try { unit = localStorage.getItem(KEY) === 'odds' ? 'odds' : 'pct'; } catch (e) {}
+
+      function paint() {
+        document.querySelectorAll('.mkt-model').forEach(td => {
+          const v = unit === 'odds' ? td.dataset.odds : td.dataset.pct;
+          if (v) td.textContent = v;
+        });
+        document.querySelectorAll('.mkt-model-head .unit-hint').forEach(el => {
+          el.textContent = unit === 'odds' ? 'odds' : '%';
+        });
+      }
+      function toggle() {
+        unit = unit === 'odds' ? 'pct' : 'odds';
+        try { localStorage.setItem(KEY, unit); } catch (e) {}
+        paint();
+      }
+      // Delegated: market tables live inside <details> that may not be open
+      // at load, and new ones appear as sections render.
+      document.addEventListener('click', e => {
+        const h = e.target.closest('[data-unit-toggle]');
+        if (h) { e.preventDefault(); toggle(); }
+      });
+      document.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const h = e.target.closest && e.target.closest('[data-unit-toggle]');
+        if (h) { e.preventDefault(); toggle(); }
+      });
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', paint, { once: true });
+      } else {
+        paint();
+      }
+      window.__repaintModelUnit = paint;   // for sections rendered later
     })();
 
     // Pinch-zoom off. The viewport meta alone doesn't do it -- iOS has

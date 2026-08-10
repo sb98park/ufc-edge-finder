@@ -262,6 +262,16 @@ def build_spotlight_chips(row_a: dict, row_b: dict, name_a: str, name_b: str,
     Thresholds are deliberately strict. A chip that fires on half the card is
     decoration; these should be rare enough that seeing one means something.
     """
+    # A LOW VALUE IS ONLY A LIABILITY WHERE LOW MEANS WEAK. Absorbing a lot
+    # of damage is a genuine vulnerability. Not scoring knockdowns is a
+    # STYLE -- Gillian Robertson is a submission grappler, and zero
+    # knockdowns is that working as intended, not a deficiency. Flagging it
+    # red told a bettor something false about her. So the bad tone is
+    # restricted to the one measure where the bad end is unambiguous; every
+    # other chip fires only when a fighter is exceptional in the good
+    # direction.
+    BAD_TONE_ALLOWED = {"sig_strikes_absorbed_per_fight"}
+
     CHIPS = [
         # column, label, direction, high-threshold, low-threshold, phrasing
         ("knockdowns_per_fight", "knockdowns per fight", True, 90, 10,
@@ -288,18 +298,26 @@ def build_spotlight_chips(row_a: dict, row_b: dict, name_a: str, name_b: str,
                 continue
             if v != v:
                 continue
+            # MIDRANK, not strictly-below. Counting only values BELOW v gave
+            # every fighter with zero knockdowns "0th percentile" -- they are
+            # tied at the floor, not uniquely worst, and on a roster where a
+            # third have none that reads as a damning claim about a third of
+            # the division. Splitting the ties puts the whole tied block at
+            # its shared midpoint instead.
             below = sum(1 for x in vals if x < v)
-            raw_pct = below / len(vals) * 100
+            equal = sum(1 for x in vals if x == v)
+            raw_pct = (below + equal / 2) / len(vals) * 100
             # Percentile as "how good", so a low damage-taken number ranks high.
             score = raw_pct if higher_better else 100 - raw_pct
             if score >= hi:
                 tone = "good"
-            elif score <= lo:
+            elif score <= lo and col in BAD_TONE_ALLOWED:
                 tone = "bad"
             else:
                 continue
             out.append({
                 "fighter": name,
+                "side": "a" if name == name_a else "b",
                 "text": phrasing.format(v=v),
                 "percentile": int(round(raw_pct)),
                 "percentile_label": _ordinal(int(round(raw_pct))),

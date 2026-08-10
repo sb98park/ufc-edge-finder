@@ -269,10 +269,15 @@ def check_method_coherence(c):
     reported "no rows found" -- inert, and worse than absent because it looked
     like a pass. This one is written against the real cell structure:
         <td class="mkt-label">Fighter &mdash; Method</td>
-        <td class="mkt-model">21.5%</td>
+        <td class="mkt-model" data-pct="21.5%" data-odds="+365">21.5%</td>
     """
     pairs = re.findall(
-        r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+        # [^>]* so the cell may carry attributes. It gained data-pct/data-odds
+        # when the Model column became unit-toggleable, and this check failed
+        # with "the pattern no longer matches the markup" -- which is the
+        # check working, but the pattern was needlessly brittle: it pinned the
+        # class to be the LAST attribute, which no markup should have to promise.
+        r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model"[^>]*>([\d.]+)%</td>',
         c, re.DOTALL)
     if not pairs:
         return fail("method-coherence",
@@ -291,7 +296,12 @@ def check_method_coherence(c):
     for block in blocks:
         key = re.search(r'data-fight-key="([^"]+)"', block)
         rows = re.findall(
-            r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+            # [^>]* so the cell may carry attributes. It gained data-pct/data-odds
+        # when the Model column became unit-toggleable, and this check failed
+        # with "the pattern no longer matches the markup" -- which is the
+        # check working, but the pattern was needlessly brittle: it pinned the
+        # class to be the LAST attribute, which no markup should have to promise.
+        r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model"[^>]*>([\d.]+)%</td>',
             block, re.DOTALL)
         total = 0.0
         n = 0
@@ -347,7 +357,12 @@ def check_headline_matches_table(c):
         headline_method = m.group(1)
         fav = re.search(r'data-fight-key="([^"|]+)', block)
         rows = re.findall(
-            r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+            # [^>]* so the cell may carry attributes. It gained data-pct/data-odds
+        # when the Model column became unit-toggleable, and this check failed
+        # with "the pattern no longer matches the markup" -- which is the
+        # check working, but the pattern was needlessly brittle: it pinned the
+        # class to be the LAST attribute, which no markup should have to promise.
+        r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model"[^>]*>([\d.]+)%</td>',
             block, re.DOTALL)
         best, best_p, name_of_best = None, -1.0, None
         per_fighter = {}
@@ -387,7 +402,12 @@ def check_round_props_monotonic(c):
     checked = 0
     for block in blocks:
         rows = re.findall(
-            r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+            # [^>]* so the cell may carry attributes. It gained data-pct/data-odds
+        # when the Model column became unit-toggleable, and this check failed
+        # with "the pattern no longer matches the markup" -- which is the
+        # check working, but the pattern was needlessly brittle: it pinned the
+        # class to be the LAST attribute, which no markup should have to promise.
+        r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model"[^>]*>([\d.]+)%</td>',
             block, re.DOTALL)
         unders = []
         for label, prob in rows:
@@ -431,7 +451,12 @@ def check_distance_vs_rounds(c):
     checked = 0
     for block in blocks:
         rows = re.findall(
-            r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+            # [^>]* so the cell may carry attributes. It gained data-pct/data-odds
+        # when the Model column became unit-toggleable, and this check failed
+        # with "the pattern no longer matches the markup" -- which is the
+        # check working, but the pattern was needlessly brittle: it pinned the
+        # class to be the LAST attribute, which no markup should have to promise.
+        r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model"[^>]*>([\d.]+)%</td>',
             block, re.DOTALL)
         decision, overs = None, []
         for label, prob in rows:
@@ -491,7 +516,12 @@ def check_plausibility(c):
         key = re.search(r'data-fight-key="([^"]+)"', block)
         name = key.group(1) if key else "unknown fight"
         for label, prob in re.findall(
-                r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model">([\d.]+)%</td>',
+                # [^>]* so the cell may carry attributes. It gained data-pct/data-odds
+        # when the Model column became unit-toggleable, and this check failed
+        # with "the pattern no longer matches the markup" -- which is the
+        # check working, but the pattern was needlessly brittle: it pinned the
+        # class to be the LAST attribute, which no markup should have to promise.
+        r'<td class="mkt-label">(.*?)</td>\s*<td class="mkt-model"[^>]*>([\d.]+)%</td>',
                 block, re.DOTALL):
             label = re.sub(r"<[^>]+>", "", label).strip()
             base = BASE_RATES.get(label)
