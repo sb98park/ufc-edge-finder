@@ -1,0 +1,79 @@
+name: UFC.com card cross-check
+
+# WHY THIS RUNS ON A SCHEDULE. The cross-check found three real problems on
+# its first manual run -- a bout UFC.com listed that we didn't have, a fight
+# promoted from Prelims to Main Card, and a title flag worth confirming. It
+# only found them because someone remembered to run it. The failures it exists
+# to catch (a late replacement, an added opener, a wrong opponent) all cost
+# hand corrections on a previous card precisely because nothing was watching.
+#
+# DELIBERATELY SEPARATE FROM refresh.yml. That job runs every 5 minutes and
+# commits data; this one runs weekly, writes nothing to the repo, and reports.
+# Bolting it onto the refresh would mean either 288 redundant UFC.com fetches
+# a day, or burying the report in a log nobody opens.
+#
+# NEVER FAILS THE BUILD. Discrepancies are information for a human, not
+# errors: the two sources legitimately disagree sometimes -- ESPN had a real
+# bout UFC.com never listed, priced by DraftKings -- so a red X here would be
+# wrong as often as right, and a check that cries wolf is one people mute.
+# The report goes to the run summary, which is readable from the mobile app.
+
+on:
+  schedule:
+    # Tuesdays 15:00 UTC. Cards are Saturday, so this lands early enough in
+    # fight week that a discovered change can still be acted on, and late
+    # enough that the week's bookings have settled.
+    - cron: "0 15 * * 2"
+  workflow_dispatch: {}
+
+concurrency:
+  group: crosscheck
+  cancel-in-progress: false
+
+permissions:
+  contents: read      # reports only; nothing here writes to the repo
+
+jobs:
+  crosscheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Cross-check tracked cards against UFC.com
+        id: check
+        # Output is captured so it can go in the summary AND stay in the log.
+        # `|| true` keeps a UFC.com outage or markup change from failing the
+        # job -- this is a reporter, and an unreachable source is not a
+        # discrepancy in the card.
+        run: |
+          set -o pipefail
+          python3 scripts/crosscheck_ufc_com.py 2>&1 | tee crosscheck.txt || true
+
+      - name: Publish to the run summary
+        # The summary is what shows in the Actions tab and the mobile app, so
+        # a real discrepancy is visible without opening raw logs.
+        run: |
+          {
+            echo "## UFC.com card cross-check"
+            echo ""
+            if grep -qE "MISSING FROM OUR CARD|NOT ON UFC.COM|POSITION:|TITLE FLAG:" crosscheck.txt; then
+              echo "**Discrepancies found.** Act on these by hand -- nothing was written."
+            else
+              echo "No discrepancies. Tracked cards match UFC.com."
+            fi
+            echo ""
+            echo '```'
+            cat crosscheck.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

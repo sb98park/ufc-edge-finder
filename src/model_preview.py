@@ -10,6 +10,12 @@ import pandas as pd
 
 from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg, build_percentile_index
+
+# A chip is a claim about a fighter's habits; too few tracked fights and it is
+# a claim about one night. Higher than the radar's floor because a chip states
+# the number outright rather than plotting it among five others.
+MIN_CHIP_FIGHTS = 5
+MAX_CHIPS = 3
 from src.method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
 
 
@@ -226,6 +232,84 @@ def _confidence_label(favorite_prob: float) -> str:
         return "Medium Confidence"
     else:
         return "Low Confidence"
+
+
+def _ordinal(n: int) -> str:
+    """1st, 2nd, 3rd, 4th ... 11th/12th/13th are the exceptions."""
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
+
+
+def build_spotlight_chips(row_a: dict, row_b: dict, name_a: str, name_b: str,
+                          pct_index: dict) -> list[dict]:
+    """
+    Surface only genuinely EXTREME measured stats, percentile-scored.
+
+    WHY CHIPS AND NOT MORE AXES. The radar shows six things for everyone,
+    which is right for comparing two fighters but wrong for saying "this one
+    number is remarkable". A 96th-percentile knockdown rate deserves to be
+    read as a sentence, not inferred from how far one spoke reaches.
+
+    THE TAKEDOWN-ATTEMPTS-FACED CHIP EARNS ITS PLACE SPECIFICALLY. Curtis
+    Blaydes reads 35% takedown defence, which looks damning for a decorated
+    wrestler -- until you see that opponents attempted only 20 takedowns
+    across 22 fights. Avoidance and defence are different quantities, and the
+    defence rate cannot express the first; it answers "what happens when
+    someone shoots", not "does anyone dare". That distinction misled me for a
+    full round of analysis, so it is worth stating outright.
+
+    Thresholds are deliberately strict. A chip that fires on half the card is
+    decoration; these should be rare enough that seeing one means something.
+    """
+    CHIPS = [
+        # column, label, direction, high-threshold, low-threshold, phrasing
+        ("knockdowns_per_fight", "knockdowns per fight", True, 90, 10,
+         "{v:.2f} knockdowns per fight"),
+        ("sig_strikes_att_per_fight", "striking volume", True, 90, 10,
+         "{v:.0f} significant strikes thrown per fight"),
+        ("sig_strikes_absorbed_per_fight", "damage taken", False, 90, 10,
+         "absorbs {v:.0f} significant strikes per fight"),
+        ("td_att_faced_per_fight", "takedown attempts faced", False, 90, 10,
+         "faces {v:.1f} takedown attempts per fight"),
+    ]
+    out = []
+    for row, name in ((row_a, name_a), (row_b, name_b)):
+        if not row.get("espn_fights") or float(row.get("espn_fights") or 0) < MIN_CHIP_FIGHTS:
+            continue
+        for col, label, higher_better, hi, lo, phrasing in CHIPS:
+            vals = pct_index.get(col)
+            v = row.get(col)
+            if not vals or v is None:
+                continue
+            try:
+                v = float(v)
+            except (TypeError, ValueError):
+                continue
+            if v != v:
+                continue
+            below = sum(1 for x in vals if x < v)
+            raw_pct = below / len(vals) * 100
+            # Percentile as "how good", so a low damage-taken number ranks high.
+            score = raw_pct if higher_better else 100 - raw_pct
+            if score >= hi:
+                tone = "good"
+            elif score <= lo:
+                tone = "bad"
+            else:
+                continue
+            out.append({
+                "fighter": name,
+                "text": phrasing.format(v=v),
+                "percentile": int(round(raw_pct)),
+                "percentile_label": _ordinal(int(round(raw_pct))),
+                "tone": tone,
+                "label": label,
+            })
+    # Cap it. Two fighters x four measures could produce eight chips, which
+    # would be noise; keep the most extreme few.
+    out.sort(key=lambda c: abs(c["percentile"] - 50), reverse=True)
+    return out[:MAX_CHIPS]
 
 
 def build_fight_preview(
@@ -476,5 +560,7 @@ def build_fight_preview(
         "narrative": narrative,
         "comparison": comparison,
         "radar_svg": radar_svg,
+        "spotlight_chips": build_spotlight_chips(row_a.to_dict(), row_b.to_dict(),
+                                                 fighter_a, fighter_b, pct_index),
         "waterfall": waterfall,
     }

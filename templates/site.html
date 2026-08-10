@@ -723,6 +723,24 @@
     background-size: 100% 100%, 300% 100%;
     animation: legendaryBorder 4s linear 5;
   }
+  /* Spotlight chips: one measured stat that is genuinely extreme, stated in
+     words rather than left to be inferred from a radar spoke. Deliberately
+     rare -- a chip that fires on half the card is decoration. Green for a
+     strength, red for a liability, and note this is the one place red is
+     used for something OTHER than an incorrect pick: here it qualifies a
+     specific number about one fighter, not the model's own claim, and it sits
+     inside the stats block rather than beside a pick. */
+  .spotlight-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
+  .spotlight-chip {
+    font-size: 10px; font-weight: 600; line-height: 1.35;
+    padding: 4px 9px; border-radius: 10px; max-width: 100%;
+    border: 1px solid transparent; overflow-wrap: anywhere;
+  }
+  .spotlight-chip.good { color: #7ee2a8; background: rgba(126,226,168,0.10); border-color: rgba(126,226,168,0.28); }
+  .spotlight-chip.bad  { color: #ff8f8f; background: rgba(255,92,92,0.10);  border-color: rgba(255,92,92,0.28); }
+  .spotlight-chip .pct { opacity: 0.72; font-weight: 500; }
+  .fight-cancelled .spotlight-chip-row { opacity: 0.45; filter: saturate(0.35); }
+
   .fun-fact-chip-row {
     display: flex; justify-content: space-between; gap: 8px; margin-top: 6px;
   }
@@ -740,7 +758,25 @@
      parent, not its own content, which structurally eliminates the
      circular shrink-to-fit sizing that caused the overflow bug. */
   @media (max-width: 640px) {
-    .fun-fact-chip-row { gap: 6px; flex-wrap: wrap; }
+    /* Spotlight chips: one measured stat that is genuinely extreme, stated in
+     words rather than left to be inferred from a radar spoke. Deliberately
+     rare -- a chip that fires on half the card is decoration. Green for a
+     strength, red for a liability, and note this is the one place red is
+     used for something OTHER than an incorrect pick: here it qualifies a
+     specific number about one fighter, not the model's own claim, and it sits
+     inside the stats block rather than beside a pick. */
+  .spotlight-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
+  .spotlight-chip {
+    font-size: 10px; font-weight: 600; line-height: 1.35;
+    padding: 4px 9px; border-radius: 10px; max-width: 100%;
+    border: 1px solid transparent; overflow-wrap: anywhere;
+  }
+  .spotlight-chip.good { color: #7ee2a8; background: rgba(126,226,168,0.10); border-color: rgba(126,226,168,0.28); }
+  .spotlight-chip.bad  { color: #ff8f8f; background: rgba(255,92,92,0.10);  border-color: rgba(255,92,92,0.28); }
+  .spotlight-chip .pct { opacity: 0.72; font-weight: 500; }
+  .fight-cancelled .spotlight-chip-row { opacity: 0.45; filter: saturate(0.35); }
+
+  .fun-fact-chip-row { gap: 6px; flex-wrap: wrap; }
     .fun-fact-chip-row > div { max-width: none; }
     .fun-fact-chip-row > div:last-child { text-align: right; }
     /* Set from JS alongside .expanded on the chip: gives the wrapper a
@@ -3779,6 +3815,16 @@
     {% endif %}
   {% endmacro %}
 
+  {% macro spotlight_chips(chips) %}
+  {% if chips %}
+  <div class="spotlight-chip-row">
+    {% for c in chips %}
+    <div class="spotlight-chip {{ c.tone }}">{{ c.fighter }}: {{ c.text }} <span class="pct">({{ c.percentile_label }} pct)</span></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endmacro %}
+
   {% macro tale_of_the_tape(comparison, radar_svg) %}
   {% if comparison %}
   <div class="market-group-label">{{ icon_ruler() }} Tale of the Tape</div>
@@ -4079,6 +4125,7 @@
       </details>
       {% endif %}
       {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg) }}
+      {{ spotlight_chips(fight.preview.spotlight_chips) }}
       {{ fighter_compare_table(fight.preview.comparison) }}
       {% endif %}
 

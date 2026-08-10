@@ -371,6 +371,13 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
         "knockdowns_per_fight": round(tot["kd"] / fights, 3),
         "sig_strikes_att_per_fight": round(tot["ssa"] / fights, 2),
         "td_att_per_fight": round(tot["tda"] / fights, 2),
+        # Attempts FACED, which is a different quantity from takedown DEFENCE
+        # and the one that actually captures avoidance. Blaydes shows 35%
+        # defence -- damning for a wrestler -- off just 20 attempts faced in
+        # 22 fights. The defence rate answers "what happens when someone
+        # shoots"; this answers "does anyone dare". Conflating them cost a
+        # round of analysis, so both are stored.
+        "td_att_faced_per_fight": round(tot["opp_tda"] / fights, 2),
         # Damage taken, and knockdowns suffered. Per fight rather than per
         # minute: ESPN's payload carries no fight duration, and per-fight is
         # the honest unit for what it actually counts.
