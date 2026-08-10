@@ -53,7 +53,13 @@ for col, (term, default) in TERMS.items():
             both += 1
         elif ba or bb:
             one += 1
-    flag = "  <-- ASYMMETRIC" if one else ""
+    # GATED columns are safe when asymmetric -- matchup_model now requires
+    # both corners to have real data or the term contributes nothing, so a
+    # one-blank fight there produces zero, not a phantom edge. Only ungated
+    # columns still manufacture one.
+    gated = "GATED" in term
+    flag = ("  <-- asymmetric, but GATED (contributes 0, safe)" if one and gated
+            else "  <-- ASYMMETRIC: phantom edge" if one else "")
     print(f"{col:<22} {term:<30} {both:>11} {one:>10}{flag}")
 
 print("\n'both blank' = term contributes nothing (harmless).")

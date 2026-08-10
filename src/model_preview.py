@@ -9,7 +9,7 @@ clearly labeled as a projection rather than a live-market edge.
 import pandas as pd
 
 from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get
-from src.radar_chart import compute_radar_metrics, build_radar_chart_svg
+from src.radar_chart import compute_radar_metrics, build_radar_chart_svg, build_percentile_index
 from src.method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
 
 
@@ -441,8 +441,20 @@ def build_fight_preview(
 
     comparison = {"a": _fighter_card(fighter_a, row_a), "b": _fighter_card(fighter_b, row_b)}
 
-    radar_metrics_a = compute_radar_metrics(row_a.to_dict())
-    radar_metrics_b = compute_radar_metrics(row_b.to_dict())
+    # Percentile population = the WHOLE roster, not this card. Ranking a
+    # fighter against the handful of people they happen to share a card with
+    # would make the same fighter's chart change shape from week to week.
+    # Cached on the DataFrame so the roster is scanned once per build rather
+    # than twice per fight.
+    pct_index = getattr(fighters_df, "_radar_pct_index", None)
+    if pct_index is None:
+        pct_index = build_percentile_index(fighters_df)
+        try:
+            fighters_df._radar_pct_index = pct_index
+        except Exception:
+            pass
+    radar_metrics_a = compute_radar_metrics(row_a.to_dict(), pct_index)
+    radar_metrics_b = compute_radar_metrics(row_b.to_dict(), pct_index)
     radar_svg = build_radar_chart_svg(radar_metrics_a, radar_metrics_b, fighter_a, fighter_b)
     factor_badges = build_factor_badges(matchup)
     comparison["a"]["badges"] = factor_badges["a"]

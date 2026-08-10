@@ -32,17 +32,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Column -> the axis it feeds. Mirrors compute_radar_metrics exactly; if that
 # function changes, this must change with it or the audit quietly goes stale.
 AXIS_INPUTS = {
-    "Striking Accuracy": ["strike_accuracy_pct"],
-    "Grappling Offense": ["control_time_pct", "td_accuracy_pct"],   # falls back
-    "Grappling Defense": ["td_defense_pct"],
-    "Finishing Ability": ["wins", "ko_wins", "sub_wins"],
-    "Experience":        ["wins", "losses"],
-    "Durability":        ["losses", "ko_losses", "sub_losses"],
+    "Knockdown Rate":        ["espn_fights", "knockdowns_per_fight"],
+    "Submission Threat":     ["wins", "sub_wins"],
+    "Striking Pace":         ["espn_fights", "sig_strikes_att_per_fight"],
+    "Damage Resistance":     ["espn_fights", "sig_strikes_absorbed_per_fight"],
+    "Submission Resistance": ["losses", "sub_losses"],
+    "Distance Rate":         ["wins", "losses", "dec_wins", "dec_losses"],
 }
 
 # In fighters.csv, never plotted.
 UNUSED = ["slpm", "sapm", "slpm_r", "sapm_r", "td_per_15", "td_per_15_r",
-          "first_round_finish_pct", "age", "reach_in", "missed_weight_count"]
+          "first_round_finish_pct", "age", "reach_in", "missed_weight_count",
+          "strike_accuracy_pct", "td_accuracy_pct", "td_defense_pct",
+          "knockdowns_absorbed_per_fight", "td_att_per_fight"]
 
 
 def _blank(v):
@@ -72,45 +74,24 @@ def main():
     # Per-axis coverage across the group.
     print("AXIS COVERAGE (how many fighters have real data for each axis)")
     for axis, cols in AXIS_INPUTS.items():
-        if axis == "Grappling Offense":
-            have = on.apply(lambda r: not _blank(r.get("control_time_pct")) or not _blank(r.get("td_accuracy_pct")), axis=1).sum()
-            ct = (~on["control_time_pct"].map(_blank)).sum() if "control_time_pct" in on else 0
-            print(f"  {axis:<20} {have}/{len(on)}   (control_time on {ct}, rest fall back to td_accuracy)")
-        else:
-            have = on.apply(lambda r: all(not _blank(r.get(c)) for c in cols), axis=1).sum()
-            print(f"  {axis:<20} {have}/{len(on)}")
+        have = on.apply(lambda r: all(not _blank(r.get(c)) for c in cols), axis=1).sum()
+        print(f"  {axis:<22} {have}/{len(on)}")
     print()
 
     # The dangerous cases: plotted as 0, indistinguishable from "bad".
-    print("FIGHTERS DRAWN AT ZERO ON AXES WHERE THE DATA IS SIMPLY ABSENT")
+    # Missing inputs now render as a polygon BREAK, not a zero, so this is a
+    # completeness report rather than a bug hunt.
+    print("FIGHTERS WITH BLANK AXES (rendered as a gap, not as zero)")
     any_bad = False
     for _, r in on.iterrows():
-        zeroed = []
-        if _blank(r.get("strike_accuracy_pct")):
-            zeroed.append("Striking Accuracy")
-        if _blank(r.get("control_time_pct")) and _blank(r.get("td_accuracy_pct")):
-            zeroed.append("Grappling Offense")
-        if _blank(r.get("td_defense_pct")):
-            zeroed.append("Grappling Defense")
-        if _blank(r.get("wins")) or (r.get("wins") or 0) <= 0:
-            zeroed.append("Finishing Ability")
-        if zeroed:
+        blanks = [axis for axis, cols in AXIS_INPUTS.items()
+                  if any(_blank(r.get(c)) for c in cols)]
+        if blanks:
             any_bad = True
-            print(f"  {r['name']:<24} -> 0 on: {', '.join(zeroed)}")
+            print(f"  {r['name']:<24} -> {len(blanks)}/6 blank: {', '.join(blanks)}")
     if not any_bad:
-        print("  none -- every fighter on the card has real data on all four measured axes.")
+        print("  none -- every fighter on the card has all six axes.")
     print()
-
-    # Mixed-scale warning for the shared axis.
-    if "control_time_pct" in on.columns:
-        ct_have = set(on.loc[~on["control_time_pct"].map(_blank), "name"])
-        ct_miss = set(on["name"]) - ct_have
-        if ct_have and ct_miss:
-            print("MIXED-SCALE WARNING on Grappling Offense")
-            print(f"  {len(ct_have)} fighter(s) plotted on control_time_pct, "
-                  f"{len(ct_miss)} on td_accuracy_pct.")
-            print("  Any bout pairing one of each compares two DIFFERENT metrics on one axis.")
-            print()
 
     print("IN fighters.csv BUT NEVER PLOTTED")
     for c in UNUSED:

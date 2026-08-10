@@ -1,55 +1,113 @@
 """
-Radar/spider chart for the Tale of the Tape: overlays both fighters' method
-profiles on one chart so the SHAPE of the likely fight reads at a glance.
+Radar/spider chart for the Tale of the Tape: overlays both fighters' profiles
+so the SHAPE of the likely fight reads at a glance.
 
-Six axes, every one computed from the fight RECORD:
-  - KO Threat              (ko_wins / wins)
-  - Submission Threat      (sub_wins / wins)
-  - Distance Rate          ((dec_wins + dec_losses) / total fights)
-  - KO Resistance          (1 - ko_losses / losses, shrunk toward the mean)
-  - Submission Resistance  (1 - sub_losses / losses, shrunk toward the mean)
-  - Experience             (career fight count on a veteran curve)
+Six axes, three MEASURED from ESPN per-fight statistics and three derived from
+the fight record:
 
-WHY THESE AND NOT THE PREVIOUS SET. The chart used to plot Striking Accuracy,
-Grappling Offense and Grappling Defense, sourced from strike_accuracy_pct /
-td_accuracy_pct / control_time_pct / td_defense_pct. A coverage audit
-(scripts/audit_radar_coverage.py) found those columns present for 0 of 25
-fighters on a live card and roughly 29% of the roster -- and NOT because of
-debutants: established names sat at zero too, because nothing in the automated
-pipeline writes them (src/scraper.py does, and it is explicitly manual).
-Half the chart was therefore drawn at zero for both fighters in every bout,
-which conveys nothing while looking like it conveys something.
+  Knockdown Rate         knockdowns_per_fight            percentile
+  Submission Threat      sub_wins / wins                 record
+  Striking Pace          sig_strikes_att_per_fight       percentile
+  Damage Resistance      sig_strikes_absorbed_per_fight  percentile, INVERTED
+  Submission Resistance  1 - sub_losses/losses, shrunk   record
+  Distance Rate          (dec_wins + dec_losses) / total record
 
-Record-derived axes have near-total coverage by construction: anyone with a
-Wikipedia page has a W-L record and its method splits. Verified on the same
-card at 24-25 of 25 for every axis here.
+WHY THESE. The previous set inferred power from ko_wins/wins and durability
+from ko_losses/losses -- both hostage to matchmaking, both moving in huge
+steps for a fighter with few bouts (a 7-1 record can only express KO threat in
+14-point increments), and durability carrying no information at all for anyone
+undefeated. ESPN's per-fight data measures the underlying things directly:
+knockdowns COUNT the power event, and strikes absorbed measures damage taken
+every fight rather than inferring it from the handful a fighter has lost.
+Striking Pace replaces Experience, which could not distinguish a 25-fight
+regional journeyman from a 25-fight UFC veteran and priced nothing; pace drives
+totals and round props, where the softer lines are.
 
-IT ALSO STOPS DUPLICATING THE WATERFALL ABOVE IT. "Why the model likes X"
-already decomposes rating gap, striking, wrestling, sub threat, recent form,
-height and durability -- i.e. WHO WINS. These axes answer a different
-question, HOW THE FIGHT GOES, which is what method, round and total props
-actually price.
+Submission Threat and Resistance stay record-derived because ESPN publishes no
+submission-attempt data -- there is nothing better to switch to. Distance Rate
+stays because it answers a question none of the measured stats do: does this
+fighter's fight reach the judges.
 
-MISSING DATA IS RETURNED AS None, NEVER ZERO. The previous version coerced
-absent inputs with `or 0`, so a fighter nobody has data on was drawn at the
-origin -- indistinguishable from, and read as, the worst fighter on the card.
-A debutant scored 0 for striking AND 100 for durability simultaneously, both
-purely from absence. None renders as a break in the polygon and a greyed
-axis label instead.
+"RESISTANCE", NOT "DEFENSE", deliberately. In MMA stats "defense" means the
+share of ATTEMPTS AGAINST YOU that fail, which is what td_defense_pct genuinely
+measures and what a reader will assume. These are outcome-based, not
+attempt-based, so borrowing the word would imply a parity that does not exist.
+
+PERCENTILES, NOT RAW VALUES, for the three measured axes. They are rates on
+incompatible scales (knockdowns ~0-1.5 per fight, strikes attempted ~20-150),
+so plotting them raw would make the chart meaningless. Percentile-ranking
+against the roster also answers the question a bettor actually has -- is this
+fighter dangerous RELATIVE to the division -- rather than against a cap someone
+invented. The cost, accepted knowingly: a fighter's shape can shift as the
+roster changes, without them fighting.
+
+DAMAGE RESISTANCE IS INVERTED so that outward always means better on every
+axis. One spoke reading backwards would make the overall shape actively
+misleading, which is worse than omitting it.
+
+MISSING DATA IS None, NEVER ZERO -- see the polygon and label handling below.
+The measured axes are UFC-only, so a debutant renders a partial chart. That is
+the honest cost of using measurements instead of inferences.
 """
 
 import math
 
-AXIS_LABELS = ["KO Threat", "Submission Threat", "Distance Rate",
-               "KO Resistance", "Submission Resistance", "Experience"]
+AXIS_LABELS = ["Knockdown Rate", "Submission Threat", "Striking Pace",
+               "Damage Resistance", "Submission Resistance", "Distance Rate"]
 
-# Shrinkage for the two resistance axes. Without it, one decision loss scores
-# a perfect 100 chin and outranks a fighter with a real sample -- the single
-# noisiest thing in the old chart. Equivalent to SHRINK_K notional prior
-# fights at the league-ish finish-loss rate, so small samples are pulled
-# toward the middle and only a real record moves the needle.
+# Columns that get percentile-ranked, and whether higher is better.
+PERCENTILE_AXES = {
+    "knockdowns_per_fight": True,
+    "sig_strikes_att_per_fight": True,
+    "sig_strikes_absorbed_per_fight": False,     # inverted: less damage taken is better
+}
+
 SHRINK_K = 3.0
 PRIOR_FINISH_LOSS_RATE = 0.5
+
+# A fighter with almost no tracked fights would rank on noise. Below this the
+# measured axes stay None rather than plotting a percentile built from one bout.
+MIN_ESPN_FIGHTS = 3
+
+
+def build_percentile_index(fighters_df) -> dict:
+    """
+    {column: sorted list of values} for percentile ranking.
+
+    Built once per site build from the whole roster and passed into
+    compute_radar_metrics. Computing it per fighter would be both slow and
+    wrong -- the ranking has to be against a fixed population, not against
+    whoever happens to be on the card.
+    """
+    index = {}
+    for col in PERCENTILE_AXES:
+        if col not in getattr(fighters_df, "columns", []):
+            continue
+        vals = []
+        for v in fighters_df[col]:
+            try:
+                f = float(v)
+            except (TypeError, ValueError):
+                continue
+            if f == f:                      # not NaN
+                vals.append(f)
+        if len(vals) >= 20:                 # too few to rank against meaningfully
+            index[col] = sorted(vals)
+    return index
+
+
+def _percentile(value, sorted_vals, higher_is_better: bool):
+    if value is None or not sorted_vals:
+        return None
+    lo, hi = 0, len(sorted_vals)
+    while lo < hi:                          # bisect_left, stdlib-free
+        mid = (lo + hi) // 2
+        if sorted_vals[mid] < value:
+            lo = mid + 1
+        else:
+            hi = mid
+    pct = lo / len(sorted_vals) * 100.0
+    return round(pct if higher_is_better else 100.0 - pct, 1)
 
 
 def _pct(numerator, denominator) -> float | None:
@@ -59,7 +117,7 @@ def _pct(numerator, denominator) -> float | None:
 
 
 def _num(row: dict, key: str):
-    """Value, or None. Deliberately does NOT default to 0 -- see module docstring."""
+    """Value, or None. Deliberately does NOT default to 0."""
     v = row.get(key)
     if v is None or v == "":
         return None
@@ -67,32 +125,17 @@ def _num(row: dict, key: str):
         f = float(v)
     except (TypeError, ValueError):
         return None
-    return None if f != f else f          # NaN
-
-
-def _experience_score(row: dict) -> float | None:
-    w, l = _num(row, "wins"), _num(row, "losses")
-    if w is None and l is None:
-        return None
-    total_fights = (w or 0) + (l or 0)
-    return round(min(100.0, total_fights * 4.0), 1)  # ~25 fights = veteran-level 100
+    return None if f != f else f
 
 
 def _resistance_score(row: dict, loss_key: str) -> float | None:
-    """
-    How rarely they're finished THIS way, shrunk toward the prior by sample.
-
-    Returns None rather than a number when the split isn't known -- a fighter
-    with recorded losses but no method breakdown is unmeasured, not durable.
-    """
+    """How rarely they're finished this way, shrunk toward the prior by sample."""
     losses = _num(row, "losses")
     finished = _num(row, loss_key)
     if losses is None or finished is None:
         return None
     if losses <= 0:
-        # Undefeated: genuinely no evidence either way. The prior IS the
-        # honest answer here, not 100 -- an unbeaten fighter has not
-        # demonstrated a chin, they have demonstrated not having been tested.
+        # Undefeated is untested, not proven. The prior is the honest answer.
         return round((1 - PRIOR_FINISH_LOSS_RATE) * 100, 1)
     rate = (finished + SHRINK_K * PRIOR_FINISH_LOSS_RATE) / (losses + SHRINK_K)
     return round((1 - rate) * 100, 1)
@@ -103,29 +146,35 @@ def _distance_rate(row: dict) -> float | None:
     w, l = _num(row, "wins"), _num(row, "losses")
     if dw is None or dl is None or w is None or l is None:
         return None
-    total = w + l
-    return _pct(dw + dl, total)
+    return _pct(dw + dl, w + l)
 
 
-def compute_radar_metrics(row: dict) -> list[float | None]:
+def compute_radar_metrics(row: dict, pct_index: dict | None = None) -> list[float | None]:
     """
-    [ko_threat, sub_threat, distance_rate, ko_resistance, sub_resistance, experience].
+    Six axes, each 0-100 or None. Callers MUST handle None rather than coerce.
 
-    Each 0-100, or None where the underlying record doesn't support a value.
-    Callers MUST handle None rather than coercing it -- that coercion is the
-    bug this rewrite exists to remove.
+    Without pct_index the three measured axes return None -- ranking needs a
+    population, and inventing one from a single fighter would be worse than
+    admitting the axis can't be drawn.
     """
+    pct_index = pct_index or {}
     wins = _num(row, "wins")
-    ko_threat = _pct(_num(row, "ko_wins"), wins) if _num(row, "ko_wins") is not None else None
-    sub_threat = _pct(_num(row, "sub_wins"), wins) if _num(row, "sub_wins") is not None else None
+    espn_fights = _num(row, "espn_fights")
+    enough = espn_fights is not None and espn_fights >= MIN_ESPN_FIGHTS
 
+    def measured(col):
+        if not enough:
+            return None
+        return _percentile(_num(row, col), pct_index.get(col), PERCENTILE_AXES[col])
+
+    sub_wins = _num(row, "sub_wins")
     return [
-        ko_threat,
-        sub_threat,
-        _distance_rate(row),
-        _resistance_score(row, "ko_losses"),
+        measured("knockdowns_per_fight"),
+        _pct(sub_wins, wins) if sub_wins is not None else None,
+        measured("sig_strikes_att_per_fight"),
+        measured("sig_strikes_absorbed_per_fight"),
         _resistance_score(row, "sub_losses"),
-        _experience_score(row),
+        _distance_rate(row),
     ]
 
 

@@ -57,6 +57,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL  # noqa: E402
 
 FIGHTERS = "data/fighters.csv"
+HISTORY_FOR_TARGETS = "data/fight_history.csv"
 ID_MAP = "data/espn_athlete_ids.csv"
 CACHE_DIR = "data/.espn_cache"
 EVENTLOG = "https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/athletes/{id}/eventlog"
@@ -243,7 +244,8 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
     if not items:
         return None
 
-    tot = {k: 0.0 for k in ("ssl", "ssa", "tdl", "tda", "opp_tdl", "opp_tda", "kd")}
+    tot = {k: 0.0 for k in ("ssl", "ssa", "tdl", "tda", "opp_tdl", "opp_tda", "kd",
+                            "opp_ssl", "opp_kd")}
     wtot = dict(tot)
     fights = 0
     now = dt.datetime.now()
@@ -287,6 +289,13 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
             # The opponent's takedowns ARE this fighter's takedown defence.
             "opp_tdl": theirs.get("takedownsLanded", 0.0),
             "opp_tda": theirs.get("takedownsAttempted", 0.0),
+            # And the opponent's LANDED STRIKES are this fighter's damage
+            # taken -- the honest durability signal, measured every fight
+            # rather than inferred from the handful of losses a fighter has.
+            # Free: this payload was already being fetched for takedown
+            # defence and the field was simply discarded.
+            "opp_ssl": theirs.get("sigStrikesLanded", 0.0),
+            "opp_kd": theirs.get("knockDowns", 0.0),
         }
         for k, v in pairs.items():
             tot[k] += v
@@ -320,6 +329,11 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
         "knockdowns_per_fight": round(tot["kd"] / fights, 3),
         "sig_strikes_att_per_fight": round(tot["ssa"] / fights, 2),
         "td_att_per_fight": round(tot["tda"] / fights, 2),
+        # Damage taken, and knockdowns suffered. Per fight rather than per
+        # minute: ESPN's payload carries no fight duration, and per-fight is
+        # the honest unit for what it actually counts.
+        "sig_strikes_absorbed_per_fight": round(tot["opp_ssl"] / fights, 2),
+        "knockdowns_absorbed_per_fight": round(tot["opp_kd"] / fights, 3),
     }
 
 
@@ -327,6 +341,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--discover", action="store_true", help="build the name->espn_id map first")
     ap.add_argument("--card-only", action="store_true", help="only fighters on data/fight_cards.csv")
+    ap.add_argument("--from-history", action="store_true",
+                    help="walk fighters from data/fight_history.csv (most-fought first) rather "
+                         "than fighters.csv -- populates the cache for point-in-time validation")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
@@ -351,6 +368,25 @@ def main():
     fighters = pd.read_csv(FIGHTERS)
 
     targets = list(fighters["name"])
+    if args.from_history:
+        # VALIDATION MODE. The point-in-time test needs BOTH fighters in a
+        # historical bout to have a cached timeline, and walking only the
+        # current roster (220 names) left an intersection of 160 scorable
+        # fights out of 9,801 -- far too few to distinguish signal from
+        # noise. Ordering by how often a fighter appears in history grows
+        # that intersection fastest per request spent, since the most-fought
+        # names are in the most bouts.
+        # Writes to fighters.csv are unaffected: a fighter with no roster row
+        # simply isn't written, but the CACHE is what the validator reads.
+        hist = pd.read_csv(HISTORY_FOR_TARGETS)
+        freq = pd.concat([hist["fighter_a"], hist["fighter_b"]]).value_counts()
+        seen, ordered = set(), []
+        for n in freq.index:
+            if _fold(n) in ids and _fold(n) not in seen:
+                seen.add(_fold(n))
+                ordered.append(n)
+        targets = ordered
+        print(f"[from-history] {len(targets)} fighters with an ESPN id, most-fought first")
     if args.card_only:
         cards = pd.read_csv("data/fight_cards.csv")
         on = set(cards["fighter_a"]) | set(cards["fighter_b"])
@@ -393,6 +429,8 @@ def main():
         fighters[c] = fighters[c].astype("object")
     idx = {n: i for i, n in enumerate(fighters["name"])}
     for name, s in updates.items():
+        if name not in idx:
+            continue      # from-history target with no roster row; cache is the point
         for c, v in s.items():
             if v is not None:
                 fighters.at[idx[name], c] = v
