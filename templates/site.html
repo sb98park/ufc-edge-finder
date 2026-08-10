@@ -752,9 +752,16 @@
      The unit marker doubles as the state indicator -- % or the fair price --
      so the header always says which mode you are in. */
   .mkt-model-head { cursor: pointer; user-select: none; white-space: nowrap; }
+  /* ONE CHARACTER IN BOTH STATES, and width-pinned so it cannot matter.
+     The marker first read "%" / "odds", and the four-character version made
+     the header wide enough to squeeze the Market column -- long labels like
+     "Islam Makhachev - KO/TKO" then wrapped to two lines on a phone, so the
+     toggle silently reflowed the table it was designed not to disturb.
+     "±" carries the meaning on its own next to values like -222 / +222. */
   .mkt-model-head .unit-hint {
     font-size: 8px; opacity: 0.55; margin-left: 3px;
     border-bottom: 1px dotted currentColor; padding-bottom: 1px;
+    display: inline-block; min-width: 1ch; text-align: center;
   }
   .mkt-model-head:hover .unit-hint,
   .mkt-model-head:focus-visible .unit-hint { opacity: 0.9; }
@@ -815,9 +822,16 @@
      The unit marker doubles as the state indicator -- % or the fair price --
      so the header always says which mode you are in. */
   .mkt-model-head { cursor: pointer; user-select: none; white-space: nowrap; }
+  /* ONE CHARACTER IN BOTH STATES, and width-pinned so it cannot matter.
+     The marker first read "%" / "odds", and the four-character version made
+     the header wide enough to squeeze the Market column -- long labels like
+     "Islam Makhachev - KO/TKO" then wrapped to two lines on a phone, so the
+     toggle silently reflowed the table it was designed not to disturb.
+     "±" carries the meaning on its own next to values like -222 / +222. */
   .mkt-model-head .unit-hint {
     font-size: 8px; opacity: 0.55; margin-left: 3px;
     border-bottom: 1px dotted currentColor; padding-bottom: 1px;
+    display: inline-block; min-width: 1ch; text-align: center;
   }
   .mkt-model-head:hover .unit-hint,
   .mkt-model-head:focus-visible .unit-hint { opacity: 0.9; }
@@ -5120,7 +5134,8 @@
           if (v) td.textContent = v;
         });
         document.querySelectorAll('.mkt-model-head .unit-hint').forEach(el => {
-          el.textContent = unit === 'odds' ? 'odds' : '%';
+          // Single character either way -- see .unit-hint in the stylesheet.
+          el.textContent = unit === 'odds' ? '\u00b1' : '%';
         });
       }
       function toggle() {
