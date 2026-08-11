@@ -767,6 +767,70 @@
   .mkt-model-head:focus-visible .unit-hint { opacity: 0.9; }
   .mkt-model-head:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
 
+  /* SILHOUETTE. Shaded in each fighter's OWN corner colour rather than a red
+     heat ramp: ESPN can use red freely, this site cannot -- red already means
+     an incorrect pick and carries the cancelled banner, so a red figure would
+     collide with a meaning that exists. The radar has already taught the
+     reader that red is corner A and blue corner B, so reusing it costs no new
+     hue and keeps the two fighters instantly separable. */
+  .striking-panel { margin: 14px 0 2px; }
+  .striking-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+  .striking-title { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
+  .sil-toggle {
+    background: none; border: none; padding: 0; cursor: pointer;
+    font-size: 9px; letter-spacing: 0.4px; color: var(--muted);
+    border-bottom: 1px dotted currentColor; opacity: 0.7;
+  }
+  .sil-toggle:hover, .sil-toggle:focus-visible { opacity: 1; }
+  /* Width pinned so the two states cannot reflow the header, the same
+     mistake the Model column's "%" -> "odds" marker made. */
+  .sil-mode { display: inline-block; min-width: 6.5ch; text-align: center; }
+
+  .striking-figs { display: flex; justify-content: center; gap: 40px; }
+  .silhouette { width: 66px; height: auto; display: block; }
+  /* The unshaded figure has to be visible on its own, or a fighter with a
+     low profile looks like a rendering failure rather than a low profile. */
+  .sil-base path { fill: rgba(255,255,255,0.085); }
+
+  /* var(--blue) DOES NOT EXIST -- the corner variable is --corner-blue, and an
+     undefined var() falls back to black, so corner B was painting black on a
+     near-black card and the whole right-hand figure looked unshaded. It read
+     as a colour-contrast problem and was a typo.
+     The blue is also lifted from #3b82f6 to a brighter tint: measured
+     relative luminance 0.235 vs red's 0.297, so at equal alpha blue genuinely
+     reads fainter, and the lift (0.440) evens the two sides up rather than
+     leaving corner B systematically quieter than corner A. */
+  /* Saturated rather than light. Compositing any colour at partial alpha
+     over a near-black card pulls it toward grey, so a pale tint (#7ab4ff)
+     lands washed out -- the "pastel" look. These are more saturated at the
+     same lightness, so the mid-alpha bands keep their hue. */
+  .side-a .sil-stop { stop-color: #ff4242; }
+  .side-b .sil-stop { stop-color: #3d9dff; }
+  .sil-stop { transition: stop-opacity 0.3s ease; stop-opacity: 0; }
+  .sil-legend { text-align: center; margin-top: 6px; }
+  /* Hit paths are invisible but clickable. pointer-events must be set
+     explicitly: an SVG path with no fill is not hit-testable by default. */
+  .sil-hit path { fill: transparent; pointer-events: all; cursor: default; }
+  /* Fixed height so the readout appearing cannot shift anything below it. */
+  .silhouette-wrap { position: relative; }
+  .sil-tip {
+    position: absolute; z-index: 5; pointer-events: none;
+    transform: translate(-50%, -140%);
+    background: rgba(18,20,24,0.96); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px; padding: 3px 7px; white-space: nowrap;
+    font-size: 9.5px; font-weight: 600; color: #eceff3;
+    font-variant-numeric: tabular-nums;
+    opacity: 0; transition: opacity 0.12s ease;
+  }
+  .sil-tip.on { opacity: 1; }
+  .sil-nodata { opacity: 0.5; }
+  .sil-scale { text-align: center; font-size: 8px; letter-spacing: 0.5px;
+               text-transform: uppercase; color: #55595f; margin-top: 6px; }
+
+  .fight-shape { text-align: center; margin-top: 9px; }
+  .fight-shape-label { display: block; font-size: 11px; font-weight: 700; color: #d8dbe2; letter-spacing: 0.2px; }
+  .fight-shape-detail { display: block; font-size: 9.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
   .spotlight-chip-row { justify-content: center; }
   /* Corner tint binds a chip to a fighter without repeating the legend. */
   .spotlight-chip.side-a { box-shadow: inset 3px 0 0 var(--red); }
@@ -837,7 +901,7 @@
   .mkt-model-head:focus-visible .unit-hint { opacity: 0.9; }
   .mkt-model-head:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
 
-  .spotlight-chip-row { justify-content: center; }
+
   /* Corner tint binds a chip to a fighter without repeating the legend. */
   .spotlight-chip.side-a { box-shadow: inset 3px 0 0 var(--red); }
   .spotlight-chip.side-b { box-shadow: inset 3px 0 0 var(--blue); }
@@ -1860,7 +1924,15 @@
   .chart-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-align: left; }
   .chart-caption { font-size: 9px; color: #5a5f6a; margin-top: 5px; line-height: 1.4; }
   .chart-placeholder-text { font-size: 11px; color: var(--muted); text-align: left; padding: 8px 0; }
-  .sparkline, .dual-chart { display: block; max-width: 100%; height: auto; }
+  /* CENTRING ONLY -- do not add a width here. As a display:block SVG with
+     only max-width it kept its intrinsic width and sat hard left in the wide
+     desktop column, which read as a layout bug; auto margins fix that.
+     Setting width:100% on desktop was tried and reverted: the chart has a
+     viewBox, so scaling the element scales EVERYTHING inside it, and the
+     axis labels and odds became enormous. Mobile is already correct and this
+     rule must not change it -- the chart fills the column there, so auto
+     margins are a no-op. */
+  .sparkline, .dual-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
   /* Moneyline chart labels: American odds shown by default, raw % hidden;
      body.pct-mode flips it. Class-based (not JS-recomputed) so it works
      correctly even for charts inside not-yet-opened <details> accordions. */
@@ -3895,6 +3967,162 @@
   {% endif %}
   {% endmacro %}
 
+  {% macro standout(prof) %}
+  {#- The zone with the highest PERCENTILE, not the highest share. Head is
+      ~65% for almost every fighter, so "head 71%" is true and says nothing;
+      "legs 88th" identifies the leg kicker. -#}
+  {%- set ns = namespace(best=none, pct=-1) -%}
+  {%- for zone in ['head', 'body', 'leg'] -%}
+    {%- if prof[zone].percentile is not none and prof[zone].percentile > ns.pct -%}
+      {%- set ns.pct = prof[zone].percentile -%}{%- set ns.best = zone -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- if ns.best -%}{{ {'head':'head','body':'body','leg':'legs'}[ns.best] }} {{ prof[ns.best].share }}%{%- else -%}—{%- endif -%}
+  {% endmacro %}
+
+  {% macro silhouette(prof_lands, prof_absorbs, side, name) %}
+  {# A DRAWN FIGURE, not three stacked blocks.
+     What was wrong with the previous attempt, and what this fixes:
+       - arms were fused to the torso, so the outline read as a blob. They are
+         now separate paths with real negative space between arm and ribcage,
+         which is what makes a silhouette legible at 58px.
+       - the head was ~20% of total height (a toddler's proportion). Now ~13%,
+         which is roughly life -- 7.5 heads tall.
+       - the torso was a rounded rectangle. Now a V-taper: shoulders 39 units
+         wide narrowing to a 29-unit waist, which is the single cue that says
+         "athlete" rather than "person icon".
+       - the legs merged into one mass. Now separated with a 3-unit gap,
+         thigh-to-calf taper and a slight stance.
+     Still entirely geometric -- no likeness, nothing traced.
+
+     ZONES BLEND VIA A GRADIENT rather than butting against each other. Hard
+     boundaries at the neck and hips made the figure look assembled from
+     parts, and they also implied a precision the data doesn't have: a strike
+     to the collarbone isn't cleanly "head" or "body". The gradient carries
+     each zone's alpha at its own band and interpolates across the joins. #}
+  {% set uid = (name ~ '-' ~ side) | lower | replace(' ', '') | replace("'", '') | replace('.', '') %}
+  <div class="silhouette-wrap side-{{ side }}">
+    {# Tooltip rides the pointer rather than sitting in a fixed slot below --
+       a readout 100px away from the zone being touched makes the reader look
+       twice to connect them. #}
+    <div class="sil-tip" data-sil-tip></div>
+    <svg viewBox="0 0 100 200" class="silhouette" role="img" aria-label="Striking zones for {{ name }}">
+      <defs>
+        {# userSpaceOnUse IS THE WHOLE FIX for the banding. A linearGradient
+           defaults to objectBoundingBox, which means EVERY path gets its own
+           copy of the ramp scaled to its own box: the torso ran the full
+           head-to-legs gradient across just the torso, each arm ran it across
+           just that arm, and the head ran it across just the head. That is
+           what produced the dark line at the shoulders and the dark cap on
+           the skull -- not a stop problem at all.
+           In user space the gradient is defined once over the figure's real
+           extent (y 6 to 194 in viewBox units) and every path samples the
+           same continuous ramp, so the colour flows through the joins. #}
+        <linearGradient id="sil-{{ uid }}" gradientUnits="userSpaceOnUse"
+                        x1="0" y1="6" x2="0" y2="194">
+          {# STOPS AT ZONE CENTRES, not at zone boundaries.
+             The first version put two stops at each zone's value and ramped
+             between them over ~11% of the figure's height. That is a flat
+             band followed by a fast transition, which the eye reads as a
+             STRIPE with a hard edge -- the opposite of the blend intended.
+             Anchoring each colour at the MIDDLE of its zone instead lets the
+             gradient interpolate across the whole neck and the whole hip:
+             the ramps are now 26% and 42% of the height, so there is no
+             point where the colour changes abruptly.
+             head centre 0.10, torso centre 0.36, legs centre 0.78. #}
+          <stop offset="0" class="sil-stop" data-zone="head"
+                data-lands="{{ prof_lands.head.alpha if prof_lands else 0 }}"
+                data-absorbs="{{ prof_absorbs.head.alpha if prof_absorbs else 0 }}"/>
+          <stop offset="0.10" class="sil-stop" data-zone="head"
+                data-lands="{{ prof_lands.head.alpha if prof_lands else 0 }}"
+                data-absorbs="{{ prof_absorbs.head.alpha if prof_absorbs else 0 }}"/>
+          <stop offset="0.36" class="sil-stop" data-zone="body"
+                data-lands="{{ prof_lands.body.alpha if prof_lands else 0 }}"
+                data-absorbs="{{ prof_absorbs.body.alpha if prof_absorbs else 0 }}"/>
+          <stop offset="0.78" class="sil-stop" data-zone="leg"
+                data-lands="{{ prof_lands.leg.alpha if prof_lands else 0 }}"
+                data-absorbs="{{ prof_absorbs.leg.alpha if prof_absorbs else 0 }}"/>
+          <stop offset="1" class="sil-stop" data-zone="leg"
+                data-lands="{{ prof_lands.leg.alpha if prof_lands else 0 }}"
+                data-absorbs="{{ prof_absorbs.leg.alpha if prof_absorbs else 0 }}"/>
+        </linearGradient>
+      </defs>
+      {% set head_d = "M50,6 C56.5,6 61,11.5 61,19 C61,24 59.5,28.5 57,31.5 C55.5,33.6 54.5,35.2 54.3,37.6 L54.3,40.6 L45.7,40.6 L45.7,37.6 C45.5,35.2 44.5,33.6 43,31.5 C40.5,28.5 39,24 39,19 C39,11.5 43.5,6 50,6 Z" %}
+      {% set torso_d = "M50,39 C55,39 59,40 62,42 C66,44 68.5,47 69.5,52 C70.5,58 70,64 68.5,70 C67,76 65.5,82 64.5,88 C64,93 63.5,97 63.5,101 L36.5,101 C36.5,97 36,93 35.5,88 C34.5,82 33,76 31.5,70 C30,64 29.5,58 30.5,52 C31.5,47 34,44 38,42 C41,40 45,39 50,39 Z" %}
+      {% set arm_r_d = "M72.5,49 C76.5,51 79,55.5 80,61 C81,68 81.5,76 81.3,83 C81.2,89 80.5,95 79.5,100 C79,104 78,106.5 76.5,107 C75,107.3 74.2,106 74,104 C73.5,98 73.3,92 73.3,85 C73.3,77 73,69 72.5,62 Z" %}
+      {% set arm_l_d = "M27.5,49 C23.5,51 21,55.5 20,61 C19,68 18.5,76 18.7,83 C18.8,89 19.5,95 20.5,100 C21,104 22,106.5 23.5,107 C25,107.3 25.8,106 26,104 C26.5,98 26.7,92 26.7,85 C26.7,77 27,69 27.5,62 Z" %}
+      {% set leg_r_d = "M52,101 L63.5,101 C63.3,110 62.8,120 62,130 C61.3,139 60.5,147 60,155 C59.5,163 59,172 58.7,180 C58.5,186 58.3,190 58,192 C57.8,193.5 56.8,194 55.5,194 L53,194 C52,194 51.4,193.3 51.4,192 C51.4,188 51.5,182 51.6,175 C51.8,163 52,150 51.9,135 C52.3,123 52.1,111 52,101 Z" %}
+      {% set leg_l_d = "M48,101 L36.5,101 C36.7,110 37.2,120 38,130 C38.7,139 39.5,147 40,155 C40.5,163 41,172 41.3,180 C41.5,186 41.7,190 42,192 C42.2,193.5 43.2,194 44.5,194 L47,194 C48,194 48.6,193.3 48.6,192 C48.6,188 48.5,182 48.4,175 C48.2,163 48,150 48.1,135 C47.7,123 47.9,111 48,101 Z" %}
+      <g class="sil-base">
+        <path d="{{ head_d }}"/><path d="{{ torso_d }}"/><path d="{{ arm_r_d }}"/>
+        <path d="{{ arm_l_d }}"/><path d="{{ leg_r_d }}"/><path d="{{ leg_l_d }}"/>
+      </g>
+      <g class="sil-fill" fill="url(#sil-{{ uid }})">
+        <path d="{{ head_d }}"/><path d="{{ torso_d }}"/><path d="{{ arm_r_d }}"/>
+        <path d="{{ arm_l_d }}"/><path d="{{ leg_r_d }}"/><path d="{{ leg_l_d }}"/>
+      </g>
+      {# Invisible hit targets on top, one per zone. The figure is drawn as
+         six paths for anatomy, but only three things are MEASURED, so the
+         interactive regions follow the data rather than the drawing: head,
+         torso+arms, both legs. Transparent fill rather than pointer-events on
+         the visible paths, so hit areas never depend on how bright a zone
+         happens to be. #}
+      <g class="sil-hit">
+        <path d="{{ head_d }}" data-zone="head"
+              data-lands="{{ ('head ' ~ prof_lands.head.share ~ '%') if prof_lands else '' }}"
+              data-absorbs="{{ ('head ' ~ prof_absorbs.head.share ~ '%') if prof_absorbs else '' }}"/>
+        <path d="{{ torso_d }}" data-zone="body"
+              data-lands="{{ ('body ' ~ prof_lands.body.share ~ '%') if prof_lands else '' }}"
+              data-absorbs="{{ ('body ' ~ prof_absorbs.body.share ~ '%') if prof_absorbs else '' }}"/>
+        <path d="{{ arm_r_d }}" data-zone="body"
+              data-lands="{{ ('body ' ~ prof_lands.body.share ~ '%') if prof_lands else '' }}"
+              data-absorbs="{{ ('body ' ~ prof_absorbs.body.share ~ '%') if prof_absorbs else '' }}"/>
+        <path d="{{ arm_l_d }}" data-zone="body"
+              data-lands="{{ ('body ' ~ prof_lands.body.share ~ '%') if prof_lands else '' }}"
+              data-absorbs="{{ ('body ' ~ prof_absorbs.body.share ~ '%') if prof_absorbs else '' }}"/>
+        <path d="{{ leg_r_d }}" data-zone="leg"
+              data-lands="{{ ('legs ' ~ prof_lands.leg.share ~ '%') if prof_lands else '' }}"
+              data-absorbs="{{ ('legs ' ~ prof_absorbs.leg.share ~ '%') if prof_absorbs else '' }}"/>
+        <path d="{{ leg_l_d }}" data-zone="leg"
+              data-lands="{{ ('legs ' ~ prof_lands.leg.share ~ '%') if prof_lands else '' }}"
+              data-absorbs="{{ ('legs ' ~ prof_absorbs.leg.share ~ '%') if prof_absorbs else '' }}"/>
+      </g>
+    </svg>
+    {# The proportional bar that used to sit here is gone. It encoded exactly
+       what the figure above already shows -- the same three shares, in a less
+       intuitive form -- so it was asking the reader to check the picture
+       against a chart of the picture. Precise numbers now come from touching
+       a zone, which is where the question is actually asked. #}
+    <div class="sil-legend">
+      {% if not (prof_lands or prof_absorbs) %}<span class="sil-nodata">no profile</span>{% endif %}
+    </div>
+  </div>
+  {% endmacro %}
+
+  {% macro striking_profile_panel(sp, name_a, name_b) %}
+  {% if sp %}
+  <div class="striking-panel">
+    <div class="striking-head">
+      <span class="striking-title">Striking profile</span>
+      {# One control for the whole page, same idiom as the Model column's unit
+         toggle -- two states, one word each, so the width never changes and
+         nothing reflows. #}
+      <button type="button" class="sil-toggle" data-sil-toggle aria-label="Switch between strikes landed and strikes absorbed">
+        <span class="sil-mode">lands</span>
+      </button>
+    </div>
+    <div class="striking-figs">
+      {{ silhouette(sp.a_lands, sp.a_absorbs, 'a', name_a) }}
+      {{ silhouette(sp.b_lands, sp.b_absorbs, 'b', name_b) }}
+    </div>
+    <div class="sil-scale">hold a zone for detail</div>
+    {% if sp.shape %}
+    <div class="fight-shape"><span class="fight-shape-label">{{ sp.shape.label }}</span><span class="fight-shape-detail">{{ sp.shape.detail }}</span></div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endmacro %}
+
   {% macro tale_of_the_tape(comparison, radar_svg, chips=None) %}
   {% if comparison %}
   <div class="market-group-label">{{ icon_ruler() }} Tale of the Tape</div>
@@ -4208,6 +4436,7 @@
       </details>
       {% endif %}
       {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg, fight.preview.spotlight_chips) }}
+      {{ striking_profile_panel(fight.preview.striking_profile, fight.fighter_a, fight.fighter_b) }}
       {{ fighter_compare_table(fight.preview.comparison) }}
       {% endif %}
 
@@ -5111,6 +5340,95 @@
           });
         }
       } catch (e) {}
+    })();
+
+    // Silhouette mode: where he LANDS <-> where he gets HIT.
+    //
+    // Page-wide and sticky, deliberately the same idiom as the Model column's
+    // unit toggle rather than a second interaction pattern for the same kind
+    // of choice. Both datasets are already in the markup, so the swap is
+    // setting fill-opacity from a data attribute -- no recomputation, and the
+    // CSS transition makes the change legible instead of instant.
+    (function() {
+      const KEY = 'oa-sil-mode';
+      let mode = 'lands';
+      try { mode = localStorage.getItem(KEY) === 'absorbs' ? 'absorbs' : 'lands'; } catch (e) {}
+
+      function paint() {
+        // Gradient STOPS now, not zone fills -- the zones blend into each
+        // other via a vertical gradient, so the thing that varies is
+        // stop-opacity at each anatomical band.
+        document.querySelectorAll('.sil-stop').forEach(el => {
+          const v = mode === 'absorbs' ? el.dataset.absorbs : el.dataset.lands;
+          el.style.stopOpacity = v || 0;
+        });
+        // The readout is reveal-on-demand, so repainting only needs to clear
+        // a stale value -- the label itself comes from whichever zone is
+        // being touched or hovered.
+        clearAllTips();
+        document.querySelectorAll('.sil-mode').forEach(el => {
+          el.textContent = mode === 'absorbs' ? 'absorbs' : 'lands';
+        });
+      }
+      // Reveal a zone's share on hover (pointer) or press-and-hold (touch).
+      // Delegated, so it covers fight cards rendered after load.
+      function showZone(path, clientX, clientY) {
+        const wrap = path.closest('.silhouette-wrap');
+        if (!wrap) return;
+        const tip = wrap.querySelector('[data-sil-tip]');
+        if (!tip) return;
+        const v = mode === 'absorbs' ? path.dataset.absorbs : path.dataset.lands;
+        if (!v) { tip.classList.remove('on'); return; }
+        tip.textContent = v;
+        // Positioned relative to the wrap, so it tracks the pointer without
+        // needing page-level coordinates that break inside scrolled panels.
+        const r = wrap.getBoundingClientRect();
+        tip.style.left = (clientX - r.left) + 'px';
+        tip.style.top = (clientY - r.top) + 'px';
+        tip.classList.add('on');
+      }
+      function clearZone(wrap) {
+        const tip = wrap && wrap.querySelector('[data-sil-tip]');
+        if (tip) tip.classList.remove('on');
+      }
+      function clearAllTips() {
+        document.querySelectorAll('.sil-tip.on').forEach(t => t.classList.remove('on'));
+      }
+      document.addEventListener('pointermove', e => {
+        const path = e.target.closest && e.target.closest('.sil-hit path');
+        if (path) showZone(path, e.clientX, e.clientY);
+      });
+      document.addEventListener('pointerout', e => {
+        const path = e.target.closest && e.target.closest('.sil-hit path');
+        if (path) clearZone(path.closest('.silhouette-wrap'));
+      });
+      // Touch: hold to reveal, release to clear. preventDefault on the move
+      // stops the page scrolling out from under a finger that is inspecting.
+      document.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        const el = t && document.elementFromPoint(t.clientX, t.clientY);
+        const path = el && el.closest && el.closest('.sil-hit path');
+        if (path) showZone(path, t.clientX, t.clientY);
+      }, { passive: true });
+      // Dragging a finger across the figure moves the tooltip with it.
+      document.addEventListener('touchmove', e => {
+        const t = e.touches[0];
+        const el = t && document.elementFromPoint(t.clientX, t.clientY);
+        const path = el && el.closest && el.closest('.sil-hit path');
+        if (path) showZone(path, t.clientX, t.clientY); else clearAllTips();
+      }, { passive: true });
+      document.addEventListener('touchend', clearAllTips, { passive: true });
+
+      document.addEventListener('click', e => {
+        if (!e.target.closest('[data-sil-toggle]')) return;
+        mode = mode === 'absorbs' ? 'lands' : 'absorbs';
+        try { localStorage.setItem(KEY, mode); } catch (err) {}
+        paint();
+      });
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', paint, { once: true });
+      } else { paint(); }
+      window.__repaintSilhouettes = paint;
     })();
 
     // Model column unit toggle: probability <-> the model's fair price.

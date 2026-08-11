@@ -84,6 +84,31 @@ MIN_FIGHTS_FOR_STATS = 1     # a single tracked fight still beats a default
 MIN_SIG_STRIKES_ATT = 100    # ~2 fights' worth of output
 MIN_TD_ATT = 5               # own attempts, for accuracy
 MIN_TD_ATT_FACED = 5         # opponents' attempts, for defence
+# Minutes of timed action before a per-minute rate means anything. Roughly
+# two full three-round fights; below that a single early finish dominates.
+MIN_TIMED_MINUTES = 25.0
+
+# The nine positional x target fields ESPN already returns in the same payload
+# the totals come from -- they were simply never extracted. POSITION is where
+# the fight is happening (at range / clinched / on the mat); TARGET is what is
+# being hit (head / body / legs). Together they are the one thing in this
+# dataset that says what KIND of fighter someone is, which nothing on the site
+# currently expresses: the radar says how he finishes, the waterfall says why
+# he wins, neither says where he operates.
+ZONE_FIELDS = {
+    ("distance", "head"): "sigDistanceHeadStrikesLanded",
+    ("distance", "body"): "sigDistanceBodyStrikesLanded",
+    ("distance", "leg"):  "sigDistanceLegStrikesLanded",
+    ("clinch", "head"):   "sigClinchHeadStrikesLanded",
+    ("clinch", "body"):   "sigClinchBodyStrikesLanded",
+    ("clinch", "leg"):    "sigClinchLegStrikesLanded",
+    ("ground", "head"):   "sigGroundHeadStrikesLanded",
+    ("ground", "body"):   "sigGroundBodyStrikesLanded",
+    ("ground", "leg"):    "sigGroundLegStrikesLanded",
+}
+
+# Below this the shares are one fight's gameplan, not a fighter's habits.
+MIN_ZONE_STRIKES = 60
 
 # CONCENTRATION GUARD REMOVED after measuring what it cost.
 #
@@ -250,6 +275,62 @@ def _stats_from_competitor(comp_ref: str) -> dict:
     return out
 
 
+def _fight_minutes(comp_ref: str) -> float | None:
+    """
+    How long the fight actually lasted, in minutes.
+
+    THE CLOCK COUNTS UP, verified rather than assumed. Two three-round
+    decisions both return period=3, clock=300.0 -- a completed 15-minute
+    fight. Elapsed gives 15.00; "remaining" would give 10.00, and a finished
+    round would read 0:00 rather than 5:00. Getting this backwards would turn
+    a round-one finish from 4.2 minutes into 0.8, a 5x error in the
+    denominator of every rate, worst precisely on the finishers whose totals
+    the correction exists to fix.
+
+    `clock` is already seconds, so displayClock never needs parsing.
+    """
+    competition = comp_ref.split("/competitors/")[0].split("?")[0]
+    st = fetch(competition + "/status")
+    if not st:
+        return None
+    period, clock = st.get("period"), st.get("clock")
+    if period is None or clock is None:
+        return None
+    try:
+        return (int(period) - 1) * 5.0 + float(clock) / 60.0
+    except (TypeError, ValueError):
+        return None
+
+
+def _zone_shares(zones: dict, prefix: str) -> dict:
+    """
+    Shares of landed strikes by TARGET (head/body/leg) and by POSITION
+    (distance/clinch/ground).
+
+    Shares, not counts, because the question is what KIND of striker this is,
+    and a high-volume fighter would otherwise dominate every comparison purely
+    on output. Returns None below MIN_ZONE_STRIKES rather than a share built
+    from one night's gameplan.
+
+    NOTE "distance" here means AT RANGE, the striking sense -- deliberately
+    never surfaced to the reader as that word, because in betting "goes the
+    distance" means reaching the judges, and the two would sit inches apart on
+    the same card meaning opposite things.
+    """
+    total = sum(zones.values())
+    if total < MIN_ZONE_STRIKES:
+        return {f"{prefix}_{k}_share": None
+                for k in ("head", "body", "leg", "distance", "clinch", "ground")}
+    out = {}
+    for target in ("head", "body", "leg"):
+        v = sum(n for (pos, tgt), n in zones.items() if tgt == target)
+        out[f"{prefix}_{target}_share"] = round(v / total * 100, 1)
+    for position in ("distance", "clinch", "ground"):
+        v = sum(n for (pos, tgt), n in zones.items() if pos == position)
+        out[f"{prefix}_{position}_share"] = round(v / total * 100, 1)
+    return out
+
+
 def _opponent_ref(comp_ref: str, athlete_id: str) -> str | None:
     """The OTHER competitor under the same competition -- needed for TD defence."""
     competition_url = comp_ref.split("/competitors/")[0].split("?")[0]
@@ -272,10 +353,18 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
         return None
 
     tot = {k: 0.0 for k in ("ssl", "ssa", "tdl", "tda", "opp_tdl", "opp_tda", "kd",
-                            "opp_ssl", "opp_kd")}
+                            "opp_ssl", "opp_kd", "minutes")}
     # Per-fight denominators, so concentration is measured rather than assumed
     # even when the total looks healthy.
     per_fight = {"ssa": [], "tda": [], "opp_tda": []}
+    # Offensive zones (where he lands) and defensive zones (where he is hit).
+    # The defensive side is free: the opponent's row is already fetched for
+    # takedown defence, and its zone fields describe damage taken.
+    zones = {k: 0.0 for k in ZONE_FIELDS}
+    opp_zones = {k: 0.0 for k in ZONE_FIELDS}
+    # Totals restricted to fights whose duration is known, so a rate's
+    # numerator and denominator always describe the same set of bouts.
+    timed = {"ssl": 0.0, "tdl": 0.0, "opp_ssl": 0.0, "minutes": 0.0}
     wtot = dict(tot)
     fights = 0
     now = dt.datetime.now()
@@ -307,6 +396,11 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
                 except ValueError:
                     pass
 
+        # Duration, for per-minute rates. Fights where ESPN gives no usable
+        # status contribute their TOTALS but not their minutes, which would
+        # inflate every rate -- so they are excluded from both sides instead.
+        minutes = _fight_minutes(comp_ref)
+
         opp_ref = _opponent_ref(comp_ref, athlete_id)
         theirs = _stats_from_competitor(opp_ref) if opp_ref else {}
 
@@ -326,12 +420,30 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
             # defence and the field was simply discarded.
             "opp_ssl": theirs.get("sigStrikesLanded", 0.0),
             "opp_kd": theirs.get("knockDowns", 0.0),
+            "minutes": minutes or 0.0,
         }
+        if minutes is None:
+            # No duration: keep the per-FIGHT figures, drop this bout from the
+            # per-MINUTE ones. Counting its strikes against zero minutes would
+            # be worse than omitting it.
+            timed_totals_skip = True
+        else:
+            timed_totals_skip = False
         for k, v in pairs.items():
+            if timed_totals_skip and k == "minutes":
+                continue
             tot[k] += v
             wtot[k] += v * weight
+        if not timed_totals_skip:
+            timed["ssl"] += pairs["ssl"]
+            timed["tdl"] += pairs["tdl"]
+            timed["opp_ssl"] += pairs["opp_ssl"]
+            timed["minutes"] += minutes
         for k in per_fight:
             per_fight[k].append(pairs[k])
+        for key, field in ZONE_FIELDS.items():
+            zones[key] += float(mine.get(field, 0.0) or 0.0)
+            opp_zones[key] += float(theirs.get(field, 0.0) or 0.0)
 
     if fights < MIN_FIGHTS_FOR_STATS:
         return None
@@ -382,6 +494,20 @@ def fighter_stats(athlete_id: str, name: str) -> dict | None:
         # minute: ESPN's payload carries no fight duration, and per-fight is
         # the honest unit for what it actually counts.
         "sig_strikes_absorbed_per_fight": round(tot["opp_ssl"] / fights, 2),
+        **_zone_shares(zones, "strikes"),
+        **_zone_shares(opp_zones, "absorbed"),
+        # PER-MINUTE rates, the inputs a strike/takedown projection needs.
+        # A per-FIGHT average conflates pace with fight length: a finisher's
+        # totals are suppressed by the very trait that makes him dangerous.
+        # Separating rate from duration lets the projection recombine them
+        # with the round-survival grid the method model already produces.
+        "fight_minutes_total": round(timed["minutes"], 1) if timed["minutes"] else None,
+        "sig_strikes_landed_per_min": (round(timed["ssl"] / timed["minutes"], 3)
+                                       if timed["minutes"] >= MIN_TIMED_MINUTES else None),
+        "sig_strikes_absorbed_per_min": (round(timed["opp_ssl"] / timed["minutes"], 3)
+                                         if timed["minutes"] >= MIN_TIMED_MINUTES else None),
+        "td_landed_per_15": (round(timed["tdl"] / timed["minutes"] * 15, 3)
+                             if timed["minutes"] >= MIN_TIMED_MINUTES else None),
         "knockdowns_absorbed_per_fight": round(tot["opp_kd"] / fights, 3),
     }
 

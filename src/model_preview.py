@@ -10,6 +10,8 @@ import pandas as pd
 
 from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg, build_percentile_index
+from src.striking_profile import (build_zone_index, zone_profile, position_profile,
+                                  fight_shape)
 
 # A chip is a claim about a fighter's habits; too few tracked fights and it is
 # a claim about one night. Higher than the radar's floor because a chip states
@@ -555,6 +557,32 @@ def build_fight_preview(
             fighters_df._radar_pct_index = pct_index
         except Exception:
             pass
+    # Zone index, cached on the DataFrame like the radar's. Ranks a fighter
+    # against the WHOLE roster, not the card -- otherwise the same fighter's
+    # silhouette would change shade depending on who he happens to face.
+    zone_index = getattr(fighters_df, "_zone_pct_index", None)
+    if zone_index is None:
+        zone_index = build_zone_index(fighters_df)
+        try:
+            fighters_df._zone_pct_index = zone_index
+        except Exception:
+            pass
+
+    dict_a, dict_b = row_a.to_dict(), row_b.to_dict()
+    pos_a = position_profile(dict_a, zone_index)
+    pos_b = position_profile(dict_b, zone_index)
+    striking_profile = {
+        "a_lands": zone_profile(dict_a, zone_index, "strikes"),
+        "a_absorbs": zone_profile(dict_a, zone_index, "absorbed"),
+        "b_lands": zone_profile(dict_b, zone_index, "strikes"),
+        "b_absorbs": zone_profile(dict_b, zone_index, "absorbed"),
+        "shape": fight_shape(pos_a, pos_b, dict_a, dict_b),
+    }
+    # Omit the whole panel unless at least one fighter has a profile -- an
+    # empty pair of silhouettes invites the reader to wonder what broke.
+    if not (striking_profile["a_lands"] or striking_profile["b_lands"]):
+        striking_profile = None
+
     radar_metrics_a = compute_radar_metrics(row_a.to_dict(), pct_index)
     radar_metrics_b = compute_radar_metrics(row_b.to_dict(), pct_index)
     radar_svg = build_radar_chart_svg(radar_metrics_a, radar_metrics_b, fighter_a, fighter_b)
@@ -578,6 +606,7 @@ def build_fight_preview(
         "narrative": narrative,
         "comparison": comparison,
         "radar_svg": radar_svg,
+        "striking_profile": striking_profile,
         "spotlight_chips": build_spotlight_chips(row_a.to_dict(), row_b.to_dict(),
                                                  fighter_a, fighter_b, pct_index),
         "waterfall": waterfall,
