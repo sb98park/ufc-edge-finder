@@ -45,8 +45,21 @@ POSITIONS = ("distance", "clinch", "ground")
 # Raising the percentile to a power >1 pushes everything below the top down
 # hard, so the same pair now separates ~5x. The floor stays clear of the
 # unshaded figure so "rarely goes there" still never reads as "no data".
-ALPHA_FLOOR = 0.10
-ALPHA_GAMMA = 1.7
+# THREE TIERS, not a smooth ramp -- and colour varies, not just opacity.
+# Opacity alone compresses into a narrow luminance band on a near-black card,
+# so no gamma curve separates the zones much further; changing the COLOUR per
+# tier is the lever that actually works. The bands also read better than a
+# continuous ramp at 78px, where a 5-point percentile difference is invisible
+# anyway and pretending otherwise is false precision.
+#   low  -- a quiet tint, "he rarely goes here"
+#   mid  -- the corner colour proper
+#   high -- brighter and shifted toward the hot end of its own hue (red ->
+#           orange, blue -> cyan), plus a glow layer. Deliberately NOT a
+#           solid corner colour at mid: that leaves the top tier nowhere to
+#           go except the glow.
+# The jump from mid's ceiling (0.60) to high's floor (0.80) is intentional --
+# a visible step is the point.
+TIER_LOW, TIER_HIGH = 30.0, 70.0
 
 
 def _pct_rank(value, sorted_vals) -> float | None:
@@ -80,11 +93,37 @@ def build_zone_index(fighters_df) -> dict:
     return index
 
 
+def _ordinal(n: int) -> str:
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
+
+
+def _tier(pct: float | None) -> str:
+    if pct is None:
+        return "low"
+    if pct >= TIER_HIGH:
+        return "high"
+    return "mid" if pct >= TIER_LOW else "low"
+
+
 def _alpha(pct: float | None) -> float:
+    """Alpha within the tier, so ranking survives inside a band."""
     if pct is None:
         return 0.0
-    x = max(0.0, min(1.0, pct / 100.0))
-    return ALPHA_FLOOR + (1.0 - ALPHA_FLOOR) * (x ** ALPHA_GAMMA)
+    p = max(0.0, min(100.0, pct))
+    if p >= TIER_HIGH:
+        return round(0.80 + 0.20 * (p - TIER_HIGH) / (100.0 - TIER_HIGH), 3)
+    if p >= TIER_LOW:
+        return round(0.38 + 0.22 * (p - TIER_LOW) / (TIER_HIGH - TIER_LOW), 3)
+    return round(0.08 + 0.10 * (p / TIER_LOW), 3)
+
+
+def _glow(pct: float | None) -> float:
+    """Halo strength -- zero below the high tier, so only standouts bloom."""
+    if pct is None or pct < TIER_HIGH:
+        return 0.0
+    return round(0.5 + 0.35 * (pct - TIER_HIGH) / (100.0 - TIER_HIGH), 3)
 
 
 def zone_profile(row: dict, zone_index: dict, prefix: str = "strikes") -> dict | None:
@@ -109,7 +148,18 @@ def zone_profile(row: dict, zone_index: dict, prefix: str = "strikes") -> dict |
         out[zone] = {
             "share": round(share, 1),
             "percentile": None if pct is None else int(round(pct)),
-            "alpha": round(_alpha(pct), 2),
+            "alpha": _alpha(pct),
+            "tier": _tier(pct),
+            "glow": _glow(pct),
+            # THE LABEL MUST CARRY THE PERCENTILE, because that is what the
+            # COLOUR encodes. Showing the raw share alone made the figure look
+            # broken: Makhachev absorbs 49.8% to the head and it renders dim,
+            # while 32.8% to the body renders bright -- correct (head is ~8th
+            # percentile, body ~96th, since the division averages ~65% head)
+            # but indefensible when the tooltip only shows the raw number.
+            # Raw share cannot drive the colour: head is ~65% for nearly
+            # everyone, so every fighter would look identical.
+            "pct_label": None if pct is None else _ordinal(int(round(pct))),
         }
     return out
 

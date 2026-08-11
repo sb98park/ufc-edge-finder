@@ -785,21 +785,36 @@
   }
   .striking-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
   .striking-title { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
-  .sil-toggle {
-    background: none; border: none; padding: 0; cursor: pointer;
-    font-size: 9px; letter-spacing: 0.4px; color: var(--muted);
-    border-bottom: 1px dotted currentColor; opacity: 0.7;
+  .sil-seg {
+    display: flex; justify-content: center; gap: 0; margin: 0 auto 6px;
+    width: max-content; border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.03);
   }
-  .sil-toggle:hover, .sil-toggle:focus-visible { opacity: 1; }
-  /* Width pinned so the two states cannot reflow the header, the same
-     mistake the Model column's "%" -> "odds" marker made. */
-  .sil-mode { display: inline-block; min-width: 6.5ch; text-align: center; }
+  .sil-seg-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 9.5px; font-weight: 600; letter-spacing: 0.3px;
+    padding: 4px 13px; color: var(--muted); transition: all 0.18s ease;
+  }
+  .sil-seg-btn.on { background: rgba(255,255,255,0.10); color: #eceff3; }
+  .sil-seg-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
+  .sil-name {
+    font-size: 9.5px; font-weight: 600; color: #c9ced6;
+    text-align: center; margin-top: 5px;
+  }
 
   .striking-figs { display: flex; justify-content: center; gap: 34px; }
   .silhouette { width: 78px; height: auto; display: block; }
   /* The unshaded figure has to be visible on its own, or a fighter with a
      low profile looks like a rendering failure rather than a low profile. */
-  .sil-base path { fill: rgba(255,255,255,0.085); }
+  /* Darker unshaded body: at 0.085 the base grey competed with the low end
+     of the ramp, flattening the whole figure. */
+  .sil-base { fill: rgba(255,255,255,0.055); }
+  /* Blurred copy UNDER the figure. A CSS drop-shadow was the obvious reach
+     here but it applies to the whole element, and the zones are gradient
+     stops on one path -- there is no per-zone target. A second copy carrying
+     a gradient that is transparent below the high tier gives the halo only
+     where it is earned. */
+  .sil-glow { filter: blur(3px); }
 
   /* var(--blue) DOES NOT EXIST -- the corner variable is --corner-blue, and an
      undefined var() falls back to black, so corner B was painting black on a
@@ -819,7 +834,7 @@
   .sil-legend { text-align: center; margin-top: 6px; }
   /* Hit paths are invisible but clickable. pointer-events must be set
      explicitly: an SVG path with no fill is not hit-testable by default. */
-  .sil-hit path { fill: transparent; pointer-events: all; cursor: default; }
+  .sil-hit rect { fill: transparent; pointer-events: all; cursor: default; }
   /* Fixed height so the readout appearing cannot shift anything below it. */
   .silhouette-wrap { position: relative; }
   .sil-tip {
@@ -2054,8 +2069,33 @@
   .tape-value.right { text-align: right; color: var(--text); }
   .tape-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; flex: 1; text-align: center; }
   .tape-bar-track { display: flex; height: 6px; border-radius: 4px; overflow: hidden; background: var(--panel2); }
-  .tape-bar-a { background: linear-gradient(90deg, transparent, var(--corner-red)); border-radius: 4px 0 0 3px; transition: width 1.4s ease-out; }
-  .tape-bar-b { background: linear-gradient(90deg, var(--corner-blue), transparent); border-radius: 0 3px 3px 0; transition: width 1.4s ease-out; }
+  /* THE JOIN. Two things were wrong; the FADE that was tried alongside them
+     was not one of them and has been reverted -- the hard red|blue meeting
+     is the intended look.
+     1. Each half carried its OWN border-radius (4px 0 0 3px / 0 3px 3px 0)
+        inside a track that already clips at 4px with overflow:hidden.
+        Double-rounding left a crescent of track background at the outer
+        corners, and the radii were asymmetric top-to-bottom (4px top-left
+        against 3px bottom-left), so the cap really was lopsided. The track
+        does the rounding now; the children are square.
+     2. Two flex children with fractional widths (63.7% / 36.3%) put their
+        shared edge on a sub-pixel. The browser rounds one side and leaves a
+        hairline where the track shows through, which reads as the blue being
+        overlaid and sitting a fraction low. A 1px negative margin makes the
+        halves overlap instead of abut, so there is no edge to round: blue
+        paints over fully-opaque red, invisibly.
+     If a misalignment survives this, the cause is the two elements being
+     rasterised separately and the fix is one element with a single
+     two-stop gradient -- no second box, so no seam is possible. */
+  .tape-bar-a {
+    background: linear-gradient(90deg, transparent, var(--corner-red));
+    transition: width 1.4s ease-out;
+  }
+  .tape-bar-b {
+    margin-left: -1px;
+    background: linear-gradient(90deg, var(--corner-blue), transparent);
+    transition: width 1.4s ease-out;
+  }
 
   .radar-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
   .radar-chart { display: block; max-width: 100%; height: auto; }
@@ -3150,6 +3190,14 @@
         media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 </head>
 <body>
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  {# THE FIGURE, DEFINED ONCE. It was inlined three times per silhouette
+     (base, fill, clip) and there are two silhouettes per fight -- 40KB a
+     fight, 519KB on a 13-fight card, on a page already near 280KB. As a
+     single <defs> path referenced by <use>, every copy costs ~40 bytes,
+     which is also what makes a fourth (glow) layer affordable. #}
+  <defs><path id="oa-fighter" d="M47.34,5.52C49.21,5.0 51.2,5.21 53.03,5.78C54.22,6.18 55.45,6.71 56.23,7.74C56.8,8.54 57.63,9.13 58.08,10.01C58.81,11.44 59.28,13.03 59.21,14.65C59.14,15.95 59.03,17.25 58.76,18.53C59.3,18.27 59.94,18.52 59.94,19.17C59.94,20.47 59.58,21.75 59.18,22.99C58.89,23.82 58.41,24.9 57.34,24.76C57.23,25.99 56.86,27.17 56.35,28.29C56.27,30.11 56.17,31.98 56.57,33.77C57.28,36.06 59.7,36.95 61.64,37.95C63.35,38.67 64.96,39.88 66.89,39.9C67.59,39.91 68.21,40.27 68.82,40.6C69.91,41.19 71.15,41.48 72.14,42.25C73.1,42.98 73.71,44.06 74.2,45.15C75.1,47.33 75.64,49.68 75.59,52.05C75.63,53.95 75.13,55.85 75.49,57.74C75.93,59.58 76.42,61.42 76.56,63.31C76.83,66.03 76.51,68.84 77.33,71.49C77.77,72.84 78.25,74.19 78.48,75.6C78.78,77.39 78.88,79.2 79.09,81.0C79.42,84.02 79.23,87.06 78.91,90.07C78.77,92.1 78.41,94.11 78.49,96.15C78.49,97.24 78.72,98.32 78.85,99.22C78.87,100.04 78.6,100.89 78.79,101.87C79.04,103.32 79.13,104.85 79.34,106.44C79.42,107.58 79.71,108.7 79.67,109.86C79.52,110.57 78.98,111.11 78.71,111.78C78.11,113.14 77.77,114.59 76.95,115.78C76.41,116.2 75.74,116.44 75.16,116.77C73.94,117.44 72.63,118.06 71.29,118.18C71.1,118.2 70.97,117.99 70.85,117.87C70.68,117.71 70.52,117.54 70.37,117.38C70.3,117.32 70.25,117.25 70.22,117.19C70.12,116.99 70.32,116.71 70.39,116.54C70.47,116.34 70.59,116.15 70.74,115.98C70.88,115.81 71.06,115.67 71.28,115.57C71.33,115.55 72.03,115.37 72.05,115.46C72.0,115.02 71.84,114.44 72.27,114.15C72.84,113.86 73.5,113.78 74.14,113.6C74.25,112.95 74.48,112.32 74.68,111.67C74.68,110.84 74.65,110.0 74.68,109.15C74.27,108.74 73.83,108.37 73.32,108.11C72.53,109.75 72.8,111.73 71.8,113.19C71.32,113.95 69.92,113.69 69.7,112.76C69.53,111.12 70.08,109.54 70.43,107.93C70.73,106.63 70.5,105.3 70.84,104.06C71.1,103.06 71.58,102.14 72.28,101.4C72.75,100.88 73.37,100.42 73.5,99.8C73.65,99.2 73.62,98.63 73.56,98.12C73.03,94.77 72.28,91.45 71.43,88.16C70.28,83.79 69.49,79.29 69.47,74.76C69.48,72.36 68.64,70.1 68.07,67.81C67.79,66.82 67.63,65.79 67.31,64.81C66.51,68.46 65.21,72.06 65.16,75.83C65.1,77.81 65.86,79.7 65.93,81.67C66.02,82.78 65.77,83.91 66.07,85.01C66.37,86.18 66.83,87.31 67.17,88.48C67.97,91.04 68.49,93.7 68.65,96.39C68.6,101.38 69.31,106.61 69.52,112.52C70.83,119.74 70.04,127.28 67.85,134.67C67.47,135.96 67.43,137.27 67.37,138.55C67.3,140.48 66.68,142.44 67.1,144.35C67.57,146.53 68.23,148.67 68.54,150.88C69.15,154.76 68.61,158.69 68.18,162.57C67.72,165.99 67.3,169.43 66.6,172.81C66.22,174.78 65.68,176.75 65.83,178.78C65.86,179.65 66.12,180.48 66.25,181.34C66.33,182.01 66.1,182.66 66.11,183.32C66.54,184.11 67.13,184.8 67.49,185.63C67.99,186.74 68.61,187.82 69.56,188.6C70.57,189.58 71.94,190.36 72.39,191.77C72.44,192.18 72.63,192.74 72.27,193.06C71.09,194.0 69.61,194.44 68.14,194.6C67.76,194.6 67.43,194.41 67.09,194.29C66.22,194.95 65.01,194.9 64.02,194.56C63.45,194.22 63.01,193.69 62.46,193.32C61.48,192.56 62.0,191.19 61.51,190.2C60.59,189.89 59.38,189.43 59.35,188.28C59.46,186.98 60.04,185.73 59.83,184.4C59.96,182.82 58.8,181.34 59.45,179.79C60.31,177.45 60.05,174.92 59.73,172.5C59.35,169.82 58.9,167.15 58.31,164.51C57.87,162.44 57.32,160.38 57.1,158.27C56.8,155.23 57.21,152.18 57.25,149.14C57.3,146.78 56.03,144.7 55.35,142.51C54.11,138.94 54.04,135.12 53.18,131.4C52.35,127.15 51.22,123.02 50.8,118.84C50.65,115.94 50.34,113.02 50.28,110.05C50.09,110.05 49.9,110.06 49.71,110.06C49.63,114.09 49.19,117.99 48.86,121.92C48.15,125.69 47.04,129.48 46.4,133.36C45.77,136.26 45.61,139.22 44.74,142.01C44.22,143.72 43.47,145.35 43.01,147.08C42.58,148.74 42.82,150.46 42.93,152.15C43.03,154.1 43.11,156.06 42.99,158.01C42.76,160.72 41.89,163.32 41.41,165.99C40.88,168.86 40.34,171.74 40.08,174.65C39.94,176.24 39.98,177.88 40.46,179.41C40.65,180.15 41.03,180.92 40.75,181.68C40.2,183.35 39.98,185.17 40.42,186.89C40.56,187.59 40.82,188.39 40.42,189.06C40.03,189.75 39.14,189.79 38.57,190.24C38.06,191.14 38.49,192.34 37.81,193.17C37.28,193.66 36.68,194.06 36.14,194.55C35.11,195.0 33.79,194.91 32.89,194.2C32.5,194.42 32.07,194.7 31.6,194.55C30.35,194.27 29.05,193.97 28.0,193.2C27.34,192.7 27.65,191.73 27.99,191.13C28.87,189.86 30.23,189.04 31.28,187.92C32.12,187.03 32.39,185.8 33.04,184.79C33.33,184.29 33.74,183.85 33.91,183.29C33.9,182.71 33.75,182.14 33.76,181.56C33.82,180.9 34.01,180.26 34.11,179.61C34.44,177.83 34.09,176.03 33.75,174.28C32.75,169.59 32.13,164.82 31.58,160.06C31.26,156.73 31.03,153.34 31.64,150.03C31.94,148.06 32.53,146.15 32.92,144.2C33.24,142.69 32.88,141.15 32.67,139.62C32.44,138.18 32.57,136.76 32.26,135.31C31.97,133.88 31.38,132.5 31.0,131.09C29.77,125.93 29.37,120.68 29.94,115.86C30.26,114.27 30.42,112.6 30.78,110.84C30.95,106.48 31.28,102.48 31.2,98.99C31.33,96.37 31.46,93.73 32.09,91.18C32.52,89.2 33.22,87.28 33.82,85.35C34.19,84.23 33.96,83.05 34.03,81.9C34.08,79.85 34.87,77.9 34.77,75.84C34.68,72.1 33.44,68.54 32.64,64.93C32.16,65.65 32.2,66.58 31.93,67.38C31.39,69.97 30.35,72.5 30.49,75.19C30.56,77.73 30.16,80.25 29.8,82.76C29.4,85.62 28.53,88.38 27.88,91.2C27.34,93.55 26.83,95.92 26.49,98.25C26.4,99.03 26.31,100.06 27.17,100.83C28.12,101.79 28.95,102.96 29.23,104.32C29.48,105.49 29.27,106.72 29.58,107.92C29.96,109.52 30.51,111.1 30.34,112.72C30.2,113.74 28.69,113.99 28.22,113.19C27.32,111.72 27.46,109.83 26.7,108.21C26.16,108.49 25.56,108.79 25.27,109.37C25.27,110.16 25.35,110.94 25.32,111.72C25.48,112.36 25.7,112.98 25.82,113.63C26.53,113.8 27.28,113.83 27.91,114.18C28.29,114.48 28.2,114.99 28.04,115.4C28.49,115.47 29.03,115.45 29.32,115.8C29.56,116.27 29.72,116.77 30.0,117.18C30.0,117.19 29.54,117.45 29.5,117.48C29.35,117.57 29.22,117.7 29.16,117.84C29.11,117.95 29.08,118.16 28.92,118.21C28.85,118.22 28.78,118.21 28.72,118.2C28.41,118.14 28.08,118.12 27.77,118.05C27.43,117.96 27.11,117.85 26.78,117.73C26.12,117.46 25.48,117.13 24.83,116.8C24.19,116.46 23.37,116.24 22.99,115.6C22.04,114.09 21.77,112.23 20.7,110.68C20.21,110.02 20.39,109.18 20.49,108.44C20.83,106.23 20.95,104.07 21.28,102.05C21.42,101.27 21.35,100.55 21.23,99.89C21.09,99.05 21.47,98.09 21.51,97.02C21.63,94.56 21.26,92.11 21.03,89.67C20.73,86.51 20.58,83.31 20.92,80.14C21.09,78.49 21.16,76.83 21.49,75.2C21.86,73.28 22.79,71.51 22.98,69.56C23.29,66.68 23.11,63.75 23.68,60.9C23.97,59.32 24.49,57.77 24.49,56.16C24.44,54.21 24.1,52.25 24.33,50.3C24.52,48.34 25.08,46.41 25.93,44.64C26.51,43.42 27.43,42.33 28.64,41.71C29.56,41.24 30.53,40.87 31.46,40.42C32.63,39.86 34.0,40.0 35.18,39.45C37.16,38.58 39.13,37.66 41.01,36.58C42.17,35.9 43.26,34.86 43.48,33.47C43.72,31.96 43.59,30.43 43.56,28.92C43.61,28.12 43.07,27.49 42.89,26.75C42.71,26.11 42.64,25.44 42.53,24.79C42.09,24.85 41.55,24.86 41.28,24.44C40.46,23.21 40.18,21.71 39.94,20.27C39.88,19.76 39.79,19.21 40.01,18.72C40.16,18.34 40.6,18.45 40.93,18.44C40.4,15.58 40.27,12.44 41.69,9.8C42.11,8.95 42.96,8.46 43.54,7.74C44.49,6.57 45.91,5.91 47.34,5.52Z"/></defs>
+</svg>
   {# ANIMATED SPLASH.
      iOS launch images are static PNGs -- that's a platform limit, not a
      choice. This picks up where the PNG hands over: identical mark, identical
@@ -3994,135 +4042,87 @@
   {% endmacro %}
 
   {% macro silhouette(prof_lands, prof_absorbs, side, name) %}
-  {# A DRAWN FIGURE, not three stacked blocks.
-     What was wrong with the previous attempt, and what this fixes:
-       - arms were fused to the torso, so the outline read as a blob. They are
-         now separate paths with real negative space between arm and ribcage,
-         which is what makes a silhouette legible at 58px.
-       - the head was ~20% of total height (a toddler's proportion). Now ~13%,
-         which is roughly life -- 7.5 heads tall.
-       - the torso was a rounded rectangle. Now a V-taper: shoulders 39 units
-         wide narrowing to a 29-unit waist, which is the single cue that says
-         "athlete" rather than "person icon".
-       - the legs merged into one mass. Now separated with a 3-unit gap,
-         thigh-to-calf taper and a slight stance.
-     ANATOMY OVER GEOMETRY, converged over several rounds of critique.
-       PROPORTION is what finally fixed the "big baby" read: an adult male's
-     crotch sits at ~50% of total height, and this figure was at 55.3% --
-     long torso, stubby legs, which is literally infant proportion. Legs
-     lengthened and the crotch raised to 50.7%; the figure is 7.3 heads tall.
-       ARMS reach MID-THIGH (fist bottom y125, thigh spans 101-148). Hands
-     ending at the hip is a child's reach and reinforced the same illusion.
-       TORSO is widest at the DELTOIDS (48 units) and narrows continuously --
-     42.8 ribs, 34.4 waist, 33.2 hips. An earlier version peaked low and
-     bulged through the obliques, which reads as a belly. The trap-to-deltoid
-     line widens on the way down and that is correct; only the oblique bulge
-     below it was wrong.
-       NECK thickens downward (13.6 -> 16.4 -> 26.8) into squared traps, no
-     pinch at the skull.
-       NO FLAT BAR anywhere near the hips: the torso sweeps to a crotch notch
-     and each leg's top is an arc up to the outer hip. Straight "L" segments
-     were the actual defect behind "box torso", "robotic inseam" and
-     "assembled from parts", and survived three redraws because I kept
-     adjusting curves instead of grepping the path data for L commands.
-       LEGS -- thigh 14 pinching to 7.6 at the knee, calf swelling to 10.7.
-     ARMS -- straight hang, wrist narrows before an upright oval fist.
-     NOTE: if the figure is ever rescaled, re-check that the gradient stop
-     offsets (0.10 / 0.36 / 0.78 of y6-y194) still land inside head / torso /
-     legs. They are fractions of the SVG, not of the anatomy.
-     Still entirely geometric -- no likeness, nothing traced.
+  {# LICENSED VECTOR (Adobe Stock, standard licence) -- replaces the
+     hand-authored geometric figure, which went ~15 rounds of critique and
+     never stopped reading as a mannequin. The structural reason: it was
+     generated by mirroring one authored half, so it was perfectly bilaterally
+     symmetric, and no amount of curve or proportion work fixes that. This one
+     is drawn from a real stance -- weight on one leg, shoulders and hips
+     slightly offset -- which is what makes it read as a person.
 
-     ZONES BLEND VIA A GRADIENT rather than butting against each other. Hard
-     boundaries at the neck and hips made the figure look assembled from
-     parts, and they also implied a precision the data doesn't have: a strike
-     to the collarbone isn't cleanly "head" or "body". The gradient carries
-     each zone's alpha at its own band and interpolates across the joins. #}
+     ONE PATH, no zone splitting. The old macro cut the body into head/torso/
+     leg shapes that had to meet at exact shared nodes, which was fiddly and
+     fragile. That is unnecessary now: the gradient is in USER SPACE, so a
+     single path is shaded head-to-legs by the vertical ramp regardless of how
+     it is drawn. Hit-testing likewise doesn't need to follow anatomy -- three
+     invisible rectangles over the head, torso and leg BANDS do the same job.
+
+     LANDMARKS were measured off the path, not guessed: a scanline of the
+     flattened outline shows the neck pinch at y36 (the narrowest row in the
+     top third) and the legs separating into two spans at y115. The gradient
+     stops sit at each zone's CENTRE (y20 / y75 / y155 as fractions of the
+     y5-y195 span) so the colour blends across the joins instead of banding.
+     If the figure is ever rescaled, re-derive these -- the offsets are
+     fractions of the SVG, not of the anatomy.
+
+     TWO EDITS to the licensed vector, applied as smooth displacement fields
+     over the control points rather than by hand:
+       GLOVES -- the fists (measured at y102-118, centred x25 / x75) are
+     expanded 16% radially about each centre, easing to zero at an 11-unit
+     radius, so they read as 4oz gloves rather than bare hands.
+       FIGHT SHORTS -- the outer thigh flares 1.6 units between y110 and the
+     hem at y142, and the inner thigh edges draw together by 1.25, closing a
+     crotch gap that was only 2.8 units wide at y118 and read as a slit.
+     The outer flare and the gap closure MUST use disjoint x regions. Keying
+     the flare on x<50 also caught the inner edges and pulled them apart, so
+     the gap came out WIDER than before -- the opposite of the intent. Outer
+     is now x<43 or x>57; inner is 43<=x<=57. #}
   {% set uid = (name ~ '-' ~ side) | lower | replace(' ', '') | replace("'", '') | replace('.', '') %}
   <div class="silhouette-wrap side-{{ side }}">
-    {# Tooltip rides the pointer rather than sitting in a fixed slot below --
-       a readout 100px away from the zone being touched makes the reader look
-       twice to connect them. #}
     <div class="sil-tip" data-sil-tip></div>
-    <svg viewBox="0 0 100 196" class="silhouette" role="img" aria-label="Striking zones for {{ name }}">
+    <svg viewBox="0 0 100 200" class="silhouette" role="img" aria-label="Striking zones for {{ name }}">
       <defs>
-        {# userSpaceOnUse IS THE WHOLE FIX for the banding. A linearGradient
-           defaults to objectBoundingBox, which means EVERY path gets its own
-           copy of the ramp scaled to its own box: the torso ran the full
-           head-to-legs gradient across just the torso, each arm ran it across
-           just that arm, and the head ran it across just the head. That is
-           what produced the dark line at the shoulders and the dark cap on
-           the skull -- not a stop problem at all.
-           In user space the gradient is defined once over the figure's real
-           extent (y 6 to 194 in viewBox units) and every path samples the
-           same continuous ramp, so the colour flows through the joins. #}
-        <linearGradient id="sil-{{ uid }}" gradientUnits="userSpaceOnUse"
-                        x1="0" y1="10" x2="0" y2="190">
-          {# STOPS AT ZONE CENTRES, not at zone boundaries.
-             The first version put two stops at each zone's value and ramped
-             between them over ~11% of the figure's height. That is a flat
-             band followed by a fast transition, which the eye reads as a
-             STRIPE with a hard edge -- the opposite of the blend intended.
-             Anchoring each colour at the MIDDLE of its zone instead lets the
-             gradient interpolate across the whole neck and the whole hip:
-             the ramps are now 26% and 42% of the height, so there is no
-             point where the colour changes abruptly.
-             head centre 0.10, torso centre 0.36, legs centre 0.78. #}
-          <stop offset="0" class="sil-stop" data-zone="head"
-                data-lands="{{ prof_lands.head.alpha if prof_lands else 0 }}"
-                data-absorbs="{{ prof_absorbs.head.alpha if prof_absorbs else 0 }}"/>
-          <stop offset="0.10" class="sil-stop" data-zone="head"
-                data-lands="{{ prof_lands.head.alpha if prof_lands else 0 }}"
-                data-absorbs="{{ prof_absorbs.head.alpha if prof_absorbs else 0 }}"/>
-          <stop offset="0.34" class="sil-stop" data-zone="body"
-                data-lands="{{ prof_lands.body.alpha if prof_lands else 0 }}"
-                data-absorbs="{{ prof_absorbs.body.alpha if prof_absorbs else 0 }}"/>
-          <stop offset="0.74" class="sil-stop" data-zone="leg"
-                data-lands="{{ prof_lands.leg.alpha if prof_lands else 0 }}"
-                data-absorbs="{{ prof_absorbs.leg.alpha if prof_absorbs else 0 }}"/>
-          <stop offset="1" class="sil-stop" data-zone="leg"
-                data-lands="{{ prof_lands.leg.alpha if prof_lands else 0 }}"
-                data-absorbs="{{ prof_absorbs.leg.alpha if prof_absorbs else 0 }}"/>
+        <linearGradient id="sil-{{ uid }}" gradientUnits="userSpaceOnUse" x1="0" y1="5" x2="0" y2="195">
+          {% for off, z in [(0,'head'),(0.08,'head'),(0.37,'body'),(0.79,'leg'),(1,'leg')] %}
+          <stop offset="{{ off }}" class="sil-stop tier-{{ prof_lands[z].tier if prof_lands else 'low' }}" data-zone="{{ z }}"
+                data-lands="{{ prof_lands[z].alpha if prof_lands else 0 }}"
+                data-absorbs="{{ prof_absorbs[z].alpha if prof_absorbs else 0 }}"
+                data-lands-tier="{{ prof_lands[z].tier if prof_lands else 'low' }}"
+                data-absorbs-tier="{{ prof_absorbs[z].tier if prof_absorbs else 'low' }}"/>
+          {% endfor %}
         </linearGradient>
+        {# GLOW GRADIENT -- zero everywhere except high-tier zones, so the
+           blurred layer beneath the figure haloes only the standouts rather
+           than fogging the whole body. #}
+        <linearGradient id="silglow-{{ uid }}" gradientUnits="userSpaceOnUse" x1="0" y1="5" x2="0" y2="195">
+          {% for off, z in [(0,'head'),(0.08,'head'),(0.37,'body'),(0.79,'leg'),(1,'leg')] %}
+          <stop offset="{{ off }}" class="sil-stop tier-high"
+                data-lands="{{ prof_lands[z].glow if prof_lands else 0 }}"
+                data-absorbs="{{ prof_absorbs[z].glow if prof_absorbs else 0 }}"/>
+          {% endfor %}
+        </linearGradient>
+        <clipPath id="silclip-{{ uid }}"><use href="#oa-fighter"/></clipPath>
       </defs>
-      {% set head_d = "M50,45.0 C51.5,45.0 52.8,45.0 54.25,45.0 C54.25,43.0 54.25,41.0 54.25,39.25 C57.6,37.4 62.34,32.5 62.34,24.5 C62.34,15.5 57.2,10.0 50.0,10.0 C42.8,10.0 37.66,15.5 37.66,24.5 C37.66,32.5 42.4,37.4 45.75,39.25 C45.75,41.0 45.75,43.0 45.75,45.0 C47.2,45.0 48.5,45.0 50,45.0 Z" %}
-      {% set torso_d = "M50,45.0 C51.5,45.0 52.8,45.0 54.25,45.0 C58.0,47.4 66.0,52.0 74.0,56.4 C76.8,58.6 78.2,61.0 78.4,64.5 C78.8,72.0 78.6,82.0 77.8,88.0 C77.2,89.8 76.8,91.0 76.6,92.0 C77.0,97.0 77.4,102.0 77.2,108.0 C76.8,112.0 76.2,115.6 75.6,118.0 C76.6,120.0 77.0,122.4 76.6,125.2 C76.2,128.0 74.2,129.8 71.6,129.8 C69.0,129.8 67.2,128.0 67.4,124.8 C67.6,122.0 68.4,119.6 69.8,118.4 C70.2,114.6 70.6,110.0 70.8,105.0 C70.9,100.0 71.1,95.5 71.4,92.0 C71.6,90.6 71.8,89.4 72.0,88.0 C71.6,82.0 71.0,73.0 70.6,66.0 C70.4,62.0 70.2,60.2 69.4,59.6 C68.6,59.1 68.2,60.6 68.2,64.0 C67.6,72.0 66.4,80.0 64.4,88.0 C64.2,90.8 65.0,93.0 65.84,95.0 C60.0,94.0 55.0,93.4 50.0,93.4 C45.0,93.4 40.0,94.0 34.16,95.0 C35.0,93.0 35.8,90.8 35.6,88.0 C33.6,80.0 32.4,72.0 31.8,64.0 C31.8,60.6 31.4,59.1 30.6,59.6 C29.8,60.2 29.6,62.0 29.4,66.0 C29.0,73.0 28.4,82.0 28.0,88.0 C28.2,89.4 28.4,90.6 28.6,92.0 C28.9,95.5 29.1,100.0 29.2,105.0 C29.4,110.0 29.8,114.6 30.2,118.4 C31.6,119.6 32.4,122.0 32.6,124.8 C32.8,128.0 31.0,129.8 28.4,129.8 C25.8,129.8 23.8,128.0 23.4,125.2 C23.0,122.4 23.4,120.0 24.4,118.0 C23.8,115.6 23.2,112.0 22.8,108.0 C22.6,102.0 23.0,97.0 23.4,92.0 C23.2,91.0 22.8,89.8 22.2,88.0 C21.4,82.0 21.2,72.0 21.6,64.5 C21.8,61.0 23.2,58.6 26.0,56.4 C34.0,52.0 42.0,47.4 45.75,45.0 C47.2,45.0 48.5,45.0 50,45.0 Z" %}
-      {% set leg_r_d = "M50,93.4 C55.0,93.4 60.0,94.0 65.84,95.0 C66.2,102.02 66.0,109.46 65.2,116.43 C64.4,123.41 63.4,130.38 62.6,136.42 C62.1,140.15 61.8,142.94 61.7,145.26 C62.4,149.91 63.1,155.03 63.3,160.14 C63.5,165.71 63.1,171.77 62.4,176.88 C62.0,180.6 61.6,183.85 61.4,186.18 C61.2,188.41 60.1,189.35 58.3,189.35 C56.8,189.35 55.7,189.35 55.2,189.35 C53.4,189.35 52.6,188.41 52.6,186.37 C52.6,183.76 52.7,180.6 52.9,176.88 C53.2,171.77 53.5,165.71 53.5,160.14 C53.5,155.03 53.8,149.91 54.3,145.26 C54.1,142.94 53.9,140.15 53.6,136.42 C53.6,130.38 53.2,123.41 52.8,116.43 C52.4,109.46 51.4,100.62 50.0,95.6 Z" %}
-      {% set leg_l_d = "M50,93.4 C45.0,93.4 40.0,94.0 34.16,95.0 C33.8,102.02 34.0,109.46 34.8,116.43 C35.6,123.41 36.6,130.38 37.4,136.42 C37.9,140.15 38.2,142.94 38.3,145.26 C37.6,149.91 36.9,155.03 36.7,160.14 C36.5,165.71 36.9,171.77 37.6,176.88 C38.0,180.6 38.4,183.85 38.6,186.18 C38.8,188.41 39.9,189.35 41.7,189.35 C43.2,189.35 44.3,189.35 44.8,189.35 C46.6,189.35 47.4,188.41 47.4,186.37 C47.4,183.76 47.3,180.6 47.1,176.88 C46.8,171.77 46.5,165.71 46.5,160.14 C46.5,155.03 46.2,149.91 45.7,145.26 C45.9,142.94 46.1,140.15 46.4,136.42 C46.4,130.38 46.8,123.41 47.2,116.43 C47.6,109.46 48.6,100.62 50.0,95.6 Z" %}
-      <g class="sil-base">
-        <path d="{{ head_d }}"/><path d="{{ torso_d }}"/>
-        <path d="{{ leg_r_d }}"/><path d="{{ leg_l_d }}"/>
-      </g>
-      <g class="sil-fill" fill="url(#sil-{{ uid }})">
-        <path d="{{ head_d }}"/><path d="{{ torso_d }}"/>
-        <path d="{{ leg_r_d }}"/><path d="{{ leg_l_d }}"/>
-      </g>
-      {# Invisible hit targets on top, one per zone. The figure is drawn as
-         six paths for anatomy, but only three things are MEASURED, so the
-         interactive regions follow the data rather than the drawing: head,
-         torso+arms, both legs. Transparent fill rather than pointer-events on
-         the visible paths, so hit areas never depend on how bright a zone
-         happens to be. #}
-      <g class="sil-hit">
-        <path d="{{ head_d }}" data-zone="head"
-              data-lands="{{ ('head ' ~ prof_lands.head.share ~ '%') if prof_lands else '' }}"
-              data-absorbs="{{ ('head ' ~ prof_absorbs.head.share ~ '%') if prof_absorbs else '' }}"/>
-        <path d="{{ torso_d }}" data-zone="body"
-              data-lands="{{ ('body ' ~ prof_lands.body.share ~ '%') if prof_lands else '' }}"
-              data-absorbs="{{ ('body ' ~ prof_absorbs.body.share ~ '%') if prof_absorbs else '' }}"/>
-        <path d="{{ leg_r_d }}" data-zone="leg"
-              data-lands="{{ ('legs ' ~ prof_lands.leg.share ~ '%') if prof_lands else '' }}"
-              data-absorbs="{{ ('legs ' ~ prof_absorbs.leg.share ~ '%') if prof_absorbs else '' }}"/>
-        <path d="{{ leg_l_d }}" data-zone="leg"
-              data-lands="{{ ('legs ' ~ prof_lands.leg.share ~ '%') if prof_lands else '' }}"
-              data-absorbs="{{ ('legs ' ~ prof_absorbs.leg.share ~ '%') if prof_absorbs else '' }}"/>
+      <use class="sil-glow" href="#oa-fighter" fill="url(#silglow-{{ uid }})"/>
+      <use class="sil-base" href="#oa-fighter"/>
+      <use class="sil-fill" href="#oa-fighter" fill="url(#sil-{{ uid }})"/>
+      <g class="sil-hit" clip-path="url(#silclip-{{ uid }})">
+        <rect x="0" y="0" width="100" height="36" data-zone="head"
+              data-lands="{{ ('head ' ~ prof_lands.head.share ~ '%  ' ~ prof_lands.head.pct_label ~ ' pct') if prof_lands else '' }}"
+              data-absorbs="{{ ('head ' ~ prof_absorbs.head.share ~ '%  ' ~ prof_absorbs.head.pct_label ~ ' pct') if prof_absorbs else '' }}"/>
+        <rect x="0" y="36" width="100" height="79" data-zone="body"
+              data-lands="{{ ('body ' ~ prof_lands.body.share ~ '%  ' ~ prof_lands.body.pct_label ~ ' pct') if prof_lands else '' }}"
+              data-absorbs="{{ ('body ' ~ prof_absorbs.body.share ~ '%  ' ~ prof_absorbs.body.pct_label ~ ' pct') if prof_absorbs else '' }}"/>
+        <rect x="0" y="115" width="100" height="85" data-zone="leg"
+              data-lands="{{ ('legs ' ~ prof_lands.leg.share ~ '%  ' ~ prof_lands.leg.pct_label ~ ' pct') if prof_lands else '' }}"
+              data-absorbs="{{ ('legs ' ~ prof_absorbs.leg.share ~ '%  ' ~ prof_absorbs.leg.pct_label ~ ' pct') if prof_absorbs else '' }}"/>
       </g>
     </svg>
-    {# The proportional bar that used to sit here is gone. It encoded exactly
-       what the figure above already shows -- the same three shares, in a less
-       intuitive form -- so it was asking the reader to check the picture
-       against a chart of the picture. Precise numbers now come from touching
-       a zone, which is where the question is actually asked. #}
     <div class="sil-legend">
+      {# Two unlabelled figures side by side left the reader matching colours
+         back to the radar legend above. Surname only -- it fits under a 78px
+         figure and is unambiguous on a two-man card. #}
+      <div class="sil-name">{{ name.split()[-1] }}</div>
       {% if not (prof_lands or prof_absorbs) %}<span class="sil-nodata">no profile</span>{% endif %}
     </div>
   </div>
@@ -4133,12 +4133,15 @@
   <div class="striking-panel">
     <div class="striking-head">
       <span class="striking-title">Striking profile</span>
-      {# One control for the whole page, same idiom as the Model column's unit
-         toggle -- two states, one word each, so the width never changes and
-         nothing reflows. #}
-      <button type="button" class="sil-toggle" data-sil-toggle aria-label="Switch between strikes landed and strikes absorbed">
-        <span class="sil-mode">lands</span>
-      </button>
+    </div>
+    {# A SEGMENTED CONTROL, both options visible. The previous version was a
+       single word that flipped between "lands" and "absorbs" -- which meant
+       the reader had to already know the other state existed, and gave no
+       clue that the two figures had just changed meaning. Showing both makes
+       the choice legible and the active state obvious. #}
+    <div class="sil-seg" role="group" aria-label="Strike zone view">
+      <button type="button" class="sil-seg-btn" data-sil-mode="lands">Lands</button>
+      <button type="button" class="sil-seg-btn" data-sil-mode="absorbs">Absorbs</button>
     </div>
     <div class="striking-figs">
       {{ silhouette(sp.a_lands, sp.a_absorbs, 'a', name_a) }}
@@ -5390,13 +5393,20 @@
         document.querySelectorAll('.sil-stop').forEach(el => {
           const v = mode === 'absorbs' ? el.dataset.absorbs : el.dataset.lands;
           el.style.stopOpacity = v || 0;
+          // Tier drives COLOUR, so it has to follow the mode too -- a zone
+          // can be high on "lands" and low on "absorbs".
+          const t = mode === 'absorbs' ? el.dataset.absorbsTier : el.dataset.landsTier;
+          if (t) {
+            el.classList.remove('tier-low', 'tier-mid', 'tier-high');
+            el.classList.add('tier-' + t);
+          }
         });
         // The readout is reveal-on-demand, so repainting only needs to clear
         // a stale value -- the label itself comes from whichever zone is
         // being touched or hovered.
         clearAllTips();
-        document.querySelectorAll('.sil-mode').forEach(el => {
-          el.textContent = mode === 'absorbs' ? 'absorbs' : 'lands';
+        document.querySelectorAll('.sil-seg-btn').forEach(b => {
+          b.classList.toggle('on', b.dataset.silMode === mode);
         });
       }
       // Reveal a zone's share on hover (pointer) or press-and-hold (touch).
@@ -5424,11 +5434,11 @@
         document.querySelectorAll('.sil-tip.on').forEach(t => t.classList.remove('on'));
       }
       document.addEventListener('pointermove', e => {
-        const path = e.target.closest && e.target.closest('.sil-hit path');
+        const path = e.target.closest && e.target.closest('.sil-hit rect');
         if (path) showZone(path, e.clientX, e.clientY);
       });
       document.addEventListener('pointerout', e => {
-        const path = e.target.closest && e.target.closest('.sil-hit path');
+        const path = e.target.closest && e.target.closest('.sil-hit rect');
         if (path) clearZone(path.closest('.silhouette-wrap'));
       });
       // Touch: hold to reveal, release to clear. preventDefault on the move
@@ -5436,21 +5446,24 @@
       document.addEventListener('touchstart', e => {
         const t = e.touches[0];
         const el = t && document.elementFromPoint(t.clientX, t.clientY);
-        const path = el && el.closest && el.closest('.sil-hit path');
+        const path = el && el.closest && el.closest('.sil-hit rect');
         if (path) showZone(path, t.clientX, t.clientY);
       }, { passive: true });
       // Dragging a finger across the figure moves the tooltip with it.
       document.addEventListener('touchmove', e => {
         const t = e.touches[0];
         const el = t && document.elementFromPoint(t.clientX, t.clientY);
-        const path = el && el.closest && el.closest('.sil-hit path');
+        const path = el && el.closest && el.closest('.sil-hit rect');
         if (path) showZone(path, t.clientX, t.clientY); else clearAllTips();
       }, { passive: true });
       document.addEventListener('touchend', clearAllTips, { passive: true });
 
       document.addEventListener('click', e => {
-        if (!e.target.closest('[data-sil-toggle]')) return;
-        mode = mode === 'absorbs' ? 'lands' : 'absorbs';
+        const btn = e.target.closest('[data-sil-mode]');
+        if (!btn) return;
+        // Set the chosen mode directly rather than flipping -- tapping the
+        // already-active side must be a no-op, not a switch away from it.
+        mode = btn.dataset.silMode === 'absorbs' ? 'absorbs' : 'lands';
         try { localStorage.setItem(KEY, mode); } catch (err) {}
         paint();
       });
