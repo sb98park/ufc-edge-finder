@@ -871,21 +871,82 @@ def _fetch_from_wikipedia(event_name: str) -> list[dict]:
     unverified against a live page, since this sandbox has no network
     access to check it against a real one.
     """
-    search_params = {"action": "opensearch", "search": event_name, "namespace": "0", "limit": "1", "format": "json"}
-    try:
-        search_resp = requests.get(WIKIPEDIA_OPENSEARCH_URL, params=search_params, headers=WIKIPEDIA_HEADERS, timeout=REQUEST_TIMEOUT)
-        search_resp.raise_for_status()
-        search_data = search_resp.json()
-    except (requests.RequestException, ValueError) as e:
-        print(f"[results_fetcher] wikipedia fallback: search failed for {event_name!r}: {e}")
-        return []
+    # OPENSEARCH IS A PREFIX MATCH, which is why this failed on the one card
+    # it was needed for: Wikipedia titles the page "UFC 330", and the query
+    # "UFC 330: Makhachev vs. Machado Garry" is LONGER than the title, so it
+    # can never be a prefix of it and the search returned nothing. The log
+    # said "no page match", which reads like Wikipedia lacks the page rather
+    # than the query being unusable.
+    # Fixed with a ladder, shortest-risk first: the full name (right for the
+    # Fight Nights that DO carry fighters in the title), then the part before
+    # the colon ("UFC 330"), then a real full-text search, which is not
+    # prefix-bound and finds oddly-titled events like the Noche cards.
+    def _numeric_token(name):
+        m = re.search(r"\bUFC\s+(\d{2,4})\b", name)
+        return m.group(1) if m else None
 
-    # OpenSearch response shape: [query, [titles], [descriptions], [urls]]
-    urls = search_data[3] if len(search_data) > 3 else []
-    if not urls:
-        print(f"[results_fetcher] wikipedia fallback: no page match for {event_name!r}")
+    want_number = _numeric_token(event_name)
+
+    def _plausible(title):
+        # Guard against landing on a fighter's biography or the wrong
+        # numbered event. If the name carries a number, the page must too.
+        low = str(title or "").lower()
+        if "ufc" not in low and "noche" not in low:
+            return False
+        if want_number and want_number not in low:
+            return False
+        return True
+
+    queries = [event_name]
+    if ":" in event_name:
+        head = event_name.split(":")[0].strip()
+        if head and head not in queries:
+            queries.append(head)
+
+    url = None
+    for q in queries:
+        params = {"action": "opensearch", "search": q, "namespace": "0", "limit": "5", "format": "json"}
+        try:
+            r = requests.get(WIKIPEDIA_OPENSEARCH_URL, params=params, headers=WIKIPEDIA_HEADERS, timeout=REQUEST_TIMEOUT)
+            r.raise_for_status()
+            data = r.json()
+        except (requests.RequestException, ValueError) as e:
+            print(f"[results_fetcher] wikipedia fallback: search failed for {q!r}: {e}")
+            continue
+        titles = data[1] if len(data) > 1 else []
+        urls = data[3] if len(data) > 3 else []
+        for t, u in zip(titles, urls):
+            if _plausible(t):
+                url = u
+                if q != event_name:
+                    print(f"[results_fetcher] wikipedia fallback: {event_name!r} resolved via {q!r} -> {t!r}")
+                break
+        if url:
+            break
+
+    if not url:
+        # Full-text search: not prefix-bound, so it catches titles that share
+        # no leading substring with the event name at all.
+        params = {"action": "query", "list": "search", "srsearch": event_name,
+                  "srlimit": "5", "format": "json"}
+        try:
+            r = requests.get(WIKIPEDIA_OPENSEARCH_URL, params=params, headers=WIKIPEDIA_HEADERS, timeout=REQUEST_TIMEOUT)
+            r.raise_for_status()
+            hits = r.json().get("query", {}).get("search", [])
+        except (requests.RequestException, ValueError) as e:
+            print(f"[results_fetcher] wikipedia fallback: full-text search failed: {e}")
+            hits = []
+        for h in hits:
+            if _plausible(h.get("title")):
+                title = h["title"]
+                url = "https://en.wikipedia.org/wiki/" + title.replace(" ", "_")
+                print(f"[results_fetcher] wikipedia fallback: {event_name!r} resolved by full-text search -> {title!r}")
+                break
+
+    if not url:
+        print(f"[results_fetcher] wikipedia fallback: no page match for {event_name!r} "
+              f"(tried {queries} and a full-text search)")
         return []
-    url = urls[0]
 
     try:
         resp = requests.get(url, headers=WIKIPEDIA_HEADERS, timeout=REQUEST_TIMEOUT)

@@ -98,7 +98,21 @@ def build_timelines(ids: dict) -> dict:
         log = _cached(EVENTLOG.format(id=aid))
         if not log:
             continue
-        for e in (log.get("events") or {}).get("items") or []:
+        # ALL PAGES. The eventlog paginates at 25, so any fighter with a
+        # longer career was silently truncated to his 25 most recent fights --
+        # and since the oldest drop first, every timeline built here started
+        # mid-career. Any conclusion drawn from a truncated history is drawn
+        # from a different fighter.
+        _ev = log.get("events") or {}
+        _items = list(_ev.get("items") or [])
+        try:
+            _pages = int(_ev.get("pageCount") or 1)
+        except (TypeError, ValueError):
+            _pages = 1
+        for _pg in range(2, _pages + 1):
+            _more = _cached(EVENTLOG.format(id=aid) + f"?page={_pg}")
+            _items += ((_more or {}).get("events") or {}).get("items") or []
+        for e in _items:
             if not e.get("played"):
                 continue
             cr = (e.get("competitor") or {}).get("$ref")

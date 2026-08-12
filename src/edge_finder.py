@@ -355,7 +355,11 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
     for fid, g in props.groupby("fight_id"):
         pos = str(g.get("card_position", pd.Series([""])).iloc[0] or "").strip()
         widest = g["_line"].dropna().max() if g["_line"].notna().any() else 0
-        _sched_by_fight[fid] = 5 if (pos == "Main Event" or (widest or 0) > 3) else 3
+        # The widest priced line is an INDEPENDENT signal -- a book offering
+        # Over 4.5 has told us this is a five-rounder regardless of how the
+        # card_position column reads -- so it stays alongside the shared rule
+        # rather than being folded into it.
+        _sched_by_fight[fid] = 5 if (_is_five_round(g.iloc[0]) or (widest or 0) > 3) else 3
 
     for (fight_id, line), group in props.groupby(["fight_id", "_line"]):
         scheduled = _sched_by_fight.get(fight_id, 3)
@@ -513,9 +517,7 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
             # is always positive. The clipping warning surfaced it on the
             # first run after being added, which is exactly what it's for.
             elo_gap=_rating_gap(effective_ratings, row),
-            # Title fights are five rounds wherever they sit -- see card_matcher.
-            scheduled_rounds=5 if (str(row.get("card_position", "")).strip() == "Main Event"
-                                   or bool(row.get("is_title_fight"))) else 3,
+            scheduled_rounds=_scheduled_rounds(row),
         )
         if not _dist:
             continue
@@ -621,9 +623,7 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
             sub_rate_sum=sub_a + sub_b,
             durability=kol_a + kol_b,
             elo_gap=gap,
-            # Title fights are five rounds wherever they sit -- see card_matcher.
-            scheduled_rounds=5 if (str(row.get("card_position", "")).strip() == "Main Event"
-                                   or bool(row.get("is_title_fight"))) else 3,
+            scheduled_rounds=_scheduled_rounds(row),
         )
         if not dist:
             continue

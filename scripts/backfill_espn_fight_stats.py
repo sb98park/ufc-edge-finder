@@ -344,11 +344,43 @@ def _opponent_ref(comp_ref: str, athlete_id: str) -> str | None:
     return None
 
 
-def fighter_stats(athlete_id: str, name: str) -> dict | None:
+def eventlog_items(athlete_id: str) -> list:
+    """
+    EVERY page of a fighter's eventlog, not just the first.
+
+    ESPN's core API paginates at pageSize 25 and reports count / pageIndex /
+    pageCount alongside the items. Reading `items` and stopping meant every
+    fighter with more than 25 professional fights was silently truncated to
+    his 25 most recent -- and because the oldest fights are the ones dropped,
+    the loss always fell on the early-career end.
+
+    Found via Sumudaerji: eventlog reported 24 played fights, his ESPN history
+    page listed 27. count=28, pageSize=25, pageCount=2. Page two held exactly
+    the three missing bouts.
+
+    This is not a niche case. Everything derived from this endpoint inherited
+    the truncation: per-fight striking and takedown stats, fight durations and
+    so every per-minute rate, the zone shares behind the striking profile, and
+    both validation harnesses. A veteran's numbers were computed from a career
+    that stopped 25 fights ago.
+    """
     log = fetch(EVENTLOG.format(id=athlete_id))
     if not log:
-        return None
-    items = (log.get("events") or {}).get("items") or []
+        return []
+    ev = log.get("events") or {}
+    items = list(ev.get("items") or [])
+    try:
+        pages = int(ev.get("pageCount") or 1)
+    except (TypeError, ValueError):
+        pages = 1
+    for page in range(2, pages + 1):
+        more = fetch(f"{EVENTLOG.format(id=athlete_id)}?page={page}")
+        items += ((more or {}).get("events") or {}).get("items") or []
+    return items
+
+
+def fighter_stats(athlete_id: str, name: str) -> dict | None:
+    items = eventlog_items(athlete_id)
     if not items:
         return None
 

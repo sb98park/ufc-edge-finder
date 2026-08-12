@@ -12,6 +12,7 @@ import pandas as pd
 from src.rationale import explain_edge, explain_favorite_pick
 from src.model_preview import build_fight_preview, build_full_market_projection
 from src.method_model import finish_share_before
+from src.fight_format import is_five_round as _is_five_round, scheduled_rounds as _scheduled_rounds
 from src.odds_utils import implied_prob_to_american, format_american_odds
 
 
@@ -280,8 +281,7 @@ def _reconcile_round_props(rows: list[dict], fight: dict,
     # 0.999 for BOTH Under 3.5 and Under 4.5 -- there are no rounds 4 or 5 in
     # that table to tell them apart -- so two distinct lines came out sharing
     # one probability. lint_site.py's round-monotonic check caught it.
-    scheduled = 5 if (str(fight.get("card_position", "")).strip() == "Main Event"
-                      or bool(fight.get("is_title_fight"))) else 3
+    scheduled = _scheduled_rounds(fight)
 
     out = []
     matched = 0
@@ -457,8 +457,7 @@ def group_edges_by_card(
         # belts. Deriving this from card_position alone silently modelled such
         # a fight as three rounds: wrong round distribution, wrong finish
         # probability, wrong Over/Under lines, and no error anywhere to notice.
-        is_five_round = (str(row.get("card_position", "")).strip() == "Main Event"
-                         or str(row.get("is_title_fight", "")).strip().lower() == "true")
+        is_five_round = _is_five_round(row)
         if fighters_df is not None and effective_ratings is not None:
             try:
                 preview = build_fight_preview(
@@ -557,8 +556,7 @@ def group_edges_by_card(
         if fighters_df is not None and effective_ratings is not None:
             live_markets = {e["market"] for e in fight["edges"]}
             # Same rule as above -- see the note there.
-            is_five_round = (str(fight.get("card_position", "")).strip() == "Main Event"
-                             or bool(fight.get("is_title_fight")))
+            is_five_round = _is_five_round(fight)
             projection = build_full_market_projection(
                 fight["fighter_a"], fight["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round
             , fight_history_df=fight_history_df)
