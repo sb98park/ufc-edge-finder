@@ -35,6 +35,80 @@ def load():
     return open(RENDERED, encoding="utf-8").read()
 
 
+# Elements that never take a closing tag. SVG is in here too: the silhouette
+# panel emits <use>, <stop>, <rect> and <path> constantly, and treating any of
+# them as an open element would bury the real result in false positives.
+VOID_TAGS = {
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
+    "meta", "param", "source", "track", "wbr",
+    "circle", "ellipse", "line", "path", "polygon", "polyline", "rect",
+    "stop", "use", "image", "animate", "fegaussianblur", "fefunca",
+}
+
+
+def check_html_tag_balance(c):
+    """
+    An unclosed <div> in a Jinja macro takes the WHOLE PAGE down while every
+    other check here passes.
+
+    That is exactly what happened: the silhouette macro lost one </div>, so
+    every fight card's contents were swallowed into the figure's wrapper and
+    the layout collapsed into a single column. CSS braces balanced, the JS
+    parsed, no Jinja leaked, every market check was happy -- because none of
+    them look at markup structure. The browser silently repairs bad nesting,
+    which is why it renders something rather than erroring, and why the damage
+    shows up as a bizarre layout instead of a stack trace.
+
+    Reports the first mismatch with a line number, which is what makes it
+    actionable -- "somewhere a div is unclosed" is nearly as bad as no check.
+    """
+    # Script and style bodies are NOT markup. JS is full of `i < len` and
+    # `a --> b`, and a stylesheet can hold `content: "<"`. Scanning them for
+    # tags produces garbage, so blank them out first while preserving line
+    # numbers so the reported location still means something.
+    def blank(m):
+        return m.group(0)[:m.start(1) - m.start(0)] + \
+               re.sub(r"[^\n]", " ", m.group(1)) + \
+               m.group(0)[m.end(1) - m.start(0):]
+
+    body = re.sub(r"<script\b[^>]*>(.*?)</script>", blank, c, flags=re.DOTALL | re.IGNORECASE)
+    body = re.sub(r"<style\b[^>]*>(.*?)</style>", blank, body, flags=re.DOTALL | re.IGNORECASE)
+    body = re.sub(r"<!--.*?-->", lambda m: re.sub(r"[^\n]", " ", m.group(0)), body, flags=re.DOTALL)
+
+    stack = []
+    checked = 0
+    # Attribute values may legitimately contain '>' (a title string, a JSON
+    # blob). A naive [^>]* ends the tag at the first one and desynchronises
+    # the whole stack, so quoted runs are consumed whole.
+    tag_re = re.compile(r"""<(/?)([a-zA-Z][a-zA-Z0-9:-]*)"""
+                        r"""((?:[^>"']|"[^"]*"|'[^']*')*)(/?)>""")
+    for m in tag_re.finditer(body):
+        closing, tag, attrs, selfclose = m.group(1), m.group(2).lower(), m.group(3), m.group(4)
+        if tag in VOID_TAGS or selfclose == "/":
+            continue
+        if tag in ("!doctype",):
+            continue
+        line = body[:m.start()].count("\n") + 1
+        if not closing:
+            stack.append((tag, line))
+            checked += 1
+        else:
+            if not stack:
+                return fail("html-balance",
+                            f"line {line}: </{tag}> with nothing open")
+            open_tag, open_line = stack.pop()
+            if open_tag != tag:
+                return fail("html-balance",
+                            f"line {line}: </{tag}> closes <{open_tag}> "
+                            f"opened at line {open_line}")
+    if stack:
+        tag, line = stack[0]
+        extra = f" (+{len(stack) - 1} more)" if len(stack) > 1 else ""
+        return fail("html-balance",
+                    f"<{tag}> opened at line {line} is never closed{extra}")
+    print(f"       [html-balance] {checked} element(s), all balanced")
+
+
 def check_css_braces(c):
     """
     A stray } silently kills EVERY rule after it. Cost ~8 rounds: the CSS was
@@ -559,6 +633,7 @@ def check_plausibility(c):
 def main():
     c = load()
     check_css_braces(c)
+    check_html_tag_balance(c)
     check_js_syntax(c)
     check_deferred_inits(c)
     check_swipe_exclusions(c)
