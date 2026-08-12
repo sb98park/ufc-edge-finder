@@ -276,14 +276,17 @@ def build_spotlight_chips(row_a: dict, row_b: dict, name_a: str, name_b: str,
 
     CHIPS = [
         # column, label, direction, high-threshold, low-threshold, phrasing
+        # SHORT PHRASING. These now sit inside the Striking Profile panel, so
+        # "significant strikes" is implied by context -- spelling it out
+        # pushed every chip onto two lines and made the row read as a wall.
         ("knockdowns_per_fight", "knockdowns per fight", True, 90, 10,
-         "{v:.2f} knockdowns per fight"),
+         "{v:.2f} knockdowns/fight"),
         ("sig_strikes_att_per_fight", "striking volume", True, 90, 10,
-         "{v:.0f} significant strikes thrown per fight"),
+         "throws {v:.0f} strikes/fight"),
         ("sig_strikes_absorbed_per_fight", "damage taken", False, 90, 10,
-         "absorbs {v:.0f} significant strikes per fight"),
+         "absorbs {v:.0f} strikes/fight"),
         ("td_att_faced_per_fight", "takedown attempts faced", False, 90, 10,
-         "faces {v:.1f} takedown attempts per fight"),
+         "faces {v:.1f} takedowns/fight"),
     ]
     out = []
     for row, name in ((row_a, name_a), (row_b, name_b)):

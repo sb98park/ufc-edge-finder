@@ -670,6 +670,13 @@ def group_edges_by_card(
                     "clob_token_id": e.get("clob_token_id"),
                     "label": build_market_label(e.get("fighter"), e.get("market")),
                     "selection": e.get("selection"),
+                    # Kept in the Edges view but MARKED. A near-certain market
+                    # is where a thin book quote does the most damage to an
+                    # edge number, and the reader asked to still see these --
+                    # a genuine quick-finisher can make a 0.5 line sharp.
+                    # Flagging beats deleting: the disagreement is real, the
+                    # size of it is what cannot be trusted.
+                    "fragile_price": price_is_fragile(e),
                 })
             for r in model_only:
                 merged.append({
@@ -786,6 +793,97 @@ def _sample_size_flag(fighter_field: str, fighters_df: pd.DataFrame | None) -> d
     return thinnest
 
 
+# ---------------------------------------------------------------------------
+# WHICH MARKETS BELONG IN A "PICK"
+#
+# Favorite Picks was filling up with "Not KO/TKO", "Not SUB" and Total Rounds
+# Over/Under 0.5 -- none of which anyone would actually bet, and two of which
+# are not independent opinions at all.
+#
+# 1. COMPLEMENTS SAY NOTHING NEW. Polymarket prices each method as a binary,
+#    so "Not KO/TKO" is exactly 1 minus "KO/TKO". If the model has an edge on
+#    one it has the mirror edge on the other by construction -- surfacing both
+#    is the same view twice, and it crowds out real picks. The fight-card
+#    tables already dropped these; picks never did.
+#
+# 2. NEAR-CERTAIN LINES ARE WHERE EDGES ARE LEAST TRUSTWORTHY. "Over 0.5
+#    rounds" asks whether a fight passes 2:30 of round one -- true ~95% of the
+#    time. At that end of the scale a small pricing error produces an enormous
+#    apparent edge, and a thin Polymarket book is exactly where such errors
+#    live. Observed: Magny/Brahimaj Over 0.5 quoted -178 (implying 64%) against
+#    a model -551. The model is closer to right, but the "edge" is a bad quote,
+#    not alpha. The payout is also negligible, so even a real edge there is
+#    not worth a slot.
+#    Deliberately NOT deleted from the Edges tab -- a genuine quick-finisher
+#    can make a 0.5 line sharp, and the tab exists to show every disagreement.
+#    It is flagged there instead, so the reader knows to distrust the price.
+#
+# 3. WHAT SURVIVES is what a person actually bets: moneyline, how the fight
+#    ends (KO/TKO, Submission, Decision), and round totals at lines where both
+#    outcomes are live.
+# ---------------------------------------------------------------------------
+
+# A 3-round fight turns on 1.5/2.5; a 5-rounder on 2.5/3.5/4.5. 0.5 is a
+# formality and 5.5 cannot happen.
+PICKABLE_ROUND_LINES = {1.5, 2.5, 3.5, 4.5}
+CENTRAL_ROUND_LINES = {2.5, 3.5}     # the ones worth leading with
+
+# Below/above these the market is a near-certainty and the price is fragile.
+NEAR_CERTAIN_HI = 0.90
+NEAR_CERTAIN_LO = 0.10
+
+
+def is_complement_market(row) -> bool:
+    """True for 'Not X' / 'Ends In Finish' rows, which mirror another row."""
+    mkt = str(row.get("market", "") or "").lower().replace(" ", "")
+    txt = f"{row.get('market','')} {row.get('selection','')}".lower()
+    if mkt.startswith("fightmethod") and "not" in txt.split(":")[-1]:
+        return True
+    if "endsinfinish" in txt.replace(" ", ""):
+        return True
+    if re.search(r"\bnot\b", str(row.get("selection", "") or "").lower()):
+        return True
+    return False
+
+
+def round_line_of(row):
+    """The X.5 in a round-total market, or None if this isn't one."""
+    txt = f"{row.get('market','')} {row.get('selection','')}"
+    if "round" not in txt.lower():
+        return None
+    m = re.search(r"(\d+\.5)", txt)
+    return float(m.group(1)) if m else None
+
+
+def is_pickable_market(row) -> bool:
+    """Would a person actually place this bet? Gate for Favorite Picks."""
+    if is_complement_market(row):
+        return False
+    line = round_line_of(row)
+    if line is not None and line not in PICKABLE_ROUND_LINES:
+        return False
+    return True
+
+
+def price_is_fragile(row) -> bool:
+    """
+    Flag an edge that rests on a near-certain outcome.
+
+    Not a claim the model is wrong -- it is usually closer to right than the
+    book here. It is a claim that the EDGE NUMBER is unreliable, because at
+    95% true probability the difference between a good and a bad quote is
+    worth tens of points of implied probability and the payout is a few
+    cents on the dollar either way.
+    """
+    try:
+        mp = float(row.get("model_prob"))
+    except (TypeError, ValueError):
+        return False
+    if mp != mp:
+        return False
+    return mp >= NEAR_CERTAIN_HI or mp <= NEAR_CERTAIN_LO
+
+
 def top_favorite_picks(
     edges_df: pd.DataFrame, fighters_df: pd.DataFrame | None = None, n: int = 5,
     min_odds: float = -220, max_odds: float = 160, min_edge: float = 3.0, min_model_prob: float = 0.55,
@@ -818,11 +916,32 @@ def top_favorite_picks(
         & (edges_df["odds_american"] >= min_odds)
         & (edges_df["odds_american"] <= max_odds)
         & (edges_df["model_prob"] >= min_model_prob)
+        & (edges_df["model_prob"] < NEAR_CERTAIN_HI)
     ].copy()
     if candidates.empty:
         return []
+    # Only markets a person would actually bet -- see is_pickable_market.
+    candidates = candidates[candidates.apply(is_pickable_market, axis=1)]
+    if candidates.empty:
+        return []
 
-    candidates = candidates.sort_values("model_prob", ascending=False)
+    # Lead with the markets the reader asked for -- moneyline and how the
+    # fight ends -- then central round totals, then the rest. Sorting by
+    # model_prob alone put a 1.5-round line above a moneyline simply because
+    # near-certain outcomes carry the highest probabilities by definition.
+    def _market_rank(row):
+        mkt = str(row.get("market", "") or "").lower()
+        if mkt.startswith("moneyline"):
+            return 0
+        if "method" in mkt or "outcome" in mkt:
+            return 1
+        line = round_line_of(row)
+        if line in CENTRAL_ROUND_LINES:
+            return 2
+        return 3
+
+    candidates["_rank"] = candidates.apply(_market_rank, axis=1)
+    candidates = candidates.sort_values(["_rank", "model_prob"], ascending=[True, False])
     seen_fights = set()
     picks = []
     for _, row in candidates.iterrows():
@@ -830,7 +949,9 @@ def top_favorite_picks(
         if fight_id in seen_fights:
             continue
         seen_fights.add(fight_id)
-        picks.append(row.to_dict())
+        d = row.to_dict()
+        d.pop("_rank", None)
+        picks.append(d)
         if len(picks) >= n:
             break
 

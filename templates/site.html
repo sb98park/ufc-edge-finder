@@ -777,11 +777,18 @@
      text-selection gesture, so inspecting a zone fought the OS: the selection
      highlight and callout appeared over the figure and swallowed the touch.
      Long-press is this panel's primary interaction, so it has to own it. */
-  .striking-panel {
-    margin: 14px 0 2px;
-    -webkit-user-select: none; user-select: none;
+  .striking-panel { margin: 14px 0 2px; }
+  /* PAGE-WIDE, not just the striking panel. Scoping it there still left every
+     other pill and label long-pressable, and iOS answers a long press with
+     the selection handles and the copy callout -- which fights the one
+     gesture this page uses for inspection. Inputs keep normal behaviour. */
+  body {
+    -webkit-user-select: none; -moz-user-select: none; user-select: none;
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
+  }
+  input, textarea, [contenteditable] {
+    -webkit-user-select: text; user-select: text;
   }
   .striking-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
   .striking-title { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
@@ -861,11 +868,16 @@
 
   .spotlight-chip-row { justify-content: center; }
   /* Corner tint binds a chip to a fighter without repeating the legend. */
-  .spotlight-chip.side-a { box-shadow: inset 3px 0 0 var(--red); }
-  .spotlight-chip.side-b { box-shadow: inset 3px 0 0 var(--blue); }
+  .spotlight-chip.side-a { box-shadow: inset 3px 0 0 var(--corner-red); }
+  .spotlight-chip.side-b { box-shadow: inset 3px 0 0 var(--corner-blue); }
   .spotlight-chip.good { color: #7ee2a8; background: rgba(126,226,168,0.10); border-color: rgba(126,226,168,0.28); }
   .spotlight-chip.bad  { color: #ff8f8f; background: rgba(255,92,92,0.10);  border-color: rgba(255,92,92,0.28); }
   .spotlight-chip .pct { opacity: 0.72; font-weight: 500; }
+  /* A near-certain market keeps its row but loses its confident styling --
+     the disagreement with the book is real, the SIZE of it is not
+     trustworthy when a fight passing 2:30 of round one is ~95% either way. */
+  .edge-fragile { opacity: 0.55; }
+  .edge-flag { font-size: 9px; vertical-align: super; opacity: 0.8; margin-left: 1px; }
   .fight-cancelled .spotlight-chip-row { opacity: 0.45; filter: saturate(0.35); }
 
   .fun-fact-chip-row {
@@ -931,8 +943,8 @@
 
 
   /* Corner tint binds a chip to a fighter without repeating the legend. */
-  .spotlight-chip.side-a { box-shadow: inset 3px 0 0 var(--red); }
-  .spotlight-chip.side-b { box-shadow: inset 3px 0 0 var(--blue); }
+  .spotlight-chip.side-a { box-shadow: inset 3px 0 0 var(--corner-red); }
+  .spotlight-chip.side-b { box-shadow: inset 3px 0 0 var(--corner-blue); }
   .spotlight-chip.good { color: #7ee2a8; background: rgba(126,226,168,0.10); border-color: rgba(126,226,168,0.28); }
   .spotlight-chip.bad  { color: #ff8f8f; background: rgba(255,92,92,0.10);  border-color: rgba(255,92,92,0.28); }
   .spotlight-chip .pct { opacity: 0.72; font-weight: 500; }
@@ -4018,15 +4030,7 @@
     {% endif %}
   {% endmacro %}
 
-  {% macro spotlight_chips(chips) %}
-  {% if chips %}
-  <div class="spotlight-chip-row">
-    {% for c in chips %}
-    <div class="spotlight-chip {{ c.tone }}">{{ c.fighter }}: {{ c.text }} <span class="pct">({{ c.percentile_label }} pct)</span></div>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% endmacro %}
+
 
   {% macro standout(prof) %}
   {#- The zone with the highest PERCENTILE, not the highest share. Head is
@@ -4128,8 +4132,8 @@
   </div>
   {% endmacro %}
 
-  {% macro striking_profile_panel(sp, name_a, name_b) %}
-  {% if sp %}
+  {% macro striking_profile_panel(sp, name_a, name_b, chips=None) %}
+  {% if sp or chips %}
   <div class="striking-panel">
     <div class="striking-head">
       <span class="striking-title">Striking profile</span>
@@ -4143,19 +4147,34 @@
       <button type="button" class="sil-seg-btn" data-sil-mode="lands">Lands</button>
       <button type="button" class="sil-seg-btn" data-sil-mode="absorbs">Absorbs</button>
     </div>
+    {% if sp %}
     <div class="striking-figs">
       {{ silhouette(sp.a_lands, sp.a_absorbs, 'a', name_a) }}
       {{ silhouette(sp.b_lands, sp.b_absorbs, 'b', name_b) }}
     </div>
     <div class="sil-scale">hold a zone for detail</div>
-    {% if sp.shape %}
+    {% endif %}
+    {# CHIPS BELONG HERE, not floating between the radar and the tape bars.
+       They are volume facts -- how MUCH a fighter throws and takes -- and the
+       silhouettes above are distribution: WHERE it lands. Read together they
+       are one striking picture, and the order is per-fighter facts first,
+       then the matchup conclusion (fight shape) last. Surname only: the full
+       name pushed every chip onto two lines. #}
+    {% if chips %}
+    <div class="spotlight-chip-row">
+      {% for c in chips %}
+      <div class="spotlight-chip {{ c.tone }} side-{{ c.side }}">{{ c.fighter.split()[-1] }} {{ c.text }} <span class="pct">{{ c.percentile_label }} pct</span></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if sp and sp.shape %}
     <div class="fight-shape"><span class="fight-shape-label">{{ sp.shape.label }}</span><span class="fight-shape-detail">{{ sp.shape.detail }}</span></div>
     {% endif %}
   </div>
   {% endif %}
   {% endmacro %}
 
-  {% macro tale_of_the_tape(comparison, radar_svg, chips=None) %}
+  {% macro tale_of_the_tape(comparison, radar_svg) %}
   {% if comparison %}
   <div class="market-group-label">{{ icon_ruler() }} Tale of the Tape</div>
   {% if radar_svg %}
@@ -4165,19 +4184,7 @@
       <span class="radar-legend-item"><span class="radar-dot a"></span>{{ comparison.a.name }}</span>
       <span class="radar-legend-item"><span class="radar-dot b"></span>{{ comparison.b.name }}</span>
     </div>
-    {# Chips live INSIDE the radar block, directly under the legend, because
-       they annotate the radar -- they name the extreme the chart can only
-       imply. Floating after the comparison bars left them attached to
-       nothing. Tinted to the corner colour the legend just established, so
-       which fighter a chip describes is carried by colour rather than
-       repeated in text. #}
-    {% if chips %}
-    <div class="spotlight-chip-row">
-      {% for c in chips %}
-      <div class="spotlight-chip {{ c.tone }} side-{{ c.side }}">{{ c.fighter }}: {{ c.text }} <span class="pct">({{ c.percentile_label }} pct)</span></div>
-      {% endfor %}
-    </div>
-    {% endif %}
+
   </div>
   {% endif %}
   <div class="tape-block">
@@ -4467,8 +4474,8 @@
         </div>
       </details>
       {% endif %}
-      {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg, fight.preview.spotlight_chips) }}
-      {{ striking_profile_panel(fight.preview.striking_profile, fight.fighter_a, fight.fighter_b) }}
+      {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg) }}
+      {{ striking_profile_panel(fight.preview.striking_profile, fight.fighter_a, fight.fighter_b, fight.preview.spotlight_chips) }}
       {{ fighter_compare_table(fight.preview.comparison) }}
       {% endif %}
 
@@ -4544,13 +4551,14 @@
                from scratch -- instead it derives the build-time vig factor
                from (fair / implied) and applies the same correction to the
                live price. Vig doesn't move meaningfully between polls. #}
-            <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}"
+            <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}{{ ' edge-fragile' if row.fragile_price }}"
+                {%- if row.fragile_price %} title="Near-certain market: the book price here is thin and the edge figure is unreliable"{% endif %}
                 {%- if row.clob_token_id and row.model_prob is not none and row.book_fair_prob is not none %}
                 data-edge-for="{{ row.clob_token_id }}"
                 data-model-prob="{{ row.model_prob }}"
                 data-fair-at-build="{{ row.book_fair_prob }}"
                 data-odds-at-build="{{ row.odds_american }}"
-                {%- endif %}>{{ row.edge_pct }}%</td>
+                {%- endif %}>{{ row.edge_pct }}%{% if row.fragile_price %}<span class="edge-flag">*</span>{% endif %}</td>
             {% else %}
             <td class="mkt-none">—</td><td class="mkt-none">—</td>
             {% endif %}
