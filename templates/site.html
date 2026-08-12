@@ -6728,29 +6728,29 @@
       const els = document.querySelectorAll('[data-live-token]');
       if (!els.length || !window.fetch) return;
       const tokens = [...new Set([...els].map(el => el.dataset.liveToken))].slice(0, 40);
-      let chip = null;
 
       function toAmerican(p) {
         if (!(p > 0.01 && p < 0.99)) return null;
         return p >= 0.5 ? '-' + Math.round(100 * p / (1 - p)) : '+' + Math.round(100 * (1 - p) / p);
       }
 
-      function showChip() {
-        // Eastern, not the visitor's local clock. toTimeString() returns
-        // whatever timezone the device is in, so a user in London saw a time
-        // that matched nothing else on the page -- every other timestamp
-        // here (card times, countdown, "Updated ... ET") is Eastern, and the
-        // prices themselves are quoted against an Eastern fight schedule.
-        // timeZone handles EST/EDT automatically, so it stays correct across
-        // the DST switch without any date maths.
-      // The meta row now carries a live DOT rather than a second timestamp.
-      // A pulse says "prices are refreshing" more directly than a time the
-      // reader has to compare against their own clock -- and crucially it can
-      // show the feed STOPPING, which a self-updating timestamp never could.
+      // A pulse in the meta row says "prices are refreshing" more directly
+      // than a timestamp the reader has to compare against their own clock --
+      // and crucially it can show the feed STOPPING, which a self-updating
+      // timestamp never could.
+      //
+      // THIS FUNCTION WAS NESTED INSIDE showChip(). When the chip was replaced
+      // by the dot, showChip's body was deleted but its braces were left, so
+      // markPricesLive ended up scoped inside a function nobody could see into.
+      // refresh() called it, threw a ReferenceError, the catch called the same
+      // missing function again, and live odds stopped entirely with the
+      // stalled dot stuck on -- "Couldn't fetch live odds right now" forever,
+      // even though the fetch itself was fine.
+      // The code was VALID JavaScript, so node --check passed it. A syntax
+      // check cannot see a scoping mistake; only calling the thing can.
       function markPricesLive(ok) {
         const dot = document.getElementById('price-pulse');
         if (dot) dot.classList.toggle('stalled', !ok);
-      }
       }
 
       async function refresh() {
@@ -6781,7 +6781,6 @@
             updated++;
           }
           markPricesLive(updated > 0);
-          if (updated > 0) showChip();
         } catch (e) { markPricesLive(false); }
         finally {
           // End the first-load shimmer whether the fetch succeeded or not

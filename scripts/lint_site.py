@@ -109,6 +109,113 @@ def check_html_tag_balance(c):
     print(f"       [html-balance] {checked} element(s), all balanced")
 
 
+def _js_strip(src):
+    """Blank out strings, template literals and comments, preserving length."""
+    out = list(src)
+    i, n = 0, len(src)
+    while i < n:
+        c = src[i]
+        if c in "\"'`":
+            q = c
+            j = i + 1
+            while j < n:
+                if src[j] == "\\":
+                    j += 2
+                    continue
+                if src[j] == q:
+                    break
+                j += 1
+            for k in range(i, min(j + 1, n)):
+                if out[k] != "\n":
+                    out[k] = " "
+            i = j + 1
+            continue
+        if c == "/" and i + 1 < n and src[i + 1] == "/":
+            j = src.find("\n", i)
+            j = n if j == -1 else j
+            for k in range(i, j):
+                out[k] = " "
+            i = j
+            continue
+        if c == "/" and i + 1 < n and src[i + 1] == "*":
+            j = src.find("*/", i)
+            j = n if j == -1 else j + 2
+            for k in range(i, j):
+                if out[k] != "\n":
+                    out[k] = " "
+            i = j
+            continue
+        i += 1
+    return "".join(out)
+
+
+def check_js_dead_wrapper(c):
+    """
+    A function whose whole body is another function declaration.
+
+    That shape is what an edit leaves behind when someone deletes a
+    function's body but not its braces: the next declaration below gets
+    absorbed into the dead wrapper's scope, and every call to it from outside
+    throws a ReferenceError.
+
+    It cost the entire live-odds feature. showChip() was emptied when its chip
+    was replaced by a pulse dot, which swallowed markPricesLive(); refresh()
+    called that, threw, the catch called the same missing function again, and
+    the page showed "Couldn't fetch live odds right now" permanently while the
+    fetch itself was perfectly healthy.
+
+    node --check passed it every time, because nesting a function is VALID
+    JavaScript. A syntax check cannot see a scoping mistake -- so this looks
+    for the shape instead.
+    """
+    blocks = re.findall(r"<script\b[^>]*>(.*?)</script>", c, re.DOTALL | re.IGNORECASE)
+    flagged = 0
+    for raw in blocks:
+        clean = _js_strip(raw)
+        for m in re.finditer(r"\bfunction\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{", clean):
+            start = clean.index("{", m.end() - 1)
+            depth, i = 0, start
+            while i < len(clean):
+                if clean[i] == "{":
+                    depth += 1
+                elif clean[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                i += 1
+            body = clean[start + 1:i]
+            inner = re.findall(r"\bfunction\s+([A-Za-z_$][\w$]*)", body)
+            if not inner:
+                continue
+            # Remove every nested function (declaration AND body) and see if
+            # anything executable is left.
+            stripped = body
+            for _ in range(len(inner)):
+                mm = re.search(r"\bfunction\s+[A-Za-z_$][\w$]*\s*\([^)]*\)\s*\{", stripped)
+                if not mm:
+                    break
+                b = stripped.index("{", mm.end() - 1)
+                d, j = 0, b
+                while j < len(stripped):
+                    if stripped[j] == "{":
+                        d += 1
+                    elif stripped[j] == "}":
+                        d -= 1
+                        if d == 0:
+                            break
+                    j += 1
+                stripped = stripped[:mm.start()] + stripped[j + 1:]
+            if not stripped.strip():
+                flagged += 1
+                line = c[:c.index(raw) + m.start()].count("\n") + 1
+                fail("js-dead-wrapper",
+                     f"line ~{line}: {m.group(1)}() does nothing but declare "
+                     f"{', '.join(inner)} -- those are trapped in its scope and "
+                     f"unreachable from outside")
+    if not flagged:
+        print(f"       [js-dead-wrapper] checked {len(blocks)} script block(s)")
+
+
 def check_css_braces(c):
     """
     A stray } silently kills EVERY rule after it. Cost ~8 rounds: the CSS was
@@ -634,6 +741,7 @@ def main():
     c = load()
     check_css_braces(c)
     check_html_tag_balance(c)
+    check_js_dead_wrapper(c)
     check_js_syntax(c)
     check_deferred_inits(c)
     check_swipe_exclusions(c)
