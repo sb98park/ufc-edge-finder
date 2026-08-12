@@ -266,13 +266,27 @@ def main():
 
     total_issues = 0
     title_writes = []
+    untracked = []
     for slug in slugs:
         parsed = parse_event(slug)
         if not parsed or not parsed["date"]:
             continue
         date = parsed["date"]
         if date not in ours:
-            continue        # not a card we track; silence is correct
+            # A WHOLE EVENT WE DO NOT TRACK -- previously skipped in silence,
+            # on the reasoning that this tool compares CARDS and an untracked
+            # date has no card to compare. That was exactly backwards: a
+            # missing fight is a gap, a missing EVENT is the entire card
+            # missing, and it was the one failure this check could not see.
+            # Found live: UFC.com listed six confirmed cards and we tracked
+            # three, and every run of this script reported zero problems.
+            # Contender Series is deliberately not tracked -- reporting it as
+            # missing every week would be the crying-wolf failure the
+            # acknowledgement file exists to prevent.
+            from src.card_discovery import is_excluded_event
+            if parsed["bouts"] and not is_excluded_event(slug.replace("-", " ")):
+                untracked.append((date, slug, len(parsed["bouts"])))
+            continue
 
         print(f"=== {slug}  ({date}) ===")
         theirs = parsed["bouts"]
@@ -339,6 +353,14 @@ def main():
                 print(f"     -> scripts/mark_title_fight.py \"{b['fighter_a']}\" \"{b['fighter_b']}\""
                       f"{'' if b['is_title_fight'] else ' --unset'}")
         print()
+
+    if untracked:
+        print("\nEVENTS ON UFC.COM WE DO NOT TRACK AT ALL")
+        for date, slug, n in sorted(untracked):
+            total_issues += 1
+            print(f"  {date}  {slug}  ({n} bouts announced)")
+        print("  -> card_discovery should pick these up; if it hasn't, run "
+              "scripts/probe_card_discovery.py to see what ESPN returns for those dates")
 
     if title_writes:
         n = apply_title_flags(title_writes)

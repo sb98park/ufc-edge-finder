@@ -2846,6 +2846,10 @@
      in from below. Only characters that ACTUALLY changed animate -- -140 ->
      -145 moves one digit, not the whole number, which is what reads as an
      odometer instead of a flash. */
+  /* Tabular figures on anything that rolls. Proportional digits change width
+     mid-animation and nudge the arrow beside them, which is the reflow
+     mistake this project has already made twice on other numbers. */
+  .live-odds { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
   .roll-wrap { display: inline-block; position: relative; overflow: hidden; vertical-align: bottom; }
   .roll-wrap .roll-old,
   .roll-wrap .roll-new { display: inline-block; }
@@ -4638,7 +4642,8 @@
       <div class="odds-compare">
         <div class="odds-compare-col">
           <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book"><span class="live-odds"{% if p.clob_token_id %} data-live-token="{{ p.clob_token_id }}"{% endif %}>{{ p.odds_american | american }}</span>{{ movement_arrow(p) }}</div>
+          <div class="odds-compare-value book"><span class="live-odds"{% if p.clob_token_id %} data-live-token="{{ p.clob_token_id }}"{% endif %}
+              {%- if p.movement and p.movement.direction != 'flat' and p.movement.from is not none %} data-roll-from="{{ p.movement.from | american }}" data-roll-to="{{ p.odds_american | american }}"{% endif %}>{{ p.odds_american | american }}</span>{{ movement_arrow(p) }}</div>
         </div>
         <div class="odds-compare-arrow">→</div>
         <div class="odds-compare-col">
@@ -7572,6 +7577,44 @@
       // box-shadow on a regular span, not SVG stroke animation, so this
       // doesn't carry the same iOS reliability caveat as the chart
       // animations elsewhere on this page.
+      // ===== Price movement replays as you reach it =====
+      // The arrows already say a price MOVED; this shows what it moved from.
+      //
+      // FIRES ON REVEAL, one cell at a time. Running every roll at load would
+      // spend the whole effect above the fold -- by the time you scrolled to
+      // the tenth prop its animation would be long finished.
+      //
+      // No backward jump: rather than writing the old price into the cell and
+      // rolling forward (which flashes a stale number), this seeds rollTo's
+      // idea of the previous value and lets the existing odometer slide the
+      // old digits out while the new ones slide in. The cell never displays
+      // anything but the current price as settled text.
+      (function () {
+        const cells = document.querySelectorAll('[data-roll-from]');
+        if (!cells.length || !('IntersectionObserver' in window)) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const rollObserver = new IntersectionObserver((entries, obs) => {
+          let i = 0;
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const el = entry.target;
+            obs.unobserve(el);
+            const from = el.dataset.rollFrom, to = el.dataset.rollTo;
+            if (!from || !to || from === to) return;
+            // A live tick may already have moved this cell past the baked
+            // price. Replaying a build-time movement on top of a newer number
+            // would show a sequence that never happened.
+            if ((el.textContent || '').trim() !== to) return;
+            setTimeout(() => {
+              el.dataset.rollValue = from;
+              if (window.__rollTo) window.__rollTo(el, to);
+            }, i * 70);
+            i++;
+          });
+        }, { threshold: 0.9, rootMargin: '0px 0px -5% 0px' });
+        cells.forEach(el => rollObserver.observe(el));
+      })();
+
       const celebrateObserver = new IntersectionObserver((entries, obs) => {
         entries.forEach(entry => {
           if (!entry.isIntersecting) return;

@@ -43,6 +43,24 @@ import requests
 
 from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, is_placeholder_fighter_name
 
+# NOT UFC CARDS, even though ESPN files them under the UFC league calendar.
+# Dana White's Contender Series is a tryout show: the fighters are prospects
+# with no UFC record, so they are absent from fighters.csv, carry no Elo, and
+# the model has nothing to work from -- every prediction would be defaults
+# dressed up as analysis. There are ten of them inside a 120-day window,
+# which would also bury the six real cards in "Coming Up".
+# The date fix surfaced these: before it, nothing was being discovered at all,
+# so their presence in the calendar never mattered.
+# Symptomatic of the mismatch: card-position inference disagreed with itself
+# on Week 3 (array order pointed at one fight, the 5-round signal at another)
+# because DWCS does not run a conventional main-event structure.
+EXCLUDED_EVENT_PATTERNS = ("contender series",)
+
+
+def is_excluded_event(name: str) -> bool:
+    low = str(name or "").lower()
+    return any(pat in low for pat in EXCLUDED_EVENT_PATTERNS)
+
 DEFAULT_START_TIME_ET = "19:00"  # US-primetime fallback when ESPN has no competition times yet
 
 FUTURE_CARDS_COLUMNS = [
@@ -729,24 +747,66 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
     transforms it into future_cards.csv's row schema. Never raises --
     returns [] on any failure, same convention as the rest of this
     project's external-data code."""
-    try:
-        date_param = pd.Timestamp(event_date).strftime("%Y%m%d")
-        resp = requests.get(ESPN_SCOREBOARD_URL, params={"dates": date_param}, headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
-        resp.raise_for_status()
-        data = resp.json()
-    except (requests.RequestException, ValueError) as e:
-        print(f"[card_discovery] ESPN fetch failed for {event_name!r}: {e}")
+    # SEARCH A DAY EITHER SIDE, and do not trust the calendar's date.
+    #
+    # The calendar's startDate is a UTC timestamp for an event that happens on
+    # a US evening, so it lands on the FOLLOWING day whenever the card starts
+    # late enough -- and inconsistently, because a 10pm ET pay-per-view rolls
+    # over while a 7pm ET Fight Night does not. Querying the scoreboard with
+    # that date returned no events at all, so the name match failed and the
+    # event was dropped.
+    #
+    # This was not a rare miss. It was EVERY untracked event: UFC 331, UFC
+    # 332, two Fight Nights and all ten Contender Series cards, every run,
+    # while the log said only "could not match". Discovery had effectively
+    # stopped adding anything and nothing surfaced that.
+    #
+    # Found because UFC.com listed six confirmed cards and the site tracked
+    # three. The date shown to a reader now comes from the MATCHED EVENT's
+    # own date field rather than the calendar's, so a card can never be
+    # filed under a day it isn't on.
+    base = pd.Timestamp(event_date)
+    matched = None
+    single_candidates = []
+    for offset in (0, -1, 1):
+        day = (base + pd.Timedelta(days=offset)).strftime("%Y%m%d")
+        try:
+            resp = requests.get(ESPN_SCOREBOARD_URL, params={"dates": day},
+                                headers=BASE_HEADERS, timeout=REQUEST_TIMEOUT)
+            resp.raise_for_status()
+            events = resp.json().get("events", [])
+        except (requests.RequestException, ValueError) as e:
+            print(f"[card_discovery] ESPN fetch failed for {event_name!r} on {day}: {e}")
+            continue
+        hit = next((ev for ev in events if ev.get("name") == event_name), None)
+        if hit is not None:
+            matched = hit
+            break
+        if len(events) == 1:
+            single_candidates.append(events[0])
+    if matched is None and len(single_candidates) == 1:
+        # A date-scoped query usually returns exactly one UFC event. Only
+        # accept this when ONE day in the window produced a lone event --
+        # two would mean guessing which is ours.
+        matched = single_candidates[0]
+    if matched is None:
+        print(f"[card_discovery] ESPN: could not match {event_name!r} near {event_date} "
+              f"(searched {event_date} +/- 1 day)")
         return []
 
-    matched = next((ev for ev in data.get("events", []) if ev.get("name") == event_name), None)
-    if matched is None:
-        # Fall back to a single-event response, since a date-scoped query
-        # usually returns exactly one UFC event.
-        events = data.get("events", [])
-        matched = events[0] if len(events) == 1 else None
-    if matched is None:
-        print(f"[card_discovery] ESPN: could not match {event_name!r} on {event_date}")
-        return []
+    # Prefer the event's OWN date over the calendar's UTC-shifted one.
+    actual = matched.get("date")
+    if actual:
+        try:
+            local = pd.Timestamp(actual).tz_convert("America/New_York") \
+                    if pd.Timestamp(actual).tzinfo else pd.Timestamp(actual)
+            resolved = local.date().isoformat()
+            if resolved != event_date:
+                print(f"[card_discovery] {event_name!r}: calendar said {event_date}, "
+                      f"ESPN's event date is {resolved} -- using {resolved}")
+            event_date = resolved
+        except (ValueError, TypeError):
+            pass
 
     competitions = matched.get("competitions", [])
     positions = _infer_card_positions(competitions)
@@ -840,7 +900,7 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
 
 def discover_and_append_new_cards(future_cards_path: str = "data/future_cards.csv",
                                    current_event_name: str | None = None,
-                                   days_ahead: int = 60) -> int:
+                                   days_ahead: int = 120) -> int:
     """
     Entry point called from generate_site.py. Returns the number of rows
     added or removed -- never raises. Reads ESPN's scoreboard calendar
@@ -927,6 +987,8 @@ def discover_and_append_new_cards(future_cards_path: str = "data/future_cards.cs
         start = entry.get("startDate")
         if not label or not start or label in known_event_names:
             continue
+        if is_excluded_event(label):
+            continue
         try:
             event_date = dt.datetime.fromisoformat(start.replace("Z", "+00:00")).date()
         except (ValueError, TypeError):
@@ -945,6 +1007,19 @@ def discover_and_append_new_cards(future_cards_path: str = "data/future_cards.cs
         old_name = existing_dates_to_names.get(event_date.isoformat())
 
         card_rows = _fetch_espn_full_card(label, event_date.isoformat())
+        if not card_rows:
+            # SAY SO. This used to fall through in silence: an in-window event
+            # whose card ESPN has not published (or whose fetch failed) was
+            # dropped with no output at all, every run, forever. UFC.com had
+            # six confirmed cards while this tracked three and printed
+            # nothing to suggest anything was missing.
+            # Not an error -- ESPN genuinely lags UFC.com on card
+            # announcements, and an event with no bouts yet is nothing to add.
+            # But it has to be visible, because "ESPN has not published it
+            # yet" and "our fetch is broken" look identical from the outside.
+            print(f"[card_discovery] {event_date} '{label}': ESPN returned no fights "
+                  f"-- not added this run (will retry next run)")
+            continue
         if card_rows:
             if old_name and old_name != label:
                 print(f"[card_discovery] '{old_name}' appears to have become '{label}' (same date, {event_date}) "
