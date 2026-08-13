@@ -25,6 +25,10 @@ on:
 # three stale queued refreshes back-to-back would add nothing).
 concurrency:
   group: refresh
+  # Kept false ON PURPOSE: this job commits and pushes, and cancelling one
+  # mid-push risks leaving the repo in a half-written state. The cost of that
+  # choice is that a hung run BLOCKS every later run -- which is exactly what
+  # timeout-minutes below exists to bound.
   cancel-in-progress: false
 
 permissions:
@@ -41,6 +45,14 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    # WITHOUT THIS, GITHUB'S DEFAULT IS SIX HOURS. With cancel-in-progress
+    # false, one hung run holds the concurrency group for that entire time and
+    # every scheduled run behind it is dropped (GitHub queues only one). That
+    # produced a 12-hour gap with no site update two days before a card, and
+    # nothing looked broken -- the workflow was simply "in progress".
+    # 12 minutes is generous for a heavy build (six events, 67 fights) and
+    # still bounds a hang to two missed cycles instead of seventy.
+    timeout-minutes: 12
     outputs:
       build: ${{ steps.cadence.outputs.build }}
     steps:
@@ -92,6 +104,7 @@ jobs:
         run: python scripts/merge_results_into_history.py --apply || true
 
       - name: Backfill history gaps from ESPN
+        timeout-minutes: 4
         if: steps.cadence.outputs.build == 'yes'
         # Catches fights that happened between the raw dataset's cutoff and
         # the site's own tracking window -- the range neither other source
@@ -103,6 +116,7 @@ jobs:
         run: python scripts/backfill_history_from_espn.py --apply || true
 
       - name: Generate site
+        timeout-minutes: 6
         if: steps.cadence.outputs.build == 'yes'
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}

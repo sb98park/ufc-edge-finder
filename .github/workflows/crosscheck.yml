@@ -36,6 +36,7 @@ permissions:
 jobs:
   crosscheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
