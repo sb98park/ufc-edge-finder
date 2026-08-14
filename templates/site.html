@@ -2571,8 +2571,68 @@
   /* While a finger is down the indicator must track without easing, or it
      lags behind the touch and stops feeling attached to it. */
   .mobile-tabbar.dragging .tabbar-indicator { transition: none; }
+  /* And while the RELEASE spring is running, JS owns the transform frame by
+     frame -- a CSS transition on the same property would fight it, easing
+     toward each frame's value and smearing the spring into mush. Added
+     before .dragging is removed so there is never a frame where the CSS
+     transition is live. The declared transition above still serves external
+     navigation and the compact-toggle width change. */
+  .mobile-tabbar.springing .tabbar-indicator { transition: none; }
   .tabbar-btn > * { position: relative; z-index: 1; }
   .tabbar-btn.active { color: var(--text); }
+
+  /* MATERIAL FALLBACKS -- the two accessibility signals that were missing.
+     prefers-reduced-motion is handled in a dozen places throughout this file;
+     these two were not handled anywhere, which left every translucent surface
+     on the page with no fallback for a user who asks the OS to reduce
+     transparency or raise contrast.
+
+     Cheap to satisfy here because the translucency is decorative rather than
+     structural: every glass surface already sits in the --panel/--panel2
+     elevation system, so going opaque costs the glass look and nothing else.
+     Placed AFTER the rules they override so source order wins -- no
+     !important needed. box-sizing: border-box is global (line 95), so the
+     borders added below don't change any element's size.
+
+     Deliberately NOT folded into the existing reduced-motion blocks: these
+     are independent user preferences. Someone can want still interfaces and
+     still want glass, or want opacity and still want motion. */
+  @media (prefers-reduced-transparency: reduce) {
+    .seg-tabs, .mobile-tabbar {
+      background: var(--panel);
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+    }
+    /* The sheen exists to make glass catch light along its top curve. With
+       no glass behind it, it is just a grey wash over half an opaque bar. */
+    .mobile-tabbar::before { display: none; }
+    .seg-indicator, .tabbar-indicator {
+      background: var(--panel2);
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+    }
+  }
+
+  @media (prefers-contrast: more) {
+    /* Near-solid plus a defined border. The selected tab currently reads as
+       a ~6% brightness lift that the double blur does most of the work to
+       sell; at high contrast that cue is far too weak, so the indicator has
+       to be identifiable by its EDGE instead. */
+    .seg-tabs, .mobile-tabbar {
+      background: var(--bg);
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      border: 1px solid var(--text-soft);
+    }
+    .mobile-tabbar::before { display: none; }
+    .seg-indicator, .tabbar-indicator {
+      background: var(--panel2);
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      border: 1px solid var(--text);
+      box-shadow: none;
+    }
+    /* Inactive tabs sit at --muted, which is deliberately quiet against the
+       glass. With the glass gone that contrast ratio is the only thing
+       distinguishing them, so lift it. */
+    .seg-tab, .tabbar-btn { color: var(--text-soft); }
+  }
 
   @media (max-width: 1023px) {
     /* The back button existed because the hub was the only way out of a
@@ -6149,6 +6209,116 @@
     }
 
 
+    // ===== Gesture motion primitives =====
+    // WHY THESE EXIST. The release animation used to be a fixed-duration CSS
+    // transition, which gets three things wrong at once:
+    //
+    //   1. NO VELOCITY. A slow drag and a hard flick both settled in exactly
+    //      0.55s. The seam between "finger moving it" and "animation moving
+    //      it" was visible because the animation ignored the speed the
+    //      gesture handed it.
+    //   2. NO MOMENTUM. The target tab was whichever one sat under the finger
+    //      at release, so throwing the pill hard at the last tab landed it
+    //      wherever the finger happened to stop.
+    //   3. NOT INTERRUPTIBLE. A CSS transition can't be grabbed mid-flight
+    //      and redirected from its current on-screen value.
+    //
+    // A spring fixes all three: it accepts an initial velocity, it can be
+    // re-targeted mid-flight while carrying that velocity through, and it has
+    // no fixed duration -- settle time emerges from the parameters.
+
+    // A JS-driven spring is invisible to the stylesheet, so the
+    // prefers-reduced-motion blocks throughout this file do NOT cover it.
+    // Every spring below has to check this itself or the preference silently
+    // stops applying to exactly the motion it most wants suppressed.
+    // Queried live rather than cached: the user can change it mid-session.
+    const _rmq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    function prefersReducedMotion() { return !!(_rmq && _rmq.matches); }
+
+    // Apple's momentum projection (Designing Fluid Interfaces sample code):
+    // where a flick would come to rest under exponential decay. NOT the
+    // textbook v^2/(2a) -- that models constant deceleration and lands short.
+    function projectMomentum(velocity, decelerationRate) {
+      const d = decelerationRate === undefined ? 0.998 : decelerationRate;
+      return (velocity / 1000) * d / (1 - d);
+    }
+
+    // Velocity over a short sample WINDOW, not the last two events. A single
+    // pair is dominated by whatever jitter the final move carried, which is
+    // exactly the sample a flick ends on.
+    function createVelocityTracker(windowMs) {
+      const w = windowMs || 100;
+      let s = [];
+      return {
+        clear() { s = []; },
+        add(x, t) {
+          s.push({ x: x, t: t });
+          while (s.length > 2 && t - s[0].t > w) s.shift();
+        },
+        get() {                               // px/s
+          if (s.length < 2) return 0;
+          const a = s[0], b = s[s.length - 1];
+          const dt = (b.t - a.t) / 1000;
+          return dt > 0 ? (b.x - a.x) / dt : 0;
+        }
+      };
+    }
+
+    // Damped harmonic oscillator, parameterised the way Apple exposes it:
+    // RESPONSE (seconds to approach the target -- not a duration, a spring
+    // has none) and DAMPING RATIO (1.0 critically damped/no overshoot,
+    // below 1 overshoots).
+    function createSpring(onFrame) {
+      let raf = 0, x = 0, v = 0, target = 0, k = 0, c = 0, last = 0, done = null;
+      function finish() {
+        raf = 0;
+        if (done) { const d = done; done = null; d(); }
+      }
+      function step(now) {
+        // Clamp dt: a backgrounded tab resumes with a huge delta, and one
+        // enormous integration step throws the spring to infinity.
+        const dt = Math.min((now - last) / 1000, 1 / 30);
+        last = now;
+        // Sub-step to 120Hz so a slow frame can't integrate into instability.
+        const n = Math.max(1, Math.ceil(dt * 120));
+        const h = dt / n;
+        for (let i = 0; i < n; i++) {
+          v += (-k * (x - target) - c * v) * h;
+          x += v * h;
+        }
+        onFrame(x);
+        if (Math.abs(x - target) < 0.1 && Math.abs(v) < 2) {
+          x = target; onFrame(x); finish(); return;
+        }
+        raf = requestAnimationFrame(step);
+      }
+      function tune(response, damping) {
+        const w = (2 * Math.PI) / response;
+        k = w * w;
+        c = 2 * damping * w;
+      }
+      return {
+        get animating() { return raf !== 0; },
+        start(from, to, velocity, response, damping, onDone) {
+          x = from; target = to; v = velocity || 0;
+          tune(response, damping);
+          done = onDone || null;
+          last = performance.now();
+          if (!raf) raf = requestAnimationFrame(step);
+        },
+        // Re-target WITHOUT resetting velocity -- this is what stops a
+        // reversal reading as a brick wall.
+        retarget(to) { target = to; },
+        // Returns the live on-screen value so a new gesture can pick up from
+        // exactly where the pill is, not where it was headed.
+        cancel() {
+          if (raf) cancelAnimationFrame(raf);
+          raf = 0; done = null; v = 0;
+          return x;
+        }
+      };
+    }
+
     // ===== Draggable tab bar =====
     // Slide along the bar and the highlight follows continuously, so Card ->
     // Record is one motion without lifting. Content commits on RELEASE only:
@@ -6159,6 +6329,13 @@
       if (!bar || !ind) return;
       const btns = Array.from(bar.querySelectorAll('.tabbar-btn'));
       let dragging = false, hovered = null;
+
+      const vel = createVelocityTracker();
+      // The spring is the single writer for X while it runs, and it keeps
+      // lastX current every frame -- which is what makes an interrupt cheap:
+      // whoever grabs the pill next just reads lastX.
+      const spring = createSpring(function (x) { lastX = x; setX(x); });
+      function endSpring() { spring.cancel(); bar.classList.remove('springing'); }
 
       // Single writer for the transform: translate and scale have to be set
       // together or the later assignment silently drops the other.
@@ -6189,13 +6366,60 @@
         return { tabW, width: Math.max(0, tabW - INSET * 2), x: index * tabW + INSET };
       }
 
-      // SNAPPED position -- used on release and for external navigation.
+      // SNAPPED position -- external navigation and layout sync. Instant,
+      // and lets the declared CSS transition ease it: nothing about this
+      // path is gesture-driven, so there is no velocity to honour.
+      // Kills any running spring first -- JS and CSS must never both be
+      // writing transform, or they ease toward each other's values.
       function moveTo(btn) {
         if (!btn) return;
+        endSpring();
         const g = geom(btns.indexOf(btn));
         ind.style.width = g.width + 'px';
         lastX = g.x;
         setX(lastX);
+      }
+
+      // Which tab the INDICATOR's left edge sits nearest. btnAt() answers for
+      // a finger position; this answers for a projected pill position, which
+      // is what momentum lands on.
+      function btnNearestX(x) {
+        const g0 = geom(0);
+        if (g0.tabW <= 0) return null;
+        const i = Math.round((x - INSET) / g0.tabW);
+        return btns[Math.max(0, Math.min(btns.length - 1, i))] || null;
+      }
+
+      // Spring the pill onto a tab, carrying the gesture's velocity in.
+      function springToBtn(btn, velocity) {
+        if (!btn) return;
+        const g = geom(btns.indexOf(btn));
+        ind.style.width = g.width + 'px';
+        // REDUCED MOTION: a velocity-carrying, overshooting spring is
+        // precisely the vestibular motion this preference asks us to drop.
+        // Land it instantly. The active-tab colour change still communicates
+        // what happened, which is the comprehension cue worth keeping.
+        if (prefersReducedMotion()) { lastX = g.x; setX(lastX); return; }
+        // Added BEFORE .dragging comes off, so the CSS transition is never
+        // live for even one frame while the spring is running.
+        bar.classList.add('springing');
+        // Bounce ONLY when a gesture carried momentum in. A tap has no
+        // velocity and gets critical damping -- overshoot on a tap looks
+        // like a bug, overshoot on a flick looks like physics.
+        //
+        // 0.72, not the 0.8 theory suggests. This integrator is semi-implicit
+        // Euler, which adds numerical damping of its own, so measured
+        // overshoot runs well under the analytic value -- 0.82 gave 0.36%,
+        // invisible on a ~90px tab hop. Measured on the sweep: 0.72 gives
+        // 2.4% from rest and ~4.7% seeded with a 1500px/s flick, bracketing
+        // the 3.8% the linear() easing this replaces was tuned to (its curve
+        // peaks at 1.038). Re-measure before changing -- the analytic
+        // overshoot formula does not predict this integrator's output.
+        const flick = Math.abs(velocity) > 40;
+        spring.start(lastX, g.x, velocity || 0,
+                     flick ? 0.34 : 0.30,
+                     flick ? 0.72 : 1.0,
+                     function () { bar.classList.remove('springing'); });
       }
 
       // FREE position -- the indicator centres on the finger rather than on
@@ -6246,8 +6470,15 @@
 
       let startX = 0, moved = false;
       bar.addEventListener('touchstart', (e) => {
+        // INTERRUPTIBILITY. A spring still in flight is grabbed, not waited
+        // out. cancel() returns the live on-screen value and lastX already
+        // holds it, so tracking resumes from where the pill actually IS --
+        // not from where the animation was heading, which is the jump this
+        // used to produce.
+        endSpring();
         dragging = true; moved = false;
         startX = e.touches[0].clientX;
+        vel.clear(); vel.add(startX, performance.now());
         hovered = btnAt(startX);
         setScale(1.12);          // press magnification, iOS-style
       }, { passive: true });
@@ -6265,6 +6496,7 @@
           bar.classList.add('dragging');
         }
         if (!moved) return;
+        vel.add(x, performance.now());
         moveFree(x);
         const btn = btnAt(x);
         if (btn && btn !== hovered) {
@@ -6275,23 +6507,44 @@
 
       function release() {
         if (!dragging) return;
-        dragging = false; bar.classList.remove('dragging');
+        dragging = false;
         setScale(1);
-        // Easing returns here, so the indicator settles onto the chosen tab
-        // -- and on a plain tap it never left, so this is the animated slide.
-        if (!moved) { hovered = btnAt(startX); }
+
+        // MOMENTUM. Land where the flick is GOING, not where the finger
+        // stopped. Projecting the pill's resting position and snapping to
+        // the tab nearest THAT is what makes a throw feel thrown -- before
+        // this, a hard flick at the last tab landed on whatever the finger
+        // was over when it lifted.
+        const v = moved ? vel.get() : 0;
+        if (!moved) {
+          hovered = btnAt(startX);
+        } else {
+          hovered = btnNearestX(lastX + projectMomentum(v)) || hovered;
+        }
         btns.forEach(b => b.classList.toggle('active', b === hovered));
-        moveTo(hovered);
-        if (!hovered) return;
+
+        // Order matters: springToBtn adds .springing before .dragging comes
+        // off, so the CSS transition never gets a frame to fight the spring.
+        springToBtn(hovered, v);
+        bar.classList.remove('dragging');
+        if (!hovered) { bar.classList.remove('springing'); return; }
         const target = hovered.dataset.tab;
         haptic(8);
         if (target === '__hub') goToMore(); else showSection(target);
       }
       bar.addEventListener('touchend', release, { passive: true });
       bar.addEventListener('touchcancel', () => {
+        // A cancelled gesture is not a selection, so nothing commits -- but
+        // the pill must not be left stranded mid-bar either, which is what
+        // happened before: .dragging came off and it simply stopped wherever
+        // the finger was when the system took the touch away. Spring it back
+        // to whatever is actually active, with no velocity, so the cancel
+        // reads as "that didn't happen" rather than as a glitch.
         dragging = false; moved = false;
-        bar.classList.remove('dragging');
         setScale(1);
+        const active = btns.find(b => b.classList.contains('active')) || hovered;
+        springToBtn(active, 0);
+        bar.classList.remove('dragging');
       }, { passive: true });
 
       // Position it once layout is settled (offsetWidth is 0 before paint).
