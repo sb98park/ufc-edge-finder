@@ -1080,6 +1080,14 @@
     display: flex; position: relative; margin: 4px 0 14px;
     position: sticky; top: 0; z-index: 40;
     padding: 3px; border-radius: 999px;
+    /* pan-y, NOT none. This control sits inline inside scrollable content,
+       unlike the fixed bottom bar -- so the browser must keep vertical pans
+       (the user scrolling the page with a thumb that happens to land on the
+       tabs) while the horizontal axis is ours for the pill drag. It replaces
+       the preventDefault() the old touchmove called, which blocked BOTH axes
+       and made the control a dead zone for scrolling. If the browser claims
+       a vertical pan mid-gesture it fires pointercancel, which reverts. */
+    touch-action: pan-y;
     background: rgba(255,255,255,0.05);
     border: 1px solid var(--border);
     backdrop-filter: blur(18px) saturate(160%);
@@ -1093,6 +1101,10 @@
     pointer-events: none; z-index: 0;
   }
   .seg-tabs.dragging .seg-indicator { transition: none; }
+  /* Same reason as the bottom bar: while the release spring runs, JS owns
+     the transform frame by frame and a CSS transition on the same property
+     would ease toward each frame's value and smear it. */
+  .seg-tabs.springing .seg-indicator { transition: none; }
   .seg-tab { position: relative; z-index: 1; }
   .seg-tab {
     flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
@@ -2116,12 +2128,39 @@
      two-stop gradient -- no second box, so no seam is possible. */
   .tape-bar-a {
     background: linear-gradient(90deg, transparent, var(--corner-red));
-    transition: width 1.4s ease-out;
   }
   .tape-bar-b {
     margin-left: -1px;
     background: linear-gradient(90deg, var(--corner-blue), transparent);
-    transition: width 1.4s ease-out;
+  }
+  /* THE REVEAL, moved off `width` onto `transform`.
+     Both halves used to animate their own width from 0%, which is a LAYOUT
+     property: 440 of these exist on a real page (220 pairs), so every frame
+     of a 1.4s reveal re-laid-out 440 elements. Transform is composited and
+     costs no layout at all.
+     The halves themselves can't be scaled individually -- they are flex
+     siblings whose widths position each other, and transform doesn't affect
+     layout, so scaling the red one would leave the blue one behind and split
+     the seam that .tape-bar-b's -1px margin exists to hide. Scaling a wrapper
+     around BOTH is what preserves it.
+     THE ANIMATION IS IDENTICAL, not merely similar. Growing both widths
+     proportionally and uniformly scaling the pair produce the same frames:
+     at the halfway point the old way gave 31.85% red + 18.15% blue with the
+     join at 31.85%, and scaleX(0.5) over 63.7% + 36.3% gives exactly the
+     same three numbers. Each gradient is relative to its own box in both
+     cases, so those match too.
+     Deliberately NO will-change: it would promote 440 elements to their own
+     compositor layers, trading a layout cost for a memory one. */
+  .tape-bar-fill {
+    display: flex; width: 100%; height: 100%;
+    transform: scaleX(0); transform-origin: left center;
+    transition: transform 1.4s ease-out;
+  }
+  /* The width version had no reduced-motion guard at all -- a gap that
+     predates this change and is worth closing while the rule is being
+     rewritten. The bar simply arrives at its value. */
+  @media (prefers-reduced-motion: reduce) {
+    .tape-bar-fill { transition: none; }
   }
 
   .radar-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
@@ -4165,8 +4204,12 @@
       <div class="tape-value right">{{ val_b }}{{ unit }}</div>
     </div>
     <div class="tape-bar-track">
-      <div class="tape-bar-a" data-target-width="{{ pct_a }}%" style="width:0%"></div>
-      <div class="tape-bar-b" data-target-width="{{ 100 - pct_a }}%" style="width:0%"></div>
+      {# Widths are final and static now; the wrapper's scaleX does the
+         reveal. See .tape-bar-fill for why the halves can't scale alone. #}
+      <div class="tape-bar-fill">
+        <div class="tape-bar-a" style="width:{{ pct_a }}%"></div>
+        <div class="tape-bar-b" style="width:{{ 100 - pct_a }}%"></div>
+      </div>
     </div>
     {% endif %}
   {% endmacro %}
@@ -4390,10 +4433,14 @@
        model=gold, matching the site-wide model/market color language), and
        a highlighted gap between them whose width IS the edge -- not a
        decorative bar, the literal data value. Reuses the same
-       data-target-width scroll-reveal mechanism already used for the tape
-       bars and favorite-prob bar elsewhere on this page, so it requires
-       zero new JavaScript: this macro's own .edge-divergence-fill element
-       just needs to be added to the existing fillObserver query list. #}
+       data-target-width scroll-reveal mechanism as the favorite-prob bar
+       elsewhere on this page, so it requires zero new JavaScript: this
+       macro's own .edge-divergence-fill element just needs to be added to
+       the existing fillObserver query list.
+       (The tape bars used to share this mechanism and no longer do -- they
+       reveal by scaling a wrapper, because 440 of them animating `width`
+       meant 440 elements re-laid-out every frame. There are five of these,
+       so width is fine here.) #}
     {%- set book_pct = (book_prob*100)|round(1) -%}
     {%- set model_pct = (model_prob*100)|round(1) -%}
     {%- set left_pct = [book_pct, model_pct]|min -%}
@@ -4540,8 +4587,10 @@
           <span class="stat-compare-val right">{% if b_max is not none %}{{ b_max }}/{% endif %}{{ b_val }}</span>
         </div>
         <div class="tape-bar-track">
-          <div class="tape-bar-a" style="width:0%;" data-target-width="{{ a_pct }}%"></div>
-          <div class="tape-bar-b" style="width:0%;" data-target-width="{{ 100 - a_pct }}%"></div>
+          <div class="tape-bar-fill">
+            <div class="tape-bar-a" style="width:{{ a_pct }}%;"></div>
+            <div class="tape-bar-b" style="width:{{ 100 - a_pct }}%;"></div>
+          </div>
         </div>
         {% endfor %}
 
@@ -5994,6 +6043,116 @@
     window.__drawerDebug = location.search.indexOf('drawerdebug') !== -1;
 
 
+    // ===== Gesture motion primitives =====
+    // WHY THESE EXIST. The release animation used to be a fixed-duration CSS
+    // transition, which gets three things wrong at once:
+    //
+    //   1. NO VELOCITY. A slow drag and a hard flick both settled in exactly
+    //      0.55s. The seam between "finger moving it" and "animation moving
+    //      it" was visible because the animation ignored the speed the
+    //      gesture handed it.
+    //   2. NO MOMENTUM. The target tab was whichever one sat under the finger
+    //      at release, so throwing the pill hard at the last tab landed it
+    //      wherever the finger happened to stop.
+    //   3. NOT INTERRUPTIBLE. A CSS transition can't be grabbed mid-flight
+    //      and redirected from its current on-screen value.
+    //
+    // A spring fixes all three: it accepts an initial velocity, it can be
+    // re-targeted mid-flight while carrying that velocity through, and it has
+    // no fixed duration -- settle time emerges from the parameters.
+
+    // A JS-driven spring is invisible to the stylesheet, so the
+    // prefers-reduced-motion blocks throughout this file do NOT cover it.
+    // Every spring below has to check this itself or the preference silently
+    // stops applying to exactly the motion it most wants suppressed.
+    // Queried live rather than cached: the user can change it mid-session.
+    const _rmq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    function prefersReducedMotion() { return !!(_rmq && _rmq.matches); }
+
+    // Apple's momentum projection (Designing Fluid Interfaces sample code):
+    // where a flick would come to rest under exponential decay. NOT the
+    // textbook v^2/(2a) -- that models constant deceleration and lands short.
+    function projectMomentum(velocity, decelerationRate) {
+      const d = decelerationRate === undefined ? 0.998 : decelerationRate;
+      return (velocity / 1000) * d / (1 - d);
+    }
+
+    // Velocity over a short sample WINDOW, not the last two events. A single
+    // pair is dominated by whatever jitter the final move carried, which is
+    // exactly the sample a flick ends on.
+    function createVelocityTracker(windowMs) {
+      const w = windowMs || 100;
+      let s = [];
+      return {
+        clear() { s = []; },
+        add(x, t) {
+          s.push({ x: x, t: t });
+          while (s.length > 2 && t - s[0].t > w) s.shift();
+        },
+        get() {                               // px/s
+          if (s.length < 2) return 0;
+          const a = s[0], b = s[s.length - 1];
+          const dt = (b.t - a.t) / 1000;
+          return dt > 0 ? (b.x - a.x) / dt : 0;
+        }
+      };
+    }
+
+    // Damped harmonic oscillator, parameterised the way Apple exposes it:
+    // RESPONSE (seconds to approach the target -- not a duration, a spring
+    // has none) and DAMPING RATIO (1.0 critically damped/no overshoot,
+    // below 1 overshoots).
+    function createSpring(onFrame) {
+      let raf = 0, x = 0, v = 0, target = 0, k = 0, c = 0, last = 0, done = null;
+      function finish() {
+        raf = 0;
+        if (done) { const d = done; done = null; d(); }
+      }
+      function step(now) {
+        // Clamp dt: a backgrounded tab resumes with a huge delta, and one
+        // enormous integration step throws the spring to infinity.
+        const dt = Math.min((now - last) / 1000, 1 / 30);
+        last = now;
+        // Sub-step to 120Hz so a slow frame can't integrate into instability.
+        const n = Math.max(1, Math.ceil(dt * 120));
+        const h = dt / n;
+        for (let i = 0; i < n; i++) {
+          v += (-k * (x - target) - c * v) * h;
+          x += v * h;
+        }
+        onFrame(x);
+        if (Math.abs(x - target) < 0.1 && Math.abs(v) < 2) {
+          x = target; onFrame(x); finish(); return;
+        }
+        raf = requestAnimationFrame(step);
+      }
+      function tune(response, damping) {
+        const w = (2 * Math.PI) / response;
+        k = w * w;
+        c = 2 * damping * w;
+      }
+      return {
+        get animating() { return raf !== 0; },
+        start(from, to, velocity, response, damping, onDone) {
+          x = from; target = to; v = velocity || 0;
+          tune(response, damping);
+          done = onDone || null;
+          last = performance.now();
+          if (!raf) raf = requestAnimationFrame(step);
+        },
+        // Re-target WITHOUT resetting velocity -- this is what stops a
+        // reversal reading as a brick wall.
+        retarget(to) { target = to; },
+        // Returns the live on-screen value so a new gesture can pick up from
+        // exactly where the pill is, not where it was headed.
+        cancel() {
+          if (raf) cancelAnimationFrame(raf);
+          raf = 0; done = null; v = 0;
+          return x;
+        }
+      };
+    }
+
     // ===== Segmented controls: sliding pill + finger-tracked swipe =====
     function initSegControls() {
       document.querySelectorAll('.seg-tabs').forEach(bar => {
@@ -6012,11 +6171,48 @@
           const w = (bar.clientWidth - PAD * 2) / n;
           return { w, x: PAD + i * w };
         }
+        // Single writer for the pill's X, so the spring and the snapped
+        // placements can't disagree about where it currently is.
+        let lastX = 0;
+        function setX(x) { lastX = x; ind.style.transform = 'translateX(' + x + 'px)'; }
+        const vel = createVelocityTracker();
+        const spring = createSpring(setX);
+        function endSpring() { spring.cancel(); bar.classList.remove('springing'); }
+
         function place(i, frac) {
+          // Snapped placement is instant and lets the declared CSS transition
+          // ease it -- external switches carry no velocity. Kill any running
+          // spring first: JS and CSS must never both write transform.
+          endSpring();
           const g = geom(i);
           const off = (frac || 0) * g.w;
           ind.style.width = g.w + 'px';
-          ind.style.transform = 'translateX(' + (g.x + off) + 'px)';
+          setX(g.x + off);
+        }
+
+        // Spring onto a segment carrying the gesture's velocity, mirroring
+        // the bottom tab bar. Same damping rationale -- bounce only when a
+        // flick put momentum into it, and the constants were measured
+        // against this integrator rather than taken from theory.
+        function springToSeg(i, velocity) {
+          const g = geom(i);
+          ind.style.width = g.w + 'px';
+          if (prefersReducedMotion()) { setX(g.x); return; }
+          bar.classList.add('springing');
+          const flick = Math.abs(velocity) > 40;
+          spring.start(lastX, g.x, velocity || 0,
+                       flick ? 0.34 : 0.30,
+                       flick ? 0.72 : 1.0,
+                       function () { bar.classList.remove('springing'); });
+        }
+
+        // Which segment the PILL's left edge lands nearest -- the projected
+        // resting position, not the segment under the pointer.
+        function segNearestX(x) {
+          const n = Math.max(1, tabs().length);
+          const wSeg = (bar.clientWidth - PAD * 2) / n;
+          if (wSeg <= 0) return -1;
+          return Math.max(0, Math.min(n - 1, Math.round((x - PAD) / wSeg)));
         }
         function activeIndex() {
           const i = tabs().findIndex(t => t.classList.contains('active'));
@@ -6058,7 +6254,7 @@
           // either end stops flush rather than against the border.
           x = Math.max(PAD, Math.min(x, bar.clientWidth - wSeg - PAD));
           ind.style.width = wSeg + 'px';
-          ind.style.transform = 'translateX(' + x + 'px)';
+          setX(x);
         }
 
         function segAt(clientX) {
@@ -6069,16 +6265,41 @@
           if (wSeg <= 0) return -1;
           return Math.max(0, Math.min(n - 1, Math.floor((x - PAD) / wSeg)));
         }
-        bar.addEventListener('touchstart', (e) => {
-          barDrag = true;
-          barHover = segAt(e.touches[0].clientX);
-          bar.classList.add('dragging');
-          placeFree(e.touches[0].clientX);
-        }, { passive: true });
-        bar.addEventListener('touchmove', (e) => {
-          if (!barDrag) return;
-          if (e.cancelable) e.preventDefault();
-          const x = e.touches[0].clientX;
+        // Pointer Events for the same reasons as the bottom tab bar: one code
+        // path covering touch, mouse and stylus, plus setPointerCapture so a
+        // drag that strays outside the control keeps tracking.
+        let segPointerId = null, segMoved = false, segStartX = 0, segCommitted = -1;
+
+        bar.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0 && e.pointerType === 'mouse') return;
+          if (segPointerId !== null) return;
+          segPointerId = e.pointerId;
+          try { bar.setPointerCapture(e.pointerId); } catch (err) {}
+          // Grab a spring in flight rather than waiting it out; lastX already
+          // holds the live on-screen position.
+          endSpring();
+          barDrag = true; segMoved = false;
+          segStartX = e.clientX;
+          // The segment actually SELECTED right now. pointermove previews by
+          // moving .active, so this can't be recovered later in the gesture.
+          segCommitted = activeIndex();
+          barHover = segAt(segStartX);
+          vel.clear(); vel.add(segStartX, performance.now());
+        });
+
+        bar.addEventListener('pointermove', (e) => {
+          if (!barDrag || e.pointerId !== segPointerId) return;
+          const x = e.clientX;
+          // Wait for real movement before entering drag mode. .dragging kills
+          // the pill's transition, and adding it on pointerdown -- as this
+          // did -- made a plain tap TELEPORT the pill to the finger instead
+          // of animating across. Same threshold the bottom bar uses.
+          if (!segMoved && Math.abs(x - segStartX) > 6) {
+            segMoved = true;
+            bar.classList.add('dragging');
+          }
+          if (!segMoved) return;
+          vel.add(x, performance.now());
           placeFree(x);                     // every frame, not just at boundaries
           const i = segAt(x);
           // Labels still light per-segment, but the pill no longer waits for a
@@ -6087,19 +6308,59 @@
             barHover = i;
             tabs().forEach((t, k) => t.classList.toggle('active', k === i));
           }
-        }, { passive: false });
-        bar.addEventListener('touchend', () => {
+        });
+
+        function segRelease() {
           if (!barDrag) return;
           barDrag = false;
+          const v = segMoved ? vel.get() : 0;
+          // A flick lands where it is THROWN. Without this the pill settled
+          // on whatever segment the finger stopped over, so a hard swipe and
+          // a slow nudge produced the same result.
+          const target = segMoved
+            ? segNearestX(lastX + projectMomentum(v))
+            : segAt(segStartX);
+          if (target >= 0) {
+            barHover = target;
+            tabs().forEach((t, k) => t.classList.toggle('active', k === target));
+          }
+          // springing goes on before dragging comes off, so the CSS
+          // transition never gets a frame to fight the spring.
+          if (barHover >= 0) springToSeg(barHover, v);
           bar.classList.remove('dragging');
-          // Easing returns here, so the pill settles onto the chosen segment
-          // instead of stopping wherever the finger lifted.
-          if (barHover >= 0) place(barHover, 0);
           if (barHover >= 0) {
             switchSegTab(tabs()[barHover]);
             if (window.navigator.vibrate) { try { navigator.vibrate(8); } catch (err) {} }
           }
-        }, { passive: true });
+        }
+
+        bar.addEventListener('pointerup', (e) => {
+          if (segPointerId !== null && e.pointerId !== segPointerId) return;
+          if (segPointerId !== null) {
+            try { bar.releasePointerCapture(segPointerId); } catch (err) {}
+            segPointerId = null;
+          }
+          segRelease();
+        });
+
+        // There was no cancel handler at all. With touch-action: pan-y the
+        // browser can legitimately claim this gesture as a scroll mid-drag,
+        // which fires pointercancel -- and without this the pill would be
+        // left stranded wherever the finger was, with .active on a segment
+        // the user never chose. Revert to what was selected at pointerdown.
+        bar.addEventListener('pointercancel', (e) => {
+          if (segPointerId !== null && e.pointerId !== segPointerId) return;
+          if (segPointerId !== null) {
+            try { bar.releasePointerCapture(segPointerId); } catch (err) {}
+            segPointerId = null;
+          }
+          barDrag = false; segMoved = false;
+          const back = segCommitted >= 0 ? segCommitted : activeIndex();
+          tabs().forEach((t, k) => t.classList.toggle('active', k === back));
+          barHover = back;
+          springToSeg(back, 0);
+          bar.classList.remove('dragging');
+        });
       });
     }
     if (document.readyState === 'loading') {
@@ -6285,116 +6546,6 @@
       initTabBarCollapse();
     }
 
-
-    // ===== Gesture motion primitives =====
-    // WHY THESE EXIST. The release animation used to be a fixed-duration CSS
-    // transition, which gets three things wrong at once:
-    //
-    //   1. NO VELOCITY. A slow drag and a hard flick both settled in exactly
-    //      0.55s. The seam between "finger moving it" and "animation moving
-    //      it" was visible because the animation ignored the speed the
-    //      gesture handed it.
-    //   2. NO MOMENTUM. The target tab was whichever one sat under the finger
-    //      at release, so throwing the pill hard at the last tab landed it
-    //      wherever the finger happened to stop.
-    //   3. NOT INTERRUPTIBLE. A CSS transition can't be grabbed mid-flight
-    //      and redirected from its current on-screen value.
-    //
-    // A spring fixes all three: it accepts an initial velocity, it can be
-    // re-targeted mid-flight while carrying that velocity through, and it has
-    // no fixed duration -- settle time emerges from the parameters.
-
-    // A JS-driven spring is invisible to the stylesheet, so the
-    // prefers-reduced-motion blocks throughout this file do NOT cover it.
-    // Every spring below has to check this itself or the preference silently
-    // stops applying to exactly the motion it most wants suppressed.
-    // Queried live rather than cached: the user can change it mid-session.
-    const _rmq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-    function prefersReducedMotion() { return !!(_rmq && _rmq.matches); }
-
-    // Apple's momentum projection (Designing Fluid Interfaces sample code):
-    // where a flick would come to rest under exponential decay. NOT the
-    // textbook v^2/(2a) -- that models constant deceleration and lands short.
-    function projectMomentum(velocity, decelerationRate) {
-      const d = decelerationRate === undefined ? 0.998 : decelerationRate;
-      return (velocity / 1000) * d / (1 - d);
-    }
-
-    // Velocity over a short sample WINDOW, not the last two events. A single
-    // pair is dominated by whatever jitter the final move carried, which is
-    // exactly the sample a flick ends on.
-    function createVelocityTracker(windowMs) {
-      const w = windowMs || 100;
-      let s = [];
-      return {
-        clear() { s = []; },
-        add(x, t) {
-          s.push({ x: x, t: t });
-          while (s.length > 2 && t - s[0].t > w) s.shift();
-        },
-        get() {                               // px/s
-          if (s.length < 2) return 0;
-          const a = s[0], b = s[s.length - 1];
-          const dt = (b.t - a.t) / 1000;
-          return dt > 0 ? (b.x - a.x) / dt : 0;
-        }
-      };
-    }
-
-    // Damped harmonic oscillator, parameterised the way Apple exposes it:
-    // RESPONSE (seconds to approach the target -- not a duration, a spring
-    // has none) and DAMPING RATIO (1.0 critically damped/no overshoot,
-    // below 1 overshoots).
-    function createSpring(onFrame) {
-      let raf = 0, x = 0, v = 0, target = 0, k = 0, c = 0, last = 0, done = null;
-      function finish() {
-        raf = 0;
-        if (done) { const d = done; done = null; d(); }
-      }
-      function step(now) {
-        // Clamp dt: a backgrounded tab resumes with a huge delta, and one
-        // enormous integration step throws the spring to infinity.
-        const dt = Math.min((now - last) / 1000, 1 / 30);
-        last = now;
-        // Sub-step to 120Hz so a slow frame can't integrate into instability.
-        const n = Math.max(1, Math.ceil(dt * 120));
-        const h = dt / n;
-        for (let i = 0; i < n; i++) {
-          v += (-k * (x - target) - c * v) * h;
-          x += v * h;
-        }
-        onFrame(x);
-        if (Math.abs(x - target) < 0.1 && Math.abs(v) < 2) {
-          x = target; onFrame(x); finish(); return;
-        }
-        raf = requestAnimationFrame(step);
-      }
-      function tune(response, damping) {
-        const w = (2 * Math.PI) / response;
-        k = w * w;
-        c = 2 * damping * w;
-      }
-      return {
-        get animating() { return raf !== 0; },
-        start(from, to, velocity, response, damping, onDone) {
-          x = from; target = to; v = velocity || 0;
-          tune(response, damping);
-          done = onDone || null;
-          last = performance.now();
-          if (!raf) raf = requestAnimationFrame(step);
-        },
-        // Re-target WITHOUT resetting velocity -- this is what stops a
-        // reversal reading as a brick wall.
-        retarget(to) { target = to; },
-        // Returns the live on-screen value so a new gesture can pick up from
-        // exactly where the pill is, not where it was headed.
-        cancel() {
-          if (raf) cancelAnimationFrame(raf);
-          raf = 0; done = null; v = 0;
-          return x;
-        }
-      };
-    }
 
     // ===== Draggable tab bar =====
     // Slide along the bar and the highlight follows continuously, so Card ->
@@ -7832,7 +7983,10 @@
       if (!('IntersectionObserver' in window)) {
         // Older browser fallback -- just show everything immediately, no animation
         document.querySelectorAll('.reveal-target').forEach(el => el.classList.add('revealed'));
-        document.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .edge-divergence-fill').forEach(el => { el.style.width = el.dataset.targetWidth; });
+        document.querySelectorAll('.favorite-prob-bar, .edge-divergence-fill').forEach(el => { el.style.width = el.dataset.targetWidth; });
+        // Tape bars carry their final widths in the markup; the wrapper's
+        // scaleX is what reveals them.
+        document.querySelectorAll('.tape-bar-fill').forEach(el => { el.style.transform = 'scaleX(1)'; });
         document.querySelectorAll('.ring-progress').forEach(el => { el.style.strokeDashoffset = el.dataset.targetOffset; });
         document.querySelectorAll('.radar-chart').forEach(el => el.classList.add('revealed'));
         return;
@@ -7849,8 +8003,11 @@
       document.querySelectorAll('.reveal-target').forEach(el => cardObserver.observe(el));
 
       function revealFillTarget(el) {
-        el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .edge-divergence-fill').forEach(bar => {
+        el.querySelectorAll('.favorite-prob-bar, .edge-divergence-fill').forEach(bar => {
           bar.style.width = bar.dataset.targetWidth;
+        });
+        el.querySelectorAll('.tape-bar-fill').forEach(fill => {
+          fill.style.transform = 'scaleX(1)';
         });
         el.querySelectorAll('.ring-progress').forEach(ring => {
           ring.style.strokeDashoffset = ring.dataset.targetOffset;
@@ -7893,11 +8050,17 @@
         // behind.
         el.classList.remove('revealed');
         el.querySelectorAll('.radar-chart').forEach(chart => chart.classList.remove('revealed'));
-        const affected = el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .ring-progress, .edge-divergence-fill');
+        // .tape-bar-fill is in this list, not the bars: it is the element
+        // that now animates, so it is the one whose transition has to be
+        // suppressed while the reset value is applied.
+        const affected = el.querySelectorAll('.tape-bar-fill, .favorite-prob-bar, .ring-progress, .edge-divergence-fill');
         affected.forEach(node => { node.style.transition = 'none'; });
 
-        el.querySelectorAll('.tape-bar-a, .tape-bar-b, .favorite-prob-bar, .edge-divergence-fill').forEach(bar => {
+        el.querySelectorAll('.favorite-prob-bar, .edge-divergence-fill').forEach(bar => {
           bar.style.width = '0%';
+        });
+        el.querySelectorAll('.tape-bar-fill').forEach(fill => {
+          fill.style.transform = 'scaleX(0)';
         });
         el.querySelectorAll('.ring-progress').forEach(ring => {
           const full = ring.getAttribute('stroke-dasharray');
