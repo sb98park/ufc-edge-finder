@@ -347,7 +347,38 @@
   .confidence-hero-stat.medium { color: var(--accent2); }
   .confidence-hero-stat.low { color: var(--red); }
 
-  .live-header { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; }
+  /* THE CARD STARTING. This is the rarest and highest-emotion state change
+     on the site -- it happens once per event -- and it was a jump cut: the
+     countdown boxes vanished and this appeared in the same frame.
+     The overshoot curve is used here and nowhere else in this list, which is
+     the point: bounce is only defensible where a moment is genuinely rare,
+     and everything else on this page sees enough daily use that overshoot
+     would wear out fast.
+     Replays on its own whenever the element leaves display:none, so it needs
+     no JS -- and it can't retrigger on the once-a-second countdown tick,
+     because re-assigning the same display value doesn't restart animations.
+     0.35s matches the fight-card entrance rather than inventing a duration. */
+  .live-header {
+    display: flex; flex-direction: column; gap: 6px; padding: 10px 0;
+    animation: liveIn 0.35s cubic-bezier(0.34,1.4,0.64,1) both;
+  }
+  @keyframes liveIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  /* The state change still has to register, so keep the fade and drop the
+     scale -- the vestibular part is the size change, not the opacity.
+     A SEPARATE KEYFRAME NAME rather than redefining liveIn inside the media
+     block. Redefinition is legal and would work, but "which @keyframes wins"
+     depends on document order and query activation, which is a subtle rule to
+     leave sitting in a file someone else will edit. Two names, no ambiguity. */
+  @keyframes liveInFade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .live-header { animation: liveInFade 0.2s ease-out both; }
+  }
   .live-header-macro {
     display: flex; align-items: center; justify-content: center; gap: 7px;
     font-size: 0.9375rem; font-weight: 700; letter-spacing: 0.6px; color: #fff;
@@ -3187,7 +3218,21 @@
      fixed height would break on cards whose content varies.
      A short rise and fade is enough to tie cause to effect; anything longer
      gets in the way of a control people open repeatedly. */
-  details.fight-card[open] > *:not(summary) {
+  /* EVERY accordion, not just the fight card. The rule above was written for
+     .fight-card and the other five <details> types on the page were left
+     snapping open -- market groups, future-event cards, the waterfall block
+     and the chart toggle.
+     That gap was conspicuous rather than merely missing, because the CHEVRON
+     on those same controls already rotates over 0.2s: the affordance
+     animated while the panel it pointed at teleported. A mismatched pair
+     reads worse than a consistently static one.
+     Enumerated rather than a bare `details[open]` so a future <details>
+     added for a non-panel purpose doesn't silently inherit an entrance. */
+  details.fight-card[open] > *:not(summary),
+  details.market-group[open] > *:not(summary),
+  details.future-event-card[open] > *:not(summary),
+  details.waterfall-block[open] > *:not(summary),
+  details.chart-toggle[open] > *:not(summary) {
     animation: fightCardIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
   }
   @keyframes fightCardIn {
@@ -3195,7 +3240,11 @@
     to   { opacity: 1; transform: translateY(0); }
   }
   @media (prefers-reduced-motion: reduce) {
-    details.fight-card[open] > *:not(summary) { animation: none; }
+    details.fight-card[open] > *:not(summary),
+    details.market-group[open] > *:not(summary),
+    details.future-event-card[open] > *:not(summary),
+    details.waterfall-block[open] > *:not(summary),
+    details.chart-toggle[open] > *:not(summary) { animation: none; }
   }
   /* Filtered-empty notice. Deliberately quiet -- it explains a state the
      reader created, so it should read as information, not as an error. */
