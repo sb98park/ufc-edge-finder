@@ -2,16 +2,32 @@ name: Refresh UFC Edge Finder
 
 on:
   schedule:
-    # Every 5 minutes -- GitHub Actions' minimum cron interval. Honest
-    # expectation-setting: scheduled triggers are best-effort and lag
-    # 5-20 min under load (especially at the top of the hour), so this
-    # buys a faster AVERAGE cadence, not a guaranteed 5-minute tick.
-    # The manual "Run workflow" button (workflow_dispatch) remains the
-    # guaranteed on-demand refresh, including from the GitHub mobile app.
+    # KEPT AS A BACKSTOP ONLY -- this is no longer the primary trigger.
+    # Measured 2026-08-12..14, GitHub delivered this */5 schedule about
+    # ONCE AN HOUR (gaps of 43-137 min), roughly one tick in twelve.
+    # `schedule` is documented as best-effort and drops ticks under load,
+    # so that is GitHub working as designed, not a misconfiguration here.
+    # It stays because a tick an hour is a useful floor if the Cloudflare
+    # Worker below is ever down, misconfigured, or its PAT expires.
     # Note the front-end already updates displayed prices in real time
     # client-side (data-live-token); this job's cadence governs model
     # recalcs, result detection, movement tags, and charts.
     - cron: "*/5 * * * *"
+
+  # THE ACTUAL 5-MINUTE CADENCE. Fired by cloudflare-worker/refresh-tick.js
+  # on a Cloudflare Cron Trigger, because Cloudflare delivers the ticks
+  # GitHub drops. The Worker holds NO cadence logic -- it fires every 5
+  # minutes unconditionally and scripts/should_refresh.py remains the sole
+  # decision-maker about whether any given tick becomes a build.
+  #
+  # THROTTLED, exactly like `schedule` -- see the cadence step below. This
+  # is why the Worker fires repository_dispatch and not workflow_dispatch:
+  # workflow_dispatch bypasses the gate by design, so pointing the Worker at
+  # it would produce 288 unthrottled builds a day and walk straight back
+  # into the Pages deployment saturation the gate exists to prevent.
+  repository_dispatch:
+    types: [tick]
+
   workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
   push:
     branches: [main]
@@ -74,19 +90,44 @@ jobs:
 
       - name: Decide whether this run needs to build
         id: cadence
-        # A manual run or a push always builds; only the CRON is throttled.
+        # AUTOMATED ticks are throttled; HUMAN triggers always build.
+        #
+        # The two automated triggers -- GitHub's own `schedule` and the
+        # `tick` repository_dispatch from cloudflare-worker/refresh-tick.js
+        # -- both go through scripts/should_refresh.py, which is the single
+        # source of truth for cadence. Neither trigger carries any opinion
+        # about whether a build is warranted; that decision lives in Python
+        # and nowhere else.
+        #
+        # workflow_dispatch and push are the deliberate escape hatches and
+        # bypass the gate entirely: the "Run workflow" button (and the phone
+        # Shortcut that hits the same endpoint) must stay a GUARANTEED
+        # immediate refresh, which is exactly what makes it the right tool
+        # on fight night.
+        #
         # Skipping sets an output the later steps check, rather than failing
         # the job -- a red X every few minutes would train everyone to ignore
         # the Actions tab, which is where today's real failures were hiding.
+        env:
+          # Via env rather than inlined into the script. github.event_name is
+          # a trusted fixed enum so this isn't an injection fix, just the
+          # form that stays safe if the condition ever widens to a field an
+          # outside caller controls (client_payload, a branch name).
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "reason=manual or push -- always builds" >> $GITHUB_OUTPUT
-            echo "build=yes" >> $GITHUB_OUTPUT
-          elif python scripts/should_refresh.py; then
-            echo "build=yes" >> $GITHUB_OUTPUT
-          else
-            echo "build=no" >> $GITHUB_OUTPUT
-          fi
+          case "$EVENT_NAME" in
+            schedule|repository_dispatch)
+              if python scripts/should_refresh.py; then
+                echo "build=yes" >> $GITHUB_OUTPUT
+              else
+                echo "build=no" >> $GITHUB_OUTPUT
+              fi
+              ;;
+            *)
+              echo "reason=manual or push -- always builds" >> $GITHUB_OUTPUT
+              echo "build=yes" >> $GITHUB_OUTPUT
+              ;;
+          esac
 
       - name: Merge recorded results into fight history
         if: steps.cadence.outputs.build == 'yes' 
