@@ -31,13 +31,17 @@ generating -- costing seconds instead of a build and a deployment.
 
 Fails OPEN: any error proceeds. A guard that silently stops the site updating
 is worse than one that occasionally lets a redundant build through.
+
+STDLIB ONLY, DELIBERATELY -- see the CSV read in main(). This file must stay
+importable without installing anything, so the workflow can run it before
+`pip install`. Adding a third-party import here silently costs ~90s on every
+skipped run.
 """
 
+import csv
 import datetime as dt
 import subprocess
 import sys
-
-import pandas as pd
 
 
 def _minutes_since_last_build():
@@ -58,12 +62,24 @@ def main():
         now = dt.datetime.now(dt.timezone.utc)
         dates = []
         for path in ("data/fight_cards.csv", "data/future_cards.csv"):
+            # csv.DictReader rather than pd.read_csv: pulling one column out
+            # of two files of a few dozen rows never needed a DataFrame, and
+            # the pandas import is what forced this gate to run below `pip
+            # install` in the workflow. Blank cells are skipped here, which
+            # is what .dropna() did; any other unparseable value (a literal
+            # "nan", a malformed date) falls through to the strptime below
+            # and is discarded there, exactly as before.
             try:
-                d = pd.read_csv(path)
-            except FileNotFoundError:
+                with open(path, newline="", encoding="utf-8-sig") as fh:
+                    reader = csv.DictReader(fh)
+                    if not reader.fieldnames or "event_date" not in reader.fieldnames:
+                        continue
+                    for row in reader:
+                        value = (row.get("event_date") or "").strip()
+                        if value:
+                            dates.append(value[:10])
+            except (FileNotFoundError, OSError, csv.Error):
                 continue
-            if "event_date" in d.columns:
-                dates += [str(x)[:10] for x in d["event_date"].dropna()]
         if not dates:
             print("[cadence] no card dates found -- proceeding")
             return 0

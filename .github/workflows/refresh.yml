@@ -85,9 +85,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
+      # THE GATE RUNS BEFORE THE INSTALL, ON PURPOSE. Most ticks skip -- with
+      # Cloudflare firing every 5 minutes that's ~264 of ~288 runs a day on a
+      # quiet week -- and there is no reason for a run that has already
+      # decided to do nothing to spend ~90s installing pandas first.
+      # scripts/should_refresh.py is deliberately stdlib-only so it can sit
+      # here, above the install; adding a third-party import to it would
+      # force this step back below and quietly restore that cost.
       - name: Decide whether this run needs to build
         id: cadence
         # AUTOMATED ticks are throttled; HUMAN triggers always build.
@@ -128,6 +132,13 @@ jobs:
               echo "build=yes" >> $GITHUB_OUTPUT
               ;;
           esac
+
+      - name: Install dependencies
+        # Gated: a skipped run never installs anything. Every step from here
+        # down is build-only, so a skip now costs a checkout, a Python setup
+        # and a few seconds of stdlib date arithmetic.
+        if: steps.cadence.outputs.build == 'yes'
+        run: pip install -r requirements.txt
 
       - name: Merge recorded results into fight history
         if: steps.cadence.outputs.build == 'yes' 
