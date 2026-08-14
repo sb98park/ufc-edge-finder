@@ -167,6 +167,36 @@ jobs:
         # results. It retries with backoff and reports the block clearly.
         run: python scripts/backfill_history_from_espn.py --apply || true
 
+      - name: Backfill per-fight ESPN stats for carded fighters
+        timeout-minutes: 4
+        if: steps.cadence.outputs.build == 'yes'
+        # WHY THIS IS HERE NOW. This script is the sole writer of
+        # espn_fights, knockdowns_per_fight, sig_strikes_att/absorbed_per_fight
+        # and every strikes_*/absorbed_*_share column -- which between them
+        # gate three of the radar's six axes AND the entire striking
+        # mannequin. It was never in CI, so it only ever ran when someone
+        # remembered to run it by hand, with --card-only, against the CURRENT
+        # card. The future cards were therefore never fetched at all: 55 of
+        # 109 upcoming fighters had no stats, so their radars drew three
+        # blank axes and their body maps didn't render. Not missing data --
+        # data nobody had asked ESPN for.
+        #
+        # --cards covers both card files; --missing-only makes the run
+        # ADDITIVE. That second flag is a safety property, not an
+        # optimisation: the script writes None deliberately so a stat can be
+        # cleared, so a broad re-run during an ESPN wobble could blank
+        # fighters who currently have good data. Restricting to fighters with
+        # no espn_fights means it can only ever fill gaps.
+        #
+        # Cheap in steady state -- once a card's fighters are backfilled the
+        # target list is empty and no requests are made at all. It does real
+        # work only when a new card appears.
+        #
+        # NON-BLOCKING like the history backfill above, and for the same
+        # reason: ESPN 403s under bursts, and a throttled stats fetch must
+        # not stop the site publishing odds and results.
+        run: python scripts/backfill_espn_fight_stats.py --cards --missing-only --apply || true
+
       - name: Generate site
         timeout-minutes: 6
         if: steps.cadence.outputs.build == 'yes'

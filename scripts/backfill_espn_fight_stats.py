@@ -548,6 +548,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--discover", action="store_true", help="build the name->espn_id map first")
     ap.add_argument("--card-only", action="store_true", help="only fighters on data/fight_cards.csv")
+    ap.add_argument("--cards", action="store_true",
+                    help="fighters on data/fight_cards.csv OR data/future_cards.csv")
+    ap.add_argument("--missing-only", action="store_true",
+                    help="skip fighters that already have espn_fights")
     ap.add_argument("--from-history", action="store_true",
                     help="walk fighters from data/fight_history.csv (most-fought first) rather "
                          "than fighters.csv -- populates the cache for point-in-time validation")
@@ -598,6 +602,28 @@ def main():
         cards = pd.read_csv("data/fight_cards.csv")
         on = set(cards["fighter_a"]) | set(cards["fighter_b"])
         targets = [n for n in targets if n in on]
+    if args.cards:
+        # --card-only covers the CURRENT card only, which is why the future
+        # cards drifted: the radar's three measured axes and the whole
+        # striking mannequin are gated on espn_fights, so a fighter never
+        # fetched renders with blank axes and no body map. That read as
+        # "we have no data on this guy" three weeks before his fight, when
+        # in fact nobody had asked ESPN for it yet.
+        on = set()
+        for path in ("data/fight_cards.csv", "data/future_cards.csv"):
+            if not os.path.exists(path):
+                continue
+            c = pd.read_csv(path)
+            on |= set(c["fighter_a"].dropna()) | set(c["fighter_b"].dropna())
+        targets = [n for n in targets if n in on]
+    if args.missing_only:
+        # SAFETY, not just speed. The write below deliberately stores None so
+        # a stat can be cleared -- which means a broad re-run during an ESPN
+        # wobble could blank fighters who currently have good data. Filtering
+        # to fighters with no espn_fights makes the run purely additive.
+        have = set(fighters.loc[fighters["espn_fights"].notna(), "name"]) \
+               if "espn_fights" in fighters.columns else set()
+        targets = [n for n in targets if n not in have]
     if args.limit:
         targets = targets[:args.limit]
 
