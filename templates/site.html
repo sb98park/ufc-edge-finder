@@ -6683,7 +6683,7 @@
     // Restricted to DRAWER_SECTIONS. Everything else on this site has its own
     // tab, so there is no parent to return to and a back gesture would be
     // asserting a hierarchy that doesn't exist.
-    (function initBackSwipe() {
+    function initBackSwipe() {
       const strip = document.getElementById('edge-back');
       const scrim = document.getElementById('swipe-scrim');
       if (!strip) return;
@@ -6798,7 +6798,20 @@
         if (pid !== null && e.pointerId !== pid) return;
         endGesture(false, 0);
       });
-    })();
+    }
+    // MUST WAIT FOR THE DOM. #edge-back and #swipe-scrim are emitted near the
+    // end of the document, after this script block -- so running immediately
+    // meant getElementById returned null, the `if (!strip) return` guard fired,
+    // and nothing was wired at all. The gesture was inert while looking
+    // completely correct in source.
+    // This is the identical trap initTabBar hit and documents a few hundred
+    // lines below ("the <nav> is emitted just before </body> -- so at
+    // inline-run time the element does not exist yet"). Same fix, same shape.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initBackSwipe);
+    } else {
+      initBackSwipe();
+    }
 
     // ===== Draggable tab bar =====
     // Slide along the bar and the highlight follows continuously, so Card ->
