@@ -1,16 +1,24 @@
 """
-Shared live-odds fetching logic. Both Polymarket and DraftKings are tried
-and MERGED (not first-success-wins) -- if Polymarket doesn't have a
-method-of-victory market for a given fight but DraftKings does, that
-DraftKings row still makes it into the final data instead of being
-discarded just because Polymarket answered first. The Odds API is a
-last resort only if both of the above return nothing at all.
+Shared live-odds fetching logic. Polymarket is the source; The Odds API is
+a last resort only if it returns nothing at all.
+
+DRAFTKINGS WAS REMOVED. It used to be tried alongside Polymarket and merged
+in to fill (fighter-pair, market) gaps. In practice it filled none: the
+scrape hit DraftKings' undocumented site endpoints, which now refuse it, so
+every build called it, caught the failure, logged a warning and carried on
+with Polymarket alone. The generated site recorded "Polymarket" and nothing
+else as its source.
+
+Keeping it cost a failed request on every one of ~288 builds a day and left
+253 lines of sportsbook-scraping code in the tree that looked load-bearing
+and wasn't. If DraftKings odds are wanted again the route is a licensed
+feed, not that scraper -- The Odds API already carries DraftKings
+moneylines under a bookmaker key on the plan this project already uses.
 """
 
 import pandas as pd
 
 from src.polymarket_source import fetch_polymarket_ufc_props
-from src.draftkings_scraper import fetch_draftkings_mma_props
 from src.live_odds import fetch_mma_odds, to_upcoming_rows
 
 
@@ -44,7 +52,7 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
             set_known_fighters(known_fighters)
         except Exception:
             pass    # discovery still works on its original "ufc" + "vs" rule
-    pm_rows, dk_rows = [], []
+    pm_rows = []
 
     try:
         pm_rows = fetch_polymarket_ufc_props()
@@ -53,41 +61,33 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
     except Exception as exc:
         print(f"[warn] Polymarket fetch failed ({exc})")
 
-    try:
-        dk_rows = fetch_draftkings_mma_props()
-        if dk_rows:
-            sources_used.append("DraftKings")
-    except Exception as exc:
-        print(f"[warn] DraftKings scrape failed ({exc})")
-
-    if not pm_rows and not dk_rows:
+    if not pm_rows:
         try:
             events = fetch_mma_odds()
             rows = to_upcoming_rows(events)
             if rows:
                 return pd.DataFrame(rows), "The Odds API (moneyline only)"
         except Exception as exc:
-            # All three sources failed. This used to raise RuntimeError,
-            # which killed the ENTIRE site generation -- a transient
-            # network blip at the wrong moment meant no site update at
-            # all, including everything that doesn't depend on live odds
-            # (track record, fighter data, schedules). The empty-DataFrame
-            # path below already exists for the quieter "sources answered
-            # but had no rows" case, and everything downstream (including
-            # the template's "Couldn't fetch live odds right now" notice)
-            # already handles it correctly -- so a total outage should
-            # take that same graceful path, just with a louder log line.
-            print(f"[warn] ALL THREE odds sources failed (Polymarket, DraftKings, "
-                  f"The Odds API) -- generating site without live odds. Last error: {exc}")
+            # Both sources failed. This used to raise RuntimeError, which
+            # killed the ENTIRE site generation -- a transient network blip
+            # at the wrong moment meant no site update at all, including
+            # everything that doesn't depend on live odds (track record,
+            # fighter data, schedules). The empty-DataFrame path below
+            # already exists for the quieter "sources answered but had no
+            # rows" case, and everything downstream (including the
+            # template's "Couldn't fetch live odds right now" notice)
+            # already handles it correctly -- so a total outage should take
+            # that same graceful path, just with a louder log line.
+            print(f"[warn] BOTH odds sources failed (Polymarket, The Odds API) "
+                  f"-- generating site without live odds. Last error: {exc}")
         return pd.DataFrame(), "no source returned data"
 
-    # Merge: Polymarket rows are kept as-is (no-vig, more trustworthy pricing).
-    # DraftKings rows only get ADDED for (fighter-pair, market) combos
-    # Polymarket didn't already cover -- filling gaps, not overriding.
-    covered = {(_pair_key(r), r["market"]) for r in pm_rows if _pair_key(r)}
-    supplemental = [r for r in dk_rows if (_pair_key(r), r["market"]) not in covered]
-
-    combined_rows = pm_rows + supplemental
+    # Polymarket rows are kept as-is (no-vig, more trustworthy pricing). This
+    # used to merge in DraftKings rows for any (fighter-pair, market) combo
+    # Polymarket hadn't covered; with that source gone there is nothing to
+    # merge, but the de-duplication below still matters -- Polymarket alone
+    # can list the same fight under two separate markets.
+    combined_rows = pm_rows
 
     # Final safety net: the same specific bet can show up twice at two
     # different prices (confirmed live) -- most likely from Polymarket
