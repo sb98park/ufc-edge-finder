@@ -30,5 +30,21 @@ docs/movements/
 !docs/og-share-card.png
 !docs/manifest.json
 !docs/.nojekyll
+# ESPN RESPONSE CACHE. scripts/backfill_espn_fight_stats.py caches every HTTP
+# response here keyed by URL hash, which is what makes a re-run cheap.
+#
+# It must never be committed. The workflow's commit step is `git add -A --
+# data/ docs/`, so the moment that script started running in CI the cache
+# began landing in the repo -- and a fresh shallow checkout starts with an
+# empty one, so each run would add whatever it fetched, forever. A local
+# working copy of this directory is 453MB across 45,000 files.
+#
+# That is the same failure that already happened once with the built site:
+# the pack reached 157MB, Pages clones the repo to build, and deployments
+# got slower until they stopped finishing. Ignoring it costs nothing --
+# it is a cache, it regenerates on demand, and CI's checkout is fresh
+# every run so it was never getting a cache hit from git anyway.
+data/.espn_cache/
+
 __pycache__/
 .DS_Store
