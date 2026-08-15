@@ -1267,9 +1267,19 @@
      The opaque background is required, not decorative: without it the page
      gradient is transparent and the hub would show THROUGH the outgoing
      page rather than behind it. */
+  /* Pinned, but its BOX IS MEASURED IN JS, not declared here.
+     `inset: 0` was wrong: fixed positioning resolves against the viewport,
+     while body is `max-width: 720px; margin-inline: auto; padding: 16px`
+     and sits below a shared header. So the hub escaped all of that and drew
+     at full viewport width from y=0 -- a different size and a different
+     origin than the same menu has when you actually navigate to it, which
+     is what made a slow swipe look broken.
+     begin() copies #detail-view's own bounding rect onto it instead, so the
+     incoming page occupies exactly the box the outgoing one does whatever
+     the layout happens to be. */
   html.swiping-back #hub-view {
     display: block !important;
-    position: fixed; inset: 0; z-index: 1; overflow: hidden;
+    position: fixed; z-index: 1; overflow: hidden;
   }
   html.swiping-back #swipe-scrim { display: block; }
   html.swiping-back #detail-view {
@@ -6713,8 +6723,20 @@
       function begin() {
         dragging = true;
         W = window.innerWidth || 1;
+        // MEASURE THE BOX BEFORE PINNING. The hub is about to become
+        // position:fixed, which resolves against the viewport and would
+        // otherwise ignore body's max-width, its auto margins, its padding
+        // and the header above it -- drawing the menu at a size and origin
+        // it never has in normal use. Copying the outgoing page's own rect
+        // makes the incoming one occupy exactly the same box, whatever the
+        // layout is, with no constants to keep in sync.
+        const r = detailView.getBoundingClientRect();
         document.documentElement.classList.add('swiping-back');
         hubView.style.display = 'block';
+        hubView.style.top = r.top + 'px';
+        hubView.style.left = r.left + 'px';
+        hubView.style.width = r.width + 'px';
+        hubView.style.bottom = '0';
         setX(0);
       }
 
@@ -6722,6 +6744,10 @@
         document.documentElement.classList.remove('swiping-back');
         detailView.style.transform = '';
         hubView.style.transform = '';
+        hubView.style.top = '';
+        hubView.style.left = '';
+        hubView.style.width = '';
+        hubView.style.bottom = '';
         if (scrim) scrim.style.opacity = '';
         dragging = false;
       }
@@ -6729,10 +6755,21 @@
       function settle(commit, velocity) {
         const target = commit ? W : 0;
         function done() {
-          cleanup();
           if (commit) {
+            // SCROLL BEFORE THE HUB RETURNS TO FLOW. showHub defers its own
+            // scrollTo to the next animation frame, which is one frame too
+            // late here: the hub has been pinned to the top of the viewport
+            // for the whole gesture, so dropping it back into a document
+            // still scrolled to the outgoing section's offset makes it jump
+            // on the first frame after the swipe lands. That jump is what
+            // stops a completed swipe feeling smooth.
+            // Everything below happens in one task, so nothing paints
+            // between the scroll, the swap and the unpinning.
+            window.scrollTo(0, 0);
             showHub({ fromSwipe: true });
+            cleanup();
           } else {
+            cleanup();
             // Abandoned: the hub must go back to being hidden, or it stays
             // in the document underneath the section the user stayed on.
             hubView.style.display = '';
