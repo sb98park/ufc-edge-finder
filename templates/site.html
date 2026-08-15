@@ -1226,6 +1226,68 @@
   .damage-badge-text { font-size: 0.8125rem; font-weight: 700; fill: #fff; text-anchor: middle; }
 
   #hub-view, #detail-view { transition: opacity 0.2s ease, transform 0.2s ease; opacity: 1; transform: translateX(0); }
+
+  /* ===== Interactive back swipe =====
+     Drag from the left edge to return to More, tracking the finger, with the
+     hub parallaxing in behind. Only for the six sections reachable ONLY
+     through the drawer -- everything else has its own tab, so there is no
+     parent to go back to and a back gesture would be lying about the
+     hierarchy.
+
+     The strip is inert by default and only takes pointer events on those
+     sections. 22px because that is roughly Apple's own edge region; wider
+     starts eating taps on content, narrower is hard to hit deliberately.
+     touch-action: pan-y is the load-bearing declaration -- the browser
+     decides who owns a gesture BEFORE any handler runs, so this is what
+     reserves the horizontal axis for us while leaving vertical scrolling
+     alone. A vertical pan is claimed by the browser and arrives as
+     pointercancel, which the handler treats as "abandon the swipe". */
+  #edge-back {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 22px; z-index: 150;
+    touch-action: pan-y; pointer-events: none;
+  }
+  body[data-section="funfacts"] #edge-back,
+  body[data-section="favorites"] #edge-back,
+  body[data-section="parlays"] #edge-back,
+  body[data-section="coming"] #edge-back,
+  body[data-section="howitworks"] #edge-back,
+  body[data-section="disclaimer"] #edge-back { pointer-events: auto; }
+
+  #swipe-scrim {
+    position: fixed; inset: 0; z-index: 2; background: #000;
+    opacity: 0; pointer-events: none; display: none;
+  }
+
+  /* Only while a swipe is actually in progress. The hub can be pinned with
+     position:fixed because it ALWAYS returns to scroll 0 (showHub scrolls it
+     there deliberately -- resuming a menu part-way down is wrong), so there
+     is no scroll offset to preserve. #detail-view meanwhile stays in normal
+     flow and keeps its own scroll position for free; a transform doesn't
+     affect layout, so nothing reflows while it slides.
+     The opaque background is required, not decorative: without it the page
+     gradient is transparent and the hub would show THROUGH the outgoing
+     page rather than behind it. */
+  html.swiping-back #hub-view {
+    display: block !important;
+    position: fixed; inset: 0; z-index: 1; overflow: hidden;
+  }
+  html.swiping-back #swipe-scrim { display: block; }
+  html.swiping-back #detail-view {
+    position: relative; z-index: 3;
+    background: var(--bg);
+    box-shadow: -12px 0 32px rgba(0,0,0,0.55);
+  }
+  /* JS owns both transforms frame by frame during the drag and the release
+     spring; a CSS transition on the same property would ease toward each
+     frame's value and smear it. */
+  html.swiping-back #hub-view,
+  html.swiping-back #detail-view { transition: none; }
+
+  /* Desktop has the rail and a persistent content pane -- there is no
+     hub/detail relationship to swipe between. */
+  @media (min-width: 1024px) {
+    #edge-back { display: none; }
+  }
   .view-slide-out-left { opacity: 0; transform: translateX(-14px); }
   .view-slide-out-right { opacity: 0; transform: translateX(14px); }
   .view-slide-in-right-start { opacity: 0; transform: translateX(14px); transition: none; }
@@ -5490,25 +5552,41 @@
       if (e.target && e.target.id === 'back-btn') { e.preventDefault(); showHub(); }
     });
 
-    function showHub() {
+    // opts.fromSwipe: the back gesture has ALREADY moved both views into
+    // their final positions by hand, so this call must change state without
+    // animating anything. Running transitionViews here would re-hide a view
+    // that is already where it belongs and play a 220ms slide on top of a
+    // gesture the user just finished, which reads as the page bouncing.
+    function showHub(opts) {
+      const fromSwipe = !!(opts && opts.fromSwipe);
+
       // HOLD the back button through the transition. Its visibility is keyed
       // off body[data-section], so changing that below removes it from the
       // flow instantly -- the outgoing view jumped up by the button's height
       // before it had even started sliding away.
       // An inline display keeps it in place for the duration, then hands
       // control back to CSS.
-      const _bb = document.getElementById('back-btn');
-      const _wasVisible = _bb && getComputedStyle(_bb).display !== 'none';
-      if (_wasVisible) {
-        _bb.style.display = 'flex';
-        setTimeout(() => { _bb.style.display = ''; }, 340);
+      // Not needed for a swipe: the detail view is already off-screen by the
+      // time state changes, so nothing can be seen jumping.
+      if (!fromSwipe) {
+        const _bb = document.getElementById('back-btn');
+        const _wasVisible = _bb && getComputedStyle(_bb).display !== 'none';
+        if (_wasVisible) {
+          _bb.style.display = 'flex';
+          setTimeout(() => { _bb.style.display = ''; }, 340);
+        }
       }
 
       if (window.__syncTabBar) window.__syncTabBar("__hub");
       document.body.dataset.section = "__hub";
       if (window.__onSectionChange) window.__onSectionChange("__hub");
       if (isDesktopLayout()) return; // no hub to return to -- the rail is always visible there
-      transitionViews(detailView, hubView, 'backward');
+      if (fromSwipe) {
+        detailView.style.display = 'none';
+        hubView.style.display = 'block';
+      } else {
+        transitionViews(detailView, hubView, 'backward');
+      }
       // ALWAYS top. Scroll memory restores a per-section offset, and the hub
       // inherited that -- so returning to More landed part-way down the list
       // with the first group header and its first row scrolled off. Position
@@ -6595,6 +6673,132 @@
       initTabBarCollapse();
     }
 
+
+    // ===== Interactive back swipe =====
+    // Drag from the left edge to return to More. The page follows the finger
+    // 1:1, the hub parallaxes in behind it, and the release is decided by
+    // momentum rather than by where the finger stopped -- the same rules the
+    // tab bar uses, on the same primitives.
+    //
+    // Restricted to DRAWER_SECTIONS. Everything else on this site has its own
+    // tab, so there is no parent to return to and a back gesture would be
+    // asserting a hierarchy that doesn't exist.
+    (function initBackSwipe() {
+      const strip = document.getElementById('edge-back');
+      const scrim = document.getElementById('swipe-scrim');
+      if (!strip) return;
+
+      // How far the underlying page trails the one being dragged. iOS uses
+      // roughly a third; the point is that the two move at different rates,
+      // which is what reads as depth rather than as one flat sheet.
+      const PARALLAX = 0.30;
+      const SCRIM_MAX = 0.35;
+      const START_THRESHOLD = 8;     // px before this counts as a drag
+      const COMMIT_FRACTION = 0.5;   // past halfway commits...
+      const COMMIT_VELOCITY = 350;   // ...or a flick does, however far it got
+
+      let pid = null, dragging = false, armed = false, startX = 0, dx = 0, W = 1;
+      const vel = createVelocityTracker();
+      const spring = createSpring(setX);
+
+      function setX(x) {
+        dx = x;
+        const p = W > 0 ? Math.max(0, Math.min(1, x / W)) : 0;
+        detailView.style.transform = 'translateX(' + x + 'px)';
+        // Hub starts held back and arrives as the page clears it.
+        hubView.style.transform = 'translateX(' + (-PARALLAX * W * (1 - p)) + 'px)';
+        if (scrim) scrim.style.opacity = String(SCRIM_MAX * (1 - p));
+      }
+
+      function begin() {
+        dragging = true;
+        W = window.innerWidth || 1;
+        document.documentElement.classList.add('swiping-back');
+        hubView.style.display = 'block';
+        setX(0);
+      }
+
+      function cleanup() {
+        document.documentElement.classList.remove('swiping-back');
+        detailView.style.transform = '';
+        hubView.style.transform = '';
+        if (scrim) scrim.style.opacity = '';
+        dragging = false;
+      }
+
+      function settle(commit, velocity) {
+        const target = commit ? W : 0;
+        function done() {
+          cleanup();
+          if (commit) {
+            showHub({ fromSwipe: true });
+          } else {
+            // Abandoned: the hub must go back to being hidden, or it stays
+            // in the document underneath the section the user stayed on.
+            hubView.style.display = '';
+          }
+        }
+        // Reduced motion: the DRAG itself is direct manipulation and stays --
+        // suppressing a gesture the user is actively driving would be wrong.
+        // It's the unattended release animation that gets dropped.
+        if (prefersReducedMotion()) { setX(target); done(); return; }
+        // Critically damped. A back navigation settling with a bounce would
+        // read as the page not being sure it had arrived.
+        spring.start(dx, target, velocity || 0, 0.32, 1.0, done);
+      }
+
+      strip.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        if (pid !== null) return;
+        if (isDesktopLayout()) return;
+        if (DRAWER_SECTIONS.indexOf(document.body.dataset.section || '') === -1) return;
+        pid = e.pointerId;
+        try { strip.setPointerCapture(e.pointerId); } catch (err) {}
+        spring.cancel();          // grab a settling page rather than waiting
+        armed = true;
+        startX = e.clientX;
+        vel.clear(); vel.add(startX, performance.now());
+      });
+
+      strip.addEventListener('pointermove', (e) => {
+        if (!armed || e.pointerId !== pid) return;
+        const x = e.clientX;
+        vel.add(x, performance.now());
+        // Hold off until the pointer has actually travelled. Entering the
+        // swipe on pointerdown would flash the hub into view behind every
+        // tap that happened to land in the edge strip.
+        if (!dragging) {
+          if (x - startX < START_THRESHOLD) return;
+          begin();
+        }
+        setX(Math.max(0, x - startX));
+      });
+
+      function endGesture(commit, velocity) {
+        if (pid !== null) {
+          try { strip.releasePointerCapture(pid); } catch (err) {}
+          pid = null;
+        }
+        armed = false;
+        if (!dragging) return;     // never became a drag; nothing to undo
+        settle(commit, velocity);
+      }
+
+      strip.addEventListener('pointerup', (e) => {
+        if (pid !== null && e.pointerId !== pid) return;
+        const v = vel.get();
+        // Momentum decides, not position: a short fast flick is a clear
+        // intent to go back even though it never reached halfway.
+        endGesture(dx / W > COMMIT_FRACTION || v > COMMIT_VELOCITY, v);
+      });
+
+      // The browser claiming the gesture as a vertical scroll arrives here.
+      // Treat it as abandonment -- the user was scrolling, not navigating.
+      strip.addEventListener('pointercancel', (e) => {
+        if (pid !== null && e.pointerId !== pid) return;
+        endGesture(false, 0);
+      });
+    })();
 
     // ===== Draggable tab bar =====
     // Slide along the bar and the highlight follows continuously, so Card ->
@@ -8395,6 +8599,17 @@
       });
     })();
   </script>
+
+  <!-- Interactive back-swipe furniture. The strip is the gesture TARGET: it
+       carries touch-action: pan-y, which has to be declared on the element the
+       gesture starts on and cannot be applied once the pointer is already
+       down. Making it a real element rather than reading edge coordinates off
+       #detail-view is what lets the browser hand us the horizontal axis while
+       keeping vertical scrolling for itself.
+       The scrim dims the hub while it sits behind the outgoing page. Both are
+       inert until a drawer section is open -- see the pointer-events rule. -->
+  <div id="edge-back" aria-hidden="true"></div>
+  <div id="swipe-scrim" aria-hidden="true"></div>
 
   <!-- Mobile-only bottom navigation. Desktop keeps the left rail, so this is
        hidden at the 1024px breakpoint rather than existing in both places. -->
