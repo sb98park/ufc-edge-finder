@@ -15,6 +15,42 @@ import pandas as pd
 
 RATING_CENTER = 1500.0
 
+# How much of a NO-HISTORY fighter's record-derived rating to keep. 1.0 is
+# the shipped behaviour: trust the pre-UFC record at full strength. Lower
+# values pull a debutant toward the neutral centre.
+#
+# scripts/research_debutant_prior.py measured what that record is worth
+# across 263 debuts. The prior is not merely noisy, it inverts at the top:
+#
+#     model implies   actually wins    n
+#     74.9%           63.2%           163
+#     82.1%           45.5%            44
+#
+# A debutant rated at 82% wins less than half the time, because a padded
+# regional record and a hard-earned one are identical in W-L.
+#
+# THE BACKTEST DID NOT JUSTIFY MOVING IT, so this stays at 1.0 and the
+# branch below is a no-op. scripts/validate_debutant_shrink.py swept it
+# point-in-time over 3,966 debut fights and the effect cancels: against a
+# RATED opponent 0.5 gives Brier -0.0007 (p=0.040), but with BOTH corners
+# debuting it gives +0.0007, and 0.0 is significantly WORSE (+0.0066,
+# p=0.009, accuracy 71.8% -> 70.0%). Overall, p=0.162.
+#
+# The reason is a scale mismatch, not a bad prior. Against Elo the stats
+# curve is on the wrong scale and shrinking narrows it; against another
+# stats-curve rating the scale already matches and shrinking only compresses
+# a correct gap. A shrink conditional on the OPPONENT captures the whole
+# gain and costs nothing -- but build_effective_ratings assigns one rating
+# per fighter and never sees a matchup, so there is nowhere to put it.
+#
+# The real defect that run surfaced is calibration, not rating: a 60-80%
+# pick in a debut fight wins about 55% (n=1,757, overstated by 13-16pp).
+# That belongs with MIN_RECORD_FOR_HIGH_CONFIDENCE in the reporting layer.
+#
+# Kept as a named constant rather than deleted so the finding stays
+# attached to the line it is about.
+DEBUT_RATING_SHRINK = 1.0
+
 
 def compute_stats_rating(row: pd.Series) -> float:
     """
@@ -104,7 +140,11 @@ def build_effective_ratings(
         n_fights_tracked = int(fight_counts.get(name, 0))
 
         if n_fights_tracked == 0:
-            effective[name] = stats_rating
+            # THE DEBUTANT BRANCH. No connected history at all, so the record
+            # is the only evidence -- and the least reliable kind. Shrunk
+            # toward the centre by DEBUT_RATING_SHRINK; at 1.0 this is
+            # exactly the previous behaviour.
+            effective[name] = RATING_CENTER + (stats_rating - RATING_CENTER) * DEBUT_RATING_SHRINK
         else:
             weight = min(1.0, n_fights_tracked / min_fights_to_trust_elo)
             elo_r = elo_ratings.get(name, RATING_CENTER)
