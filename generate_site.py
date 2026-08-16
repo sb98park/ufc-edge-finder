@@ -30,7 +30,11 @@ from src.line_movement import (
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
     load_token_cache, save_token_cache, update_token_cache,
 )
-from src.track_record import log_predictions, compute_track_record, load_momentum_by_key, LOCK_OF_WEEK_MAX, LOCK_OF_WEEK_MIN_PROB
+from src.track_record import (
+    log_predictions, compute_track_record, load_momentum_by_key,
+    load_logged_predictions_by_key, _pair_key,
+    LOCK_OF_WEEK_MAX, LOCK_OF_WEEK_MIN_PROB,
+)
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
 from src.card_discovery import discover_and_append_new_cards, normalize_existing_card_order, resync_tracked_card_order, deduplicate_tracked_fights
@@ -568,6 +572,11 @@ def main():
                     "stats_fighter_b": r["fighter_b"] if stats_present else None,
                 }
 
+    # Loaded once, outside the loop -- it is the whole log and does not vary
+    # per fight. Used to put back the pick that was actually made on any
+    # fight that has since been decided; see the block below.
+    logged_predictions = load_logged_predictions_by_key()
+
     for event in events:
         for fight in event["fights"]:
             key = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
@@ -601,6 +610,36 @@ def main():
                         "a": {k[3:]: s[k] for k in s if k.startswith("fa_" if same_order else "fb_")},
                         "b": {k[3:]: s[k] for k in s if k.startswith("fb_" if same_order else "fa_")},
                     }
+                # RESTORE THE PICK WE ACTUALLY MADE. Everything above this
+                # line has just told the page how the fight ended -- and the
+                # preview attached to it was rebuilt minutes ago from data
+                # that already knew. fighter_backfill had rewritten both
+                # records from ESPN and merge_results_into_history had fed
+                # the bout into the ratings, so re-running the model was a
+                # lookup wearing a prediction's clothes: it returns whoever
+                # won.
+                #
+                # Live during UFC 330: the card called Mansur Abdul-Malik at
+                # 51%, he was submitted, and two builds later the same card
+                # showed Dustin Stoltzfus at 67% as "the pick" -- while the
+                # track record section, which reads the log, still correctly
+                # showed Mansur. The page was disagreeing with itself, and
+                # always in the model's favour.
+                #
+                # Only the four fields the card presents as the CALL are
+                # restored. Everything else in the preview (narrative,
+                # method distribution, radar, spotlight chips) is descriptive
+                # rather than a claim about the outcome, and a logged row
+                # doesn't carry it anyway.
+                logged = logged_predictions.get(
+                    _pair_key(fight["fighter_a"], fight["fighter_b"])
+                )
+                if logged and fight.get("preview"):
+                    for field in ("favorite", "favorite_prob",
+                                  "confidence_label", "likely_method"):
+                        if logged.get(field) is not None:
+                            fight["preview"][field] = logged[field]
+                    fight["preview"]["pick_is_logged"] = True
             else:
                 fight["winner"] = None
                 fight["result_label"] = None

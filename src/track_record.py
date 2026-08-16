@@ -268,6 +268,51 @@ def compute_momentum(favorite_prob_history_json: str) -> dict | None:
     return {"direction": "up" if delta > 0 else "down", "delta_pct": round(delta * 100, 1)}
 
 
+def load_logged_predictions_by_key() -> dict:
+    """
+    {(fighter_a, fighter_b): {favorite, favorite_prob, confidence_label,
+    likely_method}} -- the prediction AS IT WAS LOGGED, for restoring onto a
+    fight whose result is already known.
+
+    WHY THIS EXISTS. The fight card rebuilds its preview from scratch on
+    every run, and once a fight is decided the inputs to that preview have
+    already been contaminated by its own outcome: fighter_backfill rewrites
+    both fighters' W/L records from ESPN, and merge_results_into_history
+    feeds the bout into the ratings. Re-running the model against that data
+    is not a prediction, it is a lookup -- and it reliably "picks" whoever
+    actually won.
+
+    Observed live during UFC 330: the card had Mansur Abdul-Malik at 51%,
+    he was submitted, and within two builds the same card was displaying
+    Dustin Stoltzfus as the pick at 67%. The track record stayed correct
+    throughout, because it reads this log -- so the card was contradicting
+    the accuracy figure printed elsewhere on the same page, always in the
+    model's favour.
+
+    This log is written before a fight resolves and frozen afterwards (see
+    decided_keys in log_predictions), which makes it the only honest source
+    for what was actually called.
+    """
+    if not os.path.exists(PREDICTIONS_LOG_PATH):
+        return {}
+    out = {}
+    with open(PREDICTIONS_LOG_PATH, newline="") as f:
+        for row in csv.DictReader(f):
+            if not row.get("favorite"):
+                continue
+            try:
+                prob = float(row.get("favorite_prob") or 0) or None
+            except (TypeError, ValueError):
+                prob = None
+            out[_pair_key(row["fighter_a"], row["fighter_b"])] = {
+                "favorite": row["favorite"],
+                "favorite_prob": prob,
+                "confidence_label": row.get("confidence_label") or None,
+                "likely_method": row.get("likely_method") or None,
+            }
+    return out
+
+
 def load_momentum_by_key() -> dict:
     """{(fighter_a, fighter_b): momentum_dict_or_None} for every logged fight."""
     if not os.path.exists(PREDICTIONS_LOG_PATH):
