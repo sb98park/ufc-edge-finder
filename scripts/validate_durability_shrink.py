@@ -36,9 +36,15 @@ and both corners are rebuilt by pit_roster as they stood that night.
 
 THE RESULT: SHIPPED AT k = 2.0. Two disjoint windows, both significant:
 
-    window                    k=2 Brier    p        accuracy
-    recent 2,500 (n=1834)      -0.0030   0.011       +0.22%
-    prior  2,500 (n=1663)      -0.0052   0.000       +1.44%
+    window                  k=2 Brier    p (clustered)   accuracy   baseline
+    recent 2,500 (n=1834)    -0.0030      0.002         +0.44%      50.9%
+    prior  2,500 (n=1663)    -0.0043      0.001         +1.32%      51.2%
+
+Corners are now randomised, so the always-pick-A baseline sits at ~51% and
+the accuracy figures above mean what a reader assumes. The bootstrap is
+clustered by card; the design effect is 0.92 and 1.13 in the two windows,
+straddling 1.0 -- see scripts/harness_stats for why a paired difference does
+not inherit the outcome-level cluster correlation.
 
 Every arm improved Brier and log loss in every subset -- 16 of 16 in the
 same direction in the first window alone -- and the effect is 3-5x anything
@@ -79,6 +85,8 @@ from src import matchup_model  # noqa: E402
 from src.matchup_model import predict_matchup  # noqa: E402
 from src.power_rating import compute_stats_rating, _streak_bonus  # noqa: E402
 from scripts.pit_roster import build_fight_index, roster_as_of  # noqa: E402
+from scripts.harness_stats import (  # noqa: E402
+    paired_signflip, randomize_corner, score as _score_pairs, trivial_baseline)
 
 FIGHTERS = "data/fighters.csv"
 HISTORY = "data/fight_history.csv"
@@ -89,28 +97,16 @@ def _fold(n) -> str:
     return str(n).strip().lower()
 
 
-def _score(pairs):
-    n = len(pairs)
-    acc = sum(1 for p, y in pairs if (p >= 0.5) == (y == 1.0)) / n
-    brier = sum((p - y) ** 2 for p, y in pairs) / n
-    ll = -sum(y * math.log(max(p, 1e-9)) + (1 - y) * math.log(max(1 - p, 1e-9))
-              for p, y in pairs) / n
-    return n, acc, brier, ll
+_score = _score_pairs
 
 
-def _paired(rows, arm, base, n_boot=4000, seed=12345):
-    """Paired sign-flip bootstrap on the per-fight change in squared error."""
-    deltas = [(pr[arm] - y) ** 2 - (pr[base] - y) ** 2 for _, y, pr in rows]
-    if not deltas:
-        return 0.0, 1.0
-    obs = sum(deltas) / len(deltas)
-    rnd = random.Random(seed)
-    hits = 0
-    for _ in range(n_boot):
-        s = sum(d if rnd.random() < 0.5 else -d for d in deltas)
-        if abs(s / len(deltas)) >= abs(obs):
-            hits += 1
-    return obs, hits / n_boot
+def _paired(rows, arm, base):
+    """
+    Paired sign-flip bootstrap, CLUSTERED BY CARD. See scripts/harness_stats.
+    Row shape is (thin, y, probs, card_key).
+    """
+    deltas = [(r[2][arm] - r[1]) ** 2 - (r[2][base] - r[1]) ** 2 for r in rows]
+    return paired_signflip(deltas, clusters=[r[3] for r in rows])
 
 
 def run(arms, limit, offset=0):
@@ -168,9 +164,17 @@ def run(arms, limit, offset=0):
                     if p is not None and not math.isnan(p):
                         probs[k] = p
                 if len(probs) == len(arms):
+                    # CORNERS RANDOMISED, identically across every arm, so the
+                    # arms stay paired on the same fights while the trivial
+                    # always-pick-A baseline falls to ~50%. Brier and log loss
+                    # are invariant under the flip; accuracy is not, and that
+                    # is the number the flip exists to make meaningful.
+                    probs = {k: randomize_corner(v, y, a, b, when)[0]
+                             for k, v in probs.items()}
+                    y = randomize_corner(0.5, y, a, b, when)[1]
                     # thinner LOSS count -- the sample size the shrink is about
                     thin = min(float(ra.get("losses") or 0), float(rb.get("losses") or 0))
-                    records.append((thin, y, probs))
+                    records.append((thin, y, probs, when.date()))
 
             loser = b if winner == a else a
             if winner in (a, b):
@@ -205,12 +209,13 @@ def main():
         sys.exit(1)
 
     def table(rows, title):
-        print(f"\n{title}  (n={len(rows)})")
+        base_rate = trivial_baseline([(r[2][arms[0]], r[1]) for r in rows])
+        print(f"\n{title}  (n={len(rows)}, always-pick-A baseline {base_rate:.1%})")
         print(f"  {'DURABILITY_SHRINK_K':<26}{'accuracy':>10}{'Brier':>10}{'log loss':>11}")
         print("  " + "-" * 57)
         base = None
         for k in arms:
-            _, acc, brier, ll = _score([(pr[k], y) for _, y, pr in rows])
+            _, acc, brier, ll = _score([(r[2][k], r[1]) for r in rows])
             label = f"{k:g}" + ("  (control, current)" if k == 0.0 else "")
             print(f"  {label:<26}{acc:>9.1%}{brier:>10.4f}{ll:>11.4f}")
             if k == 0.0:
@@ -221,12 +226,13 @@ def main():
         for k in arms:
             if k == 0.0:
                 continue
-            _, acc, brier, ll = _score([(pr[k], y) for _, y, pr in rows])
+            _, acc, brier, ll = _score([(r[2][k], r[1]) for r in rows])
             verdict = "BETTER" if brier < base[1] else ("no change" if brier == base[1] else "WORSE")
-            _, p = _paired(rows, k, 0.0)
+            _, p, deff = _paired(rows, k, 0.0)
             sig = "significant" if p < 0.05 else "NOT significant"
             print(f"    k={k:<5g} acc {acc-base[0]:+.2%}  Brier {brier-base[1]:+.4f}  "
-                  f"log loss {ll-base[2]:+.4f}  -> {verdict:9}  [p={p:.3f}, {sig}]")
+                  f"log loss {ll-base[2]:+.4f}  -> {verdict:9}  [p={p:.3f} clustered, "
+                  f"{sig}, deff={deff:.2f}]")
 
     table(records, "ALL SCORED FIGHTS")
 
