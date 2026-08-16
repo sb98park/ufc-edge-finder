@@ -157,6 +157,20 @@ jobs:
 
       - name: Backfill history gaps from ESPN
         timeout-minutes: 4
+        # `|| true` IS NOT ENOUGH ON A STEP THAT HAS A TIMEOUT. It catches a
+        # non-zero exit from the script; it cannot catch the runner KILLING
+        # the step at timeout-minutes, which fails the step and therefore the
+        # job. So a step documented as non-blocking was blocking after all,
+        # the moment it got slow enough to hit the limit.
+        #
+        # That is what happened on 2026-08-16: card discovery took
+        # future_cards.csv from 6 events / 65 fights to 9 / 75+ within an
+        # hour, both ESPN backfills grew proportionally, and every build from
+        # 03:22 onward failed. The site sat nine hours stale with two results
+        # missing, while the fetcher that would have found them was fine --
+        # it just never got to run, because an optional step upstream was
+        # killed on time.
+        continue-on-error: true
         if: steps.cadence.outputs.build == 'yes'
         # Catches fights that happened between the raw dataset's cutoff and
         # the site's own tracking window -- the range neither other source
@@ -169,6 +183,13 @@ jobs:
 
       - name: Backfill per-fight ESPN stats for carded fighters
         timeout-minutes: 4
+        # Same reasoning as the step above: this is optional data enrichment,
+        # so it must never be able to stop the site publishing odds and
+        # results. It has no cache in CI (data/.espn_cache is gitignored, and
+        # the checkout is shallow anyway), so its cost scales directly with
+        # how many carded fighters still lack stats -- which grows every time
+        # a new future card is discovered.
+        continue-on-error: true
         if: steps.cadence.outputs.build == 'yes'
         # WHY THIS IS HERE NOW. This script is the sole writer of
         # espn_fights, knockdowns_per_fight, sig_strikes_att/absorbed_per_fight
@@ -198,7 +219,14 @@ jobs:
         run: python scripts/backfill_espn_fight_stats.py --cards --missing-only --apply || true
 
       - name: Generate site
-        timeout-minutes: 6
+        # 10, up from 6. This one genuinely MUST fail the job if it breaks --
+        # there is no site without it -- so it keeps a hard limit rather than
+        # continue-on-error. But the limit was set when the pipeline tracked
+        # three future cards and it now tracks nine, each adding Polymarket
+        # chart fetches. Measured at 1m23s locally with warm caches; the
+        # headroom is for a cold CI runner on a card-discovery week, not for
+        # a hang. 12 minutes remains the job-level backstop above it.
+        timeout-minutes: 10
         if: steps.cadence.outputs.build == 'yes'
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
