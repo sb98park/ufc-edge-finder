@@ -254,6 +254,26 @@ def load_pit_stats(path: str = OUT) -> dict:
     return out
 
 
+# A RATE NEEDS A DENOMINATOR, NOT JUST A BOUT COUNT. min_bouts gates on how
+# many fights a fighter has had; it says nothing about how many takedowns were
+# thrown in them. A fighter with five bouts who faced two takedown attempts
+# and stuffed both reads 100% takedown defence -- the same 0-or-1 extreme,
+# from the same unshrunk-ratio mechanism, that put a 100% finish-loss rate on
+# 12-1 fighters and had to be fixed in the durability term.
+#
+# Measured over 1,866 fighters with 3+ bouts: 8% land on exactly 0% or 100%
+# takedown defence and 8% have a denominator of 3 or fewer, against a median
+# denominator of 18. So this is a tail rather than the norm -- and it is the
+# tail that produces the most extreme inputs to the largest style terms.
+#
+# Five is deliberately modest: it removes the 0-or-1 cases without discarding
+# a fighter who has simply not been taken down much. Below it the rate is
+# omitted entirely rather than shrunk, which hands the decision to
+# style_matchup_adjustment's both-corners gate -- the codebase's existing
+# answer to thin data, and one that needs no new fitted constant.
+MIN_RATE_DENOMINATOR = 5
+
+
 def stats_as_of(timeline: list, when, min_bouts: int = 3) -> dict:
     """
     A fighters.csv-shaped stat dict from bouts strictly BEFORE `when`.
@@ -275,11 +295,11 @@ def stats_as_of(timeline: list, when, min_bouts: int = 3) -> dict:
         "kd_for", "kd_against", "ctrl_seconds", "fight_seconds")}
     minutes = s["fight_seconds"] / 60.0
     out = {"espn_fights": len(prior)}
-    if s["sig_str_att"] > 0:
+    if s["sig_str_att"] >= MIN_RATE_DENOMINATOR:
         out["strike_accuracy_pct"] = 100.0 * s["sig_str_landed"] / s["sig_str_att"]
-    if s["td_att"] > 0:
+    if s["td_att"] >= MIN_RATE_DENOMINATOR:
         out["td_accuracy_pct"] = 100.0 * s["td_landed"] / s["td_att"]
-    if s["td_faced"] > 0:
+    if s["td_faced"] >= MIN_RATE_DENOMINATOR:
         out["td_defense_pct"] = 100.0 * s["td_stuffed"] / s["td_faced"]
     if minutes > 0:
         out["slpm"] = s["sig_str_landed"] / minutes
@@ -314,3 +334,76 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Columns this table can supply for a LIVE prediction. Ordered as the style
+# layer consumes them, and deliberately not the whole of stats_as_of's output
+# -- espn_fights has its own meaning in fighters.csv and is left alone.
+LIVE_RATE_COLUMNS = (
+    "strike_accuracy_pct", "td_accuracy_pct", "td_defense_pct",
+    "control_time_pct", "slpm", "sapm", "td_per_15",
+)
+
+
+def enrich_roster(fighters_df, when=None, path: str = OUT, min_bouts: int = 3):
+    """
+    Fill a roster's rate columns from real per-bout history.
+
+    WHY PRODUCTION SHOULD READ THESE. fighters.csv's rate columns are a
+    scrape of ufcstats career averages, and the scrape has been partial since
+    the source moved behind a JavaScript challenge: on the booked card
+    control_time_pct is populated for 0% of fighters and slpm/sapm for 1%,
+    so the style layer's control-time and volume branches were unreachable in
+    production while being reachable in backtest. That is the same
+    backtest-is-not-production gap this whole line of work exists to close,
+    pointing the other way.
+
+    SAFE BECAUSE THE TWO AGREE. Both derive from the same ufcstats numbers, so
+    a career-to-date rebuild should reproduce the scrape where the scrape
+    exists -- and does. Over the current roster: strike accuracy r=0.926 with
+    a median absolute difference of 0.2pp and 96% of fighters within 5pp;
+    takedown accuracy r=0.828, median 0.0pp; takedown defence r=0.914, median
+    0.0pp. Mean signed differences are within 0.4pp of zero, so this is not
+    shifting the distribution, it is extending it.
+
+    Coverage on the 150 booked fighters:
+
+        column                fighters.csv   pit_stats
+        strike_accuracy_pct        89%          90%
+        td_accuracy_pct            75%          80%
+        td_defense_pct             77%          83%
+        control_time_pct            0%          90%
+        slpm / sapm                 1%          90%
+
+    PIT_STATS WINS WHERE BOTH EXIST, so production and the harnesses compute a
+    fighter's rates the same way rather than two ways that happen to be close.
+    fighters.csv is kept as the fallback for the ~45 roster fighters with no
+    matched timeline -- name mismatches and fighters whose bouts sit outside
+    ufcstats.
+
+    `when` defaults to today, and the strictly-before filter in stats_as_of
+    means a fighter's own upcoming bout can never be read.
+    """
+    import datetime as _dt
+
+    timelines = load_pit_stats(path)
+    if not timelines:
+        return fighters_df
+    when = when or _dt.date.today()
+
+    out = fighters_df.copy()
+    for col in LIVE_RATE_COLUMNS:
+        if col not in out.columns:
+            out[col] = pd.NA
+
+    filled = 0
+    for i, name in out["name"].items():
+        s = stats_as_of(timelines.get(_fold(name), []), when, min_bouts=min_bouts)
+        if not s:
+            continue
+        filled += 1
+        for col in LIVE_RATE_COLUMNS:
+            if s.get(col) is not None:
+                out.at[i, col] = s[col]
+    out.attrs["pit_stats_filled"] = filled
+    return out
