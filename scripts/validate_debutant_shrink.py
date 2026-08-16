@@ -83,6 +83,14 @@ before reading that as Wint vs Chatman -- 606 of those 634 land in one
 record, so both ratings collapse toward 1500. It does NOT test a 7-0 versus
 a 5-1, where the curve produces a 168-point gap.
 
+WHAT SHIPPED, from the calibration tables rather than any arm above. See
+model_preview.DEBUT_MEDIUM_CEILING: a 60-75% pick on a debut fight is
+demoted from Medium Confidence to Low. Against the --control population the
+debut-specific damage is ~8-9pp on n=1381, and it has all but vanished by
+75%. High Confidence and Lock of the Week are deliberately left alone --
+debut picks at the Lock floor go 252/252-scale 89.3% against a ~85-90%
+claim, and are among the best-calibrated the model makes.
+
 Usage:  python3 scripts/validate_debutant_shrink.py
         python3 scripts/validate_debutant_shrink.py --sweep
 """
@@ -162,7 +170,7 @@ def _paired_test(rows, arm, base="1.0  (control, current)", n_boot=4000, seed=12
     return obs, hits / n_boot
 
 
-def run(arms):
+def run(arms, control=False):
     fighters = pd.read_csv(FIGHTERS)
     static_rows = {_fold(r["name"]): r.to_dict() for _, r in fighters.iterrows()}
 
@@ -184,8 +192,12 @@ def run(arms):
         na, nb = counts[fa], counts[fb]
 
         # At least one true debutant, or the branch under test never fires
-        # and every arm returns the identical number.
-        if (na == 0 or nb == 0) and winner in (a, b):
+        # and every arm returns the identical number. --control inverts the
+        # filter to score the OPPOSITE population, which is what makes the
+        # calibration gaps attributable to the debut rather than to the
+        # model being loose in that probability band generally.
+        want = (na > 0 and nb > 0) if control else (na == 0 or nb == 0)
+        if want and winner in (a, b):
             ra = roster_as_of(a, when, fight_index, static_rows, today=when)
             rb = roster_as_of(b, when, fight_index, static_rows, today=when)
             frame = pd.DataFrame([ra, rb])
@@ -232,6 +244,10 @@ def run(arms):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sweep", action="store_true")
+    ap.add_argument("--control", action="store_true",
+                    help="calibrate on NON-debut fights, as a baseline for the "
+                         "debut gaps -- no arm differs on these, so only the "
+                         "calibration tables are meaningful")
     args = ap.parse_args()
 
     if not os.path.exists(HISTORY):
@@ -246,7 +262,7 @@ def main():
         arms[f"{s_:g}  vs-rated-only"] = (s_, True)
     saved = power_rating.DEBUT_RATING_SHRINK
     try:
-        records, skipped = run(arms)
+        records, skipped = run(arms, control=args.control)
     finally:
         power_rating.DEBUT_RATING_SHRINK = saved
 
@@ -292,7 +308,8 @@ def main():
         print(f"\n{title}  (n={len(rows)})")
         print(f"  {'model says':<14}{'actually wins':<16}{'gap':<10}{'n'}")
         print("  " + "-" * 46)
-        for lo, hi in [(.5, .6), (.6, .7), (.7, .8), (.8, 1.01)]:
+        for lo, hi in [(.5, .6), (.6, .7), (.7, .75), (.75, .8), (.8, .85),
+                       (.85, .9), (.9, 1.01)]:
             g = [(pr[arm], y) for _, y, pr in rows
                  if lo <= max(pr[arm], 1 - pr[arm]) < hi]
             if len(g) >= 15:
@@ -301,6 +318,22 @@ def main():
                 said = sum(max(p, 1 - p) for p, _ in g) / len(g)
                 hit = sum(1 for p, y in g if (p >= .5) == (y == 1.)) / len(g)
                 print(f"  {said:<14.1%}{hit:<16.1%}{hit-said:<+10.1%}{len(g)}")
+        # COVERAGE, printed even where a bucket was too small to score.
+        # "No bucket met the print threshold" and "the model never makes a
+        # pick that confident here" look identical in the table above and
+        # mean opposite things -- one is missing evidence, the other is
+        # evidence of absence.
+        for cut, lab in ((.75, "High Confidence floor"), (.82, "Lock of the Week floor")):
+            g = [(pr[arm], y) for _, y, pr in rows if max(pr[arm], 1 - pr[arm]) >= cut]
+            if g:
+                hit = sum(1 for p, y in g if (p >= .5) == (y == 1.)) / len(g)
+                print(f"  >= {cut:.0%} ({lab}): n={len(g)}, hit {hit:.1%}")
+            else:
+                print(f"  >= {cut:.0%} ({lab}): n=0 -- NO historical coverage")
+
+    if args.control:
+        calib(records, "CALIBRATION, NEITHER CORNER DEBUTING -- current model")
+        return
 
     table(records, "ALL FIGHTS WITH AT LEAST ONE DEBUTANT")
     one = [r for r in records if r[0] == 1]

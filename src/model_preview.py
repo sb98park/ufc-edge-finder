@@ -232,8 +232,37 @@ def build_full_market_projection(
 # same floor build_effective_ratings uses before it will trust Elo at all.
 MIN_RECORD_FOR_HIGH_CONFIDENCE = 4
 
+# A pick in this band, on a fight where either corner has never fought in
+# the UFC, is not a Medium Confidence pick -- it is a coin flip.
+#
+# scripts/validate_debutant_shrink.py --control measured both populations
+# point-in-time, bucketing each against its own hit rate. Debut fights, and
+# the same bands with neither corner debuting:
+#
+#     model says     debut wins      non-debut wins     debut excess
+#     64.6 / 64.8    51.6%           59.7%              -7.9pp
+#     72.1 / 72.4    55.2%           64.8%              -9.2pp
+#     77.5 / 77.2    63.0%           65.6%              -2.8pp
+#     82.2 / 82.5    83.3%           71.6%              +12.0pp
+#
+# THE CONTROL IS WHAT PICKS THE BAND. The model runs overconfident almost
+# everywhere, so the raw debut gaps alone would have justified a cap
+# anywhere. Against the control the debut-specific damage is concentrated
+# in 60-75% -- roughly 8-9pp beyond baseline, on n=1381 -- and has all but
+# vanished by 75%. Above 80% debut picks are, if anything, the better
+# calibrated of the two.
+#
+# So the cap goes on MEDIUM, not on High Confidence. That was the intuitive
+# place to put it and the data says it would have been the wrong one.
+#
+# Real stakes ride on this: UNITS_BY_CONFIDENCE stakes Medium at 3 units
+# and Low at 1, so a band worth ~52-55% was being backed at triple a Low
+# Confidence pick.
+DEBUT_MEDIUM_CEILING = 0.75
 
-def _confidence_label(favorite_prob: float, thinner_record: int | None = None) -> str:
+
+def _confidence_label(favorite_prob: float, thinner_record: int | None = None,
+                      debut_corner: bool | None = None) -> str:
     """
     thinner_record: professional bouts on whichever fighter has fewer. A
     prediction is only as confident as its weaker side, and the label is
@@ -263,6 +292,8 @@ def _confidence_label(favorite_prob: float, thinner_record: int | None = None) -
             return "Medium Confidence"
         return "High Confidence"
     elif favorite_prob >= 0.60:
+        if debut_corner and favorite_prob < DEBUT_MEDIUM_CEILING:
+            return "Low Confidence"
         return "Medium Confidence"
     else:
         return "Low Confidence"
@@ -637,7 +668,10 @@ def build_fight_preview(
         # Confidence" on a matchup where one corner has no career to read.
         # Taken from the matchup rather than recomputed, so the label and the
         # uncertainty band can never disagree about how thin the data is.
-        "confidence_label": _confidence_label(favorite_prob, matchup.get("thinner_record")),
+        # debut_corner is the separate UFC-experience gate -- a fighter can
+        # have a long professional record and still have never fought here.
+        "confidence_label": _confidence_label(
+            favorite_prob, matchup.get("thinner_record"), matchup.get("debut_corner")),
         "rounds_lean": rounds_lean,
         "combined_finish_rate": round(combined_finish_rate, 3),
         "style_a": matchup["style_a"],

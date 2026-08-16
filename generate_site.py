@@ -44,7 +44,6 @@ from src.sparkline_chart import build_sparkline_svg
 from src.units_chart import build_units_timeseries_svg
 from src.donut_chart import build_donut_svg
 from src.damage_silhouette import build_damage_silhouette_svg
-from src.model_preview import _confidence_label
 from src.fun_facts import compute_fun_facts
 
 DATA_DIR = "data"
@@ -867,8 +866,13 @@ def main():
             if fight.get("cancelled"):
                 continue  # a cancelled fight's pick is void -- not part of this card's confidence story
             preview = fight.get("preview")
-            if preview and preview.get("favorite_prob") is not None:
-                confidence_tally[_confidence_label(preview["favorite_prob"])] += 1
+            # READ the label, do not recompute it. Rebuilding it from the
+            # probability alone skips every gate _confidence_label applies --
+            # the thin-record cap and the debut cap both need matchup fields
+            # this loop does not have -- so the countdown tally would report
+            # a Medium the fight card itself shows as Low.
+            if preview and preview.get("confidence_label") in confidence_tally:
+                confidence_tally[preview["confidence_label"]] += 1
         if sum(confidence_tally.values()) > 0:
             countdown_confidence_counts = confidence_tally
 

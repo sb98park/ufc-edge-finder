@@ -974,6 +974,23 @@ def predict_matchup(
     fights_a = int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0))
     fights_b = int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0))
     thinner_record = min(fights_a, fights_b)
+
+    # IS EITHER CORNER DEBUTING? Distinct from thinner_record, which counts
+    # PROFESSIONAL bouts: Anthony Wint is 7-0 as a pro and clears that floor
+    # comfortably while having never fought in the UFC. This counts tracked
+    # fights, the same quantity build_effective_ratings uses to decide
+    # whether Elo means anything, so it identifies exactly the fighters
+    # whose rating comes purely off the career-record curve.
+    #
+    # None when no history was supplied, so a caller that cannot know this
+    # gates off rather than silently reading every fighter as a debutant.
+    debut_corner = None
+    if fight_history_df is not None and not fight_history_df.empty:
+        tracked = pd.concat([
+            fight_history_df.get("fighter_a", pd.Series(dtype=str)),
+            fight_history_df.get("fighter_b", pd.Series(dtype=str)),
+        ]).value_counts()
+        debut_corner = int(tracked.get(fighter_a, 0)) == 0 or int(tracked.get(fighter_b, 0)) == 0
     uncertainty = UNCERTAINTY_BASE / math.sqrt(thinner_record + 1)
     prob_low = max(0.01, prob_a - uncertainty)
     prob_high = min(0.99, prob_a + uncertainty)
@@ -987,6 +1004,7 @@ def predict_matchup(
         # The uncertainty band below is already derived from this; until now
         # nothing downstream could see the number the band was built from.
         "thinner_record": thinner_record,
+        "debut_corner": debut_corner,
         "prob_low": prob_low,
         "prob_high": prob_high,
         "base_rating_a": base_r_a,
