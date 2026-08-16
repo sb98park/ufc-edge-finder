@@ -23,7 +23,7 @@ import datetime as dt
 import json
 import os
 
-from src.odds_utils import american_to_decimal
+from src.odds_utils import american_to_decimal, american_to_implied_prob, remove_vig_two_way
 from src.card_matcher import _normalize_name
 
 PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
@@ -708,15 +708,63 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
     market_position_odds_known = [m for m in matched if m.get("pick_odds") is not None]
     favorite_picks = [m for m in market_position_odds_known if not _is_underdog(m["pick_odds"], m.get("opponent_odds"))]
     underdog_picks = [m for m in market_position_odds_known if _is_underdog(m["pick_odds"], m.get("opponent_odds"))]
+    # THE HIT RATE ALONE IS NOT INTERPRETABLE, and publishing it without a
+    # baseline actively misleads. Underdog picks are SUPPOSED to lose most of
+    # the time -- that is what being an underdog means -- so "43%" reads as
+    # failure against an instinctive 50% when the honest comparison is the
+    # market's own number for those specific fighters, around 35%. Judged
+    # that way the same 43% is the model beating the price it was offered.
+    #
+    # This is not hypothetical. Analysing UFC 330 I compared underdog picks
+    # to 50%, concluded the model's disagreements "carry negative
+    # information", and was wrong: measured against the market's implied
+    # probability the picks came in AHEAD in both groups. If that mistake is
+    # available with the whole dataset open, a reader looking at a bare
+    # percentage has no chance.
+    #
+    # Both sides' prices are needed and de-vigged, since raw implied
+    # probabilities sum to ~1.05 and the margin would otherwise show up as
+    # phantom model edge.
+    def _market_expectation(picks):
+        """Mean de-vigged market probability on the fighter we picked."""
+        vals = []
+        for m in picks:
+            po, oo = m.get("pick_odds"), m.get("opponent_odds")
+            if po is None or oo is None:
+                continue
+            try:
+                fair_pick, _ = remove_vig_two_way(
+                    american_to_implied_prob(po), american_to_implied_prob(oo)
+                )
+            except (ValueError, TypeError, ZeroDivisionError):
+                continue
+            vals.append(fair_pick)
+        return round(sum(vals) / len(vals) * 100, 1) if vals else None
+
     market_position_accuracy = None
     if favorite_picks or underdog_picks:
         fav_correct = sum(1 for m in favorite_picks if m["correct"])
         dog_correct = sum(1 for m in underdog_picks if m["correct"])
+
+        def _group(picks, correct_n):
+            acc = round(correct_n / len(picks) * 100, 1) if picks else None
+            exp = _market_expectation(picks)
+            return {
+                "correct": correct_n,
+                "total": len(picks),
+                "accuracy_pct": acc,
+                # What the market gave these same picks. None when prices are
+                # missing -- shown as absent rather than guessed, same
+                # partial-coverage honesty as CLV.
+                "market_expected_pct": exp,
+                # Signed gap. Positive means the picks beat their price.
+                "vs_market_pct": (round(acc - exp, 1)
+                                  if acc is not None and exp is not None else None),
+            }
+
         market_position_accuracy = {
-            "favorites": {"correct": fav_correct, "total": len(favorite_picks),
-                          "accuracy_pct": round(fav_correct / len(favorite_picks) * 100, 1) if favorite_picks else None},
-            "underdogs": {"correct": dog_correct, "total": len(underdog_picks),
-                          "accuracy_pct": round(dog_correct / len(underdog_picks) * 100, 1) if underdog_picks else None},
+            "favorites": _group(favorite_picks, fav_correct),
+            "underdogs": _group(underdog_picks, dog_correct),
         }
 
     # Units/ROI tracking: sized by confidence tier, priced with the real

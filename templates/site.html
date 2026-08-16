@@ -1312,6 +1312,14 @@
   .clv-badge-label { font-size: 0.6875rem; font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.4px; }
   .clv-badge-value { font-size: 1.5rem; font-weight: 700; margin-top: 2px; font-family: var(--font-display); }
   .clv-badge-sub { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
+  /* A hit rate on its own is not interpretable, and underdog picks are the
+     case where that bites: they are SUPPOSED to lose most of the time, so
+     40% reads as failure against an instinctive 50% when the honest
+     comparison is the ~36% the market gave those same fighters. This is the
+     number that turns the badge from trivia into a claim. */
+  .mpa-delta { font-weight: 700; }
+  .mpa-delta.up { color: var(--green); }
+  .mpa-delta.down { color: var(--red); }
   .accuracy-split-row { display: flex; gap: 8px; margin-top: 10px; }
   .accuracy-split-row .clv-badge { flex: 1; margin-top: 0; min-width: 0; }
   .favorite-accuracy-badge {
@@ -4092,12 +4100,12 @@
       <div class="clv-badge favorite-accuracy-badge">
         <div class="clv-badge-label">{{ icon_star() }} Favorites</div>
         <div class="clv-badge-value countup favorite-accuracy-value">{{ mpa.favorites.accuracy_pct }}%</div>
-        <div class="clv-badge-sub">{{ mpa.favorites.correct }} for {{ mpa.favorites.total }}</div>
+        <div class="clv-badge-sub">{{ mpa.favorites.correct }} for {{ mpa.favorites.total }}{% if mpa.favorites.vs_market_pct is not none %} · <span class="mpa-delta {{ 'up' if mpa.favorites.vs_market_pct > 0 else 'down' }}">{{ '%+.1f'|format(mpa.favorites.vs_market_pct) }}% vs market</span>{% endif %}</div>
       </div>
       <div class="clv-badge underdog-accuracy-badge">
         <div class="clv-badge-label">{{ icon_underdog() }} Underdogs</div>
         <div class="clv-badge-value countup underdog-accuracy-value">{{ mpa.underdogs.accuracy_pct }}%</div>
-        <div class="clv-badge-sub">{{ mpa.underdogs.correct }} for {{ mpa.underdogs.total }}</div>
+        <div class="clv-badge-sub">{{ mpa.underdogs.correct }} for {{ mpa.underdogs.total }}{% if mpa.underdogs.vs_market_pct is not none %} · <span class="mpa-delta {{ 'up' if mpa.underdogs.vs_market_pct > 0 else 'down' }}">{{ '%+.1f'|format(mpa.underdogs.vs_market_pct) }}% vs market</span>{% endif %}</div>
       </div>
     </div>
     {% else %}
@@ -4105,12 +4113,12 @@
       <div class="clv-badge favorite-accuracy-badge">
         <div class="clv-badge-label">{{ icon_star() }} Favorite Accuracy</div>
         <div class="clv-badge-value countup favorite-accuracy-value">{{ mpa.favorites.accuracy_pct }}%</div>
-        <div class="clv-badge-sub">{{ mpa.favorites.correct }} for {{ mpa.favorites.total }}</div>
+        <div class="clv-badge-sub">{{ mpa.favorites.correct }} for {{ mpa.favorites.total }}{% if mpa.favorites.vs_market_pct is not none %} · <span class="mpa-delta {{ 'up' if mpa.favorites.vs_market_pct > 0 else 'down' }}">{{ '%+.1f'|format(mpa.favorites.vs_market_pct) }}% vs market</span>{% endif %}</div>
       </div>
       <div class="clv-badge underdog-accuracy-badge">
         <div class="clv-badge-label">{{ icon_underdog() }} Underdog Accuracy</div>
         <div class="clv-badge-value countup underdog-accuracy-value">{{ mpa.underdogs.accuracy_pct }}%</div>
-        <div class="clv-badge-sub">{{ mpa.underdogs.correct }} for {{ mpa.underdogs.total }}</div>
+        <div class="clv-badge-sub">{{ mpa.underdogs.correct }} for {{ mpa.underdogs.total }}{% if mpa.underdogs.vs_market_pct is not none %} · <span class="mpa-delta {{ 'up' if mpa.underdogs.vs_market_pct > 0 else 'down' }}">{{ '%+.1f'|format(mpa.underdogs.vs_market_pct) }}% vs market</span>{% endif %}</div>
       </div>
     </div>
     {% endif %}
