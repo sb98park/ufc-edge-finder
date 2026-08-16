@@ -76,6 +76,7 @@ from src.matchup_model import predict_matchup  # noqa: E402
 from scripts.validate_pointintime_stats import (  # noqa: E402
     _fold, build_timelines, stats_as_of, CACHE_DIR, ID_MAP, FIGHTERS, HISTORY,
 )
+from scripts.pit_roster import build_fight_index, roster_as_of  # noqa: E402
 
 EXTERNAL_ODDS = "data/external_odds.csv"
 
@@ -172,6 +173,12 @@ def main():
     history["date"] = pd.to_datetime(history["date"], errors="coerce")
     history = history.dropna(subset=["date"]).sort_values("date")
 
+    # Static lookup for physicals and current career totals; the record is
+    # rebuilt per fight from these plus the index, never read forward.
+    static_rows = {_fold(r["name"]): r.to_dict() for _, r in fighters.iterrows()}
+    fight_index = build_fight_index(history)
+    print(f"point-in-time roster index built for {len(fight_index)} fighters")
+
     elo = EloRatingSystem()
     counts = defaultdict(int)
     recs = []          # (model_p_on_a, market_p_on_a, y)
@@ -192,8 +199,16 @@ def main():
             else:
                 mkt_a = prices.get(str(a).strip().lower())
                 if mkt_a is not None:
-                    base_a = rows_by_name[fa].to_dict() if fa in rows_by_name else {"name": a}
-                    base_b = rows_by_name[fb].to_dict() if fb in rows_by_name else {"name": b}
+                    # POINT-IN-TIME ROSTER ROWS. Previously this fell back to
+                    # {"name": x} for anyone off the current 293-name roster,
+                    # which is 96% of history -- gating off every record-,
+                    # age- and physical-dependent style term and scoring a
+                    # near-Elo-only model. Now each corner gets its record,
+                    # last-fight date, age and physicals as they stood the
+                    # night before, so the harness scores something much
+                    # closer to what production actually runs.
+                    base_a = roster_as_of(a, when, fight_index, static_rows, timelines)
+                    base_b = roster_as_of(b, when, fight_index, static_rows, timelines)
                     eff = {a: elo.get_rating(a), b: elo.get_rating(b)}
                     sa = stats_as_of(timelines[fa], when)
                     sb = stats_as_of(timelines[fb], when)
