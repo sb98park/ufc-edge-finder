@@ -33,6 +33,17 @@ and all arms are byte-identical, so including them would dilute a real
 effect toward zero. The `both` cut is reported separately because two
 debutants is the Wint-vs-Chatman case that started this.
 
+RE-VALIDATED AFTER THE RECENCY FIX. audit_term_coverage.py found that
+recent_form_adjustment fired on every live prediction and NONE of this
+harness's scored fights, so the verdict below was originally computed
+against a model missing its only recency signal. This harness now passes
+point-in-time history, the weight-class table, the booked division and a
+reference date. Base accuracy rose 58.9% -> 59.2% and the verdict did not
+move: 0.5 vs-rated-only Brier -0.0005 (p=0.045), unconditional 0.5 -0.0004
+(p=0.186, n.s.), 0.0 still significantly WORSE on both-debuting (p=0.009).
+The both-debuting cut is bit-identical, which is the expected tell -- with
+no tracked history on either corner, recent_form is 0 for both.
+
 THE RESULT: NO RATING CHANGE SHIPPED. DEBUT_RATING_SHRINK stays at 1.0.
 
 Shrinking helps where the debutant faces a RATED opponent and hurts where
@@ -114,6 +125,7 @@ from scripts.pit_roster import build_fight_index, roster_as_of  # noqa: E402
 
 FIGHTERS = "data/fighters.csv"
 HISTORY = "data/fight_history.csv"
+WC_HISTORY = "data/fighter_weight_class_history.csv"
 
 
 def _fold(n) -> str:
@@ -178,6 +190,7 @@ def run(arms, control=False):
     history["date"] = pd.to_datetime(history["date"], errors="coerce")
     history = history.dropna(subset=["date"]).sort_values("date")
     fight_index = build_fight_index(history)
+    wc = pd.read_csv(WC_HISTORY) if os.path.exists(WC_HISTORY) else None
 
     elo = EloRatingSystem()
     counts = defaultdict(int)
@@ -198,6 +211,7 @@ def run(arms, control=False):
         # model being loose in that probability band generally.
         want = (na > 0 and nb > 0) if control else (na == 0 or nb == 0)
         if want and winner in (a, b):
+            past = history[history["date"] < f["date"]]
             ra = roster_as_of(a, when, fight_index, static_rows, today=when)
             rb = roster_as_of(b, when, fight_index, static_rows, today=when)
             frame = pd.DataFrame([ra, rb])
@@ -217,7 +231,13 @@ def run(arms, control=False):
                     b: _effective(rb, nb, elo.get_rating(b), streaks[fb], sb),
                 }
                 try:
-                    res = predict_matchup(a, b, frame, eff)
+                    # POINT-IN-TIME CONTEXT. This harness previously called
+                    # the four-argument form, which silenced recent_form on
+                    # every scored fight -- see audit_term_coverage.py. Only
+                    # fights strictly before this one are visible.
+                    res = predict_matchup(a, b, frame, eff, past, wc,
+                                          f.get("weight_class"),
+                                          reference_date=when.date())
                 except Exception:
                     res = None
                 p = (res or {}).get("prob_a")

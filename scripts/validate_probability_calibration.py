@@ -40,6 +40,22 @@ strictly BEFORE a cutoff and scored only on fights after it. T is also fit
 separately on each half and reported, because a temperature that swings
 between eras is describing that era's data coverage rather than the model.
 
+RE-VALIDATED AFTER THE RECENCY FIX. This harness originally scored a model
+with recent_form silenced (see audit_term_coverage.py), which matters here
+more than anywhere: the subject is whether the probabilities are too
+extreme, and recency moves them. Now threaded. Accuracy 62.5% -> 62.9%, and
+the modern-era calibration TIGHTENED rather than moved the other way:
+
+    bucket      before        after
+    72.4%       -2.6pp        -1.3pp
+    77.3%       -3.5pp        -1.7pp
+    fitted T     1.097         1.131
+
+The conclusion is unchanged and better supported. T=2.066 fit on pre-2021
+is still significantly worse after it (Brier +0.0036, p=0.009); T=1.15 is
+still a wash (p=0.193). The 82.3% bucket reads -7.8pp on n=98 against
++5.2pp at 87.1% on n=78 -- noise in the tail, not a trend.
+
 THE ANSWER: NOTHING TO CORRECT. The overconfidence is an artifact of old
 fights, and it has already gone. Fitting T separately per era:
 
@@ -97,6 +113,7 @@ from scripts.pit_roster import build_fight_index, roster_as_of  # noqa: E402
 
 FIGHTERS = "data/fighters.csv"
 HISTORY = "data/fight_history.csv"
+WC_HISTORY = "data/fighter_weight_class_history.csv"
 
 
 def _fold(n) -> str:
@@ -189,6 +206,7 @@ def run():
     history["date"] = pd.to_datetime(history["date"], errors="coerce")
     history = history.dropna(subset=["date"]).sort_values("date")
     fight_index = build_fight_index(history)
+    wc = pd.read_csv(WC_HISTORY) if os.path.exists(WC_HISTORY) else None
 
     elo = EloRatingSystem()
     counts, streaks = defaultdict(int), defaultdict(int)
@@ -209,7 +227,15 @@ def run():
             eff = {a: _effective(ra, na, elo.get_rating(a), streaks[fa]),
                    b: _effective(rb, nb, elo.get_rating(b), streaks[fb])}
             try:
-                res = predict_matchup(a, b, pd.DataFrame([ra, rb]), eff)
+                # POINT-IN-TIME CONTEXT -- see audit_term_coverage.py. The
+                # four-argument form silenced recent_form on every scored
+                # fight, and this harness's whole subject is whether the
+                # model's probabilities are too extreme, which the recency
+                # term moves. Only fights strictly before this one are visible.
+                past = history[history["date"] < f["date"]]
+                res = predict_matchup(a, b, pd.DataFrame([ra, rb]), eff,
+                                      past, wc, f.get("weight_class"),
+                                      reference_date=when.date())
             except Exception:
                 res = None
             p = (res or {}).get("prob_a")
