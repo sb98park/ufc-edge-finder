@@ -39,7 +39,31 @@ def compute_stats_rating(row: pd.Series) -> float:
     sub_wins = row["sub_wins"] if pd.notna(row.get("sub_wins")) else 0
     reach_in = row["reach_in"] if pd.notna(row.get("reach_in")) else 70
 
-    total_fights = max(wins + losses, 1)
+    # NO RECORD IS NOT A BAD RECORD. With wins = losses = 0 the two lines
+    # below read as win_pct 0.0 and finish_rate 0.0 -- a fighter who lost
+    # every bout and never finished anyone -- because max(x, 1) was there to
+    # stop a division by zero, not to say anything about the fighter. The
+    # result is a DOUBLE penalty for data we simply do not have.
+    #
+    # Terrance Chatman, UFC debut 2026-08-22, is 5-1 as a professional and
+    # sits in fighters.csv as 0-0 because ESPN has no page for him. That
+    # scored him 1439 -- only 66 points above a genuinely 0-5 fighter, and
+    # 358 below his 7-0 opponent. The gap alone contributed +38.7pp, made it
+    # an 89.7% pick, and crowned it Lock of the Week. His real 5-1 record
+    # scores 1613, an 88-point gap and a completely different fight.
+    #
+    # The model already knew the number was nonsense: method_model logged
+    # "elo_gap=0.895 is far outside the training range [0.003, 0.469] --
+    # clipping" on exactly this matchup.
+    #
+    # An unknown fighter belongs at the neutral prior, which is what every
+    # other term here degrades to when its input is missing. Reach still
+    # applies if we have it -- that is real measured data, not an inference
+    # from an empty record.
+    if wins + losses == 0:
+        return RATING_CENTER + 4.0 * (reach_in - 70)
+
+    total_fights = wins + losses
     win_pct = wins / total_fights
     finish_rate = (ko_wins + sub_wins) / max(wins, 1)
 

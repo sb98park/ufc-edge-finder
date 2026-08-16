@@ -983,6 +983,10 @@ def predict_matchup(
         "fighter_b": fighter_b,
         "prob_a": prob_a,
         "prob_b": 1 - prob_a,
+        # Exposed so callers can gate on data depth without recomputing it.
+        # The uncertainty band below is already derived from this; until now
+        # nothing downstream could see the number the band was built from.
+        "thinner_record": thinner_record,
         "prob_low": prob_low,
         "prob_high": prob_high,
         "base_rating_a": base_r_a,

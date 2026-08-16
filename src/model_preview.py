@@ -227,8 +227,40 @@ def build_full_market_projection(
     return {"method_rows": method_rows, "rounds_rows": rounds_rows, "distance_rows": distance_rows}
 
 
-def _confidence_label(favorite_prob: float) -> str:
+# Below this many professional bouts on the THINNER side, a matchup cannot
+# be labelled High Confidence however wide the rating gap looks. Four is the
+# same floor build_effective_ratings uses before it will trust Elo at all.
+MIN_RECORD_FOR_HIGH_CONFIDENCE = 4
+
+
+def _confidence_label(favorite_prob: float, thinner_record: int | None = None) -> str:
+    """
+    thinner_record: professional bouts on whichever fighter has fewer. A
+    prediction is only as confident as its weaker side, and the label is
+    what drives Lock of the Week and the confidence tally on the card.
+
+    WHY THE CAP. predict_matchup already computes an uncertainty band that
+    scales with exactly this number -- a fighter with no record maxes it out
+    -- but nothing downstream read it, so a matchup could carry the model's
+    widest possible error bar and still be published as High Confidence.
+
+    Terrance Chatman debuts on 2026-08-22 with no record we can find (he is
+    5-1 professionally; ESPN has no page). Against a 7-0 opponent that
+    produced an 85% pick and Lock of the Week -- the single most confident
+    claim the site makes -- on a fight where one corner is entirely unknown.
+    method_model flagged the same matchup as far outside its training range.
+
+    This caps the LABEL, not the probability. The point estimate is the
+    model's business and changing it needs a backtest; how loudly the site
+    asserts that estimate is a presentation decision, and asserting it
+    loudest where the data is thinnest is simply wrong.
+    """
     if favorite_prob >= 0.75:
+        if thinner_record is not None and thinner_record < MIN_RECORD_FOR_HIGH_CONFIDENCE:
+            # Deliberately Medium rather than Low: the gap may well be real,
+            # and burying it would be its own distortion. It just must not be
+            # eligible to be the week's flagship pick.
+            return "Medium Confidence"
         return "High Confidence"
     elif favorite_prob >= 0.60:
         return "Medium Confidence"
@@ -601,7 +633,11 @@ def build_fight_preview(
         "underdog": underdog,
         "likely_method": likely_method,
         "likely_method_rate": round(method_rates[likely_method], 3),
-        "confidence_label": _confidence_label(favorite_prob),
+        # Thinner record passed through so the label can refuse "High
+        # Confidence" on a matchup where one corner has no career to read.
+        # Taken from the matchup rather than recomputed, so the label and the
+        # uncertainty band can never disagree about how thin the data is.
+        "confidence_label": _confidence_label(favorite_prob, matchup.get("thinner_record")),
         "rounds_lean": rounds_lean,
         "combined_finish_rate": round(combined_finish_rate, 3),
         "style_a": matchup["style_a"],
