@@ -4755,9 +4755,26 @@
           <span class="waterfall-summary-label">Why the model likes {{ wf.favorite }}</span>
           <span class="waterfall-summary-hint">hide ▴</span>
         </summary>
+        {#- SET BEFORE FIRST USE. This lived two lines lower, inside
+            .wf-headline, while .waterfall-body above already referenced it.
+            Jinja treats an undefined name as falsy rather than raising, so
+            the body ALWAYS got fav-blue -- silently, with no error anywhere.
+
+            That class is what orients every factor row's colour: the four
+            rules .fav-red/.fav-blue .wf-bar/.wf-delta .pos/.neg decide
+            whether a positive delta paints in the red corner's colour or the
+            blue one's. build_probability_waterfall documents that positive
+            always means "helps the favourite", so with the body stuck on
+            fav-blue the whole decomposition inverted whenever the favourite
+            was fighter_a.
+
+            The headline split bar was RIGHT, because line 4765 reads the
+            variable after the set -- which is why a fight could show Islam
+            correctly in red at 52.8% directly above a +17.7pp rating gap
+            painted in his opponent's blue. -#}
+        {%- set fav_is_red = (wf.favorite == fight.fighter_a) -%}
         <div class="waterfall-body {{ 'fav-red' if fav_is_red else 'fav-blue' }}">
           <div class="wf-headline">
-            {%- set fav_is_red = (wf.favorite == fight.fighter_a) -%}
             <div class="wf-head-row fav {{ 'red-corner' if fav_is_red else 'blue-corner' }}">
               <span class="wf-head-name">{{ wf.favorite }}</span>
               <span class="wf-head-pct">{{ wf.favorite_pct }}%</span>
