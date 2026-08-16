@@ -938,6 +938,7 @@ def submission_threat_adjustment(row_a: pd.Series, row_b: pd.Series) -> float:
 def style_matchup_adjustment(
     row_a: pd.Series, row_b: pd.Series,
     weight_class_history_df: pd.DataFrame | None = None, this_fight_weight_class: str | None = None,
+    reference_date: dt.date | None = None,
 ) -> dict:
     """
     Returns a rating-point adjustment (in favor of fighter A, can be
@@ -1064,12 +1065,23 @@ def style_matchup_adjustment(
     durability_adj = ((finish_loss_rate_b - finish_loss_rate_a) * DURABILITY_SCALE
                       if durability_data_ok else 0.0)
 
-    layoff_adj_a = layoff_penalty(row_a)
-    layoff_adj_b = layoff_penalty(row_b)
+    # DATED TO THE FIGHT, NOT TO TODAY. layoff_penalty and quick_return_penalty
+    # have always accepted a reference_date and nothing ever passed one, so
+    # every historical fight was scored as though it happened this morning.
+    # A 2015 bout then reads an eleven-year layoff for both corners: layoff
+    # fires on 64-70% of backtested fights against 13% live, and quick_return
+    # -- which needs a gap UNDER six months -- can never fire at all.
+    #
+    # This is the same defect as the recent_form one, in the two terms beside
+    # it. Worth stating plainly because audit_term_coverage.py's own docstring
+    # blamed the firing-rate gap on reconstruction bias in fight_history; that
+    # diagnosis was wrong, and no improvement in coverage could have fixed it.
+    layoff_adj_a = layoff_penalty(row_a, reference_date)
+    layoff_adj_b = layoff_penalty(row_b, reference_date)
     layoff_adj = layoff_adj_a - layoff_adj_b  # penalize A if A has the longer layoff, and vice versa
 
-    quick_return_adj_a = quick_return_penalty(row_a)
-    quick_return_adj_b = quick_return_penalty(row_b)
+    quick_return_adj_a = quick_return_penalty(row_a, reference_date)
+    quick_return_adj_b = quick_return_penalty(row_b, reference_date)
     quick_return_adj = quick_return_adj_a - quick_return_adj_b
 
     age_cliff_adj_a = age_cliff_penalty(row_a)
@@ -1128,8 +1140,8 @@ def style_matchup_adjustment(
         "short_notice_flag_a": short_notice_a,
         "short_notice_flag_b": short_notice_b,
         "layoff_adjustment": layoff_adj,
-        "layoff_years_a": layoff_years(row_a),
-        "layoff_years_b": layoff_years(row_b),
+        "layoff_years_a": layoff_years(row_a, reference_date),
+        "layoff_years_b": layoff_years(row_b, reference_date),
         "quick_return_adjustment": quick_return_adj,
         "quick_return_flag_a": quick_return_adj_a < 0,
         "quick_return_flag_b": quick_return_adj_b < 0,
@@ -1235,7 +1247,8 @@ def predict_matchup(
     # weight_class column, which reflects "most recently known division"
     # and could in principle drift from what a specific card says.
     this_fight_wc = fight_weight_class or row_a.get("weight_class")
-    style = style_matchup_adjustment(row_a, row_b, weight_class_history_df, this_fight_wc)
+    style = style_matchup_adjustment(row_a, row_b, weight_class_history_df, this_fight_wc,
+                                     reference_date)
     # reference_date FORWARDED. It was accepted by recent_form_adjustment and
     # never supplied, so the term always dated itself to today. Harmless for a
     # booked fight; wrong for any historical one, and the missing parameter is

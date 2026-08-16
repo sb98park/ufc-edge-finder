@@ -52,26 +52,45 @@ history read FUTURE fights at full weight (a negative years_ago clamps the
 decay to 1.0). The second is why omitting history was the safe choice, and
 why the term stayed dark.
 
-THE OTHER FOUR ARE DATA LIMITS, NOT BUGS, and no amount of threading fixes
-them. Stated here so nobody reads a persistent flag as a defect:
+THE DIAGNOSIS BELOW WAS WRONG, and this file's own docstring was where it
+was recorded. It attributed layoff and quick_return to reconstruction bias
+in fight_history -- "the reconstructed gap is biased long" -- and concluded
+they were data limits. They were a MISSING FUNCTION ARGUMENT.
 
-  wrestling / striking  need strike_accuracy_pct and td_accuracy_pct on BOTH
-      corners, which pit_roster deliberately does not reconstruct (only the
-      current fighters.csv has them, and that is contaminated by the future).
-      validate_pointintime_stats.py rebuilds them from the cached ESPN
-      timelines; a harness that needs these terms must do the same.
+style_matchup_adjustment took no reference_date, so layoff_penalty and
+quick_return_penalty dated every historical fight to today. A 2015 bout read
+an eleven-year layoff for both corners. No improvement in fight_history
+coverage could ever have fixed that, and the reconstruction-bias story was
+plausible enough to stop anyone looking. Threading the date moved layoff from
+70% toward its live 13%, and quick_return needed one more thing: pit_roster
+never emitted last_fight_result or last_fight_method, both already sitting in
+its own index, so the term's gate failed silently on every row.
 
-  age_cliff  needs age, and _age_as_of can only derive it for fighters on the
-      current roster -- 310 of the thousands in history. No DOB source exists
-      for the rest.
+    term            live    before    after
+    layoff           13%      70%      23%
+    quick_return      7%       0%      13%
 
-  quick_return  needs a SHORT gap since the last fight, and the reconstructed
-      gap is biased long because fight_history is a subset of each fighter's
-      career. Measured over 723 reconstructed corners: median 182 days and 23%
-      under 120, against 99 days and 55% on the live roster. The same bias
-      inflates layoff, which fires on 70% of backtested fights and 13% of live
-      ones -- the one term whose backtest rate being HIGHER than live is
-      itself the symptom.
+WHAT REMAINS DARK, and why:
+
+  wrestling / striking  need per-fight rate statistics on BOTH corners.
+      data/ufc_fight_stats.csv (41,340 rows, 8,647 bouts, 2,702 fighters,
+      control time 99.9% populated) has them, and is now tracked in git.
+      This is an ETL away, not a data-acquisition problem -- build
+      data/pit_stats.csv keyed on (fighter, bout, date) and feed it the way
+      pit_roster feeds records. Until then these two terms are absent from
+      every verdict.
+
+  age_cliff is NOT dark and was previously reported here as such -- it fires
+      on 9% of backtested fights against 14% live, once normalize_division
+      reaches it. The table above is regenerated each run; trust it over any
+      prose, including this docstring.
+
+  missed_weight, weight_class_change and short_notice fire on NOTHING, live
+      or backtest. They are not dark, they are inert: hand-set constants
+      contributing to no prediction and no verdict. See the INERT EVERYWHERE
+      flag below, which exists because the original flag condition required a
+      term to fire live before reporting it, and so could not see its own
+      null result.
 
 Deliberately no pass/fail exit code. This is a measuring instrument, and the
 right response to a flagged term is to fix the call path or say why it cannot

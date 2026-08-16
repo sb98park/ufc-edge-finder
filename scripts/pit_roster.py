@@ -122,7 +122,21 @@ def record_as_of(fight_index: dict, name: str, when, current: dict | None = None
     key = str(name).strip().lower()
     fights = fight_index.get(key, [])
 
-    before, after, last = _split_counts(fights, when)
+    before, after, last, last_won, last_bucket = _split_counts(fights, when)
+
+    def _finish(out: dict) -> dict:
+        out["last_fight_date"] = last.strftime("%Y-%m-%d") if last else None
+        # LAST-FIGHT OUTCOME AND METHOD. Both are already in the index and
+        # neither was being emitted, which left quick_return_penalty unable to
+        # fire on a single backtested fight -- it gates on
+        # last_fight_result == "L" and last_fight_method in (KO/TKO, SUB), and
+        # a row lacking those columns fails the gate silently. That looked
+        # like a data limitation and was a missing assignment.
+        if last is not None:
+            out["last_fight_result"] = "L" if last_won is False else "W"
+            out["last_fight_method"] = {
+                "ko": "KO/TKO", "sub": "SUB", "dec": "DEC"}.get(last_bucket)
+        return out
 
     if current:
         out = {}
@@ -132,32 +146,48 @@ def record_as_of(fight_index: dict, name: str, when, current: dict | None = None
             if cur is None or (isinstance(cur, float) and pd.isna(cur)):
                 usable = False
                 break
-            out[f] = max(0, int(cur) - after[f])
+            # RAW, UNCLAMPED. The clamp used to happen here, which is what
+            # made the guard below vacuous.
+            out[f] = int(cur) - after[f]
         if usable:
             # A career total that cannot cover its own known subsequent
             # fights means the two sources disagree about this fighter;
             # fall through to accumulate rather than emit a clamped
             # number that looks authoritative.
-            if out["wins"] >= before["wins"] * 0 and out["losses"] >= 0:
-                out["last_fight_date"] = last.strftime("%Y-%m-%d") if last else None
+            #
+            # THIS GUARD WAS DEAD. It read:
+            #   if out["wins"] >= before["wins"] * 0 and out["losses"] >= 0
+            # and both operands had already been through max(0, ...), so
+            # `>= 0` and `>= anything * 0` were unconditionally true and the
+            # documented fall-through was unreachable. Every negative
+            # remainder was silently clamped to 0 and returned as
+            # "subtracted", which is exactly the authoritative-looking
+            # clamped number the comment says not to emit.
+            #
+            # One visible consequence: with the method splits each clamped
+            # independently, ko_losses + sub_losses could exceed losses,
+            # driving finish_loss_rate above 1.0 and durability_adjustment to
+            # +/-240 -- twice its documented maximum -- on 0.7% of corners.
+            if all(v >= 0 for v in out.values()) and \
+                    out["ko_losses"] + out["sub_losses"] <= out["losses"] and \
+                    out["ko_wins"] + out["sub_wins"] <= out["wins"]:
                 out["record_source"] = "subtracted"
-                return out
+                return _finish(out)
 
     out = dict(before)
-    out["last_fight_date"] = last.strftime("%Y-%m-%d") if last else None
     out["record_source"] = "accumulated"
-    return out
+    return _finish(out)
 
 
 def _split_counts(fights, when):
-    """(counts strictly before, counts on/after, last date before)."""
+    """(counts before, counts on/after, last date before, its result, its method)."""
     before = {f: 0 for f in _REC_FIELDS}
     after = {f: 0 for f in _REC_FIELDS}
-    last = None
+    last = last_won = last_bucket = None
     for d, won, bucket in fights:
         tgt = before if d < when else after
         if d < when:
-            last = d
+            last, last_won, last_bucket = d, won, bucket
         if won:
             tgt["wins"] += 1
             if bucket:
@@ -166,7 +196,7 @@ def _split_counts(fights, when):
             tgt["losses"] += 1
             if bucket:
                 tgt[f"{bucket}_losses"] += 1
-    return before, after, last
+    return before, after, last, last_won, last_bucket
 
 
 def _age_as_of(current_age, when, today=None) -> float | None:
