@@ -24,7 +24,7 @@ def _pick_variant(key: str, variants: list[str]) -> str:
     """
     digest = hashlib.md5(key.encode("utf-8")).hexdigest()
     return variants[int(digest, 16) % len(variants)]
-from src.matchup_model import _get
+from src.matchup_model import _get, divisional_prior_for, compute_divisional_method_priors
 
 
 def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
@@ -181,13 +181,20 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
     opp_stats = _fighter_stats(fighters_df, opponent) if opponent else None
     opp_vulnerability = opp_stats[loss_key] if opp_stats and opp_stats["method_data_known"] else None
 
+    # SAME DIVISIONAL BASELINE THE MODEL USES. This grouped on the RAW
+    # weight_class string, so "Strawweight" and "Women's Strawweight" produced
+    # two different baselines for one real division -- and it computed the
+    # rate from the current roster's CAREER win totals, the survivorship-
+    # biased source matchup_model documents as overstating finishes by 13-23
+    # points. The model layer was converted to divisional_prior_for; the copy
+    # layer that explains the model to the reader was not, so the prose could
+    # contradict the number beside it.
     weight_class = stats.get("weight_class")
     divisional_rate = own_rate
-    if weight_class is not None and win_col:
-        div_group = fighters_df[fighters_df["weight_class"] == weight_class]
-        total_div_wins = div_group["wins"].sum()
-        if total_div_wins > 0:
-            divisional_rate = div_group[win_col].sum() / total_div_wins
+    _prior_key = {"ko_wins": "KO/TKO", "sub_wins": "SUB", "dec_wins": "DEC"}.get(win_col)
+    if _prior_key:
+        divisional_rate = divisional_prior_for(
+            compute_divisional_method_priors(fighters_df), weight_class, _prior_key, own_rate)
 
     div_gap = own_rate - divisional_rate
     method_lower = method.lower().replace("ko/tko", "KO/TKO").replace("sub", "submission").replace("dec", "decision")

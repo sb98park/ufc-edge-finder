@@ -217,6 +217,17 @@ HEIGHT_ADVANTAGE_SCALE = 2.0
 # data); literature-derived rather than fitted, flagged per-fighter via
 # the short_notice column in fighters.csv at card-research time and
 # cleared automatically once that fighter's bout result is logged.
+# INERT, AND PERMANENTLY UNVALIDATABLE AT THIS GRANULARITY. Fires on 0% live
+# and 0% in backtest. No public source publishes bout-agreement dates, so the
+# "days of notice" this scales cannot be reconstructed for any historical
+# fight -- not by better scraping, not by any API identified in a dedicated
+# research pass. At 70 points it would be the second-largest term in the
+# layer if it ever fired.
+#
+# The reachable weaker question is the binary "was this fighter a
+# replacement", from Wikipedia event prose, and even that needs a
+# hand-labelled recall estimate before a harness should read it. Recorded
+# here so the number is not mistaken for a measured one.
 SHORT_NOTICE_PENALTY = 70.0
 
 # Safety rail on the ADJUSTMENT LAYER (style factors + recent form), NOT
@@ -357,6 +368,19 @@ def age_cliff_penalty(row: pd.Series) -> float:
 # night after rehydration. Data note: this field defaults to 0 (no known
 # instances) for the current roster; populating real history requires
 # per-fighter weigh-in research this build doesn't have time to do exhaustively.
+# INERT, AND NOT VALIDATABLE. audit_term_coverage.py reports this term firing
+# on 0% of live fights AND 0% of backtested ones -- the column it reads
+# defaults to 0 for the entire roster and no historical weigh-in dataset
+# exists to populate it. A hand-set constant that has never once changed a
+# prediction is not a modelling choice, it is decoration.
+#
+# Kept rather than deleted because the mechanism is correct and one partial
+# source is reachable: WEIGHTCLASS == "Catch Weight Bout" in
+# ufc_fight_results.csv gives 82 real instances. That is a biased subset --
+# it misses the common case where a fighter misses weight, forfeits purse and
+# the bout proceeds under its original label -- but 82 measured instances
+# against a term that has fired zero times would be the first evidence either
+# way. Until then this number is unsupported and labelled as such.
 MISSED_WEIGHT_PENALTY_PER_INSTANCE = 20.0
 MISSED_WEIGHT_PENALTY_CAP = 80.0
 
@@ -372,10 +396,32 @@ def missed_weight_penalty(row: pd.Series) -> float:
 # divisions a fighter is jumping -- a one-division move (e.g. Welterweight
 # to Middleweight) and a two-division move (e.g. Lightweight to
 # Middleweight) are not the same risk, and shouldn't score identically.
+# ORDERED BY WEIGHT, and the women's divisions are their own ladder rather
+# than points on the men's. "Strawweight" was the only entry covering a
+# women-only division and it was the label the UFC does not use; every real
+# women's move -- Strawweight to Flyweight is the common one -- fell through
+# the `not in DIVISION_ORDER` guard and returned 0.0 by construction.
+#
+# Two ladders, because a division CHANGE is a change within a fighter's own
+# sex division. Comparing a women's flyweight against the men's ladder would
+# either crash on a missing key or, worse, produce a number.
 DIVISION_ORDER = [
-    "Strawweight", "Flyweight", "Bantamweight", "Featherweight", "Lightweight",
+    "Flyweight", "Bantamweight", "Featherweight", "Lightweight",
     "Welterweight", "Middleweight", "Light Heavyweight", "Heavyweight",
 ]
+WOMENS_DIVISION_ORDER = [
+    "Women's Strawweight", "Women's Flyweight", "Women's Bantamweight",
+    "Women's Featherweight",
+]
+
+
+def _division_ladder(division: str):
+    """The ordered list a division belongs to, or None if it is off-ladder."""
+    if division in WOMENS_DIVISION_ORDER:
+        return WOMENS_DIVISION_ORDER
+    if division in DIVISION_ORDER:
+        return DIVISION_ORDER
+    return None
 
 # Deliberately modest magnitudes -- this factor is NOT backtested against
 # historical outcomes the way e.g. the durability calibration was (that
@@ -426,13 +472,20 @@ def weight_class_change_penalty(name: str, this_fight_weight_class: str | None, 
     settled division different from this fight's. Silence over a guess is
     deliberate here, same as elsewhere in this module.
     """
-    settled = recent_weight_class(name, history_df)
+    # NORMALISED FIRST. Both sides were compared as raw strings, so
+    # "Strawweight" and "Women's Strawweight" -- one real division, two
+    # spellings in fighters.csv -- read as a division CHANGE, and every
+    # women's division was off the ladder entirely.
+    settled = normalize_division(recent_weight_class(name, history_df))
+    this_fight_weight_class = normalize_division(this_fight_weight_class)
     if not settled or not this_fight_weight_class or settled == this_fight_weight_class:
         return 0.0
-    if settled not in DIVISION_ORDER or this_fight_weight_class not in DIVISION_ORDER:
-        return 0.0
 
-    division_distance = DIVISION_ORDER.index(this_fight_weight_class) - DIVISION_ORDER.index(settled)
+    ladder = _division_ladder(settled)
+    if ladder is None or _division_ladder(this_fight_weight_class) is not ladder:
+        return 0.0      # off-ladder, or a cross-ladder comparison that means nothing
+
+    division_distance = ladder.index(this_fight_weight_class) - ladder.index(settled)
     if division_distance > 0:  # moving up (this fight's division is heavier)
         return -min(WEIGHT_CLASS_UP_PENALTY_PER_DIVISION * division_distance, WEIGHT_CLASS_UP_PENALTY_CAP)
     else:  # moving down
@@ -512,7 +565,7 @@ def divisional_finish_rate(weight_class) -> float:
     return float(row.get("KO/TKO", 0.0)) + float(row.get("SUB", 0.0))
 
 
-def _shrunk_finish_loss_rate(row: pd.Series, losses: float, base: float) -> float:
+def _shrunk_finish_loss_rate(row: pd.Series, base: float) -> float:
     """
     (ko_losses + sub_losses) / losses, shrunk toward `base` by
     DURABILITY_SHRINK_K pseudo-observations. At K = 0 this is the raw ratio,
@@ -1051,8 +1104,12 @@ def style_matchup_adjustment(
     losses_a = max(int(_get(row_a, "losses", 0)), 1) if _get(row_a, "losses", 0) else 1
     losses_b = max(int(_get(row_b, "losses", 0)), 1) if _get(row_b, "losses", 0) else 1
     _dur_base = divisional_finish_rate(this_fight_weight_class)
-    finish_loss_rate_a = _shrunk_finish_loss_rate(row_a, losses_a, _dur_base)
-    finish_loss_rate_b = _shrunk_finish_loss_rate(row_b, losses_b, _dur_base)
+    # losses_a/losses_b are NOT passed: they carry a max(..., 1) floor that
+    # would read a 0-loss fighter as (0 + k*base)/(1 + k) instead of the base
+    # itself. The function reads the raw count off the row for exactly that
+    # reason -- see its docstring.
+    finish_loss_rate_a = _shrunk_finish_loss_rate(row_a, _dur_base)
+    finish_loss_rate_b = _shrunk_finish_loss_rate(row_b, _dur_base)
     # Same guard, and this one was the most backwards of the three: with
     # ko_losses/sub_losses defaulting to 0, a fighter whose method splits are
     # simply unknown computes a finish-loss rate of zero -- a PERFECT chin --
