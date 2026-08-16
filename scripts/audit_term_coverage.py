@@ -114,6 +114,7 @@ from src.elo import EloRatingSystem  # noqa: E402
 from src.power_rating import build_effective_ratings, compute_stats_rating, _streak_bonus, RATING_CENTER  # noqa: E402
 from src.matchup_model import predict_matchup  # noqa: E402
 from scripts.pit_roster import build_fight_index, roster_as_of  # noqa: E402
+from scripts.build_pit_stats import load_pit_stats, stats_as_of  # noqa: E402
 
 FIGHTERS = "data/fighters.csv"
 HISTORY = "data/fight_history.csv"
@@ -193,6 +194,11 @@ def backtest_rates(limit, full=False):
     history = history.dropna(subset=["date"]).sort_values("date")
     fight_index = build_fight_index(history)
     wc = pd.read_csv(WC_HISTORY) if (full and os.path.exists(WC_HISTORY)) else None
+    # POINT-IN-TIME RATE STATS. The reason wrestling and striking were dark:
+    # their inputs live only in the current fighters.csv, so pit_roster
+    # refuses to supply them. data/pit_stats.csv carries the same quantities
+    # per bout with a date, so they can be summed over prior fights only.
+    pit = load_pit_stats() if full else {}
 
     elo = EloRatingSystem()
     counts, streaks = defaultdict(int), defaultdict(int)
@@ -221,6 +227,8 @@ def backtest_rates(limit, full=False):
                     # date filter inside recent_form_adjustment is a second
                     # guard, not a substitute for this one.
                     past = history[history["date"] < f["date"]]
+                    for row, fold in ((ra, fa), (rb, fb)):
+                        row.update(stats_as_of(pit.get(fold, []), when.date()))
                     res = predict_matchup(a, b, pd.DataFrame([ra, rb]), eff,
                                           past, wc, f.get("weight_class"),
                                           reference_date=when.date())
