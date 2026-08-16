@@ -913,6 +913,20 @@ def recent_form_adjustment(
             return 0.0
         rows["date"] = pd.to_datetime(rows["date"], errors="coerce")
         rows = rows.dropna(subset=["date"]).sort_values("date")
+        # STRICTLY BEFORE THE FIGHT BEING PREDICTED. Without this the tail()
+        # below takes a fighter's last three fights from the WHOLE table, so
+        # a caller that supplied full history plus a past reference_date read
+        # bouts that had not happened yet -- and read them at FULL weight,
+        # because a negative years_ago clamps the decay to 1.0. The most
+        # recent fight is also the most influential, which is precisely the
+        # one most likely to be in the future.
+        #
+        # Production was never wrong here (reference_date is today and the
+        # table holds only decided fights), but the hazard is why every
+        # harness omitted fight_history_df altogether, which silenced this
+        # term in every backtest verdict the project has published. Filtering
+        # is what makes passing history safe.
+        rows = rows[rows["date"].dt.date < reference_date]
         if rows.empty:
             return 0.0
         # Last-3-fights decayed form, VALIDATED on the July 2026 walk-forward
@@ -937,6 +951,7 @@ def predict_matchup(
     fight_history_df: pd.DataFrame | None = None,
     weight_class_history_df: pd.DataFrame | None = None,
     fight_weight_class: str | None = None,
+    reference_date: dt.date | None = None,
 ) -> dict | None:
     """
     Full pairwise prediction: base rating gap + style-matchup adjustment,
@@ -957,7 +972,12 @@ def predict_matchup(
     # and could in principle drift from what a specific card says.
     this_fight_wc = fight_weight_class or row_a.get("weight_class")
     style = style_matchup_adjustment(row_a, row_b, weight_class_history_df, this_fight_wc)
-    recent_form_adj = recent_form_adjustment(fighter_a, fighter_b, fight_history_df)
+    # reference_date FORWARDED. It was accepted by recent_form_adjustment and
+    # never supplied, so the term always dated itself to today. Harmless for a
+    # booked fight; wrong for any historical one, and the missing parameter is
+    # half of why backtests could not pass history at all.
+    recent_form_adj = recent_form_adjustment(
+        fighter_a, fighter_b, fight_history_df, reference_date)
     raw_layer = style["total_adjustment"] + recent_form_adj
     applied_layer = max(-ADJUSTMENT_TOTAL_CAP, min(ADJUSTMENT_TOTAL_CAP, raw_layer))
     adjusted_gap = (base_r_a - base_r_b) + applied_layer
