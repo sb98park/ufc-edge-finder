@@ -21,6 +21,7 @@ people actually reason about matchups, instead of just comparing records.
 
 import datetime as dt
 import math
+import os
 
 import pandas as pd
 
@@ -242,21 +243,62 @@ def quick_return_penalty(row: pd.Series, reference_date: dt.date | None = None) 
 # decline past 35; heavyweight and light heavyweight fighters, where power
 # and experience matter more than raw speed, often peak or sustain well
 # into their late 30s.
+# THE UFC HAS NO MEN'S STRAWWEIGHT. The 115lb division is women-only, so the
+# "Strawweight" key below was covering a division that does not exist while
+# the one that does -- "Women's Strawweight" -- fell through to the 37
+# default. Both labels appear in fighters.csv (4 and 8 fighters), which is
+# the same real division recorded two ways.
+#
+# The women's divisions were missing entirely, so Women's Flyweight and
+# Women's Bantamweight also defaulted to 37 while the men's divisions at the
+# SAME weight got 35 -- inverting this table's own rationale that lighter
+# fighters decline earlier. On the booked card that is 11 of 76 fights.
+#
+# Thresholds mirror the men's division at the same weight, since the
+# rationale is about weight rather than sex. Catchweight is deliberately
+# absent: it is not a division, it is a one-off contracted weight, and the
+# default is the honest answer for it.
 AGE_CLIFF_START = {
-    "Strawweight": 35, "Flyweight": 35, "Bantamweight": 35, "Featherweight": 35,
+    "Flyweight": 35, "Bantamweight": 35, "Featherweight": 35,
     "Lightweight": 37, "Welterweight": 37, "Middleweight": 37,
     "Light Heavyweight": 39, "Heavyweight": 40,
+    "Women's Strawweight": 35, "Women's Flyweight": 35, "Women's Bantamweight": 35,
+    "Women's Featherweight": 35,
 }
 AGE_CLIFF_DEFAULT_START = 37  # for any weight class not explicitly listed
+
+# Labels that mean the same real division. Applied before every divisional
+# lookup so one fighter cannot sit under two age cliffs and two method priors
+# depending on which spelling their row happens to carry.
+DIVISION_ALIASES = {
+    "Strawweight": "Women's Strawweight",
+    "Women's Straw Weight": "Women's Strawweight",
+}
+
+
+def normalize_division(weight_class) -> str | None:
+    """Canonical division label, or None when it is genuinely unknown."""
+    if weight_class is None or (isinstance(weight_class, float) and pd.isna(weight_class)):
+        return None
+    s = str(weight_class).strip()
+    if not s or s.lower() in ("unknown", "nan", "n/a"):
+        return None
+    return DIVISION_ALIASES.get(s, s)
 AGE_CLIFF_PENALTY_PER_YEAR = 25.0
 AGE_CLIFF_PENALTY_CAP = 200.0
 
 
 def age_cliff_penalty(row: pd.Series) -> float:
     age = row.get("age")
-    weight_class = row.get("weight_class")
-    if pd.isna(age) or not weight_class:
+    if pd.isna(age):
         return 0.0  # no penalty when age isn't known -- better than guessing wrong
+    # THE DIVISION ONLY SETS THE THRESHOLD; the age is real data either way.
+    # `not weight_class` used to gate the whole term off for an empty string
+    # while letting NaN through to the default -- two spellings of "unknown"
+    # taking opposite paths. Unknown now consistently means "use the default
+    # cliff", which keeps a real age signal on the 114 of 310 roster fighters
+    # who carry no division rather than discarding it.
+    weight_class = normalize_division(row.get("weight_class"))
     cliff_age = AGE_CLIFF_START.get(weight_class, AGE_CLIFF_DEFAULT_START)
     years_past_cliff = float(age) - cliff_age
     if years_past_cliff <= 0:
@@ -354,22 +396,143 @@ def weight_class_change_penalty(name: str, this_fight_weight_class: str | None, 
 
 def compute_divisional_method_priors(fighters_df: pd.DataFrame) -> dict[str, dict[str, float]]:
     """
-    Divisional average method-of-victory rates, computed from the roster's
-    own aggregate data. A heavyweight fight has an inherently higher
-    baseline finish-by-KO rate than a strawweight fight, which leans
-    heavily toward decisions -- a flat blend for every division ignores
-    this real, well-documented difference between weight classes.
+    Divisional average method-of-victory rates. A heavyweight fight has an
+    inherently higher baseline finish-by-KO rate than a strawweight fight,
+    which leans heavily toward decisions -- a flat blend for every division
+    ignores this real, well-documented difference between weight classes.
+
+    COMPUTED FROM REAL UFC BOUTS, not from the roster's career totals. The
+    career-total version was wrong in one direction in every single division,
+    because a career record includes the regional circuit -- where finish
+    rates are far higher -- and because the CURRENT roster is a survivorship
+    sample of fighters good enough to still be here:
+
+        division              source     KO   SUB   DEC      n
+        Lightweight           true     0.30  0.22  0.48   1394
+                              roster   0.44  0.32  0.25
+        Women's Strawweight   true     0.12  0.20  0.67    348
+                              roster   0.39  0.17  0.44
+        Light Heavyweight     true     0.45  0.17  0.37    685
+                              roster   0.57  0.21  0.22
+
+    Decisions were understated by 13-23 points everywhere. Since these priors
+    anchor every method and round-total projection on the site, the whole
+    props surface was biased toward finishes.
+
+    data/ufc_fight_results.csv carries 8,784 real UFC bouts with both a
+    division and a method, so this needs no new data -- only reading the
+    right table. Falls back to the roster aggregate if that file is missing,
+    which keeps the function total rather than silently returning nothing.
     """
+    priors = _divisional_priors_from_results()
+    if priors:
+        return priors
+
     priors = {}
     for wc, group in fighters_df.groupby("weight_class"):
         total_wins = group["wins"].sum()
         if total_wins <= 0:
             continue
-        priors[wc] = {
+        div = normalize_division(wc)
+        if div is None:
+            continue
+        priors[div] = {
             "KO/TKO": group["ko_wins"].sum() / total_wins,
             "SUB": group["sub_wins"].sum() / total_wins,
             "DEC": group["dec_wins"].sum() / total_wins,
         }
+    return priors
+
+
+def divisional_prior_for(priors: dict, weight_class, method: str, fallback: float) -> float:
+    """
+    A division's rate for one method, resolving aliases and thin divisions.
+
+    Callers used to index priors with the raw weight_class string, so
+    "Strawweight" and "Women's Strawweight" -- the same real division, spelled
+    two ways in fighters.csv -- looked up two different priors, and anything
+    unlisted silently fell back to the FIGHTER'S OWN rate, which is not a
+    prior at all. Both now resolve through the canonical label and then the
+    all-UFC split.
+    """
+    div = normalize_division(weight_class)
+    row = priors.get(div) if div else None
+    if row is None:
+        row = priors.get("_default")
+    if row is None:
+        return fallback
+    return row.get(method, fallback)
+
+
+UFC_RESULTS_PATH = "data/ufc_fight_results.csv"
+# Below this many real bouts a division's own rate is noisier than the
+# all-UFC average, so the average is used instead. Women's Featherweight has
+# 29 bouts in total; a 29-fight rate is not a prior, it is an anecdote.
+MIN_BOUTS_FOR_DIVISIONAL_PRIOR = 120
+
+
+def _division_from_bout_label(label) -> str | None:
+    """
+    'Lightweight Bout' / 'UFC Women's Strawweight Title Bout' -> the division.
+
+    Title fights carry a 'UFC ' prefix and sometimes 'Interim', and every row
+    ends in ' Bout'. Stripped rather than filtered: a title fight is a normal
+    fight for the purpose of how often the division goes to a decision, and
+    dropping them would bias the sample toward the undercard.
+    """
+    if label is None or (isinstance(label, float) and pd.isna(label)):
+        return None
+    s = str(label).strip()
+    for suffix in (" Bout",):
+        if s.endswith(suffix):
+            s = s[: -len(suffix)].strip()
+    s = s.replace("Championship", "").strip()
+    if s.startswith("UFC "):
+        s = s[4:].strip()
+    for word in ("Interim ", "Title", "Superfight"):
+        s = s.replace(word, "").strip()
+    # Open Weight and Catch Weight are not divisions; they get the default.
+    if not s or s in ("Open Weight", "Catch Weight", "Catchweight"):
+        return None
+    return normalize_division(s)
+
+
+def _method_bucket_from_results(method) -> str | None:
+    m = str(method).strip().lower()
+    if m.startswith("decision"):
+        return "DEC"
+    if "submission" in m:
+        return "SUB"
+    if "ko/tko" in m or m.startswith("tko") or m.startswith("ko"):
+        return "KO/TKO"
+    return None      # DQ, overturned, could not continue -- no method to attribute
+
+
+def _divisional_priors_from_results() -> dict[str, dict[str, float]]:
+    """Method split per division over every decided UFC bout on record."""
+    if not os.path.exists(UFC_RESULTS_PATH):
+        return {}
+    try:
+        d = pd.read_csv(UFC_RESULTS_PATH)
+    except (OSError, pd.errors.ParserError):
+        return {}
+    if "WEIGHTCLASS" not in d.columns or "METHOD" not in d.columns:
+        return {}
+
+    d = d.assign(_div=d["WEIGHTCLASS"].map(_division_from_bout_label),
+                 _m=d["METHOD"].map(_method_bucket_from_results)).dropna(subset=["_m"])
+    if d.empty:
+        return {}
+
+    overall = {k: float((d["_m"] == k).mean()) for k in ("KO/TKO", "SUB", "DEC")}
+    priors = {}
+    for div, g in d.dropna(subset=["_div"]).groupby("_div"):
+        if len(g) < MIN_BOUTS_FOR_DIVISIONAL_PRIOR:
+            continue
+        priors[div] = {k: float((g["_m"] == k).mean()) for k in ("KO/TKO", "SUB", "DEC")}
+    # Thin and unlisted divisions resolve to the all-UFC split rather than to
+    # whatever their handful of bouts happened to produce.
+    priors.setdefault("_default", overall)
     return priors
 
 

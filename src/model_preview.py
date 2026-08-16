@@ -8,7 +8,7 @@ clearly labeled as a projection rather than a live-market edge.
 
 import pandas as pd
 
-from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get
+from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get, divisional_prior_for
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg, build_percentile_index
 from src.striking_profile import (build_zone_index, zone_profile, position_profile,
                                   fight_shape)
@@ -49,7 +49,8 @@ def _method_vulnerability_blend(fighter_row: pd.Series, opponent_row: pd.Series,
 
     # divisional_priors keys use the short form ("SUB"/"DEC") from edge_finder
     method_key_map = {"KO/TKO": "KO/TKO", "Submission": "SUB", "Decision": "DEC"}
-    divisional_prior = divisional_priors.get(fighter_row["weight_class"], {}).get(method_key_map[method], own_rate)
+    divisional_prior = divisional_prior_for(
+        divisional_priors, fighter_row["weight_class"], method_key_map[method], own_rate)
 
     opp_losses_raw = _get(opponent_row, "losses", 0)
     opp_losses = max(int(opp_losses_raw), 1) if opp_losses_raw else 0

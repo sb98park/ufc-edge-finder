@@ -130,7 +130,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
             "DEC": _get(f, "dec_wins", 0) / total_wins,
         }
         own_rate = rate_map[method]
-        divisional_prior = divisional_priors.get(f["weight_class"], {}).get(method, own_rate)
+        divisional_prior = divisional_prior_for(divisional_priors, f["weight_class"], method, own_rate)
         opp_vulnerability = own_rate  # fallback if opponent data is missing
         if opp_stats is not None and not opp_stats.empty:
             opp = opp_stats.iloc[0]
