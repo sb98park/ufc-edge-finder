@@ -14,7 +14,7 @@ import pandas as pd
 
 from src.fight_format import is_five_round as _is_five_round, scheduled_rounds as _scheduled_rounds
 
-from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob
+from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob, devig_single_sided
 from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
 from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
 
@@ -254,7 +254,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
             "model_prob": round(model_p, 3),
             "book_fair_prob": round(imp, 3),  # not devigged (single-sided prop)
             "edge_pct": round(edge_percent(model_p, imp), 2),
-            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
+            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, f"Method: {row['selection_method']}")), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
         })
 
@@ -311,7 +311,7 @@ def compute_round_betting_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataF
             "model_prob": round(model_p, 3),
             "book_fair_prob": round(imp, 3),  # not devigged (single-sided prop)
             "edge_pct": round(edge_percent(model_p, imp), 2),
-            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
+            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, "Round Betting: Round 1")), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
         })
 
@@ -444,7 +444,7 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 "model_prob": round(model_p, 3),
                 "book_fair_prob": round(imp, 3),
                 "edge_pct": round(edge_percent(model_p, imp), 2),
-                "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
+                "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, f"Total Rounds {row['selection']}")), row["odds_american"]) * 100, 2),
                 "clob_token_id": row.get("clob_token_id"),
             })
 
@@ -539,7 +539,7 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
             "model_prob": round(model_p, 3),
             "book_fair_prob": round(imp, 3),
             "edge_pct": round(edge_percent(model_p, imp), 2),
-            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
+            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, f"Fight Outcome: {row['selection']}")), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
         })
 
@@ -654,7 +654,7 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
             "model_prob": round(model_p, 3),
             "book_fair_prob": round(imp, 3),
             "edge_pct": round(edge_percent(model_p, imp), 2),
-            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, imp), row["odds_american"]) * 100, 2),
+            "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, f"Fight Method: {sel}")), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
         })
 
@@ -760,7 +760,7 @@ def _score_derived_lines(derived_df, fighters_df, elo_ratings):
         rows.append({**r, "model_prob": round(model_p, 3),
                      "edge_pct": round(edge_percent(model_p, imp), 2),
                      "suggested_stake_pct": round(
-                         kelly_fraction(market_blended_prob(model_p, imp), r["odds_american"]) * 100, 2)})
+                         kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, r.get("market"))), r["odds_american"]) * 100, 2)})
     return pd.DataFrame(rows)
 
 

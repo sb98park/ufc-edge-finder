@@ -217,9 +217,31 @@ def build_full_market_projection(
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 2.5", "model_prob": round(1 - rounds_2_5, 3)},
         ]
 
-    dec_rate_a = _get(row_a, "dec_wins", 0) / max(int(row_a["wins"]), 1)
-    dec_rate_b = _get(row_b, "dec_wins", 0) / max(int(row_b["wins"]), 1)
-    goes_distance_prob = (dec_rate_a + dec_rate_b) / 2
+    # SAME SOURCE AS THE ROUNDS ROWS. Both branches above were deliberately
+    # rewritten to derive from _md["decision"] "so the rounds markets cannot
+    # contradict the method rows" -- and this line, which prices the SAME
+    # event, was left on the old career-average path.
+    #
+    # So the site published P(finish) two incompatible ways. The career blend
+    # reads from the survivorship-biased source matchup_model documents as
+    # overstating finishes by 13-23 points, and it does not even reference
+    # the opponent's chin -- it averages two fighters' own finishing rates.
+    # Measured across the booked card the two answers differed by a mean of
+    # 13.1pp, by more than 10pp on 53 of 76 fights, and on one fight the page
+    # carried P(finish) = 0.929 beside P(decision) = 0.505.
+    #
+    # "Ends In Finish" is a PRICED market, so that gap was not cosmetic: it
+    # was a one-directional phantom edge across every fight on the card,
+    # always in the direction of betting the finish.
+    #
+    # The career fallback survives only when the method model returns nothing,
+    # which is the same fallback the rounds rows use.
+    if _md:
+        goes_distance_prob = _md["decision"]
+    else:
+        dec_rate_a = _get(row_a, "dec_wins", 0) / max(int(row_a["wins"]), 1)
+        dec_rate_b = _get(row_b, "dec_wins", 0) / max(int(row_b["wins"]), 1)
+        goes_distance_prob = (dec_rate_a + dec_rate_b) / 2
     distance_rows = [
         {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Fight Outcome: Goes The Distance", "model_prob": round(goes_distance_prob, 3)},
         {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Fight Outcome: Ends In Finish", "model_prob": round(1 - goes_distance_prob, 3)},

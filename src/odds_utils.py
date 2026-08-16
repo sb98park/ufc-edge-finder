@@ -181,6 +181,64 @@ def edge_percent(model_prob: float, book_fair_prob: float) -> float:
     return (model_prob - book_fair_prob) * 100.0
 
 
+# TYPICAL OVERROUND ON A METHOD / PROP MARKET, measured rather than assumed:
+# across the 5,646 bouts in data/external_odds.csv carrying a complete
+# six-cell method grid, the implied probabilities sum to a mean of 1.2003 and
+# a median of 1.2178 (p5 1.133, p95 1.291). Two-way moneylines on the same
+# file sum to 1.0353, which is why they get exact de-vigging and props cannot.
+# ONE CONSTANT WOULD BE WRONG. The 1.20 above is the SIX-CELL method grid.
+# The genuinely two-way prop markets carry nothing like it -- measured on the
+# live book, TotalRounds Over/Under 2.5 sums to 1.048, Over/Under 1.5 to
+# 1.055, and GoesTheDistance to 1.049. Applying a 20% correction to a 5%
+# market would strip four times the margin that is actually there and zero
+# out every stake on it.
+PROP_OVERROUND = 1.20          # six-cell method grid, n=5,646 bouts
+TWO_WAY_OVERROUND = 1.05       # totals and distance, measured on the live book
+
+
+def overround_for_market(market: str | None) -> float:
+    """
+    The margin to strip for a given market string.
+
+    Defaults to the two-way figure, which is the conservative direction: an
+    under-correction leaves a stake slightly too large, an over-correction
+    silently deletes the bet.
+    """
+    m = (market or "").lower()
+    if "method" in m or "round betting" in m:
+        return PROP_OVERROUND
+    return TWO_WAY_OVERROUND
+
+
+def devig_single_sided(implied_prob: float, market: str | None = None,
+                       overround: float | None = None) -> float:
+    """
+    Approximate fair probability for a prop quoted with no complement.
+
+    remove_vig_two_way needs both sides. A single prop leg does not have one,
+    so the raw implied probability carries the book's whole margin and is
+    biased HIGH.
+
+    Proportional de-vig: divide by that market type's overround. Crude
+    compared to the two-way version, and stated as such, but the alternative
+    is treating a number known to be biased high as if it were fair.
+
+    WHERE THIS MATTERS AND WHERE IT DOES NOT. The displayed edge uses the raw
+    implied probability deliberately, and is labelled "not devigged" at every
+    call site: an inflated book probability makes the edge look SMALLER, which
+    errs toward not betting. Staking runs the other way. market_blended_prob
+    exists to shrink the model toward the book so Kelly does not overbet a
+    disagreement, and feeding it an inflated book probability inflates the
+    blend and therefore the stake -- turning a safety mechanism into the
+    opposite. Same input, opposite consequences, so only the staking path
+    changes.
+    """
+    o = overround if overround is not None else overround_for_market(market)
+    if o <= 0:
+        return implied_prob
+    return max(0.0, min(1.0, implied_prob / o))
+
+
 MARKET_BLEND_MODEL_WEIGHT = 0.30
 
 
