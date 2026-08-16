@@ -37,8 +37,15 @@ and both corners are rebuilt by pit_roster as they stood that night.
 THE RESULT: SHIPPED AT k = 2.0. Two disjoint windows, both significant:
 
     window                  k=2 Brier    p (clustered)   accuracy   baseline
-    recent 2,500 (n=1834)    -0.0030      0.002         +0.44%      50.9%
-    prior  2,500 (n=1663)    -0.0043      0.001         +1.32%      51.2%
+    recent 2,500 (n=1825)    -0.0023      0.016         +0.77%      50.9%
+    prior  2,500 (n=1662)    -0.0034      0.006         +1.50%      51.1%
+
+Measured on the FULLY-FED model: point-in-time wrestling and striking from
+data/pit_stats.csv, dated layoff, fixed pit_roster guard, corners randomised,
+bootstrap clustered by card. Adding those two terms improved the control arm
+on its own -- Brier 0.2250 -> 0.2189 and 0.2400 -> 0.2381 -- so the shrink is
+now measured against a stronger baseline and still clears the bar in both
+windows. This is the fourth distinct baseline this verdict has survived.
 
 Corners are now randomised, so the always-pick-A baseline sits at ~51% and
 the accuracy figures above mean what a reader assumes. The bootstrap is
@@ -85,6 +92,7 @@ from src import matchup_model  # noqa: E402
 from src.matchup_model import predict_matchup  # noqa: E402
 from src.power_rating import compute_stats_rating, _streak_bonus  # noqa: E402
 from scripts.pit_roster import build_fight_index, roster_as_of  # noqa: E402
+from scripts.build_pit_stats import load_pit_stats, stats_as_of  # noqa: E402
 from scripts.harness_stats import (  # noqa: E402
     paired_signflip, randomize_corner, score as _score_pairs, trivial_baseline)
 
@@ -117,6 +125,9 @@ def run(arms, limit, offset=0):
     history = history.dropna(subset=["date"]).sort_values("date")
     fight_index = build_fight_index(history)
     wc = pd.read_csv(WC_HISTORY) if os.path.exists(WC_HISTORY) else None
+    # Point-in-time rate stats, so the scored model has its wrestling and
+    # striking terms -- see scripts/build_pit_stats.
+    pit = load_pit_stats()
 
     elo = EloRatingSystem()
     counts, streaks = defaultdict(int), defaultdict(int)
@@ -144,6 +155,9 @@ def run(arms, limit, offset=0):
                 rb = roster_as_of(b, when, fight_index, static_rows, today=when)
                 frame = pd.DataFrame([ra, rb])
                 past = history[history["date"] < f["date"]]
+                for row, fold in ((ra, fa), (rb, fb)):
+                    row.update(stats_as_of(pit.get(fold, []), when.date()))
+                frame = pd.DataFrame([ra, rb])
                 eff = {}
                 for name, row, prior, fold in ((a, ra, na, fa), (b, rb, nb, fb)):
                     sr = compute_stats_rating(pd.Series(row))

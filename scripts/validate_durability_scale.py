@@ -85,6 +85,7 @@ from src import matchup_model  # noqa: E402
 from src.matchup_model import predict_matchup  # noqa: E402
 from src.power_rating import compute_stats_rating, _streak_bonus  # noqa: E402
 from scripts.pit_roster import build_fight_index, roster_as_of  # noqa: E402
+from scripts.build_pit_stats import load_pit_stats, stats_as_of  # noqa: E402
 from scripts.harness_stats import (  # noqa: E402
     paired_signflip, randomize_corner, score as _score_pairs, trivial_baseline)
 
@@ -117,6 +118,9 @@ def run(arms, limit, offset=0):
     history = history.dropna(subset=["date"]).sort_values("date")
     fight_index = build_fight_index(history)
     wc = pd.read_csv(WC_HISTORY) if os.path.exists(WC_HISTORY) else None
+    # Point-in-time rate stats, so the scored model has its wrestling and
+    # striking terms -- see scripts/build_pit_stats.
+    pit = load_pit_stats()
 
     elo = EloRatingSystem()
     counts, streaks = defaultdict(int), defaultdict(int)
@@ -144,6 +148,9 @@ def run(arms, limit, offset=0):
                 rb = roster_as_of(b, when, fight_index, static_rows, today=when)
                 frame = pd.DataFrame([ra, rb])
                 past = history[history["date"] < f["date"]]
+                for row, fold in ((ra, fa), (rb, fb)):
+                    row.update(stats_as_of(pit.get(fold, []), when.date()))
+                frame = pd.DataFrame([ra, rb])
                 eff = {}
                 for name, row, prior, fold in ((a, ra, na, fa), (b, rb, nb, fb)):
                     sr = compute_stats_rating(pd.Series(row))
