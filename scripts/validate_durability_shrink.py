@@ -37,8 +37,8 @@ and both corners are rebuilt by pit_roster as they stood that night.
 THE RESULT: SHIPPED AT k = 2.0. Two disjoint windows, both significant:
 
     window                    k=2 Brier    p        accuracy
-    recent 2,500 (n=1834)      -0.0021   0.021       -0.22%
-    prior  2,500 (n=1663)      -0.0027   0.009       +0.30%
+    recent 2,500 (n=1834)      -0.0030   0.011       +0.22%
+    prior  2,500 (n=1663)      -0.0052   0.000       +1.44%
 
 Every arm improved Brier and log loss in every subset -- 16 of 16 in the
 same direction in the first window alone -- and the effect is 3-5x anything
@@ -51,8 +51,13 @@ disappointment: the damage is the 0-or-1 ratio at a denominator of 1, and
 any pseudo-count fixes it. k = 2 is the least intervention that captures the
 effect and was significant in both windows.
 
-Accuracy moved -0.22% and +0.30% across the two windows, so it is noise
-rather than a trade. The gain is calibration.
+Accuracy improves in BOTH windows, so this is not a calibration-for-accuracy
+trade. An earlier run measured -0.0021 / -0.0027 with accuracy -0.22% /
++0.30%; that was taken while _shrunk_finish_loss_rate still returned 0.0 for
+a 0-loss fighter, pinning every undefeated corner below a value the shrunk
+estimator could otherwise never produce. Removing that discontinuity roughly
+doubled the gain. A shrink measured against an artifact of its own
+introduction understates itself.
 
 Usage:  python3 scripts/validate_durability_shrink.py
         python3 scripts/validate_durability_shrink.py --sweep

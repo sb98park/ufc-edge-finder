@@ -239,7 +239,7 @@ def main():
 
     print(f"  {'term':<34}{'LIVE':>9}{'OLD CALL':>11}{'THREADED':>11}")
     print("  " + "-" * 65)
-    dark = []
+    dark, inert = [], []
     for t in TERMS:
         lv, bk, nb = live.get(t), old.get(t), new.get(t)
         fmt = lambda v: f"{v:.0%}" if v is not None else "  -"
@@ -249,7 +249,24 @@ def main():
             dark.append(t)
         elif lv and bk == 0.0 and nb:
             flag = "   <- fixed"
+        elif not lv and not nb:
+            # FIRES NOWHERE. The flag above required a term to fire LIVE
+            # before it would be reported, so a term inert in BOTH populations
+            # -- the worst case, since it contributes to no prediction and no
+            # verdict -- passed the instrument silently. Three terms sat in
+            # that blind spot: missed_weight, weight_class_change and
+            # short_notice. An audit that cannot see its own null result is
+            # not an audit.
+            flag = "   <- INERT EVERYWHERE"
+            inert.append(t)
         print(f"  {t:<34}{fmt(lv):>9}{fmt(bk):>11}{fmt(nb):>11}{flag}")
+
+    if inert:
+        print()
+        print(f"{len(inert)} term(s) fire on NOTHING -- not live, not in backtest. Each is")
+        print("dead weight in the style layer until its input is populated:")
+        for t in inert:
+            print(f"  - {t}")
 
     print()
     if dark:

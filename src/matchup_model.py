@@ -58,8 +58,8 @@ DURABILITY_SCALE = 120.0
 # its recency term:
 #
 #     window                    k=2 Brier    p        accuracy
-#     recent 2,500 (n=1834)      -0.0021   0.021       -0.22%
-#     prior  2,500 (n=1663)      -0.0027   0.009       +0.30%
+#     recent 2,500 (n=1834)      -0.0030   0.011       +0.22%
+#     prior  2,500 (n=1663)      -0.0052   0.000       +1.44%
 #
 # Significant in both, and every arm (k = 2, 5, 10, 20) improved Brier and
 # log loss in every subset -- 16 of 16 in the same direction across the first
@@ -71,8 +71,14 @@ DURABILITY_SCALE = 120.0
 # was significant in both windows, so it is the one that ships. A 1-loss
 # fighter finished once goes from a 100% finish-loss rate to 68%.
 #
-# Accuracy moves -0.22% and +0.30% across the two windows -- noise, not a
-# trade. The gain is in calibration, which is what a betting product prices.
+# Accuracy IMPROVES in both windows, so this is not the calibration-for-
+# accuracy trade the first measurement suggested. Those first numbers
+# (-0.0021 / -0.0027, accuracy -0.22% / +0.30%) were taken while
+# _shrunk_finish_loss_rate still pinned 0-loss fighters at 0.0, which handed
+# every undefeated fighter a better chin than anyone who had ever lost.
+# Removing that discontinuity roughly doubled the Brier gain and flipped the
+# accuracy sign -- the shrink was being measured while fighting an artifact
+# it had itself created.
 DURABILITY_SHRINK_K = 2.0
 VOLUME_DIFFERENTIAL_SCALE = 40.0  # rating points per 1.0 SLpM-SApM differential gap
 
@@ -510,14 +516,31 @@ def _shrunk_finish_loss_rate(row: pd.Series, losses: float, base: float) -> floa
     """
     (ko_losses + sub_losses) / losses, shrunk toward `base` by
     DURABILITY_SHRINK_K pseudo-observations. At K = 0 this is the raw ratio,
-    byte-identical to the previous behaviour.
+    byte-identical to the pre-shrink behaviour.
+
+    THE 0-LOSS CASE IS NOT A 0% FINISH-LOSS RATE. Returning 0.0 there was
+    harmless while the estimator was unshrunk -- an undefeated fighter and a
+    12-1 fighter never finished both scored 0.0, tied at the bottom. Adding
+    the shrink broke that tie in the wrong direction: with k=2 and a 0.52
+    base, 12-1-never-finished moves to 0.35 while 12-0 stays pinned at 0.0.
+    Undefeated then scores a BETTER chin than anyone who has ever lost,
+    including someone who has only ever lost a decision -- and 0.0 is a value
+    the shrunk estimator can no longer produce for any real record, so the
+    two corners are not even on the same scale.
+
+    That is backwards on its own terms. No losses means no evidence about a
+    fighter's chin, and the neutral answer for no evidence is the base rate,
+    which is exactly what the formula already returns at losses = 0:
+    (0 + k*base) / (0 + k) = base. The special case was the whole bug.
+
+    Kept only for k = 0, where dividing by a zero denominator would raise and
+    the legacy meaning of 0.0 still applies.
     """
-    if not _get(row, "losses", 0):
-        return 0.0
+    losses = _get(row, "losses", 0)
     finished = _get(row, "ko_losses", 0) + _get(row, "sub_losses", 0)
     k = DURABILITY_SHRINK_K
     if k <= 0:
-        return finished / losses
+        return finished / losses if losses else 0.0
     return (finished + k * base) / (losses + k)
 
 
