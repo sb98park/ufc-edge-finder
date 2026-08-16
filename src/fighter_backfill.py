@@ -678,6 +678,24 @@ def _fetch_method_breakdown_from_combat_edge(name: str, known_wins: int | None =
         match = re.search(rf"(\d+)\s*{label}", profile_html, re.IGNORECASE)
         return int(match.group(1)) if match else None
 
+    # THE CAREER RECORD, which this function fetched all along and threw
+    # away. The profile header carries "Record: 5-1-0" in plain text, and we
+    # are already holding the page.
+    #
+    # It matters because ESPN is the only source for wins/losses and it has
+    # nothing at all for some debutants -- no athlete page, no scoreboard
+    # entry. Terrance Chatman went into UFC Fight Night 2026-08-22 recorded
+    # as 0-0 when he is 5-1, which made his 7-0 opponent Lock of the Week.
+    # Combat Edge had "Record: 5-1-0" for him the whole time.
+    #
+    # Draws are captured too even though fighters.csv has no draws column,
+    # so the caller can tell "5-1-0" from a malformed parse rather than
+    # inferring it from two numbers.
+    record_wins = record_losses = None
+    rec_match = re.search(r"Record:\s*(\d+)\s*-\s*(\d+)\s*-\s*(\d+)", profile_html, re.IGNORECASE)
+    if rec_match:
+        record_wins, record_losses = int(rec_match.group(1)), int(rec_match.group(2))
+
     # Confirmed via real production diagnostics (July 2026): Combat Edge's
     # current template includes a sentence under a "How does X usually win?"
     # heading reading "X's N recorded wins include A knockouts, B
@@ -747,6 +765,16 @@ def _fetch_method_breakdown_from_combat_edge(name: str, known_wins: int | None =
             print(f"[fighter_backfill] DIAGNOSTIC: {name!r} -- no loss-side breakdown language found at all "
                   f"(page length {len(profile_html)} chars). May genuinely not exist for this fighter "
                   f"(low loss count), or uses wording this search doesn't cover yet.")
+
+    # The career record rides along even when NO method fields parsed. Those
+    # are separate facts from separate parts of the page, and a fighter whose
+    # method wording this parser doesn't cover can still have a perfectly
+    # readable "Record: 5-1-0" in the header -- which is the single most
+    # valuable field here for a debutant ESPN has never heard of.
+    if record_wins is not None and record_losses is not None:
+        breakdown["record_wins"] = record_wins
+        breakdown["record_losses"] = record_losses
+        parsed_count += 1
 
     if parsed_count == 0:
         return None
@@ -1024,6 +1052,22 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
 
                 if attempt_athlete_detail and athlete_id:
                     method_recs = _fetch_espn_method_records(athlete_id)
+                    # POP THE PRIVATE KEYS BEFORE MERGING, not after.
+                    #
+                    # _career_w/_career_l are internal signalling, not roster
+                    # columns. This update() ran BEFORE the pop below, so they
+                    # rode into `physical` and then into the gap-fill loop,
+                    # which does fighters.at[i, col] for every key it holds --
+                    # KeyError: '_career_w'.
+                    #
+                    # generate_site wraps this whole call in try/except and
+                    # logs "fighter backfill failed ... continuing", so it
+                    # never surfaced as a failure. It has been aborting the
+                    # ENTIRE enrichment pass on every build, for both card
+                    # files, which is why Terrance Chatman sat at 0-0 with no
+                    # stance, country, reach or last-fight date: the code that
+                    # would have filled them died before reaching him.
+                    cw, cl = method_recs.pop("_career_w", None), method_recs.pop("_career_l", None)
                     physical.update(method_recs)
                     # PREFER THE ATHLETE ENDPOINT'S CAREER RECORD over the
                     # scoreboard's. The scoreboard's records[] entry named
@@ -1036,7 +1080,6 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                     # athlete.statsSummary's "wins-losses-draws" IS the career
                     # figure (the same block the method splits come from), so
                     # when the two disagree the athlete endpoint wins.
-                    cw, cl = method_recs.pop("_career_w", None), method_recs.pop("_career_l", None)
                     if cw is not None and cl is not None:
                         if wins is not None and (cw != wins or cl != losses):
                             print(f"[fighter_backfill] {name}: scoreboard record {wins}-{losses} "
@@ -1064,8 +1107,43 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                     and bool(existing_row["combat_edge_checked"].iloc[0])
                     and bool(existing_row["wikipedia_checked"].iloc[0])
                 )
+                # AN ALL-ZERO ROW IS NOT DATA. A fighter recorded as 0-0 with
+                # zero wins by every method has never been looked up -- those
+                # zeros are the shape missing data takes here, not
+                # measurements. isna() cannot see them, so the lookup that
+                # would fix the row was gated off by the very emptiness it
+                # exists to fill.
+                #
+                # Terrance Chatman: 0-0, all six method columns 0.0, so
+                # needs_method_data was False and Combat Edge -- which has him
+                # at 5-1 with a full win breakdown -- was never called.
+                record_empty = (
+                    not existing_row.empty
+                    and pd.notna(existing_row["wins"].iloc[0])
+                    and pd.notna(existing_row["losses"].iloc[0])
+                    and float(existing_row["wins"].iloc[0]) == 0
+                    and float(existing_row["losses"].iloc[0]) == 0
+                )
+                # AND THE SAME TRAP ON THE WIN SIDE. A fighter with 5 wins
+                # and 0 KO + 0 sub + 0 dec is not a fighter whose wins came
+                # some other way -- the splits cannot sum to less than the
+                # wins, so the row is arithmetically impossible and those
+                # zeros are placeholders. This is a consistency check, not a
+                # heuristic.
+                #
+                # It matters because the zeros cost real rating points:
+                # compute_stats_rating reads a 0 finish rate as 150 * (0 -
+                # 0.4) = -60, so an unlooked-up fighter is docked for
+                # finishing nobody. Chatman is 4 KO and 1 decision from 5
+                # wins -- an 80% finish rate scored as 0%.
+                win_splits_impossible = False
+                if not existing_row.empty and pd.notna(existing_row["wins"].iloc[0]):
+                    _w = float(existing_row["wins"].iloc[0])
+                    _splits = [existing_row[c].iloc[0] for c in ("ko_wins", "sub_wins", "dec_wins")]
+                    if _w > 0 and all(pd.notna(s) for s in _splits) and sum(float(s) for s in _splits) == 0:
+                        win_splits_impossible = True
                 needs_method_data = not already_exhausted and (
-                    name in needs_basic or (
+                    name in needs_basic or record_empty or win_splits_impossible or (
                         not existing_row.empty and existing_row[method_cols].isna().any(axis=1).iloc[0]
                     )
                 )
@@ -1121,6 +1199,40 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                                         merged[f] = wiki_breakdown[f]
                                 breakdown = merged
                     if breakdown:
+                        # RECORD FALLBACK, and the only place a non-ESPN
+                        # source is allowed to set wins/losses.
+                        #
+                        # record_wins/record_losses are NOT roster columns --
+                        # they are Combat Edge's reading of the career record
+                        # off the profile header. Popped before the update so
+                        # they can never leak into fighters.csv as columns of
+                        # their own.
+                        #
+                        # ESPN stays authoritative whenever it answered. This
+                        # only fires when ESPN gave us nothing at all, which
+                        # for a regional debutant means no athlete page and no
+                        # scoreboard entry. Terrance Chatman went into UFC
+                        # Fight Night 2026-08-22 recorded as 0-0 -- treated by
+                        # the rating as "lost every fight" -- when Combat Edge
+                        # had him at 5-1 the whole time.
+                        record_w = breakdown.pop("record_wins", None)
+                        record_l = breakdown.pop("record_losses", None)
+                        if record_w is not None and record_l is not None:
+                            espn_gave_nothing = (
+                                wins is None or losses is None
+                                or (int(wins) == 0 and int(losses) == 0)
+                            )
+                            if espn_gave_nothing:
+                                print(f"[fighter_backfill] {name}: no career record from ESPN "
+                                      f"-- using combat-edge {record_w}-{record_l}")
+                                wins, losses = record_w, record_l
+                                # Written explicitly rather than via `physical`,
+                                # because the gap-fill path below only touches
+                                # columns that are NaN and an existing 0-0 row
+                                # is not NaN -- which is exactly the row this
+                                # needs to correct.
+                                physical["wins"] = record_w
+                                physical["losses"] = record_l
                         physical.update(breakdown)
 
                 if name in needs_basic:
@@ -1140,6 +1252,18 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                         continue
                     i = idx[0]
                     updated_fields = []
+                    # EVALUATED ONCE, BEFORE THE LOOP WRITES ANYTHING. The
+                    # first version tested this inside the per-column loop,
+                    # which re-read the row after its own write: "wins" was
+                    # set to 5, then "losses" re-checked, saw 5-0, concluded
+                    # the record was no longer absent, and skipped -- storing
+                    # 5-0 for a 5-1 fighter. A guard must not depend on state
+                    # its own action changes.
+                    _rec_w, _rec_l = fighters.at[i, "wins"], fighters.at[i, "losses"]
+                    record_was_absent = (
+                        pd.isna(_rec_w) or pd.isna(_rec_l)
+                        or (float(_rec_w) == 0 and float(_rec_l) == 0)
+                    )
                     if pd.isna(fighters.at[i, "country"]) and country:
                         fighters = _safe_set_cell(fighters, i, "country", country)
                         updated_fields.append("country")
@@ -1148,6 +1272,36 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                             if not bool(fighters.at[i, col]):  # only a genuine False->True change is worth writing
                                 fighters = _safe_set_cell(fighters, i, col, val)
                                 any_checked_flag_changed = True
+                        # WINS/LOSSES CAN OVERWRITE AN EXISTING 0-0, unlike
+                        # every other column here, which is strictly
+                        # fill-if-empty. 0-0 is not empty -- it is a WRONG
+                        # value that compute_stats_rating reads as "lost every
+                        # fight", and it is exactly the row a record fallback
+                        # exists to correct. Terrance Chatman sat at 0-0
+                        # against a true 5-1 and no fill-if-empty rule would
+                        # ever have touched him.
+                        #
+                        # Strictly bounded: only an all-zero record is
+                        # replaceable. A real record, even 1-0, is never
+                        # overwritten by this path.
+                        elif col in ("wins", "losses") and val is not None:
+                            if record_was_absent:
+                                fighters = _safe_set_cell(fighters, i, col, val)
+                                updated_fields.append(col)
+                        # THE WRITE SIDE OF THE SAME TRAP. Reaching here means
+                        # the row claimed wins with every win-split at zero --
+                        # arithmetically impossible, so those zeros are
+                        # placeholders. The fill-if-NaN rule below cannot see
+                        # them, so a freshly fetched breakdown would be
+                        # discarded on arrival and the fighter would keep a 0%
+                        # finish rate worth -60 rating points.
+                        # Bounded by win_splits_impossible, evaluated before
+                        # this loop ran, so a legitimate zero on a fighter
+                        # whose other splits are non-zero is never touched.
+                        elif (col in ("ko_wins", "sub_wins", "dec_wins")
+                              and val is not None and win_splits_impossible):
+                            fighters = _safe_set_cell(fighters, i, col, val)
+                            updated_fields.append(col)
                         # Was missing "and val is not None" -- a merged partial
                         # breakdown (e.g. wins found, losses not) still has
                         # None entries for the still-missing fields. Without
