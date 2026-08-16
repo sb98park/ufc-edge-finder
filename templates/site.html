@@ -4328,9 +4328,15 @@
     {% set total = (val_a + val_b) or 1 %}
     {% set pct_a = (val_a / total * 100) %}
     <div class="tape-row">
-      <div class="tape-value left">{{ val_a }}{{ unit }}</div>
+      {#- ROUNDED HERE TOO, not only at the source. This macro printed
+          whatever it was handed, which was fine for years because every
+          caller passed a value the ufcstats scrape had already rounded. The
+          moment one column started coming from a computed rate it rendered
+          "49.64200477326969%" across the Tale of the Tape. A display macro
+          should not depend on an invariant held somewhere in the ETL. -#}
+      <div class="tape-value left">{{ val_a | round(1) }}{{ unit }}</div>
       <div class="tape-label">{{ label }}</div>
-      <div class="tape-value right">{{ val_b }}{{ unit }}</div>
+      <div class="tape-value right">{{ val_b | round(1) }}{{ unit }}</div>
     </div>
     <div class="tape-bar-track">
       {# Widths are final and static now; the wrapper's scaleX does the

@@ -294,18 +294,30 @@ def stats_as_of(timeline: list, when, min_bouts: int = 3) -> dict:
         "td_landed", "td_att", "td_faced", "td_stuffed",
         "kd_for", "kd_against", "ctrl_seconds", "fight_seconds")}
     minutes = s["fight_seconds"] / 60.0
+    # ROUNDED TO fighters.csv's OWN PRECISION. These columns are rendered
+    # straight into the Tale of the Tape, which prints whatever it is given:
+    # the scrape stored 61.4 and 80.0, so nothing downstream ever had to
+    # round, and the first full-precision value produced
+    # "49.64200477326969%" on a live card. One decimal for percentages, two
+    # for per-minute rates, matching what the file already holds.
+    def _pct(v):
+        return round(v, 1)
+
+    def _rate(v):
+        return round(v, 2)
+
     out = {"espn_fights": len(prior)}
     if s["sig_str_att"] >= MIN_RATE_DENOMINATOR:
-        out["strike_accuracy_pct"] = 100.0 * s["sig_str_landed"] / s["sig_str_att"]
+        out["strike_accuracy_pct"] = _pct(100.0 * s["sig_str_landed"] / s["sig_str_att"])
     if s["td_att"] >= MIN_RATE_DENOMINATOR:
-        out["td_accuracy_pct"] = 100.0 * s["td_landed"] / s["td_att"]
+        out["td_accuracy_pct"] = _pct(100.0 * s["td_landed"] / s["td_att"])
     if s["td_faced"] >= MIN_RATE_DENOMINATOR:
-        out["td_defense_pct"] = 100.0 * s["td_stuffed"] / s["td_faced"]
+        out["td_defense_pct"] = _pct(100.0 * s["td_stuffed"] / s["td_faced"])
     if minutes > 0:
-        out["slpm"] = s["sig_str_landed"] / minutes
-        out["sapm"] = s["sig_str_absorbed"] / minutes
-        out["td_per_15"] = 15.0 * s["td_landed"] / minutes
-        out["control_time_pct"] = 100.0 * s["ctrl_seconds"] / s["fight_seconds"]
+        out["slpm"] = _rate(s["sig_str_landed"] / minutes)
+        out["sapm"] = _rate(s["sig_str_absorbed"] / minutes)
+        out["td_per_15"] = _rate(15.0 * s["td_landed"] / minutes)
+        out["control_time_pct"] = _pct(100.0 * s["ctrl_seconds"] / s["fight_seconds"])
     return out
 
 
