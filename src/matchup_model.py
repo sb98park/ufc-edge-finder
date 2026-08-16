@@ -35,6 +35,99 @@ TD_RATE_ADVANTAGE_SCALE = 15.0
 STRIKING_ADVANTAGE_SCALE = 150.0
 DURABILITY_SCALE = 120.0
 VOLUME_DIFFERENTIAL_SCALE = 40.0  # rating points per 1.0 SLpM-SApM differential gap
+
+# Cage time at which a fighter's RATE statistics earn full weight in the
+# style layer. Below it, the striking and wrestling terms are scaled down
+# toward zero, handing the fight back to the rating gap.
+#
+# WHY. Rate stats are per-minute and per-fight averages, so a short sample
+# does not merely make them uncertain -- it makes them EXTREME. A fighter
+# with four bouts and 38 minutes of tracked time can read as 1.42 strikes
+# absorbed per minute with zero knockdowns absorbed, numbers no established
+# fighter posts, because he has not yet had the bad night that would move
+# them. The style layer then reads that as an enormous edge.
+#
+# The both-corners gating below already stops a real number being compared
+# against a DEFAULT. It does nothing about a real number computed from
+# almost nothing, which is a different failure and the one that bit on
+# UFC 330: the model's three disagreements with the market all went against
+# it, and two were built on 38 and 15 minutes of cage time respectively
+# (Kaue Fernandes at 70% against a market 40%, Eduardo Chapolin at 64%
+# against 46%). Both lost.
+#
+# 90 minutes is six full three-round fights. Deliberately a smooth ramp
+# rather than a cliff: radar_chart draws nothing below MIN_ESPN_FIGHTS = 3,
+# which is right for a chart that must either show a number or not, but a
+# hard threshold in a continuous model just relocates the discontinuity.
+#
+# Set to 0 to disable the scaling entirely -- used by the backtest harness
+# to run the unweighted model as a control arm.
+#
+# COUNTED IN FIGHTS, NOT MINUTES, and that choice is load-bearing. Minutes
+# are the better measure in principle -- four five-round fights carry more
+# information than four first-round finishes -- but they cannot be
+# reconstructed point-in-time from the cached ESPN data: fight duration comes
+# from a per-competition status endpoint, and 73% of those were never cached.
+# A first version of this keyed on fight_minutes_total and its backtest was
+# meaningless as a result: the reconstruction returned 0 for most fights, the
+# weight collapsed to ~0 nearly everywhere, and what actually got measured
+# was "switch the style layer off", which this project already established is
+# worse (57.7% with adjustments vs 55.9% Elo-only).
+#
+# Fight COUNT is reconstructable exactly -- it is just the timeline entries
+# before a date -- so the validation can test what production runs. It is
+# also what radar_chart already gates on (MIN_ESPN_FIGHTS = 3), which keeps
+# one notion of "enough data" across the codebase rather than two.
+# OFF (0.0) -- IMPLEMENTED, MEASURED, NOT JUSTIFIED YET.
+#
+# scripts/validate_rate_stat_shrinkage.py walks 3,181 point-in-time fights
+# and compares this against an unweighted control. Every threshold, every
+# subset, the paired bootstrap comes back NOT significant:
+#
+#     subset                     best threshold   Brier      p
+#     all 3,181 fights                  3        -0.0001   0.248
+#     corner under 3 prior fights       3        -0.0009   0.263
+#     corner under 6 prior fights       3        -0.0003   0.252
+#     corner under 10 prior fights      3        -0.0002   0.242
+#
+# The direction is consistently right -- threshold 3 never hurts, and helps
+# most on exactly the thin-sample fights the theory points at -- but 377
+# fights cannot separate that from luck, and 0.248 is not close.
+#
+# Notably 6.0 (the value first proposed, from reasoning rather than
+# measurement) is NEUTRAL overall and beaten by 3.0 everywhere. That is the
+# same failure mode as the picks this was meant to fix: a confident number
+# derived from a plausible story rather than from data.
+#
+# Left in place rather than deleted because the mechanism is written and
+# tested, and the sample only grows. Re-run the harness after another
+# season; if the thin-fight subset reaches significance at threshold 3, set
+# this to 3.0 and nothing else needs to change. Setting it to any positive
+# value enables the scaling.
+STYLE_FULL_TRUST_FIGHTS = 0.0
+
+
+def rate_stat_confidence(row_a: pd.Series, row_b: pd.Series) -> float:
+    """
+    0.0-1.0 multiplier for style terms built from rate statistics.
+
+    Governed by the THINNER corner. A differential is only as trustworthy as
+    its weaker side: pairing 24 tracked fights against 1 does not average out
+    to a reliable comparison, it produces a confident-looking number about a
+    fighter nobody has measured.
+    """
+    if STYLE_FULL_TRUST_FIGHTS <= 0:
+        return 1.0
+
+    def _fights(row) -> float:
+        v = row.get("espn_fights")
+        try:
+            return float(v) if pd.notna(v) else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    thinner = min(_fights(row_a), _fights(row_b))
+    return max(0.0, min(1.0, thinner / STYLE_FULL_TRUST_FIGHTS))
 SUBMISSION_THREAT_SCALE = 60.0  # rating points per 1.0 sub-win-rate differential
 
 # Southpaw-vs-orthodox is a real, documented edge in striking sports --
@@ -738,6 +831,18 @@ def style_matchup_adjustment(
     short_notice_b = bool(_get(row_b, "short_notice", 0))
     short_notice_adj = (SHORT_NOTICE_PENALTY if short_notice_b else 0.0) - (SHORT_NOTICE_PENALTY if short_notice_a else 0.0)
 
+    # SCALED BY SAMPLE SIZE -- but only the two terms actually built from rate
+    # statistics. Height, age, layoff, short notice, missed weight and stance
+    # are biographical facts that a debutant knows about himself as precisely
+    # as a veteran does; discounting them for inexperience would be wrong.
+    # Durability and submission threat come from the win/loss RECORD, which is
+    # a count rather than a per-minute rate, so a short career makes them
+    # noisy in the ordinary way rather than systematically extreme -- a
+    # different problem, left alone here rather than swept in.
+    rate_conf = rate_stat_confidence(row_a, row_b)
+    striking_adj *= rate_conf
+    wrestling_adj *= rate_conf
+
     total_adj = (
         wrestling_adj + striking_adj + durability_adj + layoff_adj
         + quick_return_adj + age_cliff_adj + missed_weight_adj + weight_class_change_adj
@@ -746,6 +851,10 @@ def style_matchup_adjustment(
 
     return {
         "total_adjustment": total_adj,
+        # Exposed so the waterfall can say WHY a style edge is small on a
+        # thin-sample fight, rather than the number just quietly being
+        # unimpressive with no explanation.
+        "rate_stat_confidence": rate_conf,
         "wrestling_adjustment": wrestling_adj,
         "striking_adjustment": striking_adj,
         "durability_adjustment": durability_adj,
