@@ -35,6 +35,45 @@ WRESTLING_ADVANTAGE_SCALE = 300.0  # legacy fallback path only (see wrestling_ad
 TD_RATE_ADVANTAGE_SCALE = 15.0
 STRIKING_ADVANTAGE_SCALE = 150.0
 DURABILITY_SCALE = 120.0
+
+# PSEUDO-COUNTS for the durability rate's Beta shrink toward the division's
+# own finish rate. 0.0 is the shipped behaviour: the raw career ratio at full
+# strength.
+#
+# WHY IT WAS PROPOSED. finish_loss_rate is (ko_losses + sub_losses) / losses,
+# an UNSHRUNK ratio whose denominator is frequently 1. One stoppage on a
+# 12-1 record reads as a 100% finish-loss rate -- a fighter who has never
+# survived -- and drives the term to its full +/-120, which is the largest
+# single contribution in the style layer and 80% of ADJUSTMENT_TOTAL_CAP on
+# its own. The 0-loss case is already guarded; the 1-loss and 2-loss cases
+# are not, and they are common.
+#
+# k pseudo-observations at the divisional base rate:
+#     (finish_losses + k * base) / (losses + k)
+# so a 1-1 record moves most of the way to the base and a 20-8 record barely
+# moves at all -- which is the correct amount of scepticism in each case.
+#
+# VALIDATED AND ON. scripts/validate_durability_shrink.py swept k point-in-
+# time over two DISJOINT windows, with full context so the scored model has
+# its recency term:
+#
+#     window                    k=2 Brier    p        accuracy
+#     recent 2,500 (n=1834)      -0.0021   0.021       -0.22%
+#     prior  2,500 (n=1663)      -0.0027   0.009       +0.30%
+#
+# Significant in both, and every arm (k = 2, 5, 10, 20) improved Brier and
+# log loss in every subset -- 16 of 16 in the same direction across the first
+# window alone. Under the null those signs would scatter.
+#
+# The response curve is FLAT in k, which is itself the diagnosis: the damage
+# is the 0-or-1 ratio at a denominator of 1, and any pseudo-count pulls it
+# off the rails. k = 2 is the least intervention that captures the effect and
+# was significant in both windows, so it is the one that ships. A 1-loss
+# fighter finished once goes from a 100% finish-loss rate to 68%.
+#
+# Accuracy moves -0.22% and +0.30% across the two windows -- noise, not a
+# trade. The gain is in calibration, which is what a betting product prices.
+DURABILITY_SHRINK_K = 2.0
 VOLUME_DIFFERENTIAL_SCALE = 40.0  # rating points per 1.0 SLpM-SApM differential gap
 
 # Cage time at which a fighter's RATE statistics earn full weight in the
@@ -442,6 +481,44 @@ def compute_divisional_method_priors(fighters_df: pd.DataFrame) -> dict[str, dic
             "DEC": group["dec_wins"].sum() / total_wins,
         }
     return priors
+
+
+_DIV_PRIOR_CACHE: dict | None = None
+
+
+def divisional_finish_rate(weight_class) -> float:
+    """
+    Share of bouts in this division that end in a finish, from real UFC
+    results. The base the durability rate shrinks toward.
+
+    Cached: this is read per fighter per fight and the underlying table does
+    not change within a build.
+    """
+    global _DIV_PRIOR_CACHE
+    if _DIV_PRIOR_CACHE is None:
+        _DIV_PRIOR_CACHE = _divisional_priors_from_results() or {}
+    div = normalize_division(weight_class)
+    row = _DIV_PRIOR_CACHE.get(div) if div else None
+    if row is None:
+        row = _DIV_PRIOR_CACHE.get("_default")
+    if not row:
+        return 0.5
+    return float(row.get("KO/TKO", 0.0)) + float(row.get("SUB", 0.0))
+
+
+def _shrunk_finish_loss_rate(row: pd.Series, losses: float, base: float) -> float:
+    """
+    (ko_losses + sub_losses) / losses, shrunk toward `base` by
+    DURABILITY_SHRINK_K pseudo-observations. At K = 0 this is the raw ratio,
+    byte-identical to the previous behaviour.
+    """
+    if not _get(row, "losses", 0):
+        return 0.0
+    finished = _get(row, "ko_losses", 0) + _get(row, "sub_losses", 0)
+    k = DURABILITY_SHRINK_K
+    if k <= 0:
+        return finished / losses
+    return (finished + k * base) / (losses + k)
 
 
 def divisional_prior_for(priors: dict, weight_class, method: str, fallback: float) -> float:
@@ -949,8 +1026,9 @@ def style_matchup_adjustment(
     # is a real, specific risk -- not just "durability" in the abstract.
     losses_a = max(int(_get(row_a, "losses", 0)), 1) if _get(row_a, "losses", 0) else 1
     losses_b = max(int(_get(row_b, "losses", 0)), 1) if _get(row_b, "losses", 0) else 1
-    finish_loss_rate_a = (_get(row_a, "ko_losses", 0) + _get(row_a, "sub_losses", 0)) / losses_a if _get(row_a, "losses", 0) else 0
-    finish_loss_rate_b = (_get(row_b, "ko_losses", 0) + _get(row_b, "sub_losses", 0)) / losses_b if _get(row_b, "losses", 0) else 0
+    _dur_base = divisional_finish_rate(this_fight_weight_class)
+    finish_loss_rate_a = _shrunk_finish_loss_rate(row_a, losses_a, _dur_base)
+    finish_loss_rate_b = _shrunk_finish_loss_rate(row_b, losses_b, _dur_base)
     # Same guard, and this one was the most backwards of the three: with
     # ko_losses/sub_losses defaulting to 0, a fighter whose method splits are
     # simply unknown computes a finish-loss rate of zero -- a PERFECT chin --
