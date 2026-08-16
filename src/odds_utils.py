@@ -132,12 +132,12 @@ def add_estimated_vig(prob_a: float, prob_b: float, overround: float = DEFAULT_B
     return fair_a ** m, fair_b ** m
 
 
-def format_american_odds(value) -> str:
+def format_american_odds(value, cap: int | None = 5000) -> str:
     """
     +230 for underdogs, -280 for favorites -- never a bare decimal.
 
-    Capped at ±5000: stress-testing found extreme probabilities (99%+)
-    produce mathematically-correct but absurd American odds (-19900,
+    Capped at ±5000 by default: stress-testing found extreme probabilities
+    (99%+) produce mathematically-correct but absurd American odds (-19900,
     even -223304 at 99.9%) that no real sportsbook would ever quote --
     books stop around the low thousands or delist the market entirely.
     Since every displayed odds value in the site flows through this one
@@ -145,9 +145,23 @@ def format_american_odds(value) -> str:
     at once without touching any underlying probability math (edges,
     parlays, and model internals all use the raw probabilities, never
     this formatted string).
+
+    PASS cap=None FOR A COMBINED PARLAY PRICE. The realism argument above is
+    about a SINGLE market: no book quotes -19900 on one fighter. It does not
+    hold for a parlay, where +28000 is simply what eight legs multiply out
+    to and is exactly the number the bettor is being sold.
+
+    Leaving the cap on there was silently destroying the Moonshot tier.
+    parlay_builder sets its floor at min_american=5000 with no ceiling, so
+    the tier's floor WAS the display cap and all three slates rendered an
+    identical "+5000" -- true prices +8191, +10772 and +28476. A $5 slip
+    shown returning $255 actually returns $1,429. _select_spread exists
+    specifically to stop tier-floor clustering; the formatter was
+    reintroducing the exact bug that function was written to prevent.
     """
     v = int(round(float(value)))
-    v = max(-5000, min(5000, v))
+    if cap is not None:
+        v = max(-cap, min(cap, v))
     return f"+{v}" if v > 0 else str(v)
 
 

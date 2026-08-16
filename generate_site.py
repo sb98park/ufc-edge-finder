@@ -639,6 +639,31 @@ def main():
                         if logged.get(field) is not None:
                             fight["preview"][field] = logged[field]
                     fight["preview"]["pick_is_logged"] = True
+
+                    # THE WATERFALL IS NOT DESCRIPTIVE. The category above
+                    # drew the line in the wrong place. A block headed "Why
+                    # the model likes Mackenzie Dern" is a CLAIM about the
+                    # outcome, and it is rebuilt from ratings that already
+                    # absorbed the result -- so on a fight we called wrong it
+                    # reads as the reasoning for the fighter who won, sitting
+                    # directly under a badge naming the one we actually
+                    # picked. Six fights on UFC 330 rendered exactly that.
+                    #
+                    # Restoring wf.favorite from the log would not fix it.
+                    # Every number in the block -- the rating gap, each
+                    # factor's contribution, the final percentage -- was
+                    # recomputed with post-fight knowledge, so a matching
+                    # name would just hide the contamination behind a
+                    # correct-looking header. The honest options are to
+                    # persist the pre-fight object or to stop showing it.
+                    #
+                    # Dropped rather than persisted because the log has no
+                    # column for it and adding one is a schema change; the
+                    # frozen call above still renders (fighter, probability,
+                    # confidence), so what the card loses is the breakdown,
+                    # not the claim. Upcoming fights are untouched -- this
+                    # branch only runs once a result exists.
+                    fight["preview"]["waterfall"] = None
             else:
                 fight["winner"] = None
                 fight["result_label"] = None

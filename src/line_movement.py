@@ -170,6 +170,34 @@ def annotate_movement(edges: list[dict], previous_snapshot: dict) -> None:
         }
 
 
+# A RESOLVED MARKET IS NOT A PRICE. Polymarket does not delist the instant
+# the horn sounds -- the contract prints 0.9995 / 0.0005 while it settles,
+# and those ticks were being charted as though they were quotes. Every
+# concluded fight's chart then terminated at the same impossible pair
+# (-5000 / +2112) with the same gridlines: twelve fights on one card, one
+# ending price. The polyline itself is real; only the tail is not.
+#
+# 0.95 is an APPROXIMATION of "stop at the last pre-fight price", and worth
+# naming as one. The exact fix is to truncate at the fight's scheduled start,
+# which needs a start time threaded into the chart builder; this instead uses
+# the fact that no real MMA market sits this high beforehand. The heaviest
+# favourites on record price around -1500 (0.938) -- Makhachev opened near
+# -600 -- so 0.95 clears every genuine pre-fight quote while cutting both the
+# resolution ticks and the in-fight drift toward them.
+#
+# At 0.99 one chart still ended at -5000: the line had drifted to ~0.98
+# DURING the fight, which is not a resolution artifact but is not a closing
+# line either. Anything past here also collides with the min(0.995, vig_p)
+# guard below, which maps every such value onto the same -5000 label.
+_SETTLED_CHART_PROB = 0.95
+
+
+def _drop_settled(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Strip resolution ticks so a chart ends at the last real quote."""
+    return [(t, p) for t, p in points
+            if _SETTLED_CHART_PROB > p > (1.0 - _SETTLED_CHART_PROB)]
+
+
 def _clob_points(history: list[dict]) -> list[tuple[float, float]]:
     """CLOB history [{"t": unix_ts, "p": price}] -> [(timestamp, probability)]."""
     points = []
@@ -178,7 +206,7 @@ def _clob_points(history: list[dict]) -> list[tuple[float, float]]:
             points.append((float(pt["t"]), float(pt["p"])))
         except (KeyError, TypeError, ValueError):
             continue
-    return points
+    return _drop_settled(points)
 
 
 def _snapshot_points(history: list[dict]) -> list[tuple[float, float]]:
@@ -191,7 +219,7 @@ def _snapshot_points(history: list[dict]) -> list[tuple[float, float]]:
             points.append((ts, prob))
         except (KeyError, ValueError, ZeroDivisionError):
             continue
-    return points
+    return _drop_settled(points)
 
 
 def build_dual_line_chart_svg(

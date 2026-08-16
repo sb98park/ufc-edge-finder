@@ -32,6 +32,22 @@ FIELDNAMES = [
     "confidence_label", "likely_method", "pick_odds", "closing_odds", "opponent_odds",
     "favorite_prob_history", "last_updated", "is_lock_of_week", "voided",
 ]
+# A two-way price this lopsided is a market in the act of resolving, not a
+# line anyone could have bet. 0.97 is deliberately looser than the 0.9995
+# these actually print, so a genuine -3000 blowout favourite still counts
+# while nothing that resolved can sneak through.
+_SETTLED_PROB = 0.97
+
+
+def _is_settled_price(american) -> bool:
+    """True when an American price implies a probability past _SETTLED_PROB."""
+    try:
+        p = american_to_implied_prob(float(american))
+    except (TypeError, ValueError, ZeroDivisionError):
+        return False
+    return p is None or p >= _SETTLED_PROB or p <= (1.0 - _SETTLED_PROB)
+
+
 MOMENTUM_HISTORY_CAP = 10
 MOMENTUM_THRESHOLD = 0.03  # 3 percentage points -- below this, treat as noise/stable
 LOCK_OF_WEEK_MAX = 3  # cap, not a target -- a card with only one real standout gets one lock, not three padded-out picks
@@ -163,7 +179,26 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
             # closing_odds updates every run a live price is available,
             # so whatever it holds when the fight actually happens is
             # naturally the last real price seen -- the closing line.
-            closing_odds = current_odds if current_odds is not None else (prior.get("closing_odds") if prior else None)
+            #
+            # EXCEPT WHEN THE MARKET HAS ALREADY SETTLED. A Polymarket
+            # contract does not delist the moment the horn sounds; it prints
+            # 0.9995 / 0.0005 while it resolves. Those ticks arrive before
+            # this fight lands in decided_keys, so they were being written
+            # straight into closing_odds -- 14 of 77 graded rows hold a
+            # |price| >= 5000.
+            #
+            # That is not a closing line, it is the RESULT wearing one. And
+            # CLV is the single number on this site claiming to show edge
+            # INDEPENDENTLY of results, so letting the outcome in through
+            # this door makes it circular: a won pick is guaranteed to
+            # "beat the close" at 0.9995. Nearly a quarter of the sample
+            # was grading the model against its own scoreboard.
+            #
+            # Anything past _SETTLED_PROB is refused and the last genuine
+            # pre-settlement price is kept instead.
+            closing_odds = prior.get("closing_odds") if prior else None
+            if current_odds is not None and not _is_settled_price(current_odds):
+                closing_odds = current_odds
 
             # Rolling favorite_prob history, for the momentum indicator --
             # if the model's favorite FLIPS between runs, start a fresh
@@ -401,6 +436,14 @@ def _clv_result(pick_odds, closing_odds) -> dict | None:
     whole point of CLV as a model-quality metric distinct from raw record.
     """
     if not pick_odds or not closing_odds:
+        return None
+    # Refuse a settled price even if one is already sitting in the log. The
+    # capture-side guard stops new ones arriving; this stops the 14 rows
+    # written before that guard existed from being graded, without having to
+    # rewrite history. A resolved market at 0.9995 would score beat_clv=True
+    # on every winning pick by construction -- see the note at the capture
+    # site on why that makes CLV circular.
+    if _is_settled_price(closing_odds):
         return None
     try:
         pick_prob = 1 / american_to_decimal(float(pick_odds))

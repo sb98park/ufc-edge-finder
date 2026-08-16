@@ -29,6 +29,7 @@ import itertools
 import pandas as pd
 
 from src.odds_utils import american_to_decimal, decimal_to_american, format_american_odds, implied_prob_to_american
+from src.card_matcher import is_pickable_market, price_is_fragile
 
 WINNER_FAMILY = {"Moneyline"}  # "Method: X" markets are matched by prefix below
 LENGTH_FAMILY_PREFIXES = ("Total Rounds", "Fight Outcome")
@@ -97,9 +98,24 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
     idea even without a live book line for it. These are clearly labeled
     "(model)" in the leg text rather than presented as a real bettable price.
     """
+    # SAME MARKET-QUALITY FENCE THE REST OF THE SITE USES. This filtered on
+    # nothing but "has a price and has a model probability", so every market
+    # Favorite Picks refuses and the Edges tab flags as fragile was landing
+    # in published parlays unchallenged -- 13 of 32 legs on one card were
+    # Over 0.5 rounds.
+    #
+    # is_pickable_market drops 0.5 and 5.5 round lines and complement
+    # markets; price_is_fragile drops legs resting on a near-certain outcome.
+    # The reasoning is in card_matcher's fence comment and applies with MORE
+    # force here, not less: a 95% leg contributes almost nothing to a slip's
+    # payout while carrying real risk, and the apparent edge on it is a thin
+    # Polymarket quote rather than alpha. The Edges tab keeps showing these
+    # because it exists to show every disagreement; a parlay is a
+    # recommendation to bet, which is a different claim.
     real_legs = [
         row for row in tracked_edges
         if row.get("odds_american") is not None and row.get("model_prob") is not None
+        and is_pickable_market(row) and not price_is_fragile(row)
     ]
 
     by_fight: dict = {}
@@ -192,7 +208,10 @@ def _combine(pieces: tuple[dict, ...]) -> dict:
         "has_model_legs": any(l["is_model"] for l in legs),
         "fight_ids": fight_ids,
         "combined_american": round(combined_american),
-        "combined_american_display": format_american_odds(combined_american),
+        # UNCAPPED. This is the whole slip's price, not a single market --
+        # see the cap note in format_american_odds. Individual legs above
+        # keep the cap, where the realism argument does apply.
+        "combined_american_display": format_american_odds(combined_american, cap=None),
         "combined_prob": round(combined_prob, 4),
     }
 
