@@ -175,12 +175,29 @@ def build_fight_schedule(
     prelims = [f for f in chronological if f.get("card_position") == "Prelims"][::-1]
     main_block = [f for f in chronological if f.get("card_position") in ("Main Card", "Co-Main Event", "Main Event")]
     main_event_fights = [f for f in main_block if f.get("card_position") == "Main Event"]
-    main_block_undercard = [f for f in main_block if f.get("card_position") != "Main Event"]
-    # Re-sort by verified real chronology where we have it (Main Card
-    # tier); anything unlisted (Co-Main) keeps its relative file-order
-    # position via a large fallback key, which naturally keeps it last,
-    # immediately before the Main Event -- correct without needing an
-    # explicit entry for it.
+    # MAIN CARD IS REVERSED, exactly like the two segments above it. A card
+    # file lists fights in BILLING order -- main event first -- and the night
+    # runs the opposite way, which is why early prelims and prelims both take
+    # [::-1]. The main card was the one segment that didn't, so it inherited
+    # billing order as its chronology and came out backwards.
+    #
+    # Live consequence, observed during UFC 330: the main card's LAST fight
+    # (Barboza vs Ribovics) was handed the FIRST main-card slot and its first
+    # fight (Turner vs Fernandes) the last. Confirmed fights are dropped from
+    # the schedule the JS sees, so once the real Barboza and Mansur bouts were
+    # recorded, the only pending main-card fight left was Turner -- carrying
+    # an estimated start that had already passed hours earlier. The banner's
+    # "first fight whose start is still in the future" then skipped straight
+    # past both him and the co-main and announced the main event as next.
+    #
+    # Co-Main is NOT reversed with it. It is a segment of one that always
+    # runs immediately before the Main Event, so it stays pinned to the end.
+    main_card_only = [f for f in main_block if f.get("card_position") == "Main Card"][::-1]
+    co_main = [f for f in main_block if f.get("card_position") == "Co-Main Event"]
+    main_block_undercard = main_card_only + co_main
+    # Verified real chronology still wins where we have it. sorted() is
+    # stable, so anything unlisted keeps the corrected order established
+    # above rather than falling back to billing order.
     main_block_undercard = sorted(
         main_block_undercard,
         key=lambda f: VERIFIED_CHRONOLOGICAL_ORDER.get(_fight_key(f), 999),
