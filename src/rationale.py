@@ -53,6 +53,16 @@ def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
         "losses": int(r["losses"]),
         "weight_class": r["weight_class"],
         "first_round_finish_pct": float(r["first_round_finish_pct"]) if "first_round_finish_pct" in r and pd.notna(r["first_round_finish_pct"]) else None,
+        # THE PER-FIGHT RATE COLUMNS, which this function did not expose and
+        # so no sentence in the file could ever name. They are the raw
+        # material for saying WHY a factor fired instead of that it did:
+        # strike accuracy, output and absorption, takedown volume, takedown
+        # defence, control share, age. None is None-checked here rather than
+        # defaulted, because a default silently becomes a comparison -- the
+        # failure matchup_model documents at length.
+        **{k: (float(r[k]) if k in r and pd.notna(r[k]) else None) for k in (
+            "strike_accuracy_pct", "td_accuracy_pct", "td_defense_pct",
+            "control_time_pct", "slpm", "sapm", "td_per_15", "age")},
     }
 
 
@@ -74,28 +84,48 @@ def explain_moneyline(row: dict, fighters_df: pd.DataFrame) -> str:
         # predict_matchup needs effective_ratings for the base gap, but we don't
         # have that here -- just the style breakdown, which doesn't depend on it
         if matchup:
+            # THE SAME MECHANISM RENDERING explain_favorite_pick uses. This
+            # built a comma-joined list of factor NAMES -- "X's striking
+            # accuracy edge, Y having been finished less often historically"
+            # -- which is the construction the owner quoted back as generic.
+            # It could not be otherwise: there are 13 factors, so there were
+            # 13 possible list items, and any two fights sharing a top factor
+            # produced the same clause verbatim.
+            #
+            # Naming the two numbers behind the factor instead draws on
+            # hundreds of stat pairs rather than 13 labels, and is checkable.
+            opp_stats = _fighter_stats(fighters_df, opponent)
             drivers = []
-            if abs(matchup["wrestling_adjustment"]) > 15:
-                who = row["fighter"] if matchup["wrestling_adjustment"] > 0 else opponent
-                drivers.append(f"{who}'s takedown accuracy vs. the opponent's takedown defense")
-            if abs(matchup["striking_adjustment"]) > 10:
-                who = row["fighter"] if matchup["striking_adjustment"] > 0 else opponent
-                drivers.append(f"{who}'s striking accuracy edge")
-            if abs(matchup["durability_adjustment"]) > 15:
-                who = row["fighter"] if matchup["durability_adjustment"] > 0 else opponent
-                drivers.append(f"{who} having been finished less often historically")
-            if abs(matchup.get("submission_threat_adjustment", 0)) > 15:
-                who = row["fighter"] if matchup["submission_threat_adjustment"] > 0 else opponent
-                drivers.append(f"{who}'s real submission-finish rate")
+            if stats and opp_stats:
+                if abs(matchup["wrestling_adjustment"]) > 15:
+                    a, b = (row["fighter"], opponent) if matchup["wrestling_adjustment"] > 0 else (opponent, row["fighter"])
+                    sa, sb = (stats, opp_stats) if matchup["wrestling_adjustment"] > 0 else (opp_stats, stats)
+                    drivers.append(_grappling_clause(a, b, sa, sb))
+                if abs(matchup["striking_adjustment"]) > 10:
+                    a, b = (row["fighter"], opponent) if matchup["striking_adjustment"] > 0 else (opponent, row["fighter"])
+                    sa, sb = (stats, opp_stats) if matchup["striking_adjustment"] > 0 else (opp_stats, stats)
+                    drivers.append(_striking_clause(a, b, sa, sb))
+                if abs(matchup["durability_adjustment"]) > 15 and stats["losses"] >= 3 and opp_stats["losses"] >= 3:
+                    a, b = (row["fighter"], opponent) if matchup["durability_adjustment"] > 0 else (opponent, row["fighter"])
+                    sa, sb = (stats, opp_stats) if matchup["durability_adjustment"] > 0 else (opp_stats, stats)
+                    drivers.append(_durability_clause(a, b, sa, sb))
+                if abs(matchup.get("submission_threat_adjustment", 0)) > 15 and stats["wins"] >= 3 and opp_stats["wins"] >= 3:
+                    a, b = (row["fighter"], opponent) if matchup["submission_threat_adjustment"] > 0 else (opponent, row["fighter"])
+                    sa = stats if matchup["submission_threat_adjustment"] > 0 else opp_stats
+                    drivers.append(_submission_clause(a, b, sa))
             layoff_a = matchup.get("layoff_years_a")
             layoff_b = matchup.get("layoff_years_b")
-            if layoff_a and layoff_a > 1.0:
-                drivers.append(f"{row['fighter']} coming off a {layoff_a:.1f}-year layoff (ring rust risk)")
-            if layoff_b and layoff_b > 1.0:
-                drivers.append(f"{opponent} coming off a {layoff_b:.1f}-year layoff (ring rust risk)")
+            if layoff_a and layoff_a > 1.0 and not (layoff_b and abs(layoff_a - layoff_b) < 0.75):
+                drivers.append(f"{row['fighter']} has not fought in {layoff_a:.1f} years")
+            if layoff_b and layoff_b > 1.0 and not (layoff_a and abs(layoff_a - layoff_b) < 0.75):
+                drivers.append(f"{opponent} has not fought in {layoff_b:.1f} years")
 
             if drivers:
-                base += f" Biggest factors in that number: {', '.join(drivers)}."
+                # At most two, as complete sentences. Three stat pairs in one
+                # muted 0.75rem block on a phone reads as a stat dump, and the
+                # panel's own warning was that number-stuffing costs more
+                # trust than it buys.
+                base += " " + ". ".join(d[0].upper() + d[1:] for d in drivers[:2]) + "."
             elif stats and stats["method_data_known"]:
                 base += (
                     f" That's built on a {stats['wins']}-{stats['losses']} record "
@@ -189,7 +219,17 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
     # points. The model layer was converted to divisional_prior_for; the copy
     # layer that explains the model to the reader was not, so the prose could
     # contradict the number beside it.
-    weight_class = stats.get("weight_class")
+    # THE CARD'S DIVISION, NOT THE FIGHTER'S. stats["weight_class"] comes from
+    # fighters.csv, which is null for 114 of 310 roster entries -- and because
+    # bool(float('nan')) is True, an `and weight_class` guard let NaN straight
+    # through and rendered "baseline for nan" on 28 of 152 method calls. The
+    # row carries the BOOKED division for this fight, which is populated, and
+    # is also the more correct quantity: it is the division being fought in.
+    #
+    # Career rates are still the fighter's own, accumulated across whatever
+    # divisions they fought in, so the prose says "the baseline for
+    # Lightweight" rather than attributing the fighter's rate to that cohort.
+    weight_class = normalize_division(row.get("weight_class")) or normalize_division(stats.get("weight_class"))
     divisional_rate = own_rate
     _prior_key = {"ko_wins": "KO/TKO", "sub_wins": "SUB", "dec_wins": "DEC"}.get(win_col)
     if _prior_key:
@@ -218,12 +258,12 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
             f"career losses -- a real, specific vulnerability this matchup plays into, on top of "
             f"{row['fighter']}'s own {own_rate*100:.0f}% career rate finishing fights that way."
         )
-    elif abs(div_gap) >= 0.15 and normalize_division(weight_class):
+    elif abs(div_gap) >= 0.15 and weight_class:
         # fighter's own rate is well off the divisional norm -- that's the interesting part
         comparison = "well above" if div_gap > 0 else "well below"
         detail = (
             f" {row['fighter']}'s {own_rate*100:.0f}% career rate by {method_lower} runs {comparison} "
-            f"the {divisional_rate*100:.0f}% baseline for {normalize_division(weight_class)} -- a real outlier for the "
+            f"the {divisional_rate*100:.0f}% baseline for {weight_class} -- a real outlier for the "
             f"division, not just a generic tendency."
         )
     elif stats["wins"] < 6:
@@ -511,7 +551,15 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
     stats = _fighter_stats(fighters_df, fighter)
     opp_stats = _fighter_stats(fighters_df, opponent) if opponent else None
 
-    signals = []  # (magnitude, sentence)
+    # (magnitude, sentence, sign) -- sign is +1 when the fact argues FOR the
+    # pick and -1 when it argues against. Previously untracked, which is how
+    # 9 of 76 blurbs came to consist entirely of reasons the pick might lose
+    # and then close by calling it bettable value.
+    signals = []
+    # Facts that cleared the magnitude threshold but were blocked by a
+    # sample-size guard. Kept so the no-signal fallback can say WHY it is
+    # quiet instead of claiming the fight is featureless.
+    suppressed = []
 
     if opponent and stats and opp_stats:
         matchup = predict_matchup(fighter, opponent, fighters_df, {})
@@ -519,16 +567,16 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
             wrestling = matchup.get("wrestling_adjustment", 0)
             if abs(wrestling) > 8:
                 if wrestling > 0:
-                    signals.append((abs(wrestling), f"{fighter} has a real path to control the fight positionally -- {opponent}'s takedown defense doesn't match up well against it, and fights that go where {fighter} wants them tend to stay safe and one-sided"))
+                    signals.append((abs(wrestling), _grappling_clause(fighter, opponent, stats, opp_stats), +1))
                 else:
-                    signals.append((abs(wrestling), f"{opponent} is genuinely live on the mat against {fighter}, which tempers the confidence here even with the number where it is"))
+                    signals.append((abs(wrestling), f"{opponent} is genuinely live on the mat against {fighter}, which tempers the confidence here even with the number where it is", -1))
 
             striking = matchup.get("striking_adjustment", 0)
             if abs(striking) > 6:
                 if striking > 0:
-                    signals.append((abs(striking), f"on the feet, {fighter} lands at a clip {opponent} hasn't shown much answer for -- that's the kind of advantage that tends to compound over a full fight rather than fade"))
+                    signals.append((abs(striking), _striking_clause(fighter, opponent, stats, opp_stats), +1))
                 else:
-                    signals.append((abs(striking), f"{opponent} actually has the sharper striking profile here, which is a real headwind worth weighing against the pick"))
+                    signals.append((abs(striking), f"{opponent} actually has the sharper striking profile here, which is a real headwind worth weighing against the pick", -1))
 
             durability = matchup.get("durability_adjustment", 0)
             # Finish-loss rate from a thin loss record is noise, not a
@@ -536,22 +584,28 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
             # have that rate swing to 0% or 100% purely from small-sample
             # variance, which would misleadingly read as a real signal.
             durability_sample_ok = stats["losses"] >= 3 and opp_stats["losses"] >= 3
-            if abs(durability) > 8 and durability_sample_ok:
-                if durability > 0:
-                    signals.append((abs(durability), f"{opponent} has been finished at a notably higher rate than {fighter}, and durability gaps like that are exactly what tends to hold up bet after bet -- it's not a one-fight fluke, it's a pattern"))
+            if abs(durability) > 8:
+                if not durability_sample_ok:
+                    thin = fighter if stats["losses"] < 3 else opponent
+                    thin_n = min(stats["losses"], opp_stats["losses"])
+                    suppressed.append(f"the model sees a durability gap here, but {thin} has only {_count(thin_n, 'career loss', 'career losses')} on record, which is too thin to read as a pattern")
+                elif durability > 0:
+                    signals.append((abs(durability), _durability_clause(fighter, opponent, stats, opp_stats), +1))
                 else:
-                    signals.append((abs(durability), f"{fighter}'s own durability history is a genuine soft spot, which is worth knowing even if the model still leans this way"))
+                    signals.append((abs(durability), f"{fighter}'s own durability history is a genuine soft spot, which is worth knowing even if the model still leans this way", -1))
 
             submission_threat = matchup.get("submission_threat_adjustment", 0)
             # Same small-sample risk as durability above -- a fighter with
             # 2 career wins and 1 submission reads as a "50% sub rate"
             # that isn't a real pattern yet.
             sub_sample_ok = stats["wins"] >= 3 and opp_stats["wins"] >= 3
-            if abs(submission_threat) > 8 and sub_sample_ok:
-                if submission_threat > 0:
-                    signals.append((abs(submission_threat), f"{fighter} finishes a real share of wins by submission, a live threat {opponent} has to respect anywhere the fight touches the mat"))
+            if abs(submission_threat) > 8:
+                if not sub_sample_ok:
+                    suppressed.append(f"there is a submission-threat gap in the numbers, but on {_count(min(stats['wins'], opp_stats['wins']), 'career win', 'career wins')} it is not yet a pattern")
+                elif submission_threat > 0:
+                    signals.append((abs(submission_threat), _submission_clause(fighter, opponent, stats), +1))
                 else:
-                    signals.append((abs(submission_threat), f"{opponent} carries a real submission-finish rate of their own, which is a live risk for {fighter} if this fight goes to the ground"))
+                    signals.append((abs(submission_threat), f"{opponent} carries a real submission-finish rate of their own, which is a live risk for {fighter} if this fight goes to the ground", -1))
 
             layoff_a, layoff_b = matchup.get("layoff_years_a") or 0, matchup.get("layoff_years_b") or 0
             layoff_gap = layoff_b - layoff_a
@@ -560,40 +614,209 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
             # the same breath is contradictory when both are similar, and
             # only means something when there's a real gap between the two.
             if layoff_gap > 0.75 and layoff_b > 1.0:
-                signals.append((layoff_gap * 8, f"{opponent} is coming off a {layoff_b:.1f}-year layoff, and ring rust after time away is one of the more reliable soft edges in this sport -- sharpness doesn't always come back on schedule"))
+                signals.append((layoff_gap * 8, f"{opponent} has not fought in {layoff_b:.1f} years, against {layoff_a:.1f} for {fighter}", +1))
             elif layoff_gap < -0.75 and layoff_a > 1.0:
-                signals.append((abs(layoff_gap) * 6, f"{fighter}'s own {layoff_a:.1f}-year layoff is a real variable working against this pick, not for it"))
+                signals.append((abs(layoff_gap) * 6, f"{fighter}'s own {layoff_a:.1f}-year layoff is a real variable working against this pick, not for it", -1))
 
             if matchup.get("age_cliff_flag_b"):
-                signals.append((12, f"{opponent} is at the stage of their career where physical decline shows up fast in this sport -- age isn't just a number here, it's a fight-specific liability"))
+                age_b = opp_stats.get("age")
+                signals.append((12, f"{opponent} is {int(age_b)} and past the age this division's fighters typically start declining" if age_b else f"{opponent} is past the age this division's fighters typically start declining", +1))
             if matchup.get("age_cliff_flag_a"):
-                signals.append((12, f"{fighter}'s own age curve is working against this pick, which tempers how much size makes sense even at a good price"))
+                age_a = stats.get("age")
+                signals.append((12, f"{fighter}'s own age curve is working against this pick" + (f" -- {int(age_a)}, past the divisional decline point" if age_a else ""), -1))
 
-    # Fallback / supplementary signal: raw finish-resistance if nothing
-    # matchup-specific stood out, or to add a second data point alongside
-    # a matchup-specific one.
+    # Supplementary: raw finish-resistance, as a COUNT rather than a rate.
+    # "100% of their career losses" on four losses is the single most
+    # overclaiming construction this file produced; the honest version is
+    # also the more concrete one.
     if stats and stats["losses"] >= 3:
         finish_resistance = 1 - (stats["ko_loss_rate"] + stats["sub_loss_rate"])
         if finish_resistance >= 0.75:
-            signals.append((finish_resistance * 15, f"{fighter} simply doesn't get finished -- {int(finish_resistance*100)}% of their career losses have gone the distance, which caps the downside even on an off night"))
+            went_long = int(round(finish_resistance * stats["losses"]))
+            signals.append((finish_resistance * 15, f"{fighter} has been stopped {_count(stats['losses'] - went_long, 'time', 'times')} in {_count(stats['losses'], 'defeat', 'defeats')}", +1))
 
-    signals.sort(key=lambda s: s[0], reverse=True)
-    top = [s[1] for s in signals[:2]]
+    # SIGN-PARTITIONED, not top-2-by-magnitude. Taking the two largest
+    # regardless of direction is what produced blurbs whose every sentence
+    # argued against the pick. One reason for, one reason against, and the
+    # counterargument is included precisely BECAUSE the product's credibility
+    # is the asset -- a pick that names what would beat it cannot read as a tout.
+    fors = sorted([s for s in signals if s[2] > 0], key=lambda s: s[0], reverse=True)
+    againsts = sorted([s for s in signals if s[2] < 0], key=lambda s: s[0], reverse=True)
+    top = [fors[0][1]] if fors else []
+    if againsts:
+        top.append(againsts[0][1])
+    elif len(fors) > 1:
+        top.append(fors[1][1])
 
     odds_display = format_american_odds(row["odds_american"])
     prob_pct = round(row["model_prob"] * 100)
 
     if top:
         body = ". ".join(s[0].upper() + s[1:] for s in top) + "."
+    elif suppressed:
+        # A factor cleared threshold and a sample guard blocked it. Saying
+        # "nothing dramatic separates this matchup" over a suppressed signal
+        # is false: missing evidence is MORE uncertainty, not less.
+        body = suppressed[0][0].upper() + suppressed[0][1:] + "."
+    elif opp_stats is None or _thin_profile(opp_stats):
+        body = f"There is not much tracked history on {opponent} to model against, so this number leans on {fighter}'s own record more than on the matchup."
     else:
-        # No sharp matchup-specific signal -- be honest that this is a
-        # cleaner, less dramatic case rather than forcing a narrative.
-        body = f"Nothing dramatic separates this matchup on paper -- it's a cleaner, lower-variance read on {fighter} rather than one built on a single standout factor."
+        body = f"No single factor separates these two by much -- the model's edge here is the accumulation of small ones rather than anything that stands out."
 
-    return (
-        f"{body} At {odds_display}, that's real, bettable value on a pick the model has at {prob_pct}% -- "
-        f"the kind of number worth sizing up on rather than treating as a coinflip."
-    )
+    return f"{body} {_close(row, prob_pct, odds_display, bool(againsts) and not fors)}"
+
+
+# Below this many observations, a percentage is a story about a small number
+# and a count is the honest form. "100% of their losses" on four losses reads as
+# a law; "stopped once in four defeats" reads as what it is.
+_COUNT_WORDS = {0: "no", 1: "once", 2: "twice"}
+
+
+def _count(n: int, singular: str, plural: str) -> str:
+    """'3 career losses', but 'once' / 'twice' where English prefers it."""
+    n = int(n)
+    if singular in ("time",):
+        return _COUNT_WORDS.get(n, f"{n} times")
+    return f"{n} {singular if n == 1 else plural}"
+
+
+def _thin_profile(st: dict) -> bool:
+    """True when three or more advanced stats are missing for this fighter."""
+    return sum(1 for k in ("strike_accuracy_pct", "td_accuracy_pct", "td_defense_pct",
+                           "control_time_pct", "slpm") if st.get(k) is None) >= 3
+
+
+# CLOSERS, BANDED ON THE DISPLAYED INTEGER PERCENT. Banding on the raw float
+# would let a blurb rewrite itself between two rebuilds that show the reader
+# the same number; banding on what is printed means the text can only change
+# when the visible figure does.
+#
+# The single previous closer asserted "real, bettable value... worth sizing up
+# on rather than treating as a coinflip" on all 76 picks -- including 25 under
+# 55% and one at 50.2%, where it is simply false. Confidence now scales with
+# the number, and the sub-55 band is not permitted to use the vocabulary of
+# conviction at all.
+_CLOSERS = {
+    "coinflip": [
+        "At {odds} the model has this at {pct}%, which is a lean rather than a read.",
+        "The model lands on {pct}% here. That is close enough to even that the price matters more than the pick.",
+        "{pct}% at {odds} -- the model has a side, not a strong one.",
+        "This is one of the model's closest calls: {pct}%, priced at {odds}.",
+        "At {pct}% the model is barely off a coin flip, and {odds} should be read in that light.",
+    ],
+    "lean": [
+        "That puts the model at {pct}% against a price of {odds}.",
+        "The model reads it {pct}%; {odds} is the number to weigh that against.",
+        "{pct}% at {odds}, which is a real lean without being a standout.",
+        "At {odds}, the model's {pct}% is a modest but genuine disagreement with the market.",
+    ],
+    "solid": [
+        "The model settles at {pct}%, priced {odds}.",
+        "{pct}% at {odds} -- a clear side, and the reasoning above is most of it.",
+        "That reasoning gets the model to {pct}% against {odds}.",
+        "At {odds} the model's {pct}% reflects a fight it thinks it understands.",
+    ],
+    "strong": [
+        "The model has this at {pct}%, one of its firmer reads on the card, at {odds}.",
+        "{pct}% at {odds}. The model is not close to neutral here.",
+        "That combination gets the model to {pct}% -- priced at {odds}.",
+        "At {odds} the model's {pct}% is about as far from a coin flip as it gets on this card.",
+    ],
+}
+
+# When every rendered signal argues AGAINST the pick, no band may claim
+# conviction. This is asserted rather than left to the band, because the
+# failure it prevents -- a blurb reasoning its way to a loss and then calling
+# itself value -- fired on 32 of 76 picks.
+_CLOSERS_HEDGED = [
+    "The model still lands on {fighter} at {pct}%, priced {odds}, but the case above is the case against.",
+    "Those are reasons for caution; the model comes out at {pct}% anyway, at {odds}.",
+    "That is the argument against, and the model still reads {pct}% at {odds}.",
+]
+
+
+def _close(row: dict, prob_pct: int, odds_display: str, all_against: bool) -> str:
+    band = ("coinflip" if prob_pct < 55 else
+            "lean" if prob_pct < 65 else
+            "solid" if prob_pct < 75 else "strong")
+    pool = _CLOSERS_HEDGED if all_against else _CLOSERS[band]
+    key = f"{row.get('fighter')}|{row.get('opponent')}|{row.get('market')}|{band}|{prob_pct}"
+    return _pick_variant(key, pool).format(pct=prob_pct, odds=odds_display, fighter=row.get("fighter"))
+
+
+
+# ---------------------------------------------------------------------------
+# MECHANISM CLAUSES.
+#
+# The file shipped 13 body templates because the model has 13 factors, and
+# each template named its factor: "has a real path to control the fight
+# positionally", "lands at a clip the opponent hasn't shown much answer for".
+# Two fights whose top factor matched therefore read identically, and no
+# amount of extra phrasings fixes that -- three paraphrases of a sentence
+# about the same abstraction is one monoculture at a third the density.
+#
+# These render the TWO OPPOSING NUMBERS that produced the factor instead. The
+# combinatorics change completely: there are 13 factors and hundreds of stat
+# pairs, so specificity comes from the fight's own data rather than from a
+# thesaurus. It is also more useful -- "3.26 takedowns per fifteen minutes
+# against 0.00" is checkable, and "a real path to control the fight" is not.
+#
+# Every clause degrades to its qualitative form when the numbers are absent.
+# That path is not a fallback to be tolerated: 55 of 310 roster fighters carry
+# a scraped rate rather than a computed one, and some carry neither.
+# ---------------------------------------------------------------------------
+
+# NO GENDERED PRONOUNS. Roughly a fifth of the roster is women, the copy is
+# generated from one set of templates for everyone, and the first draft of
+# these clauses shipped "he is the more accurate of the two" onto Denise
+# Gomes. Name the fighter, or use "their" -- never infer a pronoun from a
+# name or from the division.
+def _num(v, fmt="{:.0f}"):
+    return None if v is None else fmt.format(v)
+
+
+def _grappling_clause(fighter, opponent, st, opp) -> str:
+    td_f, tdd_o = st.get("td_per_15"), opp.get("td_defense_pct")
+    ctrl_f, ctrl_o = st.get("control_time_pct"), opp.get("control_time_pct")
+    if td_f is not None and tdd_o is not None and td_f >= 0.5:
+        base = f"{fighter} lands {td_f:.1f} takedowns per fifteen minutes and {opponent} stops {tdd_o:.0f}% of what comes at them"
+        if ctrl_f is not None and ctrl_o is not None and ctrl_f - ctrl_o > 8:
+            return base + f", and the control time runs the same way -- {ctrl_f:.0f}% of fight minutes to {ctrl_o:.0f}%"
+        return base
+    if ctrl_f is not None and ctrl_o is not None and ctrl_f - ctrl_o > 8:
+        return f"{fighter} has held position for {ctrl_f:.0f}% of all fight minutes against {ctrl_o:.0f}% for {opponent}, and this is a matchup where that tends to decide things"
+    return f"{fighter} has a real path to control where this fight happens, and {opponent}'s takedown defence is the weaker half of that exchange"
+
+
+def _striking_clause(fighter, opponent, st, opp) -> str:
+    acc_f, acc_o = st.get("strike_accuracy_pct"), opp.get("strike_accuracy_pct")
+    slpm_f, sapm_o = st.get("slpm"), opp.get("sapm")
+    net_f = None if st.get("slpm") is None or st.get("sapm") is None else st["slpm"] - st["sapm"]
+    net_o = None if opp.get("slpm") is None or opp.get("sapm") is None else opp["slpm"] - opp["sapm"]
+    if slpm_f is not None and sapm_o is not None and slpm_f > 2.0:
+        base = f"{fighter} lands {slpm_f:.1f} significant strikes a minute into an opponent who absorbs {sapm_o:.1f}"
+        if acc_f is not None and acc_o is not None and acc_f - acc_o > 4:
+            return base + f", and is the more accurate of the two at {acc_f:.0f}% to {acc_o:.0f}%"
+        return base
+    if net_f is not None and net_o is not None and net_f - net_o > 0.8:
+        return f"{fighter} is net {net_f:+.1f} strikes a minute, {opponent} {net_o:+.1f} -- the exchange has gone one way for a while"
+    if acc_f is not None and acc_o is not None and acc_f - acc_o > 4:
+        return f"{fighter} connects on {acc_f:.0f}% of their significant strikes to {opponent}'s {acc_o:.0f}%"
+    return f"{fighter} has the sharper striking profile of the two, and it is the clearest gap in the matchup"
+
+
+def _durability_clause(fighter, opponent, st, opp) -> str:
+    fl_o = int(round((opp["ko_loss_rate"] + opp["sub_loss_rate"]) * opp["losses"]))
+    fl_f = int(round((st["ko_loss_rate"] + st["sub_loss_rate"]) * st["losses"]))
+    return (f"{opponent} has been stopped {_count(fl_o, 'time', 'times')} in "
+            f"{_count(opp['losses'], 'defeat', 'defeats')}, {fighter} "
+            f"{_count(fl_f, 'time', 'times')} in {_count(st['losses'], 'defeat', 'defeats')}")
+
+
+def _submission_clause(fighter, opponent, st) -> str:
+    subs = int(round(st["sub_rate"] * st["wins"]))
+    return (f"{subs} of {fighter}'s {_count(st['wins'], 'win', 'wins')} have come by submission, "
+            f"a threat {opponent} has to carry into every exchange on the mat")
 
 
 # Anchored on the closing "(+8.3% edge)." -- note the decimal point inside the
