@@ -2031,6 +2031,11 @@
     font-size: var(--t-small); font-weight: 600; white-space: nowrap;
     flex-shrink: 0;
   }
+  /* order: -1 puts the pick before the divider line, so the flex line takes
+     the remaining space and the group sits hard left under fighter A. The
+     chevron stays right in both cases -- it points at the disclosure, not at
+     a fighter, and moving it would make the affordance itself inconsistent. */
+  .summary-pick.corner-a { order: -1; }
   .summary-pick-name { color: var(--text-soft); }
   .summary-pick-pct { color: var(--text); font-variant-numeric: tabular-nums; font-family: var(--font-display); }
   /* The tier as colour, not a word. A word here would compete with the
@@ -5281,7 +5286,16 @@
         <div class="divider-line"></div>
         {% if fight.preview and fight.preview.favorite %}
         {% set _tier = (fight.preview.confidence_label or '')|lower|replace(' confidence','') %}
-        <span class="summary-pick {{ _tier }}">
+        {# CORNER-ALIGNED. The pick sits on the side of the fighter it names,
+           so the tie between "Dyer 77%" and the Shanelle Dyer above it is
+           SPATIAL rather than something the reader has to make by re-reading
+           the name across the full width of the card. On a real build five of
+           seven visible picks were landing on the opposite side from their
+           own fighter.
+           The side then carries information for free: scanning the column
+           shows which corner the model favours across the card without
+           reading a single name. #}
+        <span class="summary-pick {{ _tier }} {{ 'corner-a' if fight.preview.favorite == fight.fighter_a else 'corner-b' }}">
           <span class="summary-pick-dot" aria-hidden="true"></span>
           <span class="summary-pick-name">{{ fight.preview.favorite.split(' ')[-1] }}</span>
           <span class="summary-pick-pct">{{ (fight.preview.favorite_prob * 100) | round | int }}%</span>
