@@ -24,7 +24,7 @@ def _pick_variant(key: str, variants: list[str]) -> str:
     """
     digest = hashlib.md5(key.encode("utf-8")).hexdigest()
     return variants[int(digest, 16) % len(variants)]
-from src.matchup_model import _get, divisional_prior_for, compute_divisional_method_priors
+from src.matchup_model import _get, divisional_prior_for, compute_divisional_method_priors, normalize_division
 
 
 def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
@@ -218,12 +218,12 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
             f"career losses -- a real, specific vulnerability this matchup plays into, on top of "
             f"{row['fighter']}'s own {own_rate*100:.0f}% career rate finishing fights that way."
         )
-    elif abs(div_gap) >= 0.15 and weight_class:
+    elif abs(div_gap) >= 0.15 and normalize_division(weight_class):
         # fighter's own rate is well off the divisional norm -- that's the interesting part
         comparison = "well above" if div_gap > 0 else "well below"
         detail = (
             f" {row['fighter']}'s {own_rate*100:.0f}% career rate by {method_lower} runs {comparison} "
-            f"the {divisional_rate*100:.0f}% baseline for {weight_class} -- a real outlier for the "
+            f"the {divisional_rate*100:.0f}% baseline for {normalize_division(weight_class)} -- a real outlier for the "
             f"division, not just a generic tendency."
         )
     elif stats["wins"] < 6:
