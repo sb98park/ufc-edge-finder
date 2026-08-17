@@ -87,6 +87,42 @@
   --corner-blue: #3b82f6;
 
   --bg: #000000; --panel: #1c1c1e; --panel2: #242426; --border: #2e2e30;
+    /* ------------------------------------------------------------------
+       ELEVATION LADDER.
+
+       This file had 57 box-shadow declarations and only THREE of them cast a
+       shadow -- 40 were glows and 10 were inset rings. So nothing on the page
+       had a material: cards, sheets, popovers and the tour tip all landed on
+       the same grey, separated only by a 1px border and a luminance step of
+       1.234:1 from --bg to --panel and 1.098:1 from --panel to --panel2. The
+       second step is 42% the size of the first, and there was no surface
+       above --panel2 at all.
+
+       In a dark room that reads fine. In daylight, or with True Tone warming
+       the display, the card boundaries disappear and the layout flattens --
+       which is the condition to test in, not a dark room.
+
+       The one surface that already looked expensive was .mobile-tabbar,
+       because it is the only element in the file with a real material: a
+       bright inset rim reading as a specular highlight, a dark inset
+       under-edge, and a soft cast lifting it off the page. These four rungs
+       are that recipe, scaled. Blur and rim alpha both grow with height,
+       which is what makes the ladder read as distance rather than as three
+       arbitrary shadows.
+
+       PAINT COST IS DELIBERATE. --e1 is a single cheap layer because it lands
+       on ~90 resting cards; the two-layer stacks are reserved for surfaces
+       that are actually raised, of which there are a handful. Test a scroll
+       on a mid-range Android before adding a rung. */
+    --e1: 0 1px 2px rgba(0,0,0,0.30);
+    --e2: inset 0 1px 0 rgba(255,255,255,0.06),
+          0 4px 12px rgba(0,0,0,0.36);
+    --e3: inset 0 1px 0 rgba(255,255,255,0.10),
+          inset 0 -1px 0 rgba(0,0,0,0.20),
+          0 8px 24px rgba(0,0,0,0.40);
+    --e4: inset 0 1px 0 rgba(255,255,255,0.24),
+          inset 0 -1px 0 rgba(0,0,0,0.28),
+          0 8px 30px rgba(0,0,0,0.42);
   /* #1c1c1e is Apple's own dark-mode elevated-surface value. Navy opposed
      the gold, a warm bias came out dull olive, and #222 sat too light
      against a true-black page -- this is darker and effectively neutral (a
@@ -415,9 +451,10 @@
 
   .hub-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .hub-card {
-    background: linear-gradient(145deg, #242426, #1c1c1e 65%);
+    background: linear-gradient(145deg, var(--panel2), var(--panel) 65%);
     border: 1px solid var(--border); border-radius: 12px; padding: 16px;
     cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--e2);
     display: flex; flex-direction: row; align-items: center; gap: 14px; position: relative; overflow: hidden;
   }
   /* Accent strip removed: identity colour on a navigation list, the same
@@ -1642,10 +1679,16 @@
     background: var(--panel2);
     border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    /* One rung higher than a fight card: this one lifts on hover and presses
+       on tap, so it should already read as detached at rest. */
+    box-shadow: var(--e2);
   }
   .standout-card:active { transform: scale(0.98); }
   @media (hover: hover) {
-    .standout-card:hover { transform: translateY(-2px);  }
+    /* Rises a rung as well as moving. Translating without changing the
+       shadow reads as the card sliding, not lifting -- the cast is what
+       carries the height. */
+    .standout-card:hover { transform: translateY(-2px); box-shadow: var(--e3); }
   }
   .standout-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .standout-main { font-size: 0.9375rem; font-weight: 600; }
@@ -1804,6 +1847,10 @@
   details.fight-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
     margin-bottom: 12px; overflow: clip; transition: transform 0.2s ease, box-shadow 0.2s ease;
+    /* Resting rung. One layer on purpose: this lands on every fight card on
+       the page, and the two-layer stacks are reserved for surfaces that are
+       genuinely raised. */
+    box-shadow: var(--e1);
   }
   details.fight-card summary:active { transform: scale(0.995); }
   @media (hover: hover) {
@@ -2692,10 +2739,10 @@
        swipe starting on a fixed bottom bar isn't a scroll anyone intends,
        and pan-y would let the browser claim the gesture mid-drag. */
     touch-action: none;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.24),   /* crisp 1px rim */
-      inset 0 -1px 0 rgba(0,0,0,0.28),
-      0 8px 30px rgba(0,0,0,0.42);
+    /* --e4 IS this recipe, promoted to a token. Kept as the reference
+       implementation of the ladder: if the rim or the cast changes here it
+       must change there, and vice versa. */
+    box-shadow: var(--e4);
   }
   /* A soft sheen over the upper half, fading to nothing -- glass catches
      light along its top curve rather than uniformly. The 1px inset above is
