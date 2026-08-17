@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from scripts.build_pit_stats import enrich_roster
+from src.rationale import set_card_cohort
 from jinja2 import Environment, FileSystemLoader
 
 from src.elo import EloRatingSystem
@@ -268,6 +269,17 @@ def main():
     elo_ratings = build_ratings(fighters_df, history_df)
 
     future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")
+
+    # Register the booked cohort so the copy can make card-level claims
+    # ("the least of anyone booked here"). AFTER the load, obviously -- the
+    # first draft of this referenced future_cards_df one line above its own
+    # assignment. A census of the card, not a sample; see set_card_cohort.
+    try:
+        _booked = pd.concat([future_cards_df["fighter_a"], future_cards_df["fighter_b"]]).dropna().unique()
+        set_card_cohort(fighters_df, list(_booked))
+        print(f"[rationale] card cohort registered: {len(_booked)} booked fighters")
+    except Exception as _e:
+        print(f"[rationale] card cohort unavailable ({_e}) -- card-level claims disabled")
     pre_promotion_event_name = cards_df["event_name"].iloc[0] if not cards_df.empty else None
     cards_df, future_cards_df, days_since_event = promote_card_if_stale(cards_df, future_cards_df)
 

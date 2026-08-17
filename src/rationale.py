@@ -10,7 +10,7 @@ import re
 
 import pandas as pd
 
-from src.odds_utils import format_american_odds
+from src.odds_utils import format_american_odds, add_estimated_vig
 
 
 def _pick_variant(key: str, variants: list[str]) -> str:
@@ -735,7 +735,11 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
     else:
         body = f"No single factor separates these two by much -- the model's edge here is the accumulation of small ones rather than anything that stands out."
 
-    return f"{body} {_close(row, prob_pct, odds_display, bool(againsts) and not fors)}"
+    close = _close(row, prob_pct, odds_display, bool(againsts) and not fors)
+    price = _price_clause(row)
+    if price:
+        close += f" {price[0].upper() + price[1:]}."
+    return f"{body} {close}"
 
 
 # Below this many observations, a percentage is a story about a small number
@@ -852,6 +856,9 @@ def _grappling_clause(fighter, opponent, st, opp) -> str:
     ctrl_f, ctrl_o = st.get("control_time_pct"), opp.get("control_time_pct")
     if td_f is not None and tdd_o is not None and td_f >= 0.5:
         base = f"{fighter} lands {td_f:.1f} takedowns per fifteen minutes and {opponent} stops {tdd_o:.0f}% of what comes at them"
+        rank = _cohort_extreme(fighter, "td_per_15", want_high=True)
+        if rank:
+            base += f" -- {rank}"
         if ctrl_f is not None and ctrl_o is not None and ctrl_f - ctrl_o > 8:
             return base + f", and the control time runs the same way -- {ctrl_f:.0f}% of fight minutes to {ctrl_o:.0f}%"
         return base
@@ -867,6 +874,9 @@ def _striking_clause(fighter, opponent, st, opp) -> str:
     net_o = None if opp.get("slpm") is None or opp.get("sapm") is None else opp["slpm"] - opp["sapm"]
     if slpm_f is not None and sapm_o is not None and slpm_f > 2.0:
         base = f"{fighter} lands {slpm_f:.1f} significant strikes a minute into an opponent who absorbs {sapm_o:.1f}"
+        rank = _cohort_extreme(opponent, "sapm", want_high=True)
+        if rank:
+            return base + f" -- {rank}"
         if acc_f is not None and acc_o is not None and acc_f - acc_o > 4:
             return base + f", and is the more accurate of the two at {acc_f:.0f}% to {acc_o:.0f}%"
         return base
@@ -889,6 +899,187 @@ def _submission_clause(fighter, opponent, st) -> str:
     subs = int(round(st["sub_rate"] * st["wins"]))
     return (f"{subs} of {fighter}'s {_count(st['wins'], 'win', 'wins')} have come by submission, "
             f"a threat {opponent} has to carry into every exchange on the mat")
+
+
+# ---------------------------------------------------------------------------
+# THE MORNING AFTER.
+#
+# Roughly two of every five picks on this site lose. Every blurb above will
+# eventually sit under a red L, be screenshotted, and be read back by somebody
+# who did not take the bet. Nothing in this file was written for that moment.
+#
+# This appends one flat line to the ORIGINAL blurb, which is kept verbatim --
+# the pre-fight reasoning is the record and rewriting it after the fact is the
+# exact failure generate_site.py's frozen-pick restore exists to prevent.
+#
+# THE TONE IS IDENTICAL FOR WINS AND LOSSES, and that is the whole design. A
+# product whose differentiator is a public ledger including the misses cannot
+# have a losing note that sounds different from a winning one. There is a hard
+# ban below on the vocabulary of excuse -- "unlucky", "variance", "robbed",
+# "should have" -- because those words are how a track record becomes
+# marketing, and this file already shipped five sentences that had to be
+# deleted for exactly that reason.
+#
+# It also closes the loop the sign-partitioned signals opened: every pick now
+# names what would beat it, so once the fight resolves the honest question is
+# simply whether that thing happened.
+# ---------------------------------------------------------------------------
+
+_EXCUSE_WORDS = ("unlucky", "unfortunate", "variance", "robbed", "should have",
+                 "deserved", "close call", "bad luck", "hosed", "screwed")
+
+
+def explain_settled(original: str, won: bool, method: str | None = None,
+                    falsifier_fired: bool | None = None,
+                    band_record: tuple[int, int] | None = None) -> str:
+    """
+    The original blurb, unchanged, plus one line of result.
+
+    falsifier_fired: whether the counterargument the blurb named is what
+        actually happened. None when the blurb named none, or when nobody has
+        judged it -- in which case it is simply not mentioned rather than
+        guessed at.
+    band_record: (won, total) for picks in this confidence band this season.
+        Published whatever it is. A band that reads 3-11 prints 3-11; the
+        moment it is filtered it becomes the thing it was built to prevent.
+    """
+    verdict = "Won" if won else "Lost"
+    parts = [f"{verdict}{f' by {method}' if method else ''}."]
+
+    if falsifier_fired is True:
+        parts.append("The risk named above is what happened.")
+    elif falsifier_fired is False and not won:
+        parts.append("Not for the reason named above.")
+
+    if band_record:
+        w, n = band_record
+        if n >= 10:
+            parts.append(f"Picks in this confidence band are {w}-{n - w} this season.")
+
+    line = " ".join(parts)
+    # Belt and braces: the ban is asserted, not merely intended. A future
+    # edit that reaches for "unlucky" trips this rather than shipping it.
+    low = line.lower()
+    for w in _EXCUSE_WORDS:
+        if w in low:
+            raise AssertionError(f"explain_settled must not editorialise: {w!r} in {line!r}")
+    return f"{original.rstrip()} {line}"
+
+
+# ---------------------------------------------------------------------------
+# CARD COHORT.
+#
+# The one axis that produces a claim no template can reproduce, because it
+# does not exist inside a single fight: "the least of anyone booked here" is a
+# fact about the whole card. It is also free -- the card is already loaded --
+# and it is a CENSUS rather than a sample, so a superlative over it is exactly
+# true rather than an inference.
+#
+# Two guards, both learned the hard way elsewhere in this project:
+#
+#   MARGIN, NOT A BARE COMPARISON. A rank flips when a fight is cancelled or
+#   an opponent is replaced, and the site rebuilds ~48x a day, so a blurb that
+#   claims "the highest on the card" by 0.1 will contradict itself by
+#   Thursday. A superlative requires clear daylight over second place.
+#
+#   POPULATED ONLY. A fighter missing the stat is not last, they are absent.
+#   Ranking nulls is how "0.0 control time" becomes "the least on the card".
+# ---------------------------------------------------------------------------
+
+_COHORT: dict | None = None
+COHORT_MIN_MARGIN = {"control_time_pct": 6.0, "sapm": 0.6, "slpm": 0.8,
+                     "td_per_15": 1.0, "td_defense_pct": 6.0, "strike_accuracy_pct": 4.0}
+
+
+def set_card_cohort(fighters_df, names) -> None:
+    """
+    Register the fighters booked on the card being rendered.
+
+    Called once per build by the caller that knows the card. Absent this, all
+    cohort clauses return None and the copy simply does not make card claims
+    -- which is the correct failure, not a silent fallback to a roster-wide
+    comparison the reader was never promised.
+    """
+    global _COHORT
+    vals = {}
+    for stat in COHORT_MIN_MARGIN:
+        pairs = []
+        for n in names:
+            st = _fighter_stats(fighters_df, n)
+            if st and st.get(stat) is not None:
+                pairs.append((n, float(st[stat])))
+        if len(pairs) >= 8:      # too small a card and "on this card" means little
+            vals[stat] = pairs
+    _COHORT = vals or None
+
+
+def _cohort_extreme(name: str, stat: str, want_high: bool) -> str | None:
+    """'the most of anyone booked on this card', when it is unambiguously true."""
+    if not _COHORT or stat not in _COHORT:
+        return None
+    pairs = sorted(_COHORT[stat], key=lambda p: p[1], reverse=want_high)
+    if len(pairs) < 2 or pairs[0][0] != name:
+        return None
+    margin = abs(pairs[0][1] - pairs[1][1])
+    if margin < COHORT_MIN_MARGIN[stat]:
+        return None      # too close to survive a card change
+    return "the most of anyone booked on this card" if want_high else "the least of anyone booked on this card"
+
+
+# ---------------------------------------------------------------------------
+# PRICE CLAUSE.
+#
+# The closer took odds_display and prob_pct and did no arithmetic between
+# them, so it could assert "real, bettable value" on a row where the model was
+# BELOW the break-even the price demands. It also meant a 79% pick with 7
+# points of cushion and a 61% pick with 11 read identically -- and the 61% is
+# the better bet.
+#
+# The cushion is the number that makes the claim falsifiable: it states what
+# the price requires and what the model actually says, so a reader can check
+# it against the block printed directly above. That is the opposite of touting
+# and it is why this prints the cushion and NOT a stake. A stake figure is a
+# recommendation about the reader's money, issued identically to every reader
+# regardless of bankroll, and belongs nowhere in prose.
+#
+# THE VIG DISCLOSURE. Every edge on this site is measured against a de-vigged
+# Polymarket line, so a 7-point edge is smaller at a real book. Volunteering
+# that costs a little of the number and buys more than any adjective.
+# ---------------------------------------------------------------------------
+
+def _price_clause(row: dict) -> str | None:
+    """Break-even, the model's number, and the gap between them."""
+    try:
+        model_p = float(row["model_prob"])
+        fair_p = float(row["book_fair_prob"])
+    except (TypeError, ValueError, KeyError):
+        return None
+    if model_p != model_p or fair_p != fair_p or not (0 < fair_p < 1):
+        return None
+
+    cushion = (model_p - fair_p) * 100
+    odds = format_american_odds(row["odds_american"])
+
+    # NEVER claim value against the arithmetic. The old closer asserted it
+    # unconditionally; this refuses to.
+    if cushion <= 0:
+        return (f"{odds} needs {fair_p*100:.1f}% to break even and the model is at "
+                f"{model_p*100:.1f}% -- the price is ahead of the model here")
+
+    base = (f"{odds} needs {fair_p*100:.1f}% to break even; the model says "
+            f"{model_p*100:.1f}%")
+    if cushion < 8:
+        # Thin enough that the vig matters to whether it survives at a book.
+        try:
+            vig_p, _ = add_estimated_vig(fair_p, 1 - fair_p)
+            shrunk = (model_p - vig_p) * 100
+            if shrunk < cushion:
+                return base + (f", a {cushion:.1f}-point cushion that is nearer "
+                               f"{shrunk:.1f} once a real book's margin is priced in")
+        except (ValueError, ZeroDivisionError):
+            pass
+        return base + f", a cushion of {cushion:.1f} points"
+    return base + f", a cushion of {cushion:.1f} points"
 
 
 # ---------------------------------------------------------------------------
