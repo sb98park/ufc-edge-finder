@@ -130,12 +130,71 @@
     --text: #eef0f2; --text-soft: #b9bec9; --muted: #9ba1ad; --green: #3ddc84;
     --red: #ff5c5c; --accent: #d4af37; --accent2: #e8c766;
     --accent-cool: #5fb8c9;
+    /* THE THIRD GOLD, which was carrying 37 uses without a name. --accent is
+       the body gold and --accent2 the mid-tier one; this is the specular
+       stop -- the lighter end of every icon gradient and the brighter half of
+       the scrollbar thumb. It was written as a literal everywhere, so a
+       future retune of the identity would have moved two golds and left the
+       most-used one behind. */
+    --accent-hi: #f0d97a;
+    /* Channel values for the places that need an alpha of the accent. 29 of
+       ~100 hand-written rgba() literals in this file re-encode this colour by
+       hand, so changing --accent used to recolour 29% of the gold and leave
+       71% behind. */
+    --accent-rgb: 212,175,55;
+    /* HAIRLINES, as a scale rather than five ad-hoc alphas. rgba(255,255,255,
+       0.08) composites to #2e2e30 over --panel -- bit-for-bit --border -- so
+       the two were already the same edge expressed two ways. --border is a
+       solid doing an elevation job and measures 1.14:1 on --panel2, which
+       inverts the ladder: the highest surfaces got the faintest edges. An
+       alpha holds its relationship on whatever it lands on. */
+    --hairline-soft: rgba(255,255,255,0.05);
+    --hairline: rgba(255,255,255,0.08);
+    --hairline-strong: rgba(255,255,255,0.13);
+    /* The recessed surface. Three literals of #0d0f14 -- hue 223, saturation
+       35% -- sat inside a palette whose greys are hue 240 at 6.7%, which is
+       six times less saturated. The inset price panel on standout cards read
+       visibly cooler than the card around it: the one place the product
+       looked like it had two palettes, because it did. */
+    --sunken: #0e0e10;
+    /* RADII, four plus circles. The file carried ten distinct values across
+       roughly 120 declarations, and the shape a component takes was being
+       decided per-rule rather than by what the component IS. Three chip
+       variants that are DOM siblings measured five different curvatures.
+       The jobs: sm for inline chips and swatches, md for controls and inset
+       panels, lg for cards and sheets, pill for anything capsule-shaped.
+       50% stays literal on circles -- it is a different kind of value and
+       naming it would suggest it belongs on the same ladder. */
+    --r-sm: 4px;
+    --r-md: 8px;
+    --r-lg: 12px;
+    --r-pill: 999px;
     --font-display: 'Space Grotesk', -apple-system, Segoe UI, Roboto, sans-serif;
     /* Type scale. One ladder, so nothing lands on an arbitrary size --
        every step is a deliberate rung rather than a number someone reached
        for. Financial UIs read as precise partly because their type does. */
-    --t-micro: 9.5px; --t-caption: 10.5px; --t-small: 11.5px; --t-body: 12.5px;
-    --t-lead: 14px; --t-h3: 17px; --t-h2: 22px; --t-h1: 34px;
+    /* TYPE SCALE, redeclared from what the file actually renders.
+       The previous eight tokens had ZERO references -- `grep -c "var(--t-"`
+       returned 0 -- and worse, they described a scale nothing on the page
+       used: 9.5/10.5/11.5/12.5/14/17/22/34 in px, against a real ramp of
+       9/10/11/12/13/15/17/20/24/32/40 in rem. So the next contributor would
+       have read a :root scale no component obeys and reasonably assumed it
+       was authoritative.
+       Values below are the measured distribution, in rem so they keep
+       tracking the user's text-size setting. Named for job, ordered by size.
+       The three largest are display sizes with one or two uses each; the
+       workhorses are --t-small (71 uses) and --t-micro (60). */
+    --t-micro:   0.5625rem;  /*  9px */
+    --t-tiny:    0.625rem;   /* 10px */
+    --t-small:   0.6875rem;  /* 11px */
+    --t-body:    0.75rem;    /* 12px */
+    --t-lead:    0.8125rem;  /* 13px */
+    --t-sub:     0.9375rem;  /* 15px */
+    --t-h3:      1.0625rem;  /* 17px */
+    --t-h2:      1.25rem;    /* 20px */
+    --t-h1:      1.5rem;     /* 24px */
+    --t-display: 2rem;       /* 32px */
+    --t-hero:    2.5rem;     /* 40px */
   }
   * { box-sizing: border-box; }
   /* TYPE SCALE IS IN rem, NOT px. Every font-size here was a fixed pixel
@@ -186,8 +245,8 @@
   @media (min-width: 1024px) {
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #1c1c1e; }
-    ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #e8c766, #a3801f); border-radius: 8px; }
-    ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #f0d97a, #d4af37); }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--accent2), #a3801f); border-radius: var(--r-md); }
+    ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--accent-hi), var(--accent)); }
   }
   html {
     /* THE white flash on fast scrolling is not a gesture problem -- it's a
@@ -273,7 +332,7 @@
   p, .rationale, .model-preview, .parlay-subtitle, .info-body, .parlay-leg, .parlay-note {
     overflow-wrap: break-word;
   }
-  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 8px; border-radius: 12px; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 8px; border-radius: var(--r-lg); }
   .table-scroll table { margin-bottom: 0; }
   table td, table th { white-space: nowrap; }
   .model-only-note { white-space: normal; overflow-wrap: break-word; }
@@ -282,20 +341,20 @@
   .brand-left { display: flex; align-items: center; gap: 11px; flex-shrink: 0; }
   .account-badge { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
   .account-role {
-    font-size: 0.6875rem; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+    font-size: var(--t-small); font-weight: 600; padding: 4px 10px; border-radius: var(--r-pill);
     background: var(--panel2); border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
   }
   .account-role.admin { border-color: rgba(212,175,55,0.4); color: var(--accent); }
   .account-role.guest { border-color: rgba(95,184,201,0.35); color: var(--accent-cool); }
   .account-logout {
-    font-size: 0.6875rem; font-weight: 600; color: var(--muted); background: none; border: none;
+    font-size: var(--t-small); font-weight: 600; color: var(--muted); background: none; border: none;
     text-decoration: underline; cursor: pointer; padding: 4px 2px; font-family: inherit;
   }
   .account-logout:active { color: var(--text); }
   .brand-logo { flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(212,175,55,0.35)); }
   .brand-text { line-height: 1.15; display: flex; flex-direction: column; justify-content: center; }
   .brand-name {
-    position: relative; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.8px;
+    position: relative; font-size: var(--t-h2); font-weight: 800; letter-spacing: 0.8px;
     white-space: nowrap;
     /* Per-word colour rather than one gradient across both: OCTANE white,
        ALPHA gold -- the same split the mark and the share card use. The old
@@ -303,25 +362,25 @@
        header and the link preview had drifted apart. */
   }
   .brand-name .bn-octane { color: #ffffff; }
-  .brand-name .bn-alpha { color: #d4af37; text-shadow: 0 0 18px rgba(212,175,55,0.35); }
+  .brand-name .bn-alpha { color: var(--accent); text-shadow: 0 0 18px rgba(212,175,55,0.35); }
   @keyframes brand-shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -100% 0; }
   }
   .made-with-love {
-    text-align: center; font-size: 0.6875rem; color: var(--muted); letter-spacing: 0.3px;
+    text-align: center; font-size: var(--t-small); color: var(--muted); letter-spacing: 0.3px;
     margin-top: 4px; padding-bottom: 24px; font-style: italic;
   }
-  .meta-row { font-size: 0.6875rem; color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
+  .meta-row { font-size: var(--t-small); color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
   .meta-sep { color: var(--border); margin: 0 2px; }
   .countdown-card {
     background: linear-gradient(135deg, #1a1508, #1c1c1e 70%);
-    border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; text-align: center;
+    border-radius: var(--r-lg); padding: 12px 16px; margin-bottom: 14px; text-align: center;
     position: relative; border: 1px solid transparent;
     background-clip: padding-box;
   }
   .countdown-card::before {
-    content: ""; position: absolute; inset: 0; border-radius: 12px; padding: 1px;
+    content: ""; position: absolute; inset: 0; border-radius: var(--r-lg); padding: 1px;
     background: linear-gradient(135deg, var(--accent), #3a2f14 60%, var(--accent2));
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
@@ -332,13 +391,13 @@
   }
   .countdown-boxes { display: flex; align-items: center; justify-content: center; gap: 6px; }
   .countdown-box {
-    background: #0d0f14; border: 1px solid #2a2410; border-radius: 8px;
+    background: var(--sunken); border: 1px solid #2a2410; border-radius: var(--r-md);
     padding: 7px 11px; min-width: 44px;
   }
   .digit-pair { display: flex; justify-content: center; }
   .scroll-digit {
     position: relative; width: 13px; height: 25px; overflow: hidden;
-    font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums;
+    font-size: var(--t-h2); font-weight: 700; font-variant-numeric: tabular-nums;
     letter-spacing: 0.3px; font-family: var(--font-display);
   }
   .scroll-digit .track {
@@ -350,9 +409,9 @@
     animation: scrollUp 0.35s cubic-bezier(0.22,1,0.36,1) forwards;
   }
   @keyframes scrollUp { from { transform: translateY(0); } to { transform: translateY(-25px); } }
-  .countdown-box-label { font-size: 0.5625rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+  .countdown-box-label { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
   .countdown-sep {
-    font-size: 1.0625rem; font-weight: 700; color: #3a2f14;
+    font-size: var(--t-h3); font-weight: 700; color: #3a2f14;
     animation: sepPulse 2.6s ease-in-out 4;
   }
   @keyframes sepPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
@@ -361,7 +420,7 @@
      once the countdown card is no longer squeezed into a narrow column.
      Revealed and laid out in the desktop media query below. */
   .countdown-info { display: none; }
-  .countdown-info-line { font-size: 0.75rem; color: var(--muted); line-height: 1.7; white-space: nowrap; }
+  .countdown-info-line { font-size: var(--t-body); color: var(--muted); line-height: 1.7; white-space: nowrap; }
   /* Skeleton-pattern "updating" shimmer for live-price elements during
      the initial client-side price fetch -- values stay fully readable
      (they're real baked data, not placeholders), the shimmer just
@@ -371,7 +430,7 @@
     background: linear-gradient(90deg, transparent 30%, rgba(212,175,55,0.14) 50%, transparent 70%);
     background-size: 200% 100%;
     animation: priceShimmer 1.4s ease-in-out infinite;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
   }
   @keyframes priceShimmer { 0% { background-position: 180% 0; } 100% { background-position: -80% 0; } }
   @media (prefers-reduced-motion: reduce) {
@@ -384,16 +443,16 @@
      rather than invented fresh, so "High/Medium/Low" reads consistently
      everywhere it appears. */
   .confidence-hero-badge {
-    display: inline-block; border: 1px solid var(--border); border-radius: 12px;
+    display: inline-block; border: 1px solid var(--border); border-radius: var(--r-lg);
     padding: 8px 14px; background: var(--panel2);
   }
   .confidence-hero-label {
-    font-size: 0.5625rem; color: var(--muted); font-weight: 600; text-transform: uppercase;
+    font-size: var(--t-micro); color: var(--muted); font-weight: 600; text-transform: uppercase;
     letter-spacing: 0.4px; margin-bottom: 4px; white-space: nowrap;
   }
   .confidence-hero-stats { display: flex; gap: 10px; white-space: nowrap; }
-  .confidence-hero-stat { font-size: 0.8125rem; font-weight: 700; font-family: var(--font-display); }
-  .confidence-hero-stat em { font-size: 0.5625rem; font-weight: 600; font-style: normal; text-transform: uppercase; margin-left: 2px; opacity: 0.85; }
+  .confidence-hero-stat { font-size: var(--t-lead); font-weight: 700; font-family: var(--font-display); }
+  .confidence-hero-stat em { font-size: var(--t-micro); font-weight: 600; font-style: normal; text-transform: uppercase; margin-left: 2px; opacity: 0.85; }
   .confidence-hero-stat.high { color: var(--green); }
   .confidence-hero-stat.medium { color: var(--accent2); }
   .confidence-hero-stat.low { color: var(--red); }
@@ -432,8 +491,8 @@
   }
   .live-header-macro {
     display: flex; align-items: center; justify-content: center; gap: 7px;
-    font-size: 0.9375rem; font-weight: 700; letter-spacing: 0.6px; color: #fff;
-    background: linear-gradient(135deg, #7a1a1a, #4a0f0f); border-radius: 8px;
+    font-size: var(--t-sub); font-weight: 700; letter-spacing: 0.6px; color: #fff;
+    background: linear-gradient(135deg, #7a1a1a, #4a0f0f); border-radius: var(--r-md);
     padding: 9px 0; animation: live-pulse 1.8s ease-in-out infinite;
   }
   .live-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff4747; box-shadow: 0 0 8px 2px rgba(255,71,71,0.7); }
@@ -442,17 +501,17 @@
     50% { box-shadow: 0 0 0 8px rgba(255,71,71,0); }
   }
   .live-header-micro {
-    font-size: 0.6875rem; color: var(--muted); text-align: center; line-height: 1.6;
-    background: #0d0f14; border: 1px solid #2a2410; border-radius: 8px; padding: 7px 10px;
+    font-size: var(--t-small); color: var(--muted); text-align: center; line-height: 1.6;
+    background: var(--sunken); border: 1px solid #2a2410; border-radius: var(--r-md); padding: 7px 10px;
   }
   .live-header-micro strong { color: var(--text); font-weight: 600; }
   .live-header-micro .next-lock { color: var(--accent2); font-weight: 600; }
-  .coverage-warning { color: #e8c766; font-size: 0.6875rem; display: inline-block; margin-top: 2px; }
+  .coverage-warning { color: var(--accent2); font-size: var(--t-small); display: inline-block; margin-top: 2px; }
 
   .hub-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .hub-card {
     background: linear-gradient(145deg, var(--panel2), var(--panel) 65%);
-    border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+    border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px;
     cursor: pointer; transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     box-shadow: var(--e2);
     display: flex; flex-direction: row; align-items: center; gap: 14px; position: relative; overflow: hidden;
@@ -466,22 +525,22 @@
   @media (hover: hover) {
     .hub-card:hover { transform: translateY(-2px);  }
   }
-  .hub-card-icon { font-size: 1.5rem; flex-shrink: 0; width: 26px; display: flex; align-items: center; justify-content: center; }
+  .hub-card-icon { font-size: var(--t-h1); flex-shrink: 0; width: 26px; display: flex; align-items: center; justify-content: center; }
   .hub-card-icon svg { width: 24px; height: 24px; }
   .inline-icon { width: 15px; height: 15px; vertical-align: -3px; margin-right: 2px; flex-shrink: 0; }
   .hub-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-  .hub-card-label { font-size: 0.6875rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-  .hub-card-stat { font-size: 1.25rem; font-weight: 700; color: var(--text); line-height: 1.25; font-family: var(--font-display); }
-  .hub-card-sub { font-size: 0.6875rem; color: var(--muted); }
-  .hub-card-location { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
-  .hub-card-title { font-size: 0.9375rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 7px; }
+  .hub-card-label { font-size: var(--t-small); color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .hub-card-stat { font-size: var(--t-h2); font-weight: 700; color: var(--text); line-height: 1.25; font-family: var(--font-display); }
+  .hub-card-sub { font-size: var(--t-small); color: var(--muted); }
+  .hub-card-location { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
+  .hub-card-title { font-size: var(--t-sub); font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 7px; }
   .count-badge {
-    font-size: 0.6875rem; font-weight: 600; color: var(--muted); background: var(--panel2);
-    border: 1px solid var(--border); border-radius: 8px; padding: 1px 7px; min-width: 20px;
+    font-size: var(--t-small); font-weight: 600; color: var(--muted); background: var(--panel2);
+    border: 1px solid var(--border); border-radius: var(--r-md); padding: 1px 7px; min-width: 20px;
     text-align: center; line-height: 1.5;
   }
-  .hub-card-matchup { font-size: 0.75rem; color: var(--accent2); font-weight: 600; }
-  .hub-card-arrow { flex-shrink: 0; color: var(--muted); font-size: 0.9375rem; }
+  .hub-card-matchup { font-size: var(--t-body); color: var(--accent2); font-weight: 600; }
+  .hub-card-arrow { flex-shrink: 0; color: var(--muted); font-size: var(--t-sub); }
 
   /* This Weekend gets a real featured treatment now that every card is
      full-width -- extra padding and a slightly thicker accent stripe,
@@ -491,9 +550,9 @@
     padding: 18px 16px;
   }
 
-  .hub-card.featured .hub-card-icon { font-size: 2rem; width: 34px; }
+  .hub-card.featured .hub-card-icon { font-size: var(--t-display); width: 34px; }
   .hub-card.featured .hub-card-icon svg { width: 32px; height: 32px; }
-  .hub-card.featured .hub-card-stat { font-size: 1.25rem; }
+  .hub-card.featured .hub-card-stat { font-size: var(--t-h2); }
 
   .favorite-card {
     background: var(--panel2);
@@ -501,7 +560,7 @@
        matching the ones removed from the fight cards, the drawer and the
        standout props -- and green means "positive" elsewhere, so on a card
        that is already a positive pick it stated the obvious twice. */
-    border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+    border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px;
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
   }
   .favorite-card:active { transform: scale(0.98); }
@@ -509,12 +568,12 @@
     .favorite-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(61,220,132,0.15); }
   }
   .favorite-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-  .favorite-main { font-size: 0.9375rem; font-weight: 700; }
-  .favorite-vs { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
-  .favorite-odds { font-size: 1.25rem; font-weight: 700; color: var(--accent-cool); flex-shrink: 0; font-variant-numeric: tabular-nums; font-family: var(--font-display); }
+  .favorite-main { font-size: var(--t-sub); font-weight: 700; }
+  .favorite-vs { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
+  .favorite-odds { font-size: var(--t-h2); font-weight: 700; color: var(--accent-cool); flex-shrink: 0; font-variant-numeric: tabular-nums; font-family: var(--font-display); }
   .lock-pick-card {
     background: var(--panel2);
-    border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 12px; padding: 14px 16px;
+    border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px;
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
   }
   .lock-pick-card:active { transform: scale(0.98); }
@@ -523,18 +582,18 @@
   }
   .lock-pick-top { display: flex; align-items: center; gap: 12px; }
   .lock-pick-info { min-width: 0; }
-  .lock-pick-matchup { font-size: 0.9375rem; font-weight: 700; }
+  .lock-pick-matchup { font-size: var(--t-sub); font-weight: 700; }
   .lock-pick-vs { color: var(--muted); font-weight: 500; }
-  .lock-pick-meta { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
+  .lock-pick-meta { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
   .lock-pick-narrative { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
   .favorite-prob-row { margin-bottom: 8px; }
-  .favorite-prob-bar-track { height: 6px; background: var(--panel2); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
-  .favorite-prob-bar { height: 100%; background: linear-gradient(90deg, #1e4a2f, var(--green)); border-radius: 4px; transition: width 0.55s ease-out; }
-  .favorite-prob-label { font-size: 0.6875rem; color: var(--muted); font-weight: 600; }
-  .hub-card-arrow { position: absolute; top: 12px; right: 12px; color: var(--muted); font-size: 0.75rem; }
+  .favorite-prob-bar-track { height: 6px; background: var(--panel2); border-radius: var(--r-sm); overflow: hidden; margin-bottom: 4px; }
+  .favorite-prob-bar { height: 100%; background: linear-gradient(90deg, #1e4a2f, var(--green)); border-radius: var(--r-sm); transition: width 0.55s ease-out; }
+  .favorite-prob-label { font-size: var(--t-small); color: var(--muted); font-weight: 600; }
+  .hub-card-arrow { position: absolute; top: 12px; right: 12px; color: var(--muted); font-size: var(--t-body); }
   .back-btn {
     display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--border);
-    border-radius: 20px; padding: 7px 14px; color: var(--text); font-size: 0.75rem; font-weight: 600;
+    border-radius: var(--r-pill); padding: 7px 14px; color: var(--text); font-size: var(--t-body); font-weight: 600;
     cursor: pointer; margin-bottom: 14px; width: fit-content;
     /* Sticky so it stays reachable down a long section -- Coming Up and How
        It Works both run several screens. */
@@ -545,15 +604,15 @@
   .segment-divider:first-child { margin-top: 4px; }
   .segment-divider-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
   .segment-divider-label {
-    font-size: 0.6875rem; font-weight: 700; letter-spacing: 1px; color: var(--accent);
-    white-space: nowrap; padding: 3px 10px; background: #241f10; border: 1px solid #3a2f14; border-radius: 12px;
+    font-size: var(--t-small); font-weight: 700; letter-spacing: 1px; color: var(--accent);
+    white-space: nowrap; padding: 3px 10px; background: #241f10; border: 1px solid #3a2f14; border-radius: var(--r-lg);
   }
 
   .whats-new-banner {
     position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 688px; margin: 0 auto; z-index: 200;
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     background: linear-gradient(135deg, #0f2a1e, #1c1c1e 70%); border: 1px solid #1e4a2f;
-    border-radius: 12px; padding: 10px 14px; font-size: 0.75rem;
+    border-radius: var(--r-lg); padding: 10px 14px; font-size: var(--t-body);
     
     animation: toast-in 0.35s ease-out, banner-glow 2.4s ease-in-out 0.35s 4;
   }
@@ -572,8 +631,8 @@
   }
   .new-badge {
     position: absolute; top: -7px; right: -7px; background: linear-gradient(135deg, #3ddc84, #2ab568);
-    color: #0a0c10; font-size: 0.5625rem; font-weight: 700; letter-spacing: 0.4px;
-    border-radius: 8px; padding: 2px 7px; 
+    color: #0a0c10; font-size: var(--t-micro); font-weight: 700; letter-spacing: 0.4px;
+    border-radius: var(--r-md); padding: 2px 7px; 
     animation: new-badge-pop 0.35s ease-out;
   }
   @keyframes new-badge-pop {
@@ -587,7 +646,7 @@
   .reveal-target.revealed { opacity: 1; transform: translateY(0); }
   .new-item-glow {
     animation: new-item-pulse 2s ease-in-out 4;
-    border-radius: 12px;
+    border-radius: var(--r-lg);
   }
   @keyframes new-item-pulse {
     0%, 100% { outline: 2px solid rgba(61,220,132,0.15); outline-offset: 2px; }
@@ -595,72 +654,72 @@
   }
   .whats-new-text { color: var(--green); font-weight: 600; line-height: 1.4; }
   .whats-new-dismiss {
-    background: none; border: none; color: var(--muted); font-size: 0.8125rem; cursor: pointer;
+    background: none; border: none; color: var(--muted); font-size: var(--t-lead); cursor: pointer;
     padding: 2px 6px; flex-shrink: 0;
   }
 
   .track-record-card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg);
     padding: 12px 16px; margin-bottom: 16px;
   }
-  .track-record-title { font-size: 0.75rem; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  .track-record-title { font-size: var(--t-body); font-weight: 600; color: var(--accent); margin-bottom: 6px; }
   .event-summary-card {
-    margin: 10px 0 16px; padding: 14px 12px; border-radius: 12px;
+    margin: 10px 0 16px; padding: 14px 12px; border-radius: var(--r-lg);
     background: linear-gradient(160deg, rgba(212,175,55,0.08), var(--panel2) 60%);
     border: 1px solid var(--border);
   }
-  .event-summary-name { font-size: 0.6875rem; font-weight: 600; color: var(--muted); text-align: center; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .event-summary-name { font-size: var(--t-small); font-weight: 600; color: var(--muted); text-align: center; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
   .brag-headline {
-    text-align: center; font-size: 0.8125rem; font-weight: 700; padding: 8px 10px;
-    border-radius: 8px; margin: -2px 0 12px;
+    text-align: center; font-size: var(--t-lead); font-weight: 700; padding: 8px 10px;
+    border-radius: var(--r-md); margin: -2px 0 12px;
   }
   .brag-headline.gold {
-    color: #f0d97a; background: linear-gradient(135deg, rgba(240,217,122,0.16), rgba(212,175,55,0.08));
+    color: var(--accent-hi); background: linear-gradient(135deg, rgba(240,217,122,0.16), rgba(212,175,55,0.08));
     border: 1px solid rgba(212,175,55,0.35); text-shadow: 0 0 10px rgba(240,217,122,0.4);
   }
   .brag-headline.green {
     color: var(--green); background: rgba(61,220,132,0.1); border: 1px solid rgba(61,220,132,0.3);
   }
   .lock-of-week-block {
-    margin: 0 0 16px; padding: 12px 14px; border-radius: 12px;
+    margin: 0 0 16px; padding: 12px 14px; border-radius: var(--r-lg);
     background: linear-gradient(135deg, rgba(212,175,55,0.1), var(--panel2) 70%);
     border: 1px solid rgba(212,175,55,0.3);
   }
   .lock-of-week-title {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
-    font-size: 0.75rem; font-weight: 700; color: #f0d97a; margin-bottom: 8px;
+    font-size: var(--t-body); font-weight: 700; color: var(--accent-hi); margin-bottom: 8px;
   }
-  .lock-of-week-alltime { font-size: 0.5625rem; font-weight: 600; color: var(--muted); }
-  .lock-of-week-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; padding: 4px 0; }
+  .lock-of-week-alltime { font-size: var(--t-micro); font-weight: 600; color: var(--muted); }
+  .lock-of-week-row { display: flex; align-items: center; gap: 8px; font-size: var(--t-body); padding: 4px 0; }
   .lock-of-week-icon {
     flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: var(--t-small); font-weight: 700;
   }
   .lock-of-week-icon.correct { background: rgba(61,220,132,0.15); color: var(--green); }
   .lock-of-week-icon.incorrect { background: rgba(255,92,92,0.15); color: var(--red); }
   .lock-of-week-pick { font-weight: 600; color: var(--text); }
-  .lock-of-week-vs { color: var(--muted); font-size: 0.6875rem; }
+  .lock-of-week-vs { color: var(--muted); font-size: var(--t-small); }
   .event-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .event-summary-stat { text-align: center; }
   .underdog-block {
-    margin: 0 0 16px; padding: 12px 14px; border-radius: 12px;
+    margin: 0 0 16px; padding: 12px 14px; border-radius: var(--r-lg);
     background: linear-gradient(135deg, rgba(255,255,255,0.05), var(--panel2) 70%);
     border: 1px solid rgba(255,255,255,0.05);
   }
   .underdog-title {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
-    font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 10px;
+    font-size: var(--t-body); font-weight: 700; color: var(--muted); margin-bottom: 10px;
   }
-  .underdog-alltime { font-size: 0.5625rem; font-weight: 600; color: var(--muted); }
-  .underdog-biggest-label { font-size: 0.5625rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
-  .underdog-biggest-pick { font-size: 0.9375rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+  .underdog-alltime { font-size: var(--t-micro); font-weight: 600; color: var(--muted); }
+  .underdog-biggest-label { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
+  .underdog-biggest-pick { font-size: var(--t-sub); font-weight: 700; color: var(--text); margin-top: 2px; }
   .underdog-biggest-odds { color: var(--accent-cool); }
-  .underdog-biggest-sub { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
+  .underdog-biggest-sub { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
   .underdog-list { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
-  .underdog-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; padding: 3px 0; }
+  .underdog-row { display: flex; align-items: center; gap: 8px; font-size: var(--t-body); padding: 3px 0; }
   .underdog-icon {
     flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%; background: rgba(61,220,132,0.15); color: var(--green);
-    display: flex; align-items: center; justify-content: center; font-size: 0.5625rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: var(--t-micro); font-weight: 700;
   }
   .underdog-pick { font-weight: 600; color: var(--text); flex: 1; }
   /* Lock of the Week full-history card -- same visual family as
@@ -669,22 +728,22 @@
      instead of underdog orange. Interior scrolls (capped height) so the
      card stays a fixed size as the list grows week over week. */
   .lock-history-block {
-    margin: 0 0 16px; padding: 12px 14px; border-radius: 12px;
+    margin: 0 0 16px; padding: 12px 14px; border-radius: var(--r-lg);
     background: linear-gradient(135deg, rgba(255,255,255,0.05), var(--panel2) 70%);
     border: 1px solid rgba(255,255,255,0.05);
   }
   .lock-history-title {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
-    font-size: 0.75rem; font-weight: 700; color: var(--text); margin-bottom: 10px;
+    font-size: var(--t-body); font-weight: 700; color: var(--text); margin-bottom: 10px;
   }
-  .lock-history-alltime { font-size: 0.5625rem; font-weight: 600; color: var(--muted); }
+  .lock-history-alltime { font-size: var(--t-micro); font-weight: 600; color: var(--muted); }
   .lock-history-scroll {
     max-height: 300px; overflow-y: auto; padding-right: 6px;
     scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.05) transparent;
   }
   .lock-history-scroll::-webkit-scrollbar { width: 5px; }
-  .lock-history-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 4px; }
-  .lock-history-row { padding: 7px 8px; border-radius: 8px; margin-bottom: 4px; }
+  .lock-history-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: var(--r-sm); }
+  .lock-history-row { padding: 7px 8px; border-radius: var(--r-md); margin-bottom: 4px; }
   .lock-history-row:last-child { margin-bottom: 0; }
   /* The special treatment: winner AND method both called in advance.
      Gold border + soft glow + badge -- deliberately the loudest thing in
@@ -697,17 +756,17 @@
   .lock-history-main { display: flex; align-items: center; gap: 8px; }
   .lock-history-result {
     flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; font-size: 0.5625rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: var(--t-micro); font-weight: 700;
   }
   .lock-history-result.hit { background: rgba(61,220,132,0.15); color: var(--green); }
   .lock-history-result.miss { background: rgba(255,92,92,0.15); color: var(--red); }
-  .lock-history-pick { font-weight: 600; color: var(--text); font-size: 0.75rem; }
+  .lock-history-pick { font-weight: 600; color: var(--text); font-size: var(--t-body); }
   .lock-history-perfect-badge {
-    font-size: 0.5625rem; font-weight: 700; letter-spacing: 0.5px; color: #1c1c1e;
-    background: linear-gradient(135deg, var(--accent), #e8c766); border-radius: 4px;
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: 0.5px; color: #1c1c1e;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: var(--r-sm);
     padding: 2px 6px; white-space: nowrap;
   }
-  .lock-history-sub { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 3px 0 0 24px; font-size: 0.5625rem; color: var(--muted); }
+  .lock-history-sub { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 3px 0 0 24px; font-size: var(--t-micro); color: var(--muted); }
   .lock-history-method.hit { color: var(--green); font-weight: 600; }
   .lock-history-method.miss { color: var(--red); }
   /* Fight cancellation treatment: an unmissable red banner + the rest of
@@ -719,8 +778,8 @@
   .cancelled-banner {
     background: linear-gradient(135deg, rgba(255,92,92,0.18), rgba(255,92,92,0.08));
     border: 1px solid rgba(255,92,92,0.55); color: var(--red);
-    font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.8px;
-    padding: 6px 10px; border-radius: 8px; margin-bottom: 10px; text-align: center;
+    font-size: var(--t-small); font-weight: 700; letter-spacing: 0.8px;
+    padding: 6px 10px; border-radius: var(--r-md); margin-bottom: 10px; text-align: center;
   }
   .fight-cancelled .matchup-header,
   .fight-cancelled .matchup-badges-row,
@@ -737,7 +796,7 @@
      established gold treatment, consistent with ★ PERFECT elsewhere. */
   .fun-fact-card {
     display: flex; align-items: center; gap: 14px; margin: 0 0 10px; padding: 14px 16px;
-    border-radius: 12px; position: relative; overflow: hidden;
+    border-radius: var(--r-lg); position: relative; overflow: hidden;
     background: linear-gradient(135deg, rgba(255,255,255,0.05), var(--panel2) 65%);
     border: 1px solid rgba(255,255,255,0.05);
     opacity: 0; transform: translateY(12px);
@@ -793,22 +852,22 @@
   }
   .fun-fact-number {
     flex-shrink: 0; min-width: 52px; text-align: center;
-    font-size: 2rem; font-weight: 700; font-family: var(--font-display); line-height: 1;
+    font-size: var(--t-display); font-weight: 700; font-family: var(--font-display); line-height: 1;
     color: #2dd4bf;
   }
   .fun-fact-card.gold .fun-fact-number { color: var(--accent); }
-  .fun-fact-fighter { font-size: 0.8125rem; font-weight: 700; color: var(--text); }
-  .fun-fact-text { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .fun-fact-fighter { font-size: var(--t-lead); font-weight: 700; color: var(--text); }
+  .fun-fact-text { font-size: var(--t-body); color: var(--muted); margin-top: 2px; }
   .fun-fact-tier-badge {
-    position: absolute; top: 8px; right: 10px; font-size: 0.5625rem; font-weight: 700;
-    letter-spacing: 0.6px; color: #1c1c1e; padding: 2px 6px; border-radius: 4px;
-    background: linear-gradient(135deg, var(--accent), #e8c766);
+    position: absolute; top: 8px; right: 10px; font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: 0.6px; color: #1c1c1e; padding: 2px 6px; border-radius: var(--r-sm);
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
   }
   /* Small chip variant, shown on the fighter's own fight card in This
      Weekend -- same fact, glanceable in context. */
   .fun-fact-chip {
     display: inline-flex; align-items: center; gap: 5px; margin-top: 4px;
-    font-size: 0.5625rem; font-weight: 600; padding: 2px 8px; border-radius: 12px;
+    font-size: var(--t-micro); font-weight: 600; padding: 2px 8px; border-radius: var(--r-lg);
     background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid rgba(255,255,255,0.05);
   }
   .fun-fact-chip.gold { background: rgba(212,175,55,0.12); color: var(--accent); border-color: rgba(212,175,55,0.4); }
@@ -830,8 +889,8 @@
      inside the stats block rather than beside a pick. */
   .spotlight-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
   .spotlight-chip {
-    font-size: 0.625rem; font-weight: 600; line-height: 1.35;
-    padding: 4px 9px; border-radius: 10px; max-width: 100%;
+    font-size: var(--t-tiny); font-weight: 600; line-height: 1.35;
+    padding: 4px 9px; border-radius: var(--r-md); max-width: 100%;
     border: 1px solid transparent; overflow-wrap: anywhere;
   }
   /* WIDTH IS RESERVED, NOT INHERITED FROM CONTENT. The odds string is never
@@ -862,7 +921,7 @@
      lifted it to 0.9, which concedes 0.55 was too low, and there is no hover
      on a touch device, which is where this page mostly lives. */
   .mkt-model-head .unit-hint {
-    font-size: 0.5625rem; opacity: 0.9; margin-left: 3px;
+    font-size: var(--t-micro); opacity: 0.9; margin-left: 3px;
     border-bottom: 1px dotted currentColor; padding-bottom: 1px;
     display: inline-block; min-width: 1ch; text-align: center;
   }
@@ -894,11 +953,11 @@
     -webkit-user-select: text; user-select: text;
   }
   .striking-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
-  .striking-title { font-size: 0.625rem; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
+  .striking-title { font-size: var(--t-tiny); letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
   .sil-seg {
     display: flex; justify-content: center; gap: 0; margin: 0 auto 6px;
     width: max-content; border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.03);
+    border-radius: var(--r-pill); overflow: hidden; background: rgba(255,255,255,0.03);
   }
   .sil-seg-btn {
     background: none; border: none; cursor: pointer;
@@ -976,11 +1035,11 @@
      every palette token passes comfortably (--muted is 6.56:1 here). Quiet is
      the right intent, but size and letter-spacing are how you get it without
      dropping under the contrast floor. */
-  .sil-scale { text-align: center; font-size: 0.625rem; letter-spacing: 0.5px;
+  .sil-scale { text-align: center; font-size: var(--t-tiny); letter-spacing: 0.5px;
                text-transform: uppercase; color: var(--muted); margin-top: 6px; }
 
   .fight-shape { text-align: center; margin-top: 9px; }
-  .fight-shape-label { display: block; font-size: 0.6875rem; font-weight: 700; color: #d8dbe2; letter-spacing: 0.2px; }
+  .fight-shape-label { display: block; font-size: var(--t-small); font-weight: 700; color: #d8dbe2; letter-spacing: 0.2px; }
   .fight-shape-detail { display: block; font-size: 0.59375rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
 
   .spotlight-chip-row { justify-content: center; }
@@ -994,7 +1053,7 @@
      the disagreement with the book is real, the SIZE of it is not
      trustworthy when a fight passing 2:30 of round one is ~95% either way. */
   .edge-fragile { opacity: 0.55; }
-  .edge-flag { font-size: 0.5625rem; vertical-align: super; opacity: 0.8; margin-left: 1px; }
+  .edge-flag { font-size: var(--t-micro); vertical-align: super; opacity: 0.8; margin-left: 1px; }
   .fight-cancelled .spotlight-chip-row { opacity: 0.45; filter: saturate(0.35); }
 
   .fun-fact-chip-row {
@@ -1023,8 +1082,8 @@
      inside the stats block rather than beside a pick. */
   .spotlight-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
   .spotlight-chip {
-    font-size: 0.625rem; font-weight: 600; line-height: 1.35;
-    padding: 4px 9px; border-radius: 10px; max-width: 100%;
+    font-size: var(--t-tiny); font-weight: 600; line-height: 1.35;
+    padding: 4px 9px; border-radius: var(--r-md); max-width: 100%;
     border: 1px solid transparent; overflow-wrap: anywhere;
   }
   /* WIDTH IS RESERVED, NOT INHERITED FROM CONTENT. The odds string is never
@@ -1055,7 +1114,7 @@
      lifted it to 0.9, which concedes 0.55 was too low, and there is no hover
      on a touch device, which is where this page mostly lives. */
   .mkt-model-head .unit-hint {
-    font-size: 0.5625rem; opacity: 0.9; margin-left: 3px;
+    font-size: var(--t-micro); opacity: 0.9; margin-left: 3px;
     border-bottom: 1px dotted currentColor; padding-bottom: 1px;
     display: inline-block; min-width: 1ch; text-align: center;
   }
@@ -1141,35 +1200,35 @@
       box-shadow: 0 0 16px rgba(167,139,250,0.25);
     }
   }
-  .underdog-odds { color: var(--accent-cool); font-weight: 600; font-size: 0.6875rem; }
-  .event-summary-value { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; color: var(--text); line-height: 1.1; }
+  .underdog-odds { color: var(--accent-cool); font-weight: 600; font-size: var(--t-small); }
+  .event-summary-value { font-family: var(--font-display); font-size: var(--t-h2); font-weight: 700; color: var(--text); line-height: 1.1; }
   .event-summary-value.positive { color: var(--green); }
   .event-summary-value.negative { color: var(--red); }
-  .event-summary-value.gold { color: #f0d97a; font-size: 1.0625rem; }
-  .event-summary-label { font-size: 0.5625rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
-  .track-record-headline { font-size: 1.5rem; font-weight: 700; font-family: var(--font-display); margin-bottom: 6px; }
-  .track-record-headline span { font-size: 0.8125rem; color: var(--muted); font-weight: 600; }
+  .event-summary-value.gold { color: var(--accent-hi); font-size: var(--t-h3); }
+  .event-summary-label { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
+  .track-record-headline { font-size: var(--t-h1); font-weight: 700; font-family: var(--font-display); margin-bottom: 6px; }
+  .track-record-headline span { font-size: var(--t-lead); color: var(--muted); font-weight: 600; }
   .track-record-kicker {
-    font-size: 0.5625rem; font-weight: 600; color: var(--muted); text-transform: uppercase;
+    font-size: var(--t-micro); font-weight: 600; color: var(--muted); text-transform: uppercase;
     letter-spacing: 0.6px; margin-bottom: 3px;
   }
   .sparkline-svg { display: block; }
   .track-record-breakdown { margin-top: 8px; }
   .track-record-conf-row {
-    display: flex; justify-content: space-between; font-size: 0.75rem; padding: 4px 0;
+    display: flex; justify-content: space-between; font-size: var(--t-body); padding: 4px 0;
     border-top: 1px solid var(--border);
   }
   .track-record-conf-label { color: var(--muted); }
   .track-record-conf-value { font-weight: 600; }
-  .track-record-empty { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+  .track-record-empty { font-size: var(--t-body); color: var(--muted); line-height: 1.5; }
   .empty-state {
     display: flex; flex-direction: column; align-items: center; text-align: center;
     padding: 28px 16px 22px; gap: 6px;
   }
   .empty-state-icon { width: 42px; height: 42px; margin-bottom: 8px; animation: empty-state-pulse 3s ease-in-out 3; }
   .empty-state-icon svg { width: 100%; height: 100%; }
-  .empty-state-headline { font-size: 0.8125rem; font-weight: 600; color: var(--text); }
-  .empty-state-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.55; max-width: 320px; }
+  .empty-state-headline { font-size: var(--t-lead); font-weight: 600; color: var(--text); }
+  .empty-state-desc { font-size: var(--t-body); color: var(--muted); line-height: 1.55; max-width: 320px; }
   @keyframes empty-state-pulse {
     0%, 100% { opacity: 0.55; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.06); }
@@ -1186,7 +1245,7 @@
   .seg-tabs {
     display: flex; position: relative; margin: 4px 0 14px;
     position: sticky; top: 0; z-index: 40;
-    padding: 3px; border-radius: 999px;
+    padding: 3px; border-radius: var(--r-pill);
     /* pan-y, NOT none. This control sits inline inside scrollable content,
        unlike the fixed bottom bar -- so the browser must keep vertical pans
        (the user scrolling the page with a thumb that happens to land on the
@@ -1202,7 +1261,7 @@
   }
   .seg-indicator {
     position: absolute; top: 3px; bottom: 3px; left: 0; width: 0;
-    border-radius: 999px; background: rgba(255,255,255,0.10);
+    border-radius: var(--r-pill); background: rgba(255,255,255,0.10);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
     transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), width 0.35s cubic-bezier(0.22,1,0.36,1);
     pointer-events: none; z-index: 0;
@@ -1215,7 +1274,7 @@
   .seg-tab { position: relative; z-index: 1; }
   .seg-tab {
     flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
-    color: var(--muted); font-size: 0.75rem; font-weight: 600; padding: 11px 4px;
+    color: var(--muted); font-size: var(--t-body); font-weight: 600; padding: 11px 4px;
     cursor: pointer; font-family: inherit; letter-spacing: 0.2px; transition: color 0.2s, border-color 0.2s;
   }
   .seg-tab.active { color: var(--text); }
@@ -1231,15 +1290,15 @@
   .live-prices-chip { color: #d97a72; font-weight: 600; }
   .live-prices-chip .chip-sub { color: var(--muted); font-weight: 500; }
 
-  .result-stats-block { margin: 4px 0 16px; padding: 14px; background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; }
-  .result-stats-title { font-size: 0.8125rem; font-weight: 600; color: var(--accent); margin-bottom: 10px; }
+  .result-stats-block { margin: 4px 0 16px; padding: 14px; background: var(--panel2); border: 1px solid var(--border); border-radius: var(--r-lg); }
+  .result-stats-title { font-size: var(--t-lead); font-weight: 600; color: var(--accent); margin-bottom: 10px; }
   .donut-row { display: flex; justify-content: space-around; margin-bottom: 14px; }
   .donut-row.confidence-donut-row { margin-top: 8px; margin-bottom: 22px; }
   .donut-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .donut-name { font-size: 0.6875rem; font-weight: 600; color: var(--text); }
-  .donut-caption { font-size: 0.5625rem; color: var(--muted); }
-  .donut-center-value { font-size: 0.9375rem; font-weight: 700; fill: var(--text); font-family: var(--font-display); }
-  .donut-center-pct { font-size: 0.5625rem; fill: var(--muted); }
+  .donut-name { font-size: var(--t-small); font-weight: 600; color: var(--text); }
+  .donut-caption { font-size: var(--t-micro); color: var(--muted); }
+  .donut-center-value { font-size: var(--t-sub); font-weight: 700; fill: var(--text); font-family: var(--font-display); }
+  .donut-center-pct { font-size: var(--t-micro); fill: var(--muted); }
   /* Donut fill-in reveal: the ring sweeps from empty to its real
      percentage rather than just appearing. Symmetric dasharray
      (circumference/circumference) + a dashoffset animation from fully
@@ -1290,16 +1349,16 @@
     .donut-fill-ring, .confidence-donut-row .donut-col { animation: none; }
     .donut-fill-ring { stroke-dashoffset: var(--donut-end); }
   }
-  .stat-compare-row { display: flex; align-items: baseline; justify-content: space-between; margin-top: 10px; margin-bottom: 3px; font-size: 0.75rem; }
+  .stat-compare-row { display: flex; align-items: baseline; justify-content: space-between; margin-top: 10px; margin-bottom: 3px; font-size: var(--t-body); }
   .stat-compare-val { font-weight: 700; font-family: var(--font-display); min-width: 30px; }
   .stat-compare-val.right { text-align: right; }
-  .stat-compare-label { color: var(--muted); font-size: 0.6875rem; }
+  .stat-compare-label { color: var(--muted); font-size: var(--t-small); }
   .damage-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
   .damage-col { width: 84px; flex-shrink: 0; }
-  .damage-labels { display: flex; flex-direction: column; gap: 14px; text-align: center; font-size: 0.6875rem; }
+  .damage-labels { display: flex; flex-direction: column; gap: 14px; text-align: center; font-size: var(--t-small); }
   .damage-legend-num { display: block; font-weight: 700; color: var(--text); font-family: var(--font-display); }
   .damage-legend-txt { display: block; color: var(--muted); margin-top: 1px; }
-  .damage-badge-text { font-size: 0.8125rem; font-weight: 700; fill: #fff; text-anchor: middle; }
+  .damage-badge-text { font-size: var(--t-lead); font-weight: 700; fill: #fff; text-anchor: middle; }
 
   #hub-view, #detail-view { transition: opacity 0.2s ease, transform 0.2s ease; opacity: 1; transform: translateX(0); }
 
@@ -1396,12 +1455,12 @@
     #hub-view, #detail-view { transition: none; }
   }
   .clv-badge {
-    margin-top: 12px; padding: 10px 12px; border-radius: 12px; text-align: center;
+    margin-top: 12px; padding: 10px 12px; border-radius: var(--r-lg); text-align: center;
     background: linear-gradient(135deg, #1a2a1a, #1c1c1e 70%); border: 1px solid #2a4a2a;
   }
-  .clv-badge-label { font-size: 0.6875rem; font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.4px; }
-  .clv-badge-value { font-size: 1.5rem; font-weight: 700; margin-top: 2px; font-family: var(--font-display); }
-  .clv-badge-sub { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
+  .clv-badge-label { font-size: var(--t-small); font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.4px; }
+  .clv-badge-value { font-size: var(--t-h1); font-weight: 700; margin-top: 2px; font-family: var(--font-display); }
+  .clv-badge-sub { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
   /* A hit rate on its own is not interpretable, and underdog picks are the
      case where that bites: they are SUPPOSED to lose most of the time, so
      40% reads as failure against an instinctive 50% when the honest
@@ -1429,29 +1488,29 @@
   .lock-record-value { color: var(--muted); }
   .accuracy-split-row-3 { flex-wrap: wrap; gap: 10px; row-gap: 12px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--border); }
   .accuracy-split-row-3 .clv-badge { flex: 1 1 28%; min-width: 100px; padding: 12px 10px; }
-  .accuracy-split-row-3 .clv-badge-label { font-size: 0.5625rem; letter-spacing: 0.15px; white-space: nowrap; }
-  .accuracy-split-row-3 .clv-badge-value { font-size: 1.25rem; }
-  .track-result-title { font-size: 0.8125rem; font-weight: 600; color: var(--accent); margin: 18px 0 8px; }
+  .accuracy-split-row-3 .clv-badge-label { font-size: var(--t-micro); letter-spacing: 0.15px; white-space: nowrap; }
+  .accuracy-split-row-3 .clv-badge-value { font-size: var(--t-h2); }
+  .track-result-title { font-size: var(--t-lead); font-weight: 600; color: var(--accent); margin: 18px 0 8px; }
   .track-result-event-header {
-    font-size: 0.6875rem; font-weight: 600; color: var(--muted); text-transform: uppercase;
+    font-size: var(--t-small); font-weight: 600; color: var(--muted); text-transform: uppercase;
     letter-spacing: 0.4px; margin: 14px 0 2px; padding-bottom: 4px; border-bottom: 1px solid var(--border);
   }
   .track-result-list:first-of-type { margin-top: 0; }
-  .past-event-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+  .past-event-card { border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 10px; overflow: hidden; }
   .past-event-summary {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     padding: 12px 14px; cursor: pointer; list-style: none;
   }
   .past-event-summary::-webkit-details-marker { display: none; }
-  .past-event-record { font-size: 0.75rem; font-weight: 600; color: var(--muted); flex-shrink: 0; }
+  .past-event-record { font-size: var(--t-body); font-weight: 600; color: var(--muted); flex-shrink: 0; }
   .past-event-card[open] .past-event-summary { border-bottom: 1px solid var(--border); }
   .past-event-card .track-result-list, .past-event-card .fight-strip { padding: 0 14px; }
   .past-event-card .fight-strip { padding-top: 10px; }
   .past-event-card .track-result-list { padding-bottom: 10px; }
-  .track-result-conf { font-size: 0.5625rem; color: var(--muted); font-weight: 500; }
+  .track-result-conf { font-size: var(--t-micro); color: var(--muted); font-weight: 500; }
   .fight-strip { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 10px; }
   .fight-strip-block {
-    width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0;
+    width: 16px; height: 16px; border-radius: var(--r-sm); flex-shrink: 0;
   }
   .fight-strip-block.hit {
     background: #39ff14;
@@ -1461,59 +1520,59 @@
     background: #4a1f1f;
     border: 1px solid #6b2a2a;
   }
-  .baseline-block { margin: 16px 0; padding: 12px 14px; background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; }
-  .baseline-title { font-size: 0.8125rem; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
-  .baseline-caption { font-size: 0.5625rem; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  .baseline-block { margin: 16px 0; padding: 12px 14px; background: var(--panel2); border: 1px solid var(--border); border-radius: var(--r-lg); }
+  .baseline-title { font-size: var(--t-lead); font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+  .baseline-caption { font-size: var(--t-micro); color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
   .baseline-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .baseline-row:last-child { margin-bottom: 0; }
-  .baseline-label { font-size: 0.6875rem; color: var(--muted); width: 82px; flex-shrink: 0; }
-  .baseline-bar-track { flex: 1; height: 8px; background: #0d0f14; border-radius: 4px; overflow: hidden; }
-  .baseline-bar-fill { height: 100%; border-radius: 4px; transition: width 0.55s ease-out; }
+  .baseline-label { font-size: var(--t-small); color: var(--muted); width: 82px; flex-shrink: 0; }
+  .baseline-bar-track { flex: 1; height: 8px; background: var(--sunken); border-radius: var(--r-sm); overflow: hidden; }
+  .baseline-bar-fill { height: 100%; border-radius: var(--r-sm); transition: width 0.55s ease-out; }
   .baseline-bar-fill.model { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
   .baseline-bar-fill.market { background: var(--muted); }
-  .baseline-value { font-size: 0.75rem; font-weight: 700; font-family: var(--font-display); width: 40px; text-align: right; flex-shrink: 0; }
+  .baseline-value { font-size: var(--t-body); font-weight: 700; font-family: var(--font-display); width: 40px; text-align: right; flex-shrink: 0; }
   .units-block {
-    margin: 16px 0; padding: 16px 16px 14px; border-radius: 12px; text-align: center;
+    margin: 16px 0; padding: 16px 16px 14px; border-radius: var(--r-lg); text-align: center;
     /* Flat panel. A 10% gold radial wash sat over this, which is what read as
        a warm cast behind the chart -- and gold is meant to mean "model", not
        to decorate a container. */
     background: var(--panel);
     border: 1px solid var(--border);
   }
-  .units-title { font-size: 0.8125rem; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  .units-title { font-size: var(--t-lead); font-weight: 600; color: var(--accent); margin-bottom: 6px; }
   .units-headline {
-    font-family: var(--font-display); font-size: 2.5rem; font-weight: 700; line-height: 1;
+    font-family: var(--font-display); font-size: var(--t-hero); font-weight: 700; line-height: 1;
     letter-spacing: -0.5px;
   }
   .units-headline.positive { color: var(--green); text-shadow: 0 0 22px rgba(61,220,132,0.45); }
   .units-headline.negative { color: var(--red); text-shadow: 0 0 22px rgba(255,92,92,0.4); }
-  .units-suffix { font-size: 1.25rem; opacity: 0.7; margin-left: 1px; }
-  .units-sub { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
+  .units-suffix { font-size: var(--t-h2); opacity: 0.7; margin-left: 1px; }
+  .units-sub { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
   .units-roi.positive { color: var(--green); font-weight: 600; }
   .units-roi.negative { color: var(--red); font-weight: 600; }
   .units-sparkline-wrap { margin: 10px 0 8px; }
   .units-tier-breakdown { text-align: left; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
-  .units-tier-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.6875rem; }
+  .units-tier-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: var(--t-small); }
   .units-tier-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .units-tier-dot.high { background: var(--green); box-shadow: 0 0 5px 1px rgba(61,220,132,0.6); }
   .units-tier-dot.medium { background: var(--accent2); box-shadow: 0 0 5px 1px rgba(232,199,102,0.5); }
   .units-tier-dot.low { background: var(--muted); }
   .units-tier-dot.lock { background: var(--text); box-shadow: 0 0 5px 1px rgba(255,255,255,0.05); }
   .units-tier-label { font-weight: 600; color: var(--text); flex-shrink: 0; }
-  .units-tier-size { color: var(--muted); font-size: 0.5625rem; flex-shrink: 0; }
-  .units-tier-count { color: var(--muted); font-size: 0.5625rem; margin-left: auto; }
+  .units-tier-size { color: var(--muted); font-size: var(--t-micro); flex-shrink: 0; }
+  .units-tier-count { color: var(--muted); font-size: var(--t-micro); margin-left: auto; }
   .units-tier-value { font-family: var(--font-display); font-weight: 700; width: 56px; text-align: right; flex-shrink: 0; }
   .units-tier-value.positive { color: var(--green); }
   .units-tier-value.negative { color: var(--red); }
-  .units-caption { font-size: 0.5625rem; color: var(--muted); line-height: 1.5; margin-top: 10px; text-align: left; }
-  .clv-explainer { font-size: 0.6875rem; color: var(--muted); line-height: 1.55; margin-top: 8px; text-align: left; }
-  .calibration-summary { font-size: 0.6875rem; color: var(--muted); line-height: 1.55; margin: 4px 0 10px; text-align: left; }
+  .units-caption { font-size: var(--t-micro); color: var(--muted); line-height: 1.5; margin-top: 10px; text-align: left; }
+  .clv-explainer { font-size: var(--t-small); color: var(--muted); line-height: 1.55; margin-top: 8px; text-align: left; }
+  .calibration-summary { font-size: var(--t-small); color: var(--muted); line-height: 1.55; margin: 4px 0 10px; text-align: left; }
   .clv-explainer em { color: var(--text); font-style: normal; font-weight: 600; }
   .units-timeseries-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
   .units-chart-wrap.chart-block { background: none; border: none; padding: 0; margin: 10px 0 4px; }
   .units-pick-badge {
-    flex-shrink: 0; font-family: var(--font-display); font-size: 0.75rem; font-weight: 700;
-    padding: 3px 7px; border-radius: 8px; align-self: center;
+    flex-shrink: 0; font-family: var(--font-display); font-size: var(--t-body); font-weight: 700;
+    padding: 3px 7px; border-radius: var(--r-md); align-self: center;
   }
   .units-pick-badge.positive { color: var(--green); background: rgba(61,220,132,0.12); }
   .units-pick-badge.negative { color: var(--red); background: rgba(255,92,92,0.12); }
@@ -1526,39 +1585,39 @@
   /* Deliberately quiet -- it is context for the row above, not a claim of its
      own, and it must read the same after a loss as after a win. */
   .track-result-band {
-    font-size: 0.6875rem;
+    font-size: var(--t-small);
     color: var(--muted);
     margin-top: 3px;
   }
   .track-result-icon {
     flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.8125rem; font-weight: 700;
+    font-size: var(--t-lead); font-weight: 700;
   }
   .track-result-icon.correct { background: rgba(61,220,132,0.15); color: var(--green); }
   .track-result-icon.incorrect { background: rgba(255,92,92,0.15); color: var(--red); }
   .track-result-info { flex: 1; min-width: 0; }
-  .track-result-fight { font-size: 0.75rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .track-result-fight { font-size: var(--t-body); font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .conf-badge {
-    font-size: 0.5625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
-    padding: 1.5px 6px; border-radius: 8px; line-height: 1.5;
+    font-size: var(--t-micro); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+    padding: 1.5px 6px; border-radius: var(--r-md); line-height: 1.5;
   }
   .conf-badge.high { background: rgba(61,220,132,0.15); color: var(--green); }
   .conf-badge.medium { background: rgba(232,199,102,0.15); color: var(--accent2); }
   .conf-badge.low { background: rgba(138,143,154,0.2); color: var(--muted); }
   .perfect-prop-badge {
-    font-size: 0.5625rem; font-weight: 700; letter-spacing: 0.2px;
-    padding: 2px 7px; border-radius: 8px; line-height: 1.6;
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: 0.2px;
+    padding: 2px 7px; border-radius: var(--r-md); line-height: 1.6;
     background: linear-gradient(135deg, rgba(240,217,122,0.22), rgba(212,175,55,0.16));
-    border: 1px solid rgba(212,175,55,0.4); color: #f0d97a;
+    border: 1px solid rgba(212,175,55,0.4); color: var(--accent-hi);
     text-shadow: 0 0 8px rgba(240,217,122,0.5);
     display: inline-block;
   }
   .lock-badge {
-    font-size: 0.5625rem; font-weight: 700; letter-spacing: 0.3px;
-    padding: 3px 9px; border-radius: 8px; line-height: 1.6;
-    background: linear-gradient(135deg, #f0d97a, #d4af37);
-    border: 1px solid #d4af37; color: #1c1c1e;
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: 0.3px;
+    padding: 3px 9px; border-radius: var(--r-md); line-height: 1.6;
+    background: linear-gradient(135deg, var(--accent-hi), var(--accent));
+    border: 1px solid var(--accent); color: #1c1c1e;
     display: inline-block;
     box-shadow: 0 0 10px rgba(212,175,55,0.4);
     margin-left: 6px;
@@ -1592,31 +1651,31 @@
   }
   .unit-pips { display: inline-flex; flex-direction: column-reverse; gap: 1.5px; vertical-align: middle; }
   .unit-pip {
-    width: 10px; height: 2.5px; border-radius: 4px;
-    background: #f0d97a; box-shadow: 0 0 3px rgba(240,217,122,0.7);
+    width: 10px; height: 2.5px; border-radius: var(--r-sm);
+    background: var(--accent-hi); box-shadow: 0 0 3px rgba(240,217,122,0.7);
   }
-  .method-match { font-size: 0.5625rem; font-weight: 600; margin-left: 4px; }
+  .method-match { font-size: var(--t-micro); font-weight: 600; margin-left: 4px; }
   .method-match.yes { color: var(--green); }
   .method-match.no { color: var(--red); }
-  .track-result-picks { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
+  .track-result-picks { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
   .track-result-label { color: var(--muted); }
   .track-result-name { font-weight: 600; }
   .track-result-name.pick { color: var(--accent2); }
   .track-result-name.actual { color: var(--text); }
   .calibration-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); text-align: center; }
-  .calibration-block.calibration-pending { padding: 10px; background: var(--panel2); border-radius: 8px; border-top: none; }
-  .calibration-title { font-size: 0.6875rem; font-weight: 600; color: var(--accent2); margin-bottom: 8px; }
+  .calibration-block.calibration-pending { padding: 10px; background: var(--panel2); border-radius: var(--r-md); border-top: none; }
+  .calibration-title { font-size: var(--t-small); font-weight: 600; color: var(--accent2); margin-bottom: 8px; }
   .calibration-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
   .badge {
     display: inline-flex; align-items: center; gap: 5px;
-    background: var(--panel2); border: 1px solid var(--border); border-radius: 20px;
-    padding: 4px 11px; font-size: 0.6875rem; color: var(--muted);
+    background: var(--panel2); border: 1px solid var(--border); border-radius: var(--r-pill);
+    padding: 4px 11px; font-size: var(--t-small); color: var(--muted);
   }
   .badge.book { border-color: #3a2f14; color: var(--accent2); }
 
   .disclaimer, .notice {
     background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    padding: 10px 14px; border-radius: 8px; font-size: 0.75rem; color: var(--muted); margin-bottom: 16px;
+    padding: 10px 14px; border-radius: var(--r-md); font-size: var(--t-body); color: var(--muted); margin-bottom: 16px;
   }
   .notice { border-left-color: var(--red); }
   /* Disclaimer SECTION styles. Replaced the old .footer-disclaimer /
@@ -1626,58 +1685,58 @@
      and contrasted like real section content while keeping the same
      restrained, non-shouty tone. */
   .disclaimer-card {
-    font-size: 0.75rem; color: var(--text); line-height: 1.7;
+    font-size: var(--t-body); color: var(--text); line-height: 1.7;
     background: linear-gradient(135deg, rgba(138,143,154,0.08), var(--panel2) 70%);
     border: 1px solid var(--border); border-left: 3px solid #8a8f9a;
-    border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;
+    border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 12px;
   }
   .disclaimer-meta {
-    font-size: 0.6875rem; color: var(--muted); text-align: center; margin-bottom: 4px;
+    font-size: var(--t-small); color: var(--muted); text-align: center; margin-bottom: 4px;
   }
 
   details.info-card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg);
     margin-bottom: 20px; overflow: hidden;
   }
   details.info-card summary {
     padding: 12px 14px; cursor: pointer; list-style: none;
-    display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; font-size: 0.8125rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; font-size: var(--t-lead);
   }
   details.info-card summary::-webkit-details-marker { display: none; }
-  .chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; }
+  .chevron { color: var(--muted); font-size: var(--t-body); transition: transform 0.2s; flex-shrink: 0; }
   details[open] .chevron { transform: rotate(90deg); }
-  .info-body { padding: 0 14px 14px; font-size: 0.75rem; line-height: 1.6; color: var(--text); }
+  .info-body { padding: 0 14px 14px; font-size: var(--t-body); line-height: 1.6; color: var(--text); }
   .info-body p { margin: 10px 0; }
   .model-group-title {
-    font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    font-size: var(--t-small); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
     color: var(--muted); margin: 16px 0 8px;
   }
   .model-group-title:first-child { margin-top: 6px; }
   .model-factor-card {
     display: flex; gap: 10px; align-items: flex-start;
     background: var(--panel2); border: 1px solid var(--border); border-left: 3px solid var(--border);
-    border-radius: 8px; padding: 10px 12px; margin-bottom: 6px;
+    border-radius: var(--r-md); padding: 10px 12px; margin-bottom: 6px;
   }
   .model-factor-card.group-gold { border-left-color: var(--accent); }
   .model-factor-card.group-blue { border-left-color: var(--muted); }
   .model-factor-card.group-purple { border-left-color: var(--muted); }
   .model-factor-card.group-green { border-left-color: var(--green); }
-  .model-factor-icon { font-size: 0.9375rem; flex-shrink: 0; width: 20px; text-align: center; line-height: 1.4; }
+  .model-factor-icon { font-size: var(--t-sub); flex-shrink: 0; width: 20px; text-align: center; line-height: 1.4; }
   .model-factor-content { min-width: 0; }
-  .model-factor-title { font-size: 0.75rem; font-weight: 600; color: var(--text); margin-bottom: 3px; }
-  .model-factor-text { font-size: 0.6875rem; line-height: 1.55; color: var(--muted); }
+  .model-factor-title { font-size: var(--t-body); font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .model-factor-text { font-size: var(--t-small); line-height: 1.55; color: var(--muted); }
   .model-limitations-notice {
-    font-size: 0.6875rem; line-height: 1.55; color: var(--muted);
+    font-size: var(--t-small); line-height: 1.55; color: var(--muted);
     background: var(--panel2); border: 1px solid var(--border); border-left: 3px solid var(--red);
-    border-radius: 8px; padding: 10px 12px; margin-top: 16px;
+    border-radius: var(--r-md); padding: 10px 12px; margin-top: 16px;
   }
   .model-limitations-notice strong { color: var(--text); }
 
-  .standout-title { font-size: 0.9375rem; color: #ffffff; margin-bottom: 10px; font-weight: 600; }
+  .standout-title { font-size: var(--t-sub); color: #ffffff; margin-bottom: 10px; font-weight: 600; }
   .standout-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 26px; }
   .standout-card {
     background: var(--panel2);
-    border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+    border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px;
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     /* One rung higher than a fight card: this one lifts on hover and presses
        on tap, so it should already read as detached at rest. */
@@ -1691,42 +1750,42 @@
     .standout-card:hover { transform: translateY(-2px); box-shadow: var(--e3); }
   }
   .standout-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-  .standout-main { font-size: 0.9375rem; font-weight: 600; }
-  .standout-vs { font-size: 0.75rem; font-weight: 400; color: var(--muted); }
+  .standout-main { font-size: var(--t-sub); font-weight: 600; }
+  .standout-vs { font-size: var(--t-body); font-weight: 400; color: var(--muted); }
   .dog-badge {
-    display: inline-block; font-size: 0.5625rem; font-weight: 600; border-radius: 12px;
+    display: inline-block; font-size: var(--t-micro); font-weight: 600; border-radius: var(--r-lg);
     padding: 2px 7px; margin-left: 6px; vertical-align: middle;
   }
   .dog-badge.fav { background: #1a2a3a; color: var(--muted); }
   .dog-badge.dog { background: #2a1a3a; color: var(--muted); }
-  .dog-badge-sm { font-size: 0.6875rem; margin-left: 4px; }
+  .dog-badge-sm { font-size: var(--t-small); margin-left: 4px; }
   .sample-badge {
-    display: inline-block; font-size: 0.5625rem; font-weight: 600; border-radius: 8px;
+    display: inline-block; font-size: var(--t-micro); font-weight: 600; border-radius: var(--r-md);
     padding: 2px 7px; margin-left: 6px; margin-top: 3px; vertical-align: middle;
-    background: #2a2410; color: #d4af37; border: 1px solid #4a3f1a;
+    background: #2a2410; color: var(--accent); border: 1px solid #4a3f1a;
   }
-  .standout-market { color: var(--accent-cool); font-size: 0.6875rem; font-weight: 600; margin-top: 1px; }
+  .standout-market { color: var(--accent-cool); font-size: var(--t-small); font-weight: 600; margin-top: 1px; }
   .standout-edge-badge {
-    font-size: 0.9375rem; font-weight: 700; white-space: nowrap; border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+    font-size: var(--t-sub); font-weight: 700; white-space: nowrap; border-radius: var(--r-md); padding: 3px 9px; flex-shrink: 0;
     font-family: var(--font-display);
   }
   .odds-compare {
     display: flex; align-items: center; gap: 10px; margin: 10px 0;
-    background: #0f1218; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px;
+    background: #0f1218; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 12px;
   }
   .odds-compare-col { flex: 1; text-align: center; min-width: 0; }
-  .odds-compare-label { font-size: 0.5625rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; }
-  .odds-compare-value { color: var(--accent-cool); font-size: 1.25rem; font-weight: 700; margin-top: 2px; }
+  .odds-compare-label { font-size: var(--t-micro); text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; }
+  .odds-compare-value { color: var(--accent-cool); font-size: var(--t-h2); font-weight: 700; margin-top: 2px; }
   .odds-compare-value.book { color: var(--accent-cool); }
   .odds-compare-value.model { color: var(--accent2); }
-  .move-arrow { font-size: 0.8125rem; margin-left: 3px; vertical-align: middle; }
+  .move-arrow { font-size: var(--t-lead); margin-left: 3px; vertical-align: middle; }
   .move-arrow.up { color: var(--green); }
   .move-arrow.down { color: var(--red); }
-  .odds-compare-pct { font-size: 0.5625rem; color: var(--muted); margin-top: 1px; }
-  .odds-compare-delta { text-align: center; font-size: 0.6875rem; color: var(--accent2); margin: -4px 0 10px; font-weight: 600; }
-  .odds-compare-arrow { color: var(--muted); font-size: 0.9375rem; flex-shrink: 0; }
+  .odds-compare-pct { font-size: var(--t-micro); color: var(--muted); margin-top: 1px; }
+  .odds-compare-delta { text-align: center; font-size: var(--t-small); color: var(--accent2); margin: -4px 0 10px; font-weight: 600; }
+  .odds-compare-arrow { color: var(--muted); font-size: var(--t-sub); flex-shrink: 0; }
   .edge-divergence { margin: 14px 4px 18px; }
-  .edge-divergence-track { position: relative; height: 3px; background: var(--border); border-radius: 4px; margin: 40px 6px 40px; }
+  .edge-divergence-track { position: relative; height: 3px; background: var(--border); border-radius: var(--r-sm); margin: 40px 6px 40px; }
   /* Coloured by DIRECTION -- green when the model reads above the book, red
      when below. The two-tone gradient it replaces was decorative; this
      segment's job is to say which way the disagreement runs, and its width
@@ -1734,7 +1793,7 @@
   .edge-divergence-fill.model-high { background: var(--green, #3ddc84) !important; }
   .edge-divergence-fill.model-low { background: var(--red, #ff5c5c) !important; }
   .edge-divergence-fill {
-    position: absolute; top: 0; height: 3px; border-radius: 4px;
+    position: absolute; top: 0; height: 3px; border-radius: var(--r-sm);
     background: linear-gradient(90deg, var(--accent-cool), var(--accent2));
     transition: width 1.1s cubic-bezier(0.22,1,0.36,1); box-shadow: 0 0 10px rgba(232, 199, 102, 0.35);
   }
@@ -1746,28 +1805,28 @@
   .edge-divergence-dot.model { background: var(--accent2); box-shadow: 0 0 8px rgba(232, 199, 102, 0.5); }
   .edge-divergence-label {
     position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
-    font-size: 0.5625rem; line-height: 1.3; text-align: center; white-space: nowrap; font-weight: 600;
+    font-size: var(--t-micro); line-height: 1.3; text-align: center; white-space: nowrap; font-weight: 600;
   }
   .edge-divergence-dot.model .edge-divergence-label { bottom: auto; top: 14px; }
   .edge-divergence-label.book { color: var(--accent-cool); }
   .edge-divergence-label.model { color: var(--accent2); }
-  .standout-sub { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
+  .standout-sub { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
   .rationale {
-    font-size: 0.75rem; color: var(--muted); line-height: 1.55;
+    font-size: var(--t-body); color: var(--muted); line-height: 1.55;
     margin-top: 8px; padding-top: 8px;
     border-top: 1px solid var(--border);
     white-space: normal;
   }
 
   .movement-tag {
-    display: inline-block; font-size: 0.5625rem; font-weight: 600; border-radius: 8px;
+    display: inline-block; font-size: var(--t-micro); font-weight: 600; border-radius: var(--r-md);
     padding: 1px 6px; margin-left: 4px; white-space: nowrap;
   }
   .movement-tag.shortening { background: #10251a; color: var(--green); }
   .movement-tag.drifting { background: #2a1414; color: var(--red); }
   .movement-tag.notable { border: 1px solid currentColor; }
 
-  .parlay-section-title { font-size: 0.9375rem; margin: 28px 0 10px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .parlay-section-title { font-size: var(--t-sub); margin: 28px 0 10px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
   /* The 28px top margin exists to separate the SECOND and later parlay
      headings (Bankroll, Lotto, Moonshot) from the cards above them. At the
      very top of a section there is nothing above to separate from, so it is
@@ -1785,48 +1844,48 @@
   /* White, matching the other section titles. Grey read as a disabled or
      secondary heading when it labels a first-class section. */
   .parlay-section-title.movement { color: #ffffff; }
-  .parlay-subtitle { font-size: 0.6875rem; color: var(--muted); margin: -6px 0 12px; line-height: 1.5; }
+  .parlay-subtitle { font-size: var(--t-small); color: var(--muted); margin: -6px 0 12px; line-height: 1.5; }
   .analytics-fallback-notice {
-    font-size: 0.6875rem; color: var(--text); background: rgba(95,184,201,0.1);
-    border: 1px solid rgba(95,184,201,0.3); border-radius: 8px;
+    font-size: var(--t-small); color: var(--text); background: rgba(95,184,201,0.1);
+    border: 1px solid rgba(95,184,201,0.3); border-radius: var(--r-md);
     padding: 10px 12px; margin-bottom: 14px; line-height: 1.5;
   }
   .analytics-fallback-notice strong { color: var(--accent-cool); }
   .parlay-card {
-    border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+    border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 10px;
     background: var(--panel2); border: 1px solid var(--border); border-left: 3px solid var(--border);
   }
   .parlay-card.bankroll { border-left-color: #3ddc84; }
   .parlay-card.lotto { border-left-color: var(--muted); }
   .parlay-card.moonshot { border-left-color: #ffb347; }
   .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .parlay-odds { font-size: 1.25rem; font-weight: 700; font-family: var(--font-display); }
+  .parlay-odds { font-size: var(--t-h2); font-weight: 700; font-family: var(--font-display); }
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
   .parlay-card.lotto .parlay-odds { color: var(--muted); }
   .parlay-card.moonshot .parlay-odds {
     color: #ffb347;
   }
-  .parlay-prob { font-size: 0.6875rem; color: var(--muted); }
+  .parlay-prob { font-size: var(--t-small); color: var(--muted); }
   .parlay-legs { list-style: none; margin: 0; padding: 0; }
   .parlay-leg {
-    font-size: 0.75rem; padding: 7px 8px; border-bottom: 1px dashed var(--border);
-    display: flex; align-items: center; gap: 8px; border-radius: 8px;
+    font-size: var(--t-body); padding: 7px 8px; border-bottom: 1px dashed var(--border);
+    display: flex; align-items: center; gap: 8px; border-radius: var(--r-md);
   }
   .parlay-leg.model-leg { background: rgba(107, 179, 242, 0.08); border-bottom-color: rgba(107, 179, 242, 0.2); }
   .parlay-leg:last-child { border-bottom: none; }
   .parlay-leg-num {
     width: 18px; height: 18px; border-radius: 50%; background: var(--panel2);
-    display: flex; align-items: center; justify-content: center; font-size: 0.5625rem; color: var(--muted); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: var(--t-micro); color: var(--muted); flex-shrink: 0;
   }
   .parlay-leg-label { flex: 1; min-width: 0; }
   .parlay-leg-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; margin-left: auto; }
-  .parlay-leg-odds { font-size: 0.8125rem; font-weight: 700; color: var(--accent-cool); font-variant-numeric: tabular-nums; }
+  .parlay-leg-odds { font-size: var(--t-lead); font-weight: 700; color: var(--accent-cool); font-variant-numeric: tabular-nums; }
   .model-tag {
-    font-size: 0.5625rem; font-weight: 700; color: var(--muted); background: #16283a;
-    border-radius: 4px; padding: 1.5px 5px; letter-spacing: 0.3px; white-space: nowrap;
+    font-size: var(--t-micro); font-weight: 700; color: var(--muted); background: #16283a;
+    border-radius: var(--r-sm); padding: 1.5px 5px; letter-spacing: 0.3px; white-space: nowrap;
   }
-  .parlay-note { font-size: 0.6875rem; color: var(--muted); margin-top: 8px; line-height: 1.5; }
-  .no-parlays { font-size: 0.75rem; color: var(--muted); padding: 4px 0 8px; }
+  .parlay-note { font-size: var(--t-small); color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .no-parlays { font-size: var(--t-body); color: var(--muted); padding: 4px 0 8px; }
 
   /* Edge heatmapping - visual intensity scales with how big the model/book disagreement is */
   tr.edge-heat-1 { background: rgba(61, 220, 132, 0.03); }
@@ -1834,18 +1893,18 @@
   tr.edge-heat-3 { background: rgba(61, 220, 132, 0.13); border-left: 2px solid rgba(61, 220, 132, 0.8); }
 
   .event-header { margin: 26px 0 10px; }
-  .event-name { font-size: 1.0625rem; font-weight: 600; }
-  .event-date { color: var(--muted); font-size: 0.75rem; }
-  .future-event-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+  .event-name { font-size: var(--t-h3); font-weight: 600; }
+  .event-date { color: var(--muted); font-size: var(--t-body); }
+  .future-event-card { border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden; }
   .future-event-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; cursor: pointer; list-style: none; }
   .future-event-summary::-webkit-details-marker { display: none; }
   .future-event-summary-text { min-width: 0; }
-  .future-event-teaser { color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
+  .future-event-teaser { color: var(--muted); font-size: var(--t-body); margin-top: 4px; }
   .future-event-body { padding: 0 16px 16px; }
   .future-event-card .event-header { margin-top: 0; }
 
   details.fight-card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg);
     margin-bottom: 12px; overflow: clip; transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     /* Resting rung. One layer on purpose: this lands on every fight card on
        the page, and the two-layer stacks are reserved for surfaces that are
@@ -1870,7 +1929,7 @@
   .matchup-fighter { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
   .matchup-fighter.right { justify-content: flex-end; text-align: right; }
   .matchup-fighter .matchup-name-wrap { min-width: 0; }
-  .matchup-name { font-size: 0.75rem; font-weight: 600; line-height: 1.25; display: block; }
+  .matchup-name { font-size: var(--t-body); font-weight: 600; line-height: 1.25; display: block; }
   .matchup-divider-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
   .matchup-divider-row .divider-line { flex: 1; height: 1px; background: var(--border); }
   .matchup-badges-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 4px; }
@@ -1878,13 +1937,13 @@
   .factor-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
   .factor-badges.right { justify-content: flex-end; }
   .factor-badge {
-    font-size: 0.5625rem; font-weight: 600; border-radius: 8px; padding: 1.5px 5px;
+    font-size: var(--t-micro); font-weight: 600; border-radius: var(--r-md); padding: 1.5px 5px;
     white-space: normal; letter-spacing: 0.2px; max-width: 100%; box-sizing: border-box;
   }
   .factor-badge.pos { background: #10251a; color: var(--green); }
   .factor-badge.neg { background: #2a1414; color: var(--red); }
   .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: 124px; min-width: 0; overflow: hidden; }
-  .vs-text { display: block; font-size: 0.6875rem; font-weight: 700; color: var(--muted); letter-spacing: 0.5px; }
+  .vs-text { display: block; font-size: var(--t-small); font-weight: 700; color: var(--muted); letter-spacing: 0.5px; }
   @media (max-width: 480px) {
     .matchup-fighter .fighter-avatar-wrap { display: none; }
   }
@@ -1931,14 +1990,14 @@
     .winner-check-inline { display: flex; }
   }
 
-  .weight-class { color: var(--muted); font-size: 0.5625rem; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; white-space: nowrap; }
+  .weight-class { color: var(--muted); font-size: var(--t-micro); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; white-space: nowrap; }
   .weight-class-badge {
-    margin-top: 4px; font-size: 0.5625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+    margin-top: 4px; font-size: var(--t-micro); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
     color: var(--muted); display: block; line-height: 1.3; white-space: normal; overflow-wrap: break-word;
   }
   .card-position {
-    color: var(--accent); font-size: 0.5625rem; font-weight: 600; text-transform: uppercase;
-    background: #241f10; border-radius: 12px; padding: 2px 7px; display: inline-block; margin-bottom: 3px;
+    color: var(--accent); font-size: var(--t-micro); font-weight: 600; text-transform: uppercase;
+    background: #241f10; border-radius: var(--r-lg); padding: 2px 7px; display: inline-block; margin-bottom: 3px;
     white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
   }
   /* Deliberately a SIBLING of .card-position: same slot, same pill, same
@@ -1967,25 +2026,25 @@
      second one sits in the CO-MAIN slot, where "TITLE FIGHT" alone would lose
      the position and "CO-MAIN EVENT" alone would lose the belt. */
   .title-fight-badge {
-    color: #1a1607; font-size: 0.5625rem; font-weight: 800; text-transform: uppercase;
-    background: linear-gradient(180deg, #f0d97a, #d4af37);
-    border-radius: 12px; padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;
+    color: #1a1607; font-size: var(--t-micro); font-weight: 800; text-transform: uppercase;
+    background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+    border-radius: var(--r-lg); padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;
     margin-bottom: 3px; letter-spacing: 0.4px;
     white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
   }
   .title-fight-badge .inline-icon { width: 12px; height: 12px; flex: none; }
 
   .replacement-badge {
-    color: #c3c8d2; font-size: 0.5625rem; font-weight: 600; text-transform: uppercase;
+    color: #c3c8d2; font-size: var(--t-micro); font-weight: 600; text-transform: uppercase;
     background: #23262d; border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 12px; padding: 2px 7px; display: inline-flex; align-items: center; gap: 3px;
+    border-radius: var(--r-lg); padding: 2px 7px; display: inline-flex; align-items: center; gap: 3px;
     margin-bottom: 3px;
     white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
   }
   /* 9px badge type; the icon has to come down to match or it drags the
      pill taller than .card-position and the two stop looking like siblings. */
   .replacement-badge .inline-icon { width: 11px; height: 11px; flex: none; }
-  .no-edges { color: var(--muted); font-size: 0.75rem; padding: 0 16px 14px; }
+  .no-edges { color: var(--muted); font-size: var(--t-body); padding: 0 16px 14px; }
 
   .result-text { font-size: 0.5625rem !important; font-weight: 700 !important; color: var(--green) !important; letter-spacing: 0.3px; }
 
@@ -2016,7 +2075,7 @@
   }
   .live-vs-badge {
     background: linear-gradient(135deg, #7a1a1a, #4a0f0f); color: #fff; font-size: 0.5625rem !important;
-    font-weight: 700 !important; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 8px;
+    font-weight: 700 !important; letter-spacing: 0.5px; padding: 2px 8px; border-radius: var(--r-md);
     display: inline-flex !important; align-items: center; gap: 4px;
   }
   .live-vs-badge .live-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: #ff4747; box-shadow: 0 0 6px 1px rgba(255,71,71,0.7); }
@@ -2027,20 +2086,20 @@
      who wants to interrogate the pick, not crowd the card for everyone
      who doesn't. */
   .waterfall-block {
-    margin: 10px 0 4px; border: 1px solid var(--border); border-radius: 12px;
+    margin: 10px 0 4px; border: 1px solid var(--border); border-radius: var(--r-lg);
     background: var(--panel2); overflow: hidden;
   }
   .waterfall-summary {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 9px 12px; cursor: pointer; list-style: none; font-size: 0.75rem;
+    padding: 9px 12px; cursor: pointer; list-style: none; font-size: var(--t-body);
   }
   .waterfall-summary::-webkit-details-marker { display: none; }
   .waterfall-summary-label { font-weight: 600; color: var(--text); }
-  .waterfall-summary-hint { font-size: 0.6875rem; color: var(--muted); white-space: nowrap; }
+  .waterfall-summary-hint { font-size: var(--t-small); color: var(--muted); white-space: nowrap; }
   .waterfall-block[open] .waterfall-summary-hint { visibility: hidden; }
   .waterfall-body { padding: 0 12px 12px; }
   .waterfall-caption {
-    font-size: 0.6875rem; color: var(--muted); line-height: 1.55; margin: 10px 0;
+    font-size: var(--t-small); color: var(--muted); line-height: 1.55; margin: 10px 0;
     padding-bottom: 8px; border-bottom: 1px solid var(--border);
   }
   /* Headline: who's favored and by how much, readable without reading
@@ -2076,14 +2135,14 @@
     content: ""; display: inline-block; width: 7px; height: 7px;
     border-radius: 2px; margin-right: 6px; background: currentColor;
   }
-  .wf-head-name { font-size: 0.75rem; font-weight: 600; color: var(--muted); min-width: 0;
+  .wf-head-name { font-size: var(--t-body); font-weight: 600; color: var(--muted); min-width: 0;
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* Long names must truncate rather than push the percentage off-screen --
      the number is the point, the name is the label. */
   .wf-head-name { max-width: 46vw; }
-  .wf-head-pct { font-size: 0.75rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .wf-head-row.fav .wf-head-pct { font-size: 1.0625rem; font-weight: 700; font-family: var(--font-display); }
-  .wf-split { height: 9px; border-radius: 4px; overflow: hidden; margin: 5px 0; }
+  .wf-head-pct { font-size: var(--t-body); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wf-head-row.fav .wf-head-pct { font-size: var(--t-h3); font-weight: 700; font-family: var(--font-display); }
+  .wf-split { height: 9px; border-radius: var(--r-sm); overflow: hidden; margin: 5px 0; }
   /* The fill is the favourite's share, the track the underdog's -- so which
      colour goes where depends on which corner is favoured. */
   .wf-split.fav-red { background: var(--corner-blue); }
@@ -2174,10 +2233,10 @@
   .waterfall-row.start { opacity: 0.75; border-bottom: 1px dashed var(--border); padding-bottom: 7px; }
   .waterfall-row.base { border-bottom: 1px dashed var(--border); padding-bottom: 8px; margin-bottom: 3px; }
   .waterfall-row.cap .wf-label { font-style: italic; }
-  .wf-label { flex: 1 1 auto; min-width: 0; font-size: 0.6875rem; font-weight: 600; color: var(--text); }
-  .wf-why { display: block; font-size: 0.5625rem; font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 1px; }
-  .wf-bar-cell { flex: 0 0 26%; height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
-  .wf-bar { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
+  .wf-label { flex: 1 1 auto; min-width: 0; font-size: var(--t-small); font-weight: 600; color: var(--text); }
+  .wf-why { display: block; font-size: var(--t-micro); font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 1px; }
+  .wf-bar-cell { flex: 0 0 26%; height: 8px; background: rgba(255,255,255,0.04); border-radius: var(--r-sm); overflow: hidden; }
+  .wf-bar { display: block; height: 100%; border-radius: var(--r-sm); min-width: 2px; }
   /* "pos" means the factor pushes toward the FAVOURITE -- so the colour
      depends on which corner the favourite is in, not on the sign. */
   .fav-red .wf-bar.pos { background: linear-gradient(90deg, rgba(229,57,53,0.5), var(--corner-red)); }
@@ -2185,26 +2244,26 @@
   .fav-blue .wf-bar.pos { background: linear-gradient(90deg, rgba(59,130,246,0.45), var(--corner-blue)); }
   .fav-blue .wf-bar.neg { background: linear-gradient(90deg, rgba(229,57,53,0.5), var(--corner-red)); }
   .wf-nums { flex: 0 0 62px; text-align: right; }
-  .wf-delta { display: block; font-size: 0.6875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .wf-delta { display: block; font-size: var(--t-small); font-weight: 600; font-variant-numeric: tabular-nums; }
   /* No opacity. At 0.75 over an already-dim corner colour this composited to
      2.58:1 -- a 9px unit label nobody could read. The size difference alone
      is enough to subordinate it. */
-  .wf-delta::after { content: "pp"; font-size: 0.5625rem; font-weight: 600; margin-left: 1px; }
+  .wf-delta::after { content: "pp"; font-size: var(--t-micro); font-weight: 600; margin-left: 1px; }
   .fav-red .wf-delta.pos { color: var(--corner-red); }
   .fav-red .wf-delta.neg { color: var(--corner-blue); }
   .fav-blue .wf-delta.pos { color: var(--corner-blue); }
   .fav-blue .wf-delta.neg { color: var(--corner-red); }
-  .wf-run { display: block; font-size: 0.5625rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .wf-run { display: block; font-size: var(--t-micro); color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 1px; }
   .waterfall-total {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 0.75rem;
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: var(--t-body);
   }
   .wf-total-label { font-weight: 600; color: var(--text); min-width: 0; }
   /* WHITE. Tried gold (wrong -- gold means model-vs-market and there is no
      market number here) then corner colour (defensible, but the fighter's
      name sits right beside it already). White reads as the conclusion rather
      than as one more coloured element in an argument built from colour. */
-  .wf-total-prob { font-weight: 700; font-size: 1.0625rem; color: var(--text); font-family: var(--font-display); }
+  .wf-total-prob { font-weight: 700; font-size: var(--t-h3); color: var(--text); font-family: var(--font-display); }
   @media (max-width: 400px) {
     .waterfall-row { gap: 6px; }
     .wf-bar-cell { flex-basis: 20%; }
@@ -2229,22 +2288,22 @@
     border-radius: 10px;
     padding: 11px 13px; margin: 4px 0 14px;
     font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-    font-size: 0.75rem; color: #b9bec9; line-height: 1.6;
+    font-size: var(--t-body); color: #b9bec9; line-height: 1.6;
     white-space: normal;
   }
   .chart-block {
-    background: var(--panel2); border: 1px solid var(--border); border-radius: 12px;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: var(--r-lg);
     padding: 10px 12px; margin: 8px 0; text-align: center;
   }
-  .chart-label { font-size: 0.6875rem; color: var(--muted); margin-bottom: 4px; text-align: left; }
+  .chart-label { font-size: var(--t-small); color: var(--muted); margin-bottom: 4px; text-align: left; }
   /* --muted, not a hand-picked grey. #5a5f6a measured 2.42:1 on --panel2 --
      these captions are the strings that explain what each chart MEANS, and
      they were the least legible text in the block they describe. This file
      already documents and fixed the identical bug on .sil-scale. Get the
      quietness from size and tracking, not from luminance: --muted is 5.97:1
      on the same surface and still reads as secondary at 9px. */
-  .chart-caption { font-size: 0.5625rem; color: var(--muted); margin-top: 5px; line-height: 1.4; }
-  .chart-placeholder-text { font-size: 0.6875rem; color: var(--muted); text-align: left; padding: 8px 0; }
+  .chart-caption { font-size: var(--t-micro); color: var(--muted); margin-top: 5px; line-height: 1.4; }
+  .chart-placeholder-text { font-size: var(--t-small); color: var(--muted); text-align: left; padding: 8px 0; }
   /* CENTRING ONLY -- do not add a width here. As a display:block SVG with
      only max-width it kept its intrinsic width and sat hard left in the wide
      desktop column, which read as a layout bug; auto margins fix that.
@@ -2262,11 +2321,11 @@
   body.pct-mode .dual-chart .label-pct { display: inline; }
   body.pct-mode .dual-chart .label-odds { display: none; }
   details.chart-toggle {
-    background: var(--panel2); border: 1px solid var(--border); border-radius: 12px;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: var(--r-lg);
     margin: 8px 0; overflow: hidden;
   }
   details.chart-toggle summary {
-    padding: 9px 12px; cursor: pointer; list-style: none; font-size: 0.75rem; font-weight: 600;
+    padding: 9px 12px; cursor: pointer; list-style: none; font-size: var(--t-body); font-weight: 600;
     display: flex; justify-content: space-between; align-items: center;
   }
   details.chart-toggle summary::-webkit-details-marker { display: none; }
@@ -2280,19 +2339,19 @@
      against it rather than adding, so the two gaps match. */
   .model-pick-badge {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    padding: 8px 12px; border-radius: 12px; margin: 10px 0; font-size: 0.75rem;
+    padding: 8px 12px; border-radius: var(--r-lg); margin: 10px 0; font-size: var(--t-body);
   }
   .model-pick-badge.high { background: linear-gradient(135deg, #10251a, #1c1c1e); border: 1px solid #1e4a2f; }
   .model-pick-badge.medium { background: linear-gradient(135deg, #241f10, #1c1c1e); border: 1px solid #4a3f1e; }
   .model-pick-badge.low { background: linear-gradient(135deg, #241010, #1c1c1e); border: 1px solid #4a1e1e; }
-  .pick-winner { font-weight: 700; font-size: 0.8125rem; }
-  .momentum-arrow { font-size: 0.5625rem; font-weight: 600; border-radius: 8px; padding: 1.5px 5px; margin-left: 2px; }
+  .pick-winner { font-weight: 700; font-size: var(--t-lead); }
+  .momentum-arrow { font-size: var(--t-micro); font-weight: 600; border-radius: var(--r-md); padding: 1.5px 5px; margin-left: 2px; }
   .momentum-arrow.up { background: #10251a; color: var(--green); }
   .momentum-arrow.down { background: #2a1414; color: var(--red); }
   .pick-method { color: var(--muted); }
   .pick-confidence {
-    margin-left: auto; font-size: 0.5625rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.4px; padding: 3px 8px; border-radius: 8px;
+    margin-left: auto; font-size: var(--t-micro); font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.4px; padding: 3px 8px; border-radius: var(--r-md);
   }
   .model-pick-badge.high .pick-confidence { background: #1a3a26; color: var(--green); }
   .model-pick-badge.medium .pick-confidence { background: #3a331a; color: var(--accent2); }
@@ -2304,17 +2363,17 @@
   .tour-highlight {
     position: relative; z-index: 301;
     box-shadow: 0 0 0 3px var(--accent), 0 0 24px rgba(212,175,55,0.5) !important;
-    border-radius: 12px;
+    border-radius: var(--r-lg);
   }
   .tour-tooltip {
     position: fixed; z-index: 302; max-width: 260px; background: var(--panel);
-    border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px;
-     font-size: 0.75rem; line-height: 1.5;
+    border: 1px solid var(--accent); border-radius: var(--r-lg); padding: 12px 14px;
+     font-size: var(--t-body); line-height: 1.5;
   }
   .tour-tooltip-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-  .tour-skip { background: none; border: none; color: var(--muted); font-size: 0.6875rem; cursor: pointer; padding: 4px; }
-  .tour-next { background: var(--accent); color: #1c1c1e; border: none; border-radius: 8px; font-size: 0.6875rem; font-weight: 600; padding: 6px 12px; cursor: pointer; }
-  .tour-step-count { font-size: 0.5625rem; color: var(--muted); }
+  .tour-skip { background: none; border: none; color: var(--muted); font-size: var(--t-small); cursor: pointer; padding: 4px; }
+  .tour-next { background: var(--accent); color: #1c1c1e; border: none; border-radius: var(--r-md); font-size: var(--t-small); font-weight: 600; padding: 6px 12px; cursor: pointer; }
+  .tour-step-count { font-size: var(--t-micro); color: var(--muted); }
   .ripple-effect {
     position: absolute; border-radius: 50%; background: rgba(212,175,55,0.35);
     transform: scale(0); animation: ripple-expand 0.55s ease-out; pointer-events: none;
@@ -2323,12 +2382,12 @@
     to { transform: scale(1); opacity: 0; }
   }
 
-  .compare-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-bottom: 14px; }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: var(--t-body); margin-bottom: 14px; }
   .compare-table th, .compare-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
   /* White. These are the two fighters' NAMES heading their columns -- gold
      means model here and they are neither a model output nor a market one,
      they are just labels for which column is whose. */
-  .compare-table th { color: var(--text); font-size: 0.6875rem; font-weight: 600; }
+  .compare-table th { color: var(--text); font-size: var(--t-small); font-weight: 600; }
   /* FIXED LAYOUT AT EVERY WIDTH. Without it, table-layout's default "auto"
      lets one long cell (Last Fight's date + result + opponent) force the
      whole table wider than its container. Widths are proportional to what the
@@ -2370,11 +2429,11 @@
 
   .tape-block { margin-bottom: 14px; }
   .tape-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 3px; }
-  .tape-value { font-size: 0.75rem; font-weight: 600; width: 50px; }
+  .tape-value { font-size: var(--t-body); font-weight: 600; width: 50px; }
   .tape-value.left { text-align: left; color: var(--text); }
   .tape-value.right { text-align: right; color: var(--text); }
-  .tape-label { font-size: 0.5625rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; flex: 1; text-align: center; }
-  .tape-bar-track { display: flex; height: 6px; border-radius: 4px; overflow: hidden; background: var(--panel2); }
+  .tape-label { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; flex: 1; text-align: center; }
+  .tape-bar-track { display: flex; height: 6px; border-radius: var(--r-sm); overflow: hidden; background: var(--panel2); }
   /* THE JOIN. Two things were wrong; the FADE that was tried alongside them
      was not one of them and has been reverted -- the hard red|blue meeting
      is the intended look.
@@ -2522,7 +2581,7 @@
   }
   /* Names in white -- they are labels, not values. The DOT carries the
      colour, which is all the legend needs to do. */
-  .radar-legend-item { font-size: 0.6875rem; color: var(--text); display: flex; align-items: center; gap: 5px; }
+  .radar-legend-item { font-size: var(--t-small); color: var(--text); display: flex; align-items: center; gap: 5px; }
   .radar-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
   .radar-dot.a { background: var(--corner-red); }
   .radar-dot.b { background: var(--corner-blue); }
@@ -2530,16 +2589,16 @@
      grey further down the sheet, so the corner colours set earlier never
      took effect. Colours removed; only the sizing it also carried is kept. */
   .radar-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .compare-table td:nth-child(2) { text-align: center; color: var(--muted); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.3px; }
+  .compare-table td:nth-child(2) { text-align: center; color: var(--muted); font-size: var(--t-small); text-transform: uppercase; letter-spacing: 0.3px; }
   .compare-table tr:last-child td { border-bottom: none; }
 
   .market-group-label {
-    font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
+    font-size: var(--t-small); text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
     margin: 14px 0 6px; font-weight: 600;
   }
-  table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+  table { width: 100%; border-collapse: collapse; font-size: var(--t-body); }
   th, td { padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); text-transform: uppercase; font-size: 0.5625rem; letter-spacing: 0.4px; }
+  th { color: var(--muted); text-transform: uppercase; font-size: var(--t-micro); letter-spacing: 0.4px; }
   tr:last-child td { border-bottom: none; }
   .edge-pos { color: var(--green); font-weight: 600; }
   .edge-neg { color: var(--red); }
@@ -2551,20 +2610,20 @@
     .model-only-table th:last-child, .model-only-table td:last-child { width: 18%; }
     .model-only-table th, .model-only-table td { white-space: normal; word-break: break-word; }
   }
-  .model-only-note { font-size: 0.6875rem; color: var(--muted); margin-top: 4px; }
+  .model-only-note { font-size: var(--t-small); color: var(--muted); margin-top: 4px; }
 
-  .section-title { font-size: 0.8125rem; margin: 26px 0 10px; color: var(--accent); font-weight: 600; }
+  .section-title { font-size: var(--t-lead); margin: 26px 0 10px; color: var(--accent); font-weight: 600; }
 
   .line-card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg);
     padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
   }
-  .line-matchup { font-size: 0.8125rem; font-weight: 600; }
-  .line-market { font-size: 0.6875rem; color: var(--muted); margin-top: 2px; }
-  .line-edge { font-size: 0.9375rem; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+  .line-matchup { font-size: var(--t-lead); font-weight: 600; }
+  .line-market { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
+  .line-edge { font-size: var(--t-sub); font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 
   @media (max-width: 480px) {
-    th, td { padding: 6px 5px; font-size: 0.6875rem; }
+    th, td { padding: 6px 5px; font-size: var(--t-small); }
     /* On narrow screens the badge + logout link no longer fit next to
        "OCTANE ALPHA" on one line -- rather than wrapping the whole group
        below the logo (which pushes it away from the top-right corner),
@@ -2573,8 +2632,8 @@
        both still right-aligned at the top. Desktop is completely
        unaffected since this only applies below 480px. */
     .account-badge { flex-direction: column; align-items: flex-end; gap: 3px; }
-    .account-role { font-size: 0.5625rem; padding: 3px 8px; }
-    .account-logout { font-size: 0.5625rem; }
+    .account-role { font-size: var(--t-micro); padding: 3px 8px; }
+    .account-logout { font-size: var(--t-micro); }
   }
 
   /* ============================================================
@@ -2600,11 +2659,11 @@
       flex: 0 0 248px; display: flex !important; flex-direction: column; gap: 6px;
       position: sticky; top: 24px;
     }
-    .hub-card { padding: 10px 12px; gap: 10px; border-radius: 12px; }
+    .hub-card { padding: 10px 12px; gap: 10px; border-radius: var(--r-lg); }
     .hub-card.featured { padding: 10px 12px; }
-    .hub-card-icon, .hub-card.featured .hub-card-icon { font-size: 1.0625rem; width: 20px; }
+    .hub-card-icon, .hub-card.featured .hub-card-icon { font-size: var(--t-h3); width: 20px; }
     .hub-card-icon svg, .hub-card.featured .hub-card-icon svg { width: 18px; height: 18px; }
-    .hub-card-title { font-size: 0.8125rem; }
+    .hub-card-title { font-size: var(--t-lead); }
     /* The big stat/matchup/location lines make sense as a large mobile
        card but are too much detail for a slim rail item -- hide them
        here rather than try to compress text that's meant to be read at
@@ -2709,7 +2768,7 @@
        rectangular when open. A very large radius is clamped to half the
        height by the browser, so both states are capsules automatically and
        the shape stays consistent as it animates between them. */
-    border-radius: 999px; overflow: hidden;
+    border-radius: var(--r-pill); overflow: hidden;
     /* Far more transparent than before (0.62/0.72 -> 0.28/0.38). A heavy
        semi-opaque fill defeats its own blur: if little shows through, there
        is nothing to blur and the result reads as faded rather than
@@ -2784,7 +2843,7 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 4px; padding: 11px 2px 10px;
     background: none; border: 0; cursor: pointer;
-    color: rgba(255,255,255,0.62); font-family: inherit; font-size: 0.6875rem; font-weight: 600;
+    color: rgba(255,255,255,0.62); font-family: inherit; font-size: var(--t-small); font-weight: 600;
     /* Carries contrast that the fill no longer provides. Two stacked shadows:
        a tight dark halo for edge definition, a wider soft one for separation
        from bright content scrolling underneath. */
@@ -2889,7 +2948,7 @@
        bar's effective radius is 30 and the pill's is 25, exactly 30 - 5; at
        41px it's 20.5 and 15.5. The nested-radius rule holds at every height
        without hard-coding a value per state. */
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     /* A smooth pane of frosted glass FLOATING on the bar -- no inner shadow.
        An inset highlight or dark inner edge is a lighting cue that reads as
        "carved into" the surface, which is what made this feel recessed and
@@ -3112,18 +3171,18 @@
     .hub-card {
       display: flex; align-items: center; gap: 12px;
       padding: 13px 14px; margin: 0 0 8px;
-      min-height: 0; border-radius: 10px;
+      min-height: 0; border-radius: var(--r-lg);
     }
-    .hub-card .hub-card-title { font-size: 0.8125rem; margin: 0; }
+    .hub-card .hub-card-title { font-size: var(--t-lead); margin: 0; }
     .hub-card .hub-card-sub {
-      font-size: 0.6875rem; margin: 2px 0 0;
+      font-size: var(--t-small); margin: 2px 0 0;
       /* one line only -- descriptions are for discovery, and this is now
          a place you go when you already know what you want */
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     /* No ::after chevron here -- .hub-card-arrow already provides one, and
        adding a second produced a visible double arrow on every row. */
-    .hub-card-arrow { position: static; margin-left: auto; font-size: 1.0625rem; opacity: 0.5; }
+    .hub-card-arrow { position: static; margin-left: auto; font-size: var(--t-h3); opacity: 0.5; }
   }
 
   /* ===== Fight list controls ===== */
@@ -3137,14 +3196,14 @@
      phone, and keeps the site's own tier vocabulary ("High"/"Medium"
      confidence) rather than substituting raw thresholds for it. */
   .fc-label {
-    font-size: 0.5625rem; font-weight: 600; letter-spacing: 0.06em;
+    font-size: var(--t-micro); font-weight: 600; letter-spacing: 0.06em;
     text-transform: uppercase; color: var(--muted); opacity: 0.8;
     margin-right: 2px; white-space: nowrap;
   }
   .fc-chip {
-    padding: 5px 10px; border-radius: 999px; cursor: pointer;
+    padding: 5px 10px; border-radius: var(--r-pill); cursor: pointer;
     background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-    color: var(--muted); font-size: 0.6875rem; font-weight: 600;
+    color: var(--muted); font-size: var(--t-small); font-weight: 600;
     font-family: inherit; -webkit-tap-highlight-color: transparent;
   }
   .fc-chip.on { background: rgba(212,175,55,0.14); border-color: var(--accent); color: var(--accent); }
@@ -3160,7 +3219,7 @@
      the height, and the GROUP becomes the card rather than each row. */
   @media (max-width: 1023px) {
     .hub-group-header {
-      font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em;
+      font-size: var(--t-small); font-weight: 600; letter-spacing: 0.06em;
       text-transform: uppercase; color: var(--muted);
       margin: 18px 4px 7px; opacity: 0.75;
     }
@@ -3219,9 +3278,9 @@
       margin: 0;
     }
     .hub-card-icon svg { width: 18px; height: 18px; }
-    .hub-card-title { font-size: 0.8125rem; margin: 0; }
+    .hub-card-title { font-size: var(--t-lead); margin: 0; }
     .hub-card-sub { display: none; }   /* labels are self-explanatory here */
-    .hub-card-arrow { position: static; margin-left: auto; font-size: 1.0625rem; opacity: 0.45; }
+    .hub-card-arrow { position: static; margin-left: auto; font-size: var(--t-h3); opacity: 0.45; }
 
   }
   @media (min-width: 1024px) {
@@ -3403,16 +3462,16 @@
   .market-group { margin: 0 0 8px; }
   .market-group-summary {
     display: flex; align-items: baseline; gap: 8px; cursor: pointer;
-    padding: 8px 10px; border-radius: 8px; list-style: none;
+    padding: 8px 10px; border-radius: var(--r-md); list-style: none;
     background: rgba(255,255,255,0.03); border: 1px solid var(--border);
   }
   .market-group-summary::-webkit-details-marker { display: none; }
-  .market-group-summary .mg-name { font-size: 0.75rem; font-weight: 700; color: var(--text); }
+  .market-group-summary .mg-name { font-size: var(--t-body); font-weight: 700; color: var(--text); }
   .market-group-summary .mg-name { flex: 1; min-width: 0; }
-  .market-group-summary .mg-meta { font-size: 0.6875rem; color: var(--muted); white-space: nowrap; }
+  .market-group-summary .mg-meta { font-size: var(--t-small); color: var(--muted); white-space: nowrap; }
   .market-group[open] .market-group-summary { border-radius: 8px 8px 0 0; }
   .market-group[open] .market-group-summary .chevron { transform: rotate(90deg); }
-  .market-group-summary .chevron { transition: transform 0.2s ease; font-size: 0.5625rem; color: var(--muted); }
+  .market-group-summary .chevron { transition: transform 0.2s ease; font-size: var(--t-micro); color: var(--muted); }
   .upcoming-movement { margin-top: 10px; }
   .upcoming-movement .line-card { margin-top: 6px; }
   /* Live pulse: states that prices are refreshing without spending a second
@@ -3428,7 +3487,7 @@
   @keyframes pricePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
   @media (prefers-reduced-motion: reduce) { .live-dot-sm { animation: none; } }
   .units-dollars {
-    font-size: 0.8125rem; color: var(--text-soft); margin-top: 2px;
+    font-size: var(--t-lead); color: var(--text-soft); margin-top: 2px;
   }
   .units-dollars strong { color: var(--accent); font-weight: 700; font-family: var(--font-display); }
 
@@ -3437,7 +3496,7 @@
   .units-chart-wrap svg { display: block; }
   .scrub-readout {
     position: absolute; top: -2px; left: 0; right: 0;
-    text-align: center; font-size: 0.6875rem; color: var(--muted);
+    text-align: center; font-size: var(--t-small); color: var(--muted);
     pointer-events: none; opacity: 0;
     transition: opacity 0.2s ease;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -3460,7 +3519,7 @@
   /* ===== Compact countdown (outside 24h) ===== */
   .countdown-compact { padding: 2px 0 4px; }
   .cd-venue {
-    font-size: 0.625rem; font-weight: 600; color: var(--muted);
+    font-size: var(--t-tiny); font-weight: 600; color: var(--muted);
     text-transform: uppercase; letter-spacing: 0.09em;
     margin-bottom: 5px;
     /* Truncate rather than wrap. A long venue wrapping to two lines would
@@ -3470,7 +3529,7 @@
     max-width: 100%;
   }
   .cd-absolute {
-    font-size: 0.8125rem; color: var(--text-soft, #c8ccd4); margin-top: 4px;
+    font-size: var(--t-lead); color: var(--text-soft, #c8ccd4); margin-top: 4px;
     letter-spacing: 0.1px; font-weight: 600;
   }
 
@@ -3482,7 +3541,7 @@
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
   }
   .tabbar-btn:focus-visible,
   .seg-tab:focus-visible { outline-offset: -2px; }
@@ -3566,12 +3625,12 @@
   .filter-empty {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     flex-wrap: wrap; padding: 18px 12px; margin: 4px 0 12px;
-    border: 1px dashed var(--border); border-radius: 12px;
-    font-size: 0.8125rem; color: var(--muted);
+    border: 1px dashed var(--border); border-radius: var(--r-lg);
+    font-size: var(--t-lead); color: var(--muted);
   }
   .filter-empty-reset {
-    background: none; border: 1px solid var(--border); border-radius: 999px;
-    color: var(--text); font: inherit; font-weight: 600; font-size: 0.75rem;
+    background: none; border: 1px solid var(--border); border-radius: var(--r-pill);
+    color: var(--text); font: inherit; font-weight: 600; font-size: var(--t-body);
     padding: 5px 12px; cursor: pointer; min-height: 32px;
   }
   .filter-empty-reset:active { transform: scale(0.97); }
@@ -3580,7 +3639,7 @@
   .waterfall-block:not([open]) .waterfall-summary-hint::after { content: "show the math \25BE"; }
   .waterfall-block[open] .waterfall-summary-hint::after { content: "hide \25B4"; }
   .waterfall-summary-hint { font-size: 0; }
-  .waterfall-summary-hint::after { font-size: 0.6875rem; }
+  .waterfall-summary-hint::after { font-size: var(--t-small); }
   /* nowrap is the part that matters. Shrinking alone wasn't enough: BOTH
      word-break: break-word AND overflow-wrap: break-word permit splitting
      inside a token when it doesn't fit, so the text just broke one character
@@ -3590,7 +3649,7 @@
      2px per side, which buys 12px -- more than the font reduction does.
      17 characters at 10px is ~87px in a 106px cell. */
   .compare-table td.cmp-long {
-    font-size: 0.625rem; letter-spacing: -0.2px;
+    font-size: var(--t-tiny); letter-spacing: -0.2px;
     white-space: nowrap;
     padding-left: 2px; padding-right: 2px;
   }
@@ -3708,12 +3767,12 @@
   @keyframes splash-draw { to { stroke-dashoffset: 0; } }
 
   #splash-word {
-    font-family: var(--font-display); font-size: 1.0625rem; font-weight: 700;
+    font-family: var(--font-display); font-size: var(--t-h3); font-weight: 700;
     letter-spacing: 0.09em;
     opacity: 0; animation: splash-word 0.5s ease-out 0.7s forwards;
   }
   #splash-word span:first-child { color: #ffffff; }
-  #splash-word span:last-child { color: #d4af37; }
+  #splash-word span:last-child { color: var(--accent); }
   @keyframes splash-word { to { opacity: 1; } }
 
   /* Reduced motion: no drawing, no fade-in -- just the finished mark, then
@@ -3788,7 +3847,7 @@
             fill="none" stroke="#ffffff" stroke-width="4.6"
             stroke-linecap="round" stroke-linejoin="round"/>
       <path id="splash-peak" d="M32.00,80.48 L50.00,44.48 L68.00,80.48"
-            fill="none" stroke="#d4af37" stroke-width="4.6"
+            fill="none" stroke="var(--accent)" stroke-width="4.6"
             stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <div id="splash-word"><span>OCTANE </span><span>ALPHA</span></div>
@@ -3801,27 +3860,27 @@
     </div>
   {%- endmacro %}
 {% macro icon_trendup() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend up"><defs><linearGradient id="hi-trendup" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M4 18 L10 12 L14 15 L22 7" stroke="url(#hi-trendup)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 7 H22 V13" stroke="url(#hi-trendup)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend up"><defs><linearGradient id="hi-trendup" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M4 18 L10 12 L14 15 L22 7" stroke="url(#hi-trendup)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 7 H22 V13" stroke="url(#hi-trendup)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_trenddown() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend down"><defs><linearGradient id="hi-trenddown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M4 8 L10 14 L14 11 L22 19" stroke="url(#hi-trenddown)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 19 H22 V13" stroke="url(#hi-trenddown)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend down"><defs><linearGradient id="hi-trenddown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M4 8 L10 14 L14 11 L22 19" stroke="url(#hi-trenddown)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 19 H22 V13" stroke="url(#hi-trenddown)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_ruler() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Tape measure"><defs><linearGradient id="hi-ruler" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><rect x="3" y="9" width="20" height="8" rx="1.6" fill="url(#hi-ruler)" opacity="0.15" stroke="url(#hi-ruler)" stroke-width="1.8"/><path d="M8 9 V13 M13 9 V14.5 M18 9 V13" stroke="url(#hi-ruler)" stroke-width="1.6" stroke-linecap="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Tape measure"><defs><linearGradient id="hi-ruler" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><rect x="3" y="9" width="20" height="8" rx="1.6" fill="url(#hi-ruler)" opacity="0.15" stroke="url(#hi-ruler)" stroke-width="1.8"/><path d="M8 9 V13 M13 9 V14.5 M18 9 V13" stroke="url(#hi-ruler)" stroke-width="1.6" stroke-linecap="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_scales() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Balance scales"><defs><linearGradient id="hi-scales" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 5 V21 M7 21 H19" stroke="url(#hi-scales)" stroke-width="1.8" stroke-linecap="round"/><path d="M5 9 H21" stroke="url(#hi-scales)" stroke-width="1.8" stroke-linecap="round"/><path d="M5 9 L2.5 14.5 H7.5 Z M21 9 L18.5 14.5 H23.5 Z" fill="url(#hi-scales)" opacity="0.2" stroke="url(#hi-scales)" stroke-width="1.5" stroke-linejoin="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Balance scales"><defs><linearGradient id="hi-scales" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M13 5 V21 M7 21 H19" stroke="url(#hi-scales)" stroke-width="1.8" stroke-linecap="round"/><path d="M5 9 H21" stroke="url(#hi-scales)" stroke-width="1.8" stroke-linecap="round"/><path d="M5 9 L2.5 14.5 H7.5 Z M21 9 L18.5 14.5 H23.5 Z" fill="url(#hi-scales)" opacity="0.2" stroke="url(#hi-scales)" stroke-width="1.5" stroke-linejoin="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_list() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="List"><defs><linearGradient id="hi-list" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M9 7.5 H22 M9 13 H22 M9 18.5 H22" stroke="url(#hi-list)" stroke-width="1.9" stroke-linecap="round"/><circle cx="4.6" cy="7.5" r="1.5" fill="url(#hi-list)"/><circle cx="4.6" cy="13" r="1.5" fill="url(#hi-list)"/><circle cx="4.6" cy="18.5" r="1.5" fill="url(#hi-list)"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="List"><defs><linearGradient id="hi-list" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M9 7.5 H22 M9 13 H22 M9 18.5 H22" stroke="url(#hi-list)" stroke-width="1.9" stroke-linecap="round"/><circle cx="4.6" cy="7.5" r="1.5" fill="url(#hi-list)"/><circle cx="4.6" cy="13" r="1.5" fill="url(#hi-list)"/><circle cx="4.6" cy="18.5" r="1.5" fill="url(#hi-list)"/></svg>
 {%- endmacro %}
 
 {% macro icon_star() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Star"><defs><linearGradient id="hi-star" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 3.5 L16 10 L23 10.9 L18 15.7 L19.3 22.5 L13 19.2 L6.7 22.5 L8 15.7 L3 10.9 L10 10 Z" fill="url(#hi-star)" opacity="0.18" stroke="url(#hi-star)" stroke-width="1.7" stroke-linejoin="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Star"><defs><linearGradient id="hi-star" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M13 3.5 L16 10 L23 10.9 L18 15.7 L19.3 22.5 L13 19.2 L6.7 22.5 L8 15.7 L3 10.9 L10 10 Z" fill="url(#hi-star)" opacity="0.18" stroke="url(#hi-star)" stroke-width="1.7" stroke-linejoin="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_underdog() -%}
@@ -3829,27 +3888,27 @@
 {%- endmacro %}
 
 {% macro icon_trophy() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trophy"><defs><linearGradient id="hi-trophy" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M8 4.5 H18 V11 a5 5 0 0 1 -10 0 Z" fill="url(#hi-trophy)" opacity="0.18" stroke="url(#hi-trophy)" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 6.5 H5 a3 3 0 0 0 3 3.5 M18 6.5 H21 a3 3 0 0 1 -3 3.5" stroke="url(#hi-trophy)" stroke-width="1.6" fill="none"/><path d="M13 16 V19 M9.5 21.5 H16.5" stroke="url(#hi-trophy)" stroke-width="1.9" stroke-linecap="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trophy"><defs><linearGradient id="hi-trophy" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M8 4.5 H18 V11 a5 5 0 0 1 -10 0 Z" fill="url(#hi-trophy)" opacity="0.18" stroke="url(#hi-trophy)" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 6.5 H5 a3 3 0 0 0 3 3.5 M18 6.5 H21 a3 3 0 0 1 -3 3.5" stroke="url(#hi-trophy)" stroke-width="1.6" fill="none"/><path d="M13 16 V19 M9.5 21.5 H16.5" stroke="url(#hi-trophy)" stroke-width="1.9" stroke-linecap="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_clock() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Clock"><defs><linearGradient id="hi-clock" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><circle cx="13" cy="13" r="9.3" fill="url(#hi-clock)" opacity="0.12" stroke="url(#hi-clock)" stroke-width="1.8"/><path d="M13 7.5 V13.4 L17 15.6" stroke="url(#hi-clock)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Clock"><defs><linearGradient id="hi-clock" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><circle cx="13" cy="13" r="9.3" fill="url(#hi-clock)" opacity="0.12" stroke="url(#hi-clock)" stroke-width="1.8"/><path d="M13 7.5 V13.4 L17 15.6" stroke="url(#hi-clock)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_pin() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Location"><defs><linearGradient id="hi-pin" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 23 s7-7.2 7-12 a7 7 0 1 0 -14 0 c0 4.8 7 12 7 12 Z" fill="url(#hi-pin)" opacity="0.15" stroke="url(#hi-pin)" stroke-width="1.8" stroke-linejoin="round"/><circle cx="13" cy="10.7" r="2.6" fill="url(#hi-pin)"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Location"><defs><linearGradient id="hi-pin" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M13 23 s7-7.2 7-12 a7 7 0 1 0 -14 0 c0 4.8 7 12 7 12 Z" fill="url(#hi-pin)" opacity="0.15" stroke="url(#hi-pin)" stroke-width="1.8" stroke-linejoin="round"/><circle cx="13" cy="10.7" r="2.6" fill="url(#hi-pin)"/></svg>
 {%- endmacro %}
 
 {% macro icon_warning() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Warning"><defs><linearGradient id="hi-warning" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 4 L23 21 H3 Z" fill="url(#hi-warning)" opacity="0.15" stroke="url(#hi-warning)" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 10.5 V15.5" stroke="url(#hi-warning)" stroke-width="1.9" stroke-linecap="round"/><circle cx="13" cy="18.2" r="1.25" fill="url(#hi-warning)"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Warning"><defs><linearGradient id="hi-warning" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M13 4 L23 21 H3 Z" fill="url(#hi-warning)" opacity="0.15" stroke="url(#hi-warning)" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 10.5 V15.5" stroke="url(#hi-warning)" stroke-width="1.9" stroke-linecap="round"/><circle cx="13" cy="18.2" r="1.25" fill="url(#hi-warning)"/></svg>
 {%- endmacro %}
 
 {% macro icon_ticket() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Ticket"><defs><linearGradient id="hi-ticket" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M3 9.5 a2 2 0 0 1 2-2 H21 a2 2 0 0 1 2 2 v1.6 a2.2 2.2 0 0 0 0 4.4 v1.6 a2 2 0 0 1 -2 2 H5 a2 2 0 0 1 -2-2 v-1.6 a2.2 2.2 0 0 0 0-4.4 Z" fill="url(#hi-ticket)" opacity="0.14" stroke="url(#hi-ticket)" stroke-width="1.7" stroke-linejoin="round"/><path d="M14.5 9 V17" stroke="url(#hi-ticket)" stroke-width="1.5" stroke-dasharray="2 2.4"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Ticket"><defs><linearGradient id="hi-ticket" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M3 9.5 a2 2 0 0 1 2-2 H21 a2 2 0 0 1 2 2 v1.6 a2.2 2.2 0 0 0 0 4.4 v1.6 a2 2 0 0 1 -2 2 H5 a2 2 0 0 1 -2-2 v-1.6 a2.2 2.2 0 0 0 0-4.4 Z" fill="url(#hi-ticket)" opacity="0.14" stroke="url(#hi-ticket)" stroke-width="1.7" stroke-linejoin="round"/><path d="M14.5 9 V17" stroke="url(#hi-ticket)" stroke-width="1.5" stroke-dasharray="2 2.4"/></svg>
 {%- endmacro %}
 
 {% macro icon_gauge() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Calibration gauge"><defs><linearGradient id="hi-gauge" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M4 18 a9 9 0 0 1 18 0" fill="none" stroke="url(#hi-gauge)" stroke-width="1.9" stroke-linecap="round"/><path d="M13 18 L18.5 11.5" stroke="url(#hi-gauge)" stroke-width="1.9" stroke-linecap="round"/><circle cx="13" cy="18" r="1.8" fill="url(#hi-gauge)"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Calibration gauge"><defs><linearGradient id="hi-gauge" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M4 18 a9 9 0 0 1 18 0" fill="none" stroke="url(#hi-gauge)" stroke-width="1.9" stroke-linecap="round"/><path d="M13 18 L18.5 11.5" stroke="url(#hi-gauge)" stroke-width="1.9" stroke-linecap="round"/><circle cx="13" cy="18" r="1.8" fill="url(#hi-gauge)"/></svg>
 {%- endmacro %}
 
 {% macro icon_damage() -%}
@@ -3865,15 +3924,15 @@
 {%- endmacro %}
 
 {% macro icon_track() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart"><defs><linearGradient id="hi-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><polyline points="3,19 9,12 14,16 22,5" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><polyline points="16,5 22,5 22,11" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart"><defs><linearGradient id="hi-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><polyline points="3,19 9,12 14,16 22,5" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><polyline points="16,5 22,5 22,11" stroke="url(#hi-track)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_flame() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame"><defs><linearGradient id="hi-flame" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13 2 C13 2 8 8 8 13 C8 16.5 10 19 13 19 C16 19 18 16.5 18 13 C18 13 16 15 15 13 C15 13 17 9 13 2 Z" fill="url(#hi-flame)" opacity="0.9"/><path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#1c1c1e"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame"><defs><linearGradient id="hi-flame" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M13 2 C13 2 8 8 8 13 C8 16.5 10 19 13 19 C16 19 18 16.5 18 13 C18 13 16 15 15 13 C15 13 17 9 13 2 Z" fill="url(#hi-flame)" opacity="0.9"/><path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#1c1c1e"/></svg>
 {%- endmacro %}
 
 {% macro icon_diamond() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond"><defs><linearGradient id="hi-diamond" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M6 9 L20 9 L24 13 L13 23 L2 13 Z" fill="url(#hi-diamond)" opacity="0.18" stroke="url(#hi-diamond)" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9 L9 13 L13 9 M20 9 L17 13 L13 9 M2 13 L24 13 M13 9 L13 23 M9 13 L13 23 L17 13" stroke="url(#hi-diamond)" stroke-width="1.1" opacity="0.85" stroke-linejoin="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond"><defs><linearGradient id="hi-diamond" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M6 9 L20 9 L24 13 L13 23 L2 13 Z" fill="url(#hi-diamond)" opacity="0.18" stroke="url(#hi-diamond)" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9 L9 13 L13 9 M20 9 L17 13 L13 9 M2 13 L24 13 M13 9 L13 23 M9 13 L13 23 L17 13" stroke="url(#hi-diamond)" stroke-width="1.1" opacity="0.85" stroke-linejoin="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_lock() -%}
@@ -3881,31 +3940,31 @@
 {%- endmacro %}
 
 {% macro icon_coins() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins"><defs><linearGradient id="hi-coins" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><ellipse cx="13" cy="19" rx="9" ry="3.2" fill="none" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#1c1c1e" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#1c1c1e" stroke="url(#hi-coins)" stroke-width="2"/><line x1="4" y1="9" x2="4" y2="19" stroke="url(#hi-coins)" stroke-width="2"/><line x1="22" y1="9" x2="22" y2="19" stroke="url(#hi-coins)" stroke-width="2"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins"><defs><linearGradient id="hi-coins" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><ellipse cx="13" cy="19" rx="9" ry="3.2" fill="none" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#1c1c1e" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#1c1c1e" stroke="url(#hi-coins)" stroke-width="2"/><line x1="4" y1="9" x2="4" y2="19" stroke="url(#hi-coins)" stroke-width="2"/><line x1="22" y1="9" x2="22" y2="19" stroke="url(#hi-coins)" stroke-width="2"/></svg>
 {%- endmacro %}
 
 {% macro icon_calendar() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar"><defs><linearGradient id="hi-calendar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><rect x="3" y="5" width="20" height="18" rx="3" stroke="url(#hi-calendar)" stroke-width="2"/><line x1="3" y1="10" x2="23" y2="10" stroke="url(#hi-calendar)" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="7" stroke="url(#hi-calendar)" stroke-width="2" stroke-linecap="round"/><line x1="18" y1="2" x2="18" y2="7" stroke="url(#hi-calendar)" stroke-width="2" stroke-linecap="round"/><circle cx="17.5" cy="16.5" r="2.6" fill="#e8c766"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar"><defs><linearGradient id="hi-calendar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><rect x="3" y="5" width="20" height="18" rx="3" stroke="url(#hi-calendar)" stroke-width="2"/><line x1="3" y1="10" x2="23" y2="10" stroke="url(#hi-calendar)" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="7" stroke="url(#hi-calendar)" stroke-width="2" stroke-linecap="round"/><line x1="18" y1="2" x2="18" y2="7" stroke="url(#hi-calendar)" stroke-width="2" stroke-linecap="round"/><circle cx="17.5" cy="16.5" r="2.6" fill="var(--accent2)"/></svg>
 {%- endmacro %}
 
 {% macro icon_barchart() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Bar chart"><defs><linearGradient id="hi-bars" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><rect x="5" y="14" width="4" height="8" rx="1" fill="url(#hi-bars)"/><rect x="11" y="8" width="4" height="14" rx="1" fill="url(#hi-bars)"/><rect x="17" y="11" width="4" height="11" rx="1" fill="url(#hi-bars)"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Bar chart"><defs><linearGradient id="hi-bars" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><rect x="5" y="14" width="4" height="8" rx="1" fill="url(#hi-bars)"/><rect x="11" y="8" width="4" height="14" rx="1" fill="url(#hi-bars)"/><rect x="17" y="11" width="4" height="11" rx="1" fill="url(#hi-bars)"/></svg>
 {%- endmacro %}
 
 {% macro icon_sigma() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Sigma summation symbol"><defs><linearGradient id="hi-sigma" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M20 5 L7 5 L15 13 L7 21 L20 21" stroke="url(#hi-sigma)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Sigma summation symbol"><defs><linearGradient id="hi-sigma" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M20 5 L7 5 L15 13 L7 21 L20 21" stroke="url(#hi-sigma)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_dice() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Dice"><defs><linearGradient id="hi-dice" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><rect x="3" y="5" width="10" height="10" rx="2.5" fill="url(#hi-dice)" opacity="0.16" stroke="url(#hi-dice)" stroke-width="1.5"/><circle cx="6" cy="8" r="1" fill="url(#hi-dice)"/><circle cx="8" cy="10" r="1" fill="url(#hi-dice)"/><circle cx="10" cy="12" r="1" fill="url(#hi-dice)"/><rect x="13" y="11" width="10" height="10" rx="2.5" fill="url(#hi-dice)" opacity="0.16" stroke="url(#hi-dice)" stroke-width="1.5"/><circle cx="16" cy="14" r="1" fill="url(#hi-dice)"/><circle cx="20" cy="14" r="1" fill="url(#hi-dice)"/><circle cx="18" cy="16" r="1" fill="url(#hi-dice)"/><circle cx="16" cy="18" r="1" fill="url(#hi-dice)"/><circle cx="20" cy="18" r="1" fill="url(#hi-dice)"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Dice"><defs><linearGradient id="hi-dice" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><rect x="3" y="5" width="10" height="10" rx="2.5" fill="url(#hi-dice)" opacity="0.16" stroke="url(#hi-dice)" stroke-width="1.5"/><circle cx="6" cy="8" r="1" fill="url(#hi-dice)"/><circle cx="8" cy="10" r="1" fill="url(#hi-dice)"/><circle cx="10" cy="12" r="1" fill="url(#hi-dice)"/><rect x="13" y="11" width="10" height="10" rx="2.5" fill="url(#hi-dice)" opacity="0.16" stroke="url(#hi-dice)" stroke-width="1.5"/><circle cx="16" cy="14" r="1" fill="url(#hi-dice)"/><circle cx="20" cy="14" r="1" fill="url(#hi-dice)"/><circle cx="18" cy="16" r="1" fill="url(#hi-dice)"/><circle cx="16" cy="18" r="1" fill="url(#hi-dice)"/><circle cx="20" cy="18" r="1" fill="url(#hi-dice)"/></svg>
 {%- endmacro %}
 
 {% macro icon_rocket() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Rocket"><defs><linearGradient id="hi-rocket" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M13,3 Q16,6 16,9 L16,16 L19,20 L16,18 Q13,19.5 10,18 L7,20 L10,16 L10,9 Q10,6 13,3 Z" fill="url(#hi-rocket)" opacity="0.5" stroke="url(#hi-rocket)" stroke-width="1.4" stroke-linejoin="round"/><circle cx="13" cy="10" r="1.6" fill="#1c1c1e" stroke="url(#hi-rocket)" stroke-width="1"/><path d="M11,19 Q13,23 15,19 Q13,21 11,19 Z" fill="url(#hi-rocket)" opacity="0.85"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Rocket"><defs><linearGradient id="hi-rocket" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M13,3 Q16,6 16,9 L16,16 L19,20 L16,18 Q13,19.5 10,18 L7,20 L10,16 L10,9 Q10,6 13,3 Z" fill="url(#hi-rocket)" opacity="0.5" stroke="url(#hi-rocket)" stroke-width="1.4" stroke-linejoin="round"/><circle cx="13" cy="10" r="1.6" fill="#1c1c1e" stroke="url(#hi-rocket)" stroke-width="1"/><path d="M11,19 Q13,23 15,19 Q13,21 11,19 Z" fill="url(#hi-rocket)" opacity="0.85"/></svg>
 {%- endmacro %}
 
 {% macro icon_target() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Redline gauge"><defs><linearGradient id="hi-target" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs><path d="M4,20 A9,9 0 1,1 22,20" stroke="url(#hi-target)" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.45"/><line x1="13" y1="20" x2="18.5" y2="9.5" stroke="url(#hi-target)" stroke-width="2" stroke-linecap="round"/><circle cx="13" cy="20" r="2.2" fill="url(#hi-target)"/><circle cx="19.7" cy="7.3" r="1.3" fill="url(#hi-target)" opacity="0.7"/></svg>
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Redline gauge"><defs><linearGradient id="hi-target" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M4,20 A9,9 0 1,1 22,20" stroke="url(#hi-target)" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.45"/><line x1="13" y1="20" x2="18.5" y2="9.5" stroke="url(#hi-target)" stroke-width="2" stroke-linecap="round"/><circle cx="13" cy="20" r="2.2" fill="url(#hi-target)"/><circle cx="19.7" cy="7.3" r="1.3" fill="url(#hi-target)" opacity="0.7"/></svg>
 {%- endmacro %}
 
 {# The ONE deliberately non-gold icon in the set. Every other icon here uses
@@ -3971,7 +4030,7 @@
         <path d="M13.04 65.31 L13.04 34.69 L34.69 13.04 L65.31 13.04 L86.96 34.69 L86.96 65.31"
             stroke="#ffffff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M32 74 L50 38 L68 74"
-            stroke="#d4af37" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+            stroke="var(--accent)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
     </svg>
     <div class="brand-text">
@@ -4108,7 +4167,7 @@
       <div class="hub-card featured" onclick="showSection('thisweekend')" data-section-nav="thisweekend" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Octagon cage">
-            <defs><linearGradient id="icon-weekend" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <defs><linearGradient id="icon-weekend" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs>
             <polygon points="13,4 19.4,6.6 22,13 19.4,19.4 13,22 6.6,19.4 4,13 6.6,6.6" fill="url(#icon-weekend)" opacity="0.12" stroke="url(#icon-weekend)" stroke-width="1.6" stroke-linejoin="round"/>
             <polygon points="13,7 17.2,8.8 19,13 17.2,17.2 13,19 8.8,17.2 7,13 8.8,8.8" fill="none" stroke="url(#icon-weekend)" stroke-width="1.1" opacity="0.75" stroke-linejoin="round"/>
           </svg>
@@ -4126,7 +4185,7 @@
       <div class="hub-card" onclick="showSection('track')" data-section-nav="track" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart">
-            <defs><linearGradient id="icon-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <defs><linearGradient id="icon-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs>
             <polyline points="3,19 9,12 14,16 22,5" stroke="url(#icon-track)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
             <polyline points="16,5 22,5 22,11" stroke="url(#icon-track)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
           </svg>
@@ -4140,7 +4199,7 @@
       <div class="hub-card" onclick="showSection('standout')" data-section-nav="standout" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame">
-            <defs><linearGradient id="icon-standout" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <defs><linearGradient id="icon-standout" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs>
             <path d="M13 2 C13 2 8 8 8 13 C8 16.5 10 19 13 19 C16 19 18 16.5 18 13 C18 13 16 15 15 13 C15 13 17 9 13 2 Z" fill="url(#icon-standout)" opacity="0.9"/>
             <path d="M13 12 C13 12 11 14.5 11 16.5 C11 18 12 19 13 19 C14 19 15 18 15 16.5 C15 16.5 14 17 13.5 16 C13.5 16 14.5 14 13 12 Z" fill="#242426"/>
           </svg>
@@ -4170,7 +4229,7 @@
       <div class="hub-card" onclick="showSection('favorites')" data-section-nav="favorites" data-row="mid" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond">
-            <defs><linearGradient id="icon-favorites" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <defs><linearGradient id="icon-favorites" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs>
             <path d="M6 9 L20 9 L24 13 L13 23 L2 13 Z" fill="url(#icon-favorites)" opacity="0.15" stroke="url(#icon-favorites)" stroke-width="1.6" stroke-linejoin="round"/>
             <path d="M6 9 L9 13 L13 9 M20 9 L17 13 L13 9 M2 13 L24 13 M13 9 L13 23 M9 13 L13 23 L17 13" stroke="url(#icon-favorites)" stroke-width="1" opacity="0.8" stroke-linejoin="round"/>
           </svg>
@@ -4199,7 +4258,7 @@
       <div class="hub-card" onclick="showSection('parlays')" data-section-nav="parlays" data-row="last" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins">
-            <defs><linearGradient id="icon-parlays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <defs><linearGradient id="icon-parlays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs>
             <ellipse cx="13" cy="19" rx="9" ry="3.2" fill="none" stroke="url(#icon-parlays)" stroke-width="1.8"/>
             <ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#242426" stroke="url(#icon-parlays)" stroke-width="1.8"/>
             <ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#242426" stroke="url(#icon-parlays)" stroke-width="1.8"/>
@@ -4217,12 +4276,12 @@
       <div class="hub-card" onclick="showSection('coming')" data-section-nav="coming" data-row="solo" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar">
-            <defs><linearGradient id="icon-coming" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <defs><linearGradient id="icon-coming" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs>
             <rect x="3" y="5" width="20" height="18" rx="3" stroke="url(#icon-coming)" stroke-width="1.8"/>
             <line x1="3" y1="10" x2="23" y2="10" stroke="url(#icon-coming)" stroke-width="1.8"/>
             <line x1="8" y1="2" x2="8" y2="7" stroke="url(#icon-coming)" stroke-width="1.8" stroke-linecap="round"/>
             <line x1="18" y1="2" x2="18" y2="7" stroke="url(#icon-coming)" stroke-width="1.8" stroke-linecap="round"/>
-            <circle cx="17.5" cy="16.5" r="2.3" fill="#e8c766"/>
+            <circle cx="17.5" cy="16.5" r="2.3" fill="var(--accent2)"/>
           </svg>
         </div>
         <div class="hub-card-text">
@@ -4235,7 +4294,7 @@
       <div class="hub-card" onclick="showSection('howitworks')" data-section-nav="howitworks" data-row="first" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Sigma summation symbol">
-            <defs><linearGradient id="icon-howitworks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <defs><linearGradient id="icon-howitworks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs>
             <path d="M20 5 L7 5 L15 13 L7 21 L20 21" stroke="url(#icon-howitworks)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
           </svg>
         </div>
@@ -4343,7 +4402,7 @@
     <div class="baseline-caption" style="margin-bottom: 6px;">How often the model's own stated conviction level (High/Medium/Low) matched the actual result.</div>
     <div class="donut-row confidence-donut-row">
       {% for label, stats in track_record.by_confidence.items() %}
-      {% set tier_color = {'High Confidence': '#3ddc84', 'Medium Confidence': '#e8c766', 'Low Confidence': '#8a8f9a'}[label] %}
+      {% set tier_color = {'High Confidence': '#3ddc84', 'Medium Confidence': 'var(--accent2)', 'Low Confidence': '#8a8f9a'}[label] %}
       <div class="donut-col" style="animation-delay: {{ loop.index0 * 0.15 }}s;">
         {{ donut_svg(stats.correct, stats.total, tier_color, size=90, animate=True, delay=loop.index0 * 0.15) | safe }}
         <div class="donut-caption">{{ label|replace(' Confidence', '') }}</div>
@@ -4875,7 +4934,7 @@
   {% endmacro %}
 
   {% macro confidence_ring(prob, confidence_label, size=34) %}
-    {%- set color = '#3ddc84' if confidence_label == 'High Confidence' else ('#e8c766' if confidence_label == 'Medium Confidence' else '#ff5c5c') -%}
+    {%- set color = '#3ddc84' if confidence_label == 'High Confidence' else ('var(--accent2)' if confidence_label == 'Medium Confidence' else '#ff5c5c') -%}
     {%- set radius = (size / 2) - 3 -%}
     {%- set circumference = 2 * 3.14159265 * radius -%}
     {%- set offset = circumference * (1 - prob) -%}
@@ -6448,7 +6507,7 @@
         if (!DEBUG) return;
         const box = document.createElement('div');
         box.style.cssText = 'position:fixed;bottom:90px;left:10px;right:10px;z-index:9999;' +
-          'background:#161618;border:1px solid #d4af37;border-radius:10px;padding:12px;' +
+          'background:#161618;border:1px solid var(--accent);border-radius:8px;padding:12px;' +
           'font:11px/1.5 monospace;color:#e6e9ef;white-space:pre-wrap;max-height:45vh;overflow:auto';
         box.textContent = 'SCRUB DIAGNOSTIC\n' + notes.join('\n') + '\n\nBAILED AT: ' + why;
         document.body.appendChild(box);
