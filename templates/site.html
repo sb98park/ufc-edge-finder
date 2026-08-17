@@ -819,13 +819,18 @@
      "Islam Makhachev - KO/TKO" then wrapped to two lines on a phone, so the
      toggle silently reflowed the table it was designed not to disturb.
      "±" carries the meaning on its own next to values like -222 / +222. */
+  /* 0.9 AT REST, not 0.55. This is the only affordance telling a reader the
+     %/± toggle exists, and at 0.55 it composited to 2.92:1 -- below the floor
+     for the one element whose job is to be noticed. The hover rule already
+     lifted it to 0.9, which concedes 0.55 was too low, and there is no hover
+     on a touch device, which is where this page mostly lives. */
   .mkt-model-head .unit-hint {
-    font-size: 0.5rem; opacity: 0.55; margin-left: 3px;
+    font-size: 0.5625rem; opacity: 0.9; margin-left: 3px;
     border-bottom: 1px dotted currentColor; padding-bottom: 1px;
     display: inline-block; min-width: 1ch; text-align: center;
   }
   .mkt-model-head:hover .unit-hint,
-  .mkt-model-head:focus-visible .unit-hint { opacity: 0.9; }
+  .mkt-model-head:focus-visible .unit-hint { opacity: 1; }
   .mkt-model-head:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
 
   /* SILHOUETTE. Shaded in each fighter's OWN corner colour rather than a red
@@ -1007,13 +1012,18 @@
      "Islam Makhachev - KO/TKO" then wrapped to two lines on a phone, so the
      toggle silently reflowed the table it was designed not to disturb.
      "±" carries the meaning on its own next to values like -222 / +222. */
+  /* 0.9 AT REST, not 0.55. This is the only affordance telling a reader the
+     %/± toggle exists, and at 0.55 it composited to 2.92:1 -- below the floor
+     for the one element whose job is to be noticed. The hover rule already
+     lifted it to 0.9, which concedes 0.55 was too low, and there is no hover
+     on a touch device, which is where this page mostly lives. */
   .mkt-model-head .unit-hint {
-    font-size: 0.5rem; opacity: 0.55; margin-left: 3px;
+    font-size: 0.5625rem; opacity: 0.9; margin-left: 3px;
     border-bottom: 1px dotted currentColor; padding-bottom: 1px;
     display: inline-block; min-width: 1ch; text-align: center;
   }
   .mkt-model-head:hover .unit-hint,
-  .mkt-model-head:focus-visible .unit-hint { opacity: 0.9; }
+  .mkt-model-head:focus-visible .unit-hint { opacity: 1; }
   .mkt-model-head:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
 
 
@@ -1996,10 +2006,20 @@
   .wf-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   /* Keyed on CORNER, not on who is favoured -- the fighter listed first is
      always red, second always blue, however the model rates them. */
-  .wf-head-row.red-corner .wf-head-name,
-  .wf-head-row.red-corner .wf-head-pct { color: var(--corner-red); }
-  .wf-head-row.blue-corner .wf-head-name,
-  .wf-head-row.blue-corner .wf-head-pct { color: var(--corner-blue); }
+  /* THE NAME CARRIES THE CORNER COLOUR; THE NUMBER DOES NOT.
+     Measured on --panel2 (#242426), which is what .waterfall-block paints:
+     --corner-red is 3.67:1 and --corner-blue 4.21:1. .wf-head-pct on the
+     favoured row is 17px/700 -- under the 18.66px bold threshold, so 4.5:1
+     applies and both fail. That made the model's own headline probability
+     the least legible text on the card.
+     Lightening the corner reds to pass would push --corner-red to ~#f74f4b,
+     which collides with --red and destroys the separation this file's colour
+     contract depends on. So the identity stays where it is already carried
+     three times over -- the name, the 7px swatch below, and the bar segment
+     -- and the number gets the text colour it should always have had. */
+  .wf-head-row.red-corner .wf-head-name { color: var(--corner-red); }
+  .wf-head-row.blue-corner .wf-head-name { color: var(--corner-blue); }
+  .wf-head-row .wf-head-pct { color: var(--text); }
   /* A small square in the segment colour, so the tie reads even for anyone
      who can't separate gold from cyan. */
   .wf-head-row .wf-head-name::before {
@@ -2102,7 +2122,10 @@
   .fav-blue .wf-bar.neg { background: linear-gradient(90deg, rgba(229,57,53,0.5), var(--corner-red)); }
   .wf-nums { flex: 0 0 62px; text-align: right; }
   .wf-delta { display: block; font-size: 0.6875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .wf-delta::after { content: "pp"; font-size: 0.5625rem; font-weight: 600; opacity: 0.75; margin-left: 1px; }
+  /* No opacity. At 0.75 over an already-dim corner colour this composited to
+     2.58:1 -- a 9px unit label nobody could read. The size difference alone
+     is enough to subordinate it. */
+  .wf-delta::after { content: "pp"; font-size: 0.5625rem; font-weight: 600; margin-left: 1px; }
   .fav-red .wf-delta.pos { color: var(--corner-red); }
   .fav-red .wf-delta.neg { color: var(--corner-blue); }
   .fav-blue .wf-delta.pos { color: var(--corner-blue); }
@@ -2150,7 +2173,13 @@
     padding: 10px 12px; margin: 8px 0; text-align: center;
   }
   .chart-label { font-size: 0.6875rem; color: var(--muted); margin-bottom: 4px; text-align: left; }
-  .chart-caption { font-size: 0.5625rem; color: #5a5f6a; margin-top: 5px; line-height: 1.4; }
+  /* --muted, not a hand-picked grey. #5a5f6a measured 2.42:1 on --panel2 --
+     these captions are the strings that explain what each chart MEANS, and
+     they were the least legible text in the block they describe. This file
+     already documents and fixed the identical bug on .sil-scale. Get the
+     quietness from size and tracking, not from luminance: --muted is 5.97:1
+     on the same surface and still reads as secondary at 9px. */
+  .chart-caption { font-size: 0.5625rem; color: var(--muted); margin-top: 5px; line-height: 1.4; }
   .chart-placeholder-text { font-size: 0.6875rem; color: var(--muted); text-align: left; padding: 8px 0; }
   /* CENTRING ONLY -- do not add a width here. As a display:block SVG with
      only max-width it kept its intrinsic width and sat hard left in the wide
@@ -2236,6 +2265,20 @@
      means model here and they are neither a model output nor a market one,
      they are just labels for which column is whose. */
   .compare-table th { color: var(--text); font-size: 0.6875rem; font-weight: 600; }
+  /* FIXED LAYOUT AT EVERY WIDTH. Without it, table-layout's default "auto"
+     lets one long cell (Last Fight's date + result + opponent) force the
+     whole table wider than its container. Widths are proportional to what the
+     content actually needs, measured -- an equal split starves the label
+     column for "Decision Record" while leaving the value columns slack.
+     white-space:normal overrides the site-wide `table td { nowrap }`, which
+     is the actual root cause: it forced Last Fight's text onto one line at
+     full unwrapped width. word-break stays `normal` because break-word splits
+     inside a word and turned "Wrestler/Grappler" into "Wrestler/Grappl". */
+  .compare-table { table-layout: fixed; }
+  .compare-table th:first-child, .compare-table td:first-child,
+  .compare-table th:last-child, .compare-table td:last-child { width: 34%; }
+  .compare-table th:nth-child(2), .compare-table td:nth-child(2) { width: 32%; }
+  .compare-table th, .compare-table td { white-space: normal; word-break: normal; overflow-wrap: break-word; }
   @media (max-width: 480px) {
     /* Fixed layout + explicit column widths keeps the table within the
        viewport regardless of content length -- without this, table-layout's
@@ -2252,14 +2295,13 @@
        text to stay on one line at its full, unwrapped width in the first
        place, which is the actual root cause of the overflow.
     */
-    .compare-table { table-layout: fixed; }
-    .compare-table th:first-child, .compare-table td:first-child,
-    .compare-table th:last-child, .compare-table td:last-child { width: 34%; }
-    .compare-table th:nth-child(2), .compare-table td:nth-child(2) { width: 32%; }
-    /* normal, not break-word. break-word splits INSIDE a word, which turned
-     "Wrestler/Grappler" into "Wrestler/Grappl" + "er". The slash is already a
-     valid break point, so if a value must wrap it now does so cleanly. */
-  .compare-table th, .compare-table td { white-space: normal; word-break: normal; overflow-wrap: break-word; }
+    /* HOISTED OUT OF THIS BLOCK -- see the .compare-table rules at top level.
+       Keeping the fix inside max-width:480px meant it stopped applying at
+       481px, where the site-wide `white-space: nowrap` took back over and 58
+       of 76 tables overflowed their container, the worst hiding 252px of a
+       fighter's name. A one-pixel cliff affecting every phone in landscape
+       and every desktop window under 768px. A fixed-layout 100% table cannot
+       overflow, so there is no width at which this is the wrong behaviour. */
   }
 
   .tape-block { margin-bottom: 14px; }
@@ -3325,8 +3367,15 @@
   }
   .units-chart-wrap.scrubbing .scrub-readout { opacity: 1; }
   .scrub-readout .sr-units { font-weight: 700; font-family: var(--font-display); }
-  .scrub-readout .sr-win { color: var(--good, #4ade80); }
-  .scrub-readout .sr-loss { color: var(--bad, #ff5c5c); }
+  /* --good and --bad were never declared anywhere in this file, so both of
+     these silently fell through to their literals -- and #4ade80 is not
+     --green (#3ddc84), it is Tailwind's green-400, a visibly different green
+     on the one readout whose job is looking trustworthy about money. --bad's
+     literal happened to equal --red, so it was wrong only by luck.
+     A var() fallback on an undeclared name never errors, which is what let
+     this sit; grep every var(--x, y) in this file before adding another. */
+  .scrub-readout .sr-win { color: var(--green); }
+  .scrub-readout .sr-loss { color: var(--red); }
   /* The cursor line and dot are injected into the SVG so they scale with it
      rather than needing separate positioning maths. */
   .scrub-line { stroke: rgba(255,255,255,0.35); stroke-width: 1; pointer-events: none; }
@@ -3979,7 +4028,7 @@
   <div id="hub-view">
     <div class="hub-grid">
       {% if events %}
-      <div class="hub-card featured" onclick="showSection('thisweekend')" data-section-nav="thisweekend">
+      <div class="hub-card featured" onclick="showSection('thisweekend')" data-section-nav="thisweekend" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Octagon cage">
             <defs><linearGradient id="icon-weekend" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -3997,7 +4046,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       {% endif %}
-      <div class="hub-card" onclick="showSection('track')" data-section-nav="track">
+      <div class="hub-card" onclick="showSection('track')" data-section-nav="track" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Trend line chart">
             <defs><linearGradient id="icon-track" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -4011,7 +4060,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" onclick="showSection('standout')" data-section-nav="standout">
+      <div class="hub-card" onclick="showSection('standout')" data-section-nav="standout" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Flame">
             <defs><linearGradient id="icon-standout" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -4026,7 +4075,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-group-header">Analysis</div>
-      <div class="hub-card" onclick="showSection('funfacts')" data-section-nav="funfacts" data-row="first">
+      <div class="hub-card" onclick="showSection('funfacts')" data-section-nav="funfacts" data-row="first" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Lightning bolt">
             <defs><linearGradient id="icon-funfacts" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#99f6e4"/><stop offset="100%" stop-color="#2dd4bf"/></linearGradient></defs>
@@ -4041,7 +4090,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" onclick="showSection('favorites')" data-section-nav="favorites" data-row="mid">
+      <div class="hub-card" onclick="showSection('favorites')" data-section-nav="favorites" data-row="mid" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Faceted diamond">
             <defs><linearGradient id="icon-favorites" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -4055,7 +4104,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" onclick="showSection('locks')" data-section-nav="locks">
+      <div class="hub-card" onclick="showSection('locks')" data-section-nav="locks" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Padlock">
             <defs><linearGradient id="icon-locks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
@@ -4070,7 +4119,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" onclick="showSection('parlays')" data-section-nav="parlays" data-row="last">
+      <div class="hub-card" onclick="showSection('parlays')" data-section-nav="parlays" data-row="last" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins">
             <defs><linearGradient id="icon-parlays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -4088,7 +4137,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-group-header">Schedule</div>
-      <div class="hub-card" onclick="showSection('coming')" data-section-nav="coming" data-row="solo">
+      <div class="hub-card" onclick="showSection('coming')" data-section-nav="coming" data-row="solo" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Calendar">
             <defs><linearGradient id="icon-coming" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -4106,7 +4155,7 @@
         <span class="hub-card-arrow">→</span>
       </div>
       <div class="hub-group-header">About</div>
-      <div class="hub-card" onclick="showSection('howitworks')" data-section-nav="howitworks" data-row="first">
+      <div class="hub-card" onclick="showSection('howitworks')" data-section-nav="howitworks" data-row="first" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Sigma summation symbol">
             <defs><linearGradient id="icon-howitworks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
@@ -4119,7 +4168,7 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
-      <div class="hub-card" onclick="showSection('disclaimer')" data-section-nav="disclaimer" data-row="last">
+      <div class="hub-card" onclick="showSection('disclaimer')" data-section-nav="disclaimer" data-row="last" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Information">
             <defs><linearGradient id="icon-disclaimer" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c6cad4"/><stop offset="100%" stop-color="#8a8f9a"/></linearGradient></defs>
@@ -5899,7 +5948,19 @@
     // which would inherit button styling across three breakpoints.
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      if (e.target && e.target.id === 'back-btn') { e.preventDefault(); showHub(); }
+      if (e.target && e.target.id === 'back-btn') { e.preventDefault(); showHub(); return; }
+      // THE HUB CARDS ARE THE ONLY WAY INTO EIGHT SECTIONS, and they were
+      // plain <div onclick> -- no role, no tabindex, no key handling. Ten of
+      // them, 0 of 10 reachable by keyboard, and because the tab bar is
+      // hidden above 1023px those sections were unreachable full stop on a
+      // desktop. There is not a single <a href> in this page to fall back to.
+      //
+      // Delegated on the attribute the click path already keys off, so the
+      // two cannot drift apart. closest() rather than a direct match because
+      // the focusable element is the card and the event target may be a
+      // child span or the inline SVG icon.
+      const nav = e.target.closest && e.target.closest('[data-section-nav]');
+      if (nav) { e.preventDefault(); showSection(nav.getAttribute('data-section-nav')); }
     });
 
     // opts.fromSwipe: the back gesture has ALREADY moved both views into

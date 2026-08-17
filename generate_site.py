@@ -357,8 +357,18 @@ def main():
     events.sort(key=lambda e: e["event_date"])
     future_events.sort(key=lambda e: e["event_date"])
 
+    # CANCELLED FIGHTS ARE NOT VALUE. `cancelled` was checked in exactly two
+    # places in the template and nowhere here, so a void bout kept feeding
+    # Standout Props, Favorite Picks and Parlays -- every one of which is a
+    # recommendation to bet. A parlay is worse than a prop: it prices a
+    # combined payout and a combined hit probability that both include a leg
+    # that cannot settle.
+    #
+    # Filtered at the source rather than in each of the three consumers, so a
+    # fourth consumer added later inherits the guard instead of re-earning it.
     tracked_edges = pd.DataFrame(
-        [edge for event in events for fight in event["fights"] for edge in fight["edges"]]
+        [edge for event in events for fight in event["fights"]
+         if not fight.get("cancelled") for edge in fight["edges"]]
     )
 
     # Standout Props / Favorite Picks / Parlays are meant to answer "where
