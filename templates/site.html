@@ -453,7 +453,7 @@
   .hub-card {
     background: linear-gradient(145deg, var(--panel2), var(--panel) 65%);
     border: 1px solid var(--border); border-radius: 12px; padding: 16px;
-    cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer; transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     box-shadow: var(--e2);
     display: flex; flex-direction: row; align-items: center; gap: 14px; position: relative; overflow: hidden;
   }
@@ -502,7 +502,7 @@
        standout props -- and green means "positive" elsewhere, so on a card
        that is already a positive pick it stated the obvious twice. */
     border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
   }
   .favorite-card:active { transform: scale(0.98); }
   @media (hover: hover) {
@@ -515,7 +515,7 @@
   .lock-pick-card {
     background: var(--panel2);
     border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 12px; padding: 14px 16px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
   }
   .lock-pick-card:active { transform: scale(0.98); }
   @media (hover: hover) {
@@ -1678,7 +1678,7 @@
   .standout-card {
     background: var(--panel2);
     border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     /* One rung higher than a fight card: this one lifts on hover and presses
        on tap, so it should already read as detached at rest. */
     box-shadow: var(--e2);
@@ -1846,13 +1846,16 @@
 
   details.fight-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-    margin-bottom: 12px; overflow: clip; transition: transform 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 12px; overflow: clip; transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     /* Resting rung. One layer on purpose: this lands on every fight card on
        the page, and the two-layer stacks are reserved for surfaces that are
        genuinely raised. */
     box-shadow: var(--e1);
   }
-  details.fight-card summary:active { transform: scale(0.995); }
+  /* Press feedback moved to the tint list below. scale(0.995) on a 343px card
+     is 0.85px per side -- under the threshold where a transform reads as a
+     press at all -- and this file's own rule says full-width rows should tint
+     rather than scale, which five sibling rows already do. */
   @media (hover: hover) {
     details.fight-card:hover {  }
   }
@@ -2101,6 +2104,20 @@
      With square corners here the fill covers the whole corner region
      opaquely, the track's clip provides the single rounded edge, and there
      is no second layer left underneath to bleed through at any DPR. */
+  /* Still animates width, unlike .wf-bar four rules below which uses scaleX
+     for compositor reasons that apply here too. A conversion was tried and
+     reverted, and the reason is worth recording because the obvious
+     measurement is misleading.
+     Probing every .wf-split-fill on a fresh page finds ~5 of 76 rendering at
+     50% rather than their real value, under either implementation. They are
+     not a bug and they are not visible: they sit inside COLLAPSED
+     details.fight-card elements, where the animation clock never advances, so
+     `both` holds the from-frame. The re-trigger handler on card expansion
+     exists for exactly this. getBoundingClientRect still reports geometry
+     inside a collapsed <details>, which is what makes the probe lie.
+     So the conversion is safe and worth doing for the relayout saving on 76
+     elements -- it is simply not urgent, and it should not be re-attempted on
+     the strength of a probe that counts hidden bars as broken ones. */
   .wf-split-fill { display: block; height: 100%; border-radius: 0; }
   /* Fill animations. These are re-triggered from JS whenever the panel is
      opened (see the .waterfall-block toggle handler) because CSS
@@ -2424,7 +2441,14 @@
      the same label clears the edge by roughly 10px. Only at the narrowest
      supported width; at 375px there is already room. */
   @media (max-width: 359px) { .radar-chart { max-width: 90%; } }
-  .radar-polygon { transform: scale(0); transition: transform 1.4s cubic-bezier(0.34,1.4,0.64,1); }
+  /* EXPO-OUT, NOT THE OVERSHOOT CURVE. cubic-bezier(0.34,1.4,0.64,1) peaks at
+     1.0529 -- so for about a third of a second on every scroll-in, across 154
+     charts, the polygon drew each attribute ~5.3% ABOVE the value it plots.
+     Every other use of that curve in this file is a celebration or a piece of
+     chrome arriving, where overshoot is correct because the thing arriving is
+     an object. This one is data.
+     The rule worth keeping: overshoot is for objects, never for quantities. */
+  .radar-polygon { transform: scale(0); transition: transform 1.4s cubic-bezier(0.22,1,0.36,1); }
   .radar-chart.revealed .radar-polygon { transform: scale(1); }
   .radar-legend { display: flex; gap: 16px; margin-top: 4px; }
   .chart-draw-line { /* renders normally now - visibility controlled by chart-reveal-mask instead */ }
@@ -2947,6 +2971,12 @@
   .past-event-summary:active,
   .market-group-summary:active,
   .waterfall-summary:active,
+  /* details.fight-card summary and .chart-toggle summary joined this list:
+     the first was scaling by 0.85px, the second had cursor:pointer, a
+     rotating chevron and no press acknowledgement at all across 18
+     instances -- while the market-group row 4px below it tinted. */
+  details.fight-card summary:active,
+  details.chart-toggle summary:active,
   .mkt-model-head:active {
     background: rgba(255,255,255,0.06);
     transition: background 90ms ease-out;
@@ -6996,6 +7026,13 @@
         function segRelease() {
           if (!barDrag) return;
           barDrag = false;
+          // The segmented control commits like the tab bar and felt inert by
+          // comparison, because only the tab bar ticked. Three gesture
+          // commits are built on the same primitives; the one that ticked was
+          // not the one that feels most physical. haptic() already no-ops
+          // under reduced motion and on iOS Safari, which ignores
+          // navigator.vibrate entirely.
+          haptic(8);
           const v = segMoved ? vel.get() : 0;
           // A flick lands where it is THROWN. Without this the pill settled
           // on whatever segment the finger stopped over, so a hard swipe and
@@ -7347,7 +7384,12 @@
             // Everything below happens in one task, so nothing paints
             // between the scroll, the swap and the unpinning.
             window.scrollTo(0, 0);
-            showHub({ fromSwipe: true });
+            // The back swipe is the one gesture where the finger is still on
+            // the glass at the moment of commit, so it is the one that most
+            // earns a tick.
+            haptic(8);
+            haptic(8);
+          showHub({ fromSwipe: true });
             cleanup();
           } else {
             cleanup();
@@ -8159,6 +8201,7 @@
           // on screen. fromSwipe: the views are being swapped because the
           // LAYOUT changed, so a 220ms hub-vs-detail slide would be animating
           // a transition the user never asked for.
+          haptic(8);
           showHub({ fromSwipe: true });
         }
         __wasDesktopLayout = isDesktopNow;
@@ -9418,17 +9461,56 @@
         });
       });
     })();
-    // Ripple tap effect on all accordion toggles
+    // Ripple tap effect on all accordion toggles.
+    //
+    // ON pointerdown, NOT click. Expanding an accordion is the most repeated
+    // action on this site -- 410 summaries -- and its acknowledgement was
+    // arriving at RELEASE, in the same frame as the result it was supposed to
+    // precede. That is the one place this file's own doctrine (respond on
+    // pointer-down, feedback continuous, same frame across senses) was not
+    // being followed, and it is the action where it matters most.
+    //
+    // Keyboard Enter reports clientX = 0, which put the ripple origin outside
+    // the element and clipped it away entirely -- so the single most common
+    // control had no acknowledgement at all for keyboard users. Falls back to
+    // the element's centre when there are no real coordinates.
+    //
+    // Reduced motion suppresses the ripple rather than shortening it: a
+    // radial expansion has no quiet version, and the :active tint on these
+    // same rows already carries the acknowledgement.
     (function() {
+      const rmq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
       document.querySelectorAll('summary').forEach(el => {
-        el.addEventListener('click', function(e) {
+        el.addEventListener('pointerdown', function(e) {
+          if (rmq && rmq.matches) return;
+          const rect = el.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height);
+          // e.clientX is 0 for a keyboard-synthesised event and for some
+          // assistive-tech activations; centre the ripple rather than
+          // originating it off-element.
+          const hasPoint = e.clientX || e.clientY;
+          const cx = hasPoint ? e.clientX - rect.left : rect.width / 2;
+          const cy = hasPoint ? e.clientY - rect.top : rect.height / 2;
+          const ripple = document.createElement('span');
+          ripple.className = 'ripple-effect';
+          ripple.style.width = ripple.style.height = size + 'px';
+          ripple.style.left = (cx - size / 2) + 'px';
+          ripple.style.top = (cy - size / 2) + 'px';
+          el.appendChild(ripple);
+          setTimeout(() => ripple.remove(), 550);
+        });
+        // Keyboard activation never produces a pointerdown, so Enter/Space on
+        // a focused summary would otherwise be the one path with no feedback.
+        el.addEventListener('keydown', function(e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          if (rmq && rmq.matches) return;
           const rect = el.getBoundingClientRect();
           const size = Math.max(rect.width, rect.height);
           const ripple = document.createElement('span');
           ripple.className = 'ripple-effect';
           ripple.style.width = ripple.style.height = size + 'px';
-          ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
-          ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+          ripple.style.left = (rect.width / 2 - size / 2) + 'px';
+          ripple.style.top = (rect.height / 2 - size / 2) + 'px';
           el.appendChild(ripple);
           setTimeout(() => ripple.remove(), 550);
         });
@@ -9531,17 +9613,56 @@
       }, 1200);
     })();
 
-    // Ripple tap effect on all accordion toggles
+    // Ripple tap effect on all accordion toggles.
+    //
+    // ON pointerdown, NOT click. Expanding an accordion is the most repeated
+    // action on this site -- 410 summaries -- and its acknowledgement was
+    // arriving at RELEASE, in the same frame as the result it was supposed to
+    // precede. That is the one place this file's own doctrine (respond on
+    // pointer-down, feedback continuous, same frame across senses) was not
+    // being followed, and it is the action where it matters most.
+    //
+    // Keyboard Enter reports clientX = 0, which put the ripple origin outside
+    // the element and clipped it away entirely -- so the single most common
+    // control had no acknowledgement at all for keyboard users. Falls back to
+    // the element's centre when there are no real coordinates.
+    //
+    // Reduced motion suppresses the ripple rather than shortening it: a
+    // radial expansion has no quiet version, and the :active tint on these
+    // same rows already carries the acknowledgement.
     (function() {
+      const rmq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
       document.querySelectorAll('summary').forEach(el => {
-        el.addEventListener('click', function(e) {
+        el.addEventListener('pointerdown', function(e) {
+          if (rmq && rmq.matches) return;
+          const rect = el.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height);
+          // e.clientX is 0 for a keyboard-synthesised event and for some
+          // assistive-tech activations; centre the ripple rather than
+          // originating it off-element.
+          const hasPoint = e.clientX || e.clientY;
+          const cx = hasPoint ? e.clientX - rect.left : rect.width / 2;
+          const cy = hasPoint ? e.clientY - rect.top : rect.height / 2;
+          const ripple = document.createElement('span');
+          ripple.className = 'ripple-effect';
+          ripple.style.width = ripple.style.height = size + 'px';
+          ripple.style.left = (cx - size / 2) + 'px';
+          ripple.style.top = (cy - size / 2) + 'px';
+          el.appendChild(ripple);
+          setTimeout(() => ripple.remove(), 550);
+        });
+        // Keyboard activation never produces a pointerdown, so Enter/Space on
+        // a focused summary would otherwise be the one path with no feedback.
+        el.addEventListener('keydown', function(e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          if (rmq && rmq.matches) return;
           const rect = el.getBoundingClientRect();
           const size = Math.max(rect.width, rect.height);
           const ripple = document.createElement('span');
           ripple.className = 'ripple-effect';
           ripple.style.width = ripple.style.height = size + 'px';
-          ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
-          ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+          ripple.style.left = (rect.width / 2 - size / 2) + 'px';
+          ripple.style.top = (rect.height / 2 - size / 2) + 'px';
           el.appendChild(ripple);
           setTimeout(() => ripple.remove(), 550);
         });
