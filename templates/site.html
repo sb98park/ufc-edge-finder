@@ -1979,7 +1979,32 @@
   .matchup-name { font-size: var(--t-body); font-weight: 600; line-height: 1.25; display: block; }
   .matchup-divider-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
   .matchup-divider-row .divider-line { flex: 1; height: 1px; background: var(--border); }
-  .matchup-badges-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 4px; }
+  /* THE SUMMARY PICK. Sits on the divider row between the line and the
+     chevron, so it reads as part of the "there is more here" affordance
+     rather than as another badge competing with the fighter names.
+     Tabular numerals so a column of fourteen percentages aligns down the
+     card -- the whole point is that they can be compared at a glance. */
+  .summary-pick {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: var(--t-small); font-weight: 600; white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .summary-pick-name { color: var(--text-soft); }
+  .summary-pick-pct { color: var(--text); font-variant-numeric: tabular-nums; font-family: var(--font-display); }
+  /* The tier as colour, not a word. A word here would compete with the
+     names for the same glance, and the three tiers already have a colour
+     language elsewhere in the file (.conf-badge). */
+  .summary-pick-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .summary-pick.high .summary-pick-dot { background: var(--green); }
+  .summary-pick.medium .summary-pick-dot { background: var(--accent2); }
+  .summary-pick.low .summary-pick-dot { background: var(--muted); }
+  /* A decided fight already prints the result and a green check beside the
+     winner, so the pick beside it is the frozen call sitting next to what
+     happened -- which is the point. It just should not shout. */
+  .finished-row .summary-pick-name,
+  .finished-row .summary-pick-pct { color: var(--muted); }
+
+  .matchup-badges-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 10px; }
   .matchup-badges-row .factor-badges { flex: 1; min-width: 0; margin-top: 0; }
   .factor-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
   .factor-badges.right { justify-content: flex-end; }
@@ -1987,8 +2012,22 @@
     font-size: var(--t-micro); font-weight: 600; border-radius: var(--r-md); padding: 1.5px 5px;
     white-space: normal; letter-spacing: 0.2px; max-width: 100%; box-sizing: border-box;
   }
-  .factor-badge.pos { background: #10251a; color: var(--green); }
-  .factor-badge.neg { background: #2a1414; color: var(--red); }
+  /* NEUTRAL, WITH DIRECTION. These were green and red -- the same palette
+     this site uses for correct and incorrect on the Track Record -- so
+     "+ Wrestling" and "- Quick Return" read as verdicts rather than as
+     attributes, most confusingly on a decided card sitting beside a real
+     green check. The +/- glyph already carries the direction; the colour was
+     saying something it does not know.
+     Direction now shows as weight and a hairline edge on the positive side,
+     both on the same neutral surface. */
+  .factor-badge.pos {
+    background: rgba(255,255,255,0.05); color: var(--text-soft);
+    border: 1px solid var(--hairline);
+  }
+  .factor-badge.neg {
+    background: rgba(255,255,255,0.03); color: var(--muted);
+    border: 1px solid transparent;
+  }
   .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: 124px; min-width: 0; overflow: hidden; }
   .vs-text { display: block; font-size: var(--t-small); font-weight: 700; color: var(--muted); letter-spacing: 0.5px; }
   @media (max-width: 480px) {
@@ -3061,6 +3100,7 @@
      press state is the indicator's 1.12 scale, and its real gap is that the
      scale is driven from touchstart only -- a pointer-input problem, fixed
      with the pointer-event work rather than here. */
+  .fc-action:active,
   .fc-chip:active,
   .fun-fact-chip:active,
   .seg-tab:active,
@@ -3254,6 +3294,17 @@
     font-family: inherit; -webkit-tap-highlight-color: transparent;
   }
   .fc-chip.on { background: rgba(212,175,55,0.14); border-color: var(--accent); color: var(--accent); }
+  /* A command, not a filter. No pill, no border -- an underline on the text
+     so it still reads as pressable, at the same size as the chips so the row
+     stays on one baseline. */
+  .fc-action {
+    margin-left: auto; padding: 5px 2px; cursor: pointer;
+    background: none; border: 0; border-bottom: 1px solid var(--hairline);
+    color: var(--muted); font-size: var(--t-small); font-weight: 600;
+    font-family: inherit; -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  .fc-action:hover, .fc-action:focus-visible { color: var(--text-soft); border-bottom-color: var(--text-soft); }
   .fc-spacer { margin-left: auto; }
   .fight-card.fc-hidden { display: none; }
 
@@ -5132,20 +5183,36 @@
         <div>{% if fact_b %}{{ fact_chip(fact_b, fight.fighter_b) }}{% endif %}</div>
       </div>
       {% endif %}
+      {# THE COLLAPSED ROW CARRIES THE CONCLUSION, NOT THE EVIDENCE.
+         It used to do the opposite: the factor badges (+ Wrestling,
+         - Quick Return) sat out here while the pick, the probability and the
+         confidence tier all lived inside the body. So fourteen fights
+         presented as fourteen rows of supporting detail with no claim
+         attached, and a reader could not tell a 51% coin flip from an 82%
+         call without opening both -- on a build that is 32 low, 35 medium
+         and 9 high.
+
+         Three elements, deliberately. Surname because the full names are
+         already two lines above; the probability because it is the claim;
+         the tier as a COLOUR rather than a word because a word here competes
+         with the names for the same glance.
+
+         Everything answering "why" stays behind the tap -- the factor
+         badges, the method, the momentum arrow, the confidence label and the
+         rationale. The pick is the hook, not the giveaway: "Hernandez 78%"
+         creates a question, and a row with no claim creates none. #}
       <div class="matchup-divider-row">
         <div class="divider-line"></div>
+        {% if fight.preview and fight.preview.favorite %}
+        {% set _tier = (fight.preview.confidence_label or '')|lower|replace(' confidence','') %}
+        <span class="summary-pick {{ _tier }}">
+          <span class="summary-pick-dot" aria-hidden="true"></span>
+          <span class="summary-pick-name">{{ fight.preview.favorite.split(' ')[-1] }}</span>
+          <span class="summary-pick-pct">{{ (fight.preview.favorite_prob * 100) | round | int }}%</span>
+        </span>
+        {% endif %}
         <span class="chevron">▶</span>
       </div>
-      {% if (fight.preview and fight.preview.comparison.a.badges) or (fight.preview and fight.preview.comparison.b.badges) %}
-      <div class="matchup-badges-row">
-        <div class="factor-badges">
-          {% if fight.preview and fight.preview.comparison.a.badges %}{% for b in fight.preview.comparison.a.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
-        </div>
-        <div class="factor-badges right">
-          {% if fight.preview and fight.preview.comparison.b.badges %}{% for b in fight.preview.comparison.b.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
-        </div>
-      </div>
-      {% endif %}
       </div>
     </summary>
     <div class="fight-body">
@@ -5162,6 +5229,19 @@
         <span class="pick-confidence">{{ fight.preview.confidence_label }}</span>
         {% if fight.is_lock_of_week %}<span class="lock-badge celebratable">{{ icon_lock() }} Lock of the Week</span>{% endif %}
       </div>
+      {# The factor badges, moved in from the summary. They are the REASONING
+         -- which attributes favour whom -- so they belong with the pick they
+         explain rather than in front of it. #}
+      {% if (fight.preview.comparison.a.badges) or (fight.preview.comparison.b.badges) %}
+      <div class="matchup-badges-row">
+        <div class="factor-badges">
+          {% if fight.preview.comparison.a.badges %}{% for b in fight.preview.comparison.a.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
+        </div>
+        <div class="factor-badges right">
+          {% if fight.preview.comparison.b.badges %}{% for b in fight.preview.comparison.b.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
+        </div>
+      </div>
+      {% endif %}
       {% if fight.result_stats %}
       <div class="result-stats-block">
         <div class="result-stats-title">{{ icon_barchart() }} Fight Overview</div>
@@ -5686,7 +5766,15 @@
        filter could not answer. The filter compares data-filter to
        data-confidence directly, so this needs no JS change. #}
     <button class="fc-chip" data-filter="low">Low</button>
-    <button class="fc-chip fc-spacer" id="fc-toggle-all">Expand all</button>
+    {# NOT A CHIP. In a row of five identical pills, four change what is
+       SHOWN and one changes how everything is DISPLAYED -- a command wearing
+       a filter's clothes. Adding the Low chip made the row wrap and pushed
+       this onto its own line, which was the accident that made the problem
+       visible: it had been getting away with the disguise only because it
+       happened to fit.
+       Now a text action. It reads as a different kind of control, and the
+       four filters get the width back. #}
+    <button class="fc-action fc-spacer" id="fc-toggle-all">Expand all</button>
   </div>
   {# Shown when a filter empties the visible segment. Without it, filtering to
      High and switching to a card with no High picks looks like the tab broke
