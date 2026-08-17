@@ -420,21 +420,49 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      # Falls back to the retry's URL: on a first-attempt failure the original
+      # output is empty and the environment link would render blank.
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     steps:
+      # RETRIED ONCE, because the failures here are transient and server-side.
+      #
+      # THE PREVIOUS DIAGNOSIS IN THIS BLOCK WAS WRONG and is corrected below,
+      # because it sent the next reader (and it did) after the wrong thing.
+      # It read: "Every failure so far has been the ACTION giving up while
+      # GitHub still reported deployment_in_progress -- not an error from
+      # Pages", and on that basis raised the timeout to 30 minutes.
+      #
+      # Run 2574 refutes it. GitHub itself marked the DEPLOYMENT failed:
+      #     15:06:09  in_progress
+      #     15:07:05  failure
+      # Fifty-six seconds, against a 30-minute timeout. The action did not
+      # give up; Pages failed it. No timeout value addresses that, and the
+      # generous timeout below is retained only because it is harmless.
+      #
+      # What the evidence supports is a retry. The same sha deployed cleanly
+      # six minutes later in 13 seconds, so the artifact and the config were
+      # both fine -- permissions, upload-pages-artifact@v3 and path: docs all
+      # verified on the failing run.
+      #
+      # WHY NOT "SKIP THE DEPLOY WHEN THE PAGE IS UNCHANGED", which is the
+      # obvious way to reduce exposure: the page is never unchanged. docs/ is
+      # gitignored and never committed, so there is nothing to diff against,
+      # and two builds four minutes apart differ by 344 lines -- the build
+      # stamp, live prices, and which props clear the standout threshold.
+      # Excluding the volatile fields to force the comparison would risk the
+      # far worse failure of NOT publishing a page that really did change.
       - name: Deploy to Pages
         id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v4
         with:
-          # 30 minutes, up from the 10-minute default.
-          #
-          # Every failure so far has been the ACTION giving up while GitHub
-          # still reported deployment_in_progress -- not an error from Pages,
-          # and not a queue: the environment shows no deployment stuck ahead
-          # of these. Cancelling at 10 minutes may itself be what stops them
-          # finishing.
-          #
-          # If it still fails at 30, the problem is on GitHub's side and worth
-          # raising with support rather than tuning further.
+          timeout: 1800000
+          error_count: 20
+
+      - name: Retry the deploy once
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        with:
           timeout: 1800000
           error_count: 20
