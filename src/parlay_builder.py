@@ -24,7 +24,9 @@ simplification -- fights on the same card aren't perfectly independent
 in reality, but there's no clean way to quantify that from public data.
 """
 
+import hashlib
 import itertools
+import re
 
 import pandas as pd
 
@@ -50,6 +52,102 @@ def _leg_label(row: dict) -> str:
         outcome = market.replace("Fight Outcome: ", "")
         return f"{row['fighter']} — {outcome}"
     return f"{row['fighter']} — {market}"
+
+
+# ESPN's own vocabulary, from result.name on the per-competition status
+# object. Confirmed live against espn_method_probe.json: kotko, submission,
+# decision---unanimous, decision---split, decision---majority.
+#
+# GRADE AGAINST THESE SLUGS, NEVER AGAINST THE DISPLAY STRING. _leg_label
+# builds prose for humans ("Topuria by KO/TKO") and prose is not a protocol --
+# reparsing it client-side would couple leg grading to a copy change.
+# KEYED ON THE SITE'S OWN ABBREVIATIONS, which is what actually arrives here.
+# upcoming_props.selection_method holds KO/TKO, SUB and DEC, and edge_finder
+# interpolates that straight into "Method: {…}" -- so keying this on the
+# spelled-out words matched KO/TKO by luck and silently made every submission
+# and decision leg ungradeable. The long forms are kept as aliases in case a
+# future feed spells them out.
+_METHOD_SLUGS = {
+    "KO/TKO": ["kotko"],
+    "SUB": ["submission"],
+    "DEC": ["decision---unanimous", "decision---split", "decision---majority"],
+    "Submission": ["submission"],
+    "Decision": ["decision---unanimous", "decision---split", "decision---majority"],
+}
+
+
+def _leg_conditions(row: dict) -> list[dict]:
+    """
+    Machine-gradeable predicates for one leg. The leg wins iff ALL of them are
+    true; any single false condition kills it.
+
+    A list rather than a single dict because a combined winner+length piece is
+    ONE leg carrying TWO markets (see _build_candidate_pieces), and because a
+    method bet is really two claims -- this fighter won, AND it ended that way.
+    Splitting them matters for latency as much as correctness: the winner
+    clause grades off the scoreboard within seconds, so a method leg whose
+    fighter LOST dies immediately rather than waiting on the deeper method
+    fetch that would only confirm what is already decided.
+
+    Returns [] for a market this does not recognise, which the client treats
+    as permanently ungradeable rather than guessing. Silence is the only safe
+    failure here -- a leg wrongly shown as lost is worse than one shown as
+    unknown.
+    """
+    market = str(row.get("market") or "")
+    fighter = row.get("fighter")
+    if market == "Moneyline":
+        return [{"kind": "winner", "fighter": fighter}]
+    if market.startswith("Method"):
+        method = market.replace("Method: ", "").strip()
+        slugs = _METHOD_SLUGS.get(method)
+        if not slugs:
+            return []
+        return [{"kind": "winner", "fighter": fighter},
+                {"kind": "method", "any_of": slugs}]
+    if market.startswith("Total Rounds"):
+        m = re.search(r"(Under|Over)\s*([\d.]+)", market, re.IGNORECASE)
+        if not m:
+            return []
+        return [{"kind": "rounds", "op": m.group(1).lower(), "line": float(m.group(2))}]
+    if market.startswith("Fight Outcome"):
+        outcome = market.replace("Fight Outcome: ", "").strip().lower()
+        if "distance" in outcome:
+            return [{"kind": "distance", "value": True}]
+        if "finish" in outcome:
+            return [{"kind": "distance", "value": False}]
+        return []
+    return []
+
+
+def _fight_key(row: dict) -> str | None:
+    """
+    'Fighter A|Fighter B' for the bout this leg belongs to.
+
+    generate_site stamps fight_key onto every tracked edge, which is the only
+    place the edge and its fight are both in scope. The fallback covers
+    model-only projected rows, whose fight_id is already built in that shape
+    -- and it deliberately does NOT try fighter + opponent, because
+    fight-level markets set no opponent and would silently produce a
+    half-formed key that matches nothing.
+    """
+    key = row.get("fight_key")
+    if key:
+        return str(key)
+    fid = str(row.get("fight_id") or "")
+    return fid if "|" in fid else None
+
+
+def _slip_id(fight_ids, legs) -> str:
+    """
+    Stable DOM identity for a slip, across the three families and across
+    rebuilds. Hashed over the legs' own labels rather than their order in the
+    combination search, so the same slip keeps the same id when the ranking
+    around it changes -- which is what makes a per-slip collapse state
+    survivable from one refresh to the next.
+    """
+    parts = sorted(f"{fid}::{leg.get('label')}" for fid, leg in zip(fight_ids, legs))
+    return hashlib.sha1("|".join(parts).encode()).hexdigest()[:12]
 
 
 def _leg_family(market: str) -> str:
@@ -136,6 +234,8 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                 "model_prob": leg["model_prob"],
                 "decimal_odds": american_to_decimal(leg["odds_american"]),
                 "is_model": False,
+                "conditions": _leg_conditions(leg),
+                "fight_key": _fight_key(leg),
             })
 
         # combined winner+length pieces, skipping real contradictions
@@ -144,6 +244,10 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                 if _is_contradiction(w, l):
                     continue
                 combined_decimal = american_to_decimal(w["odds_american"]) * american_to_decimal(l["odds_american"])
+                # BOTH markets' conditions, concatenated. This is the case
+                # the list return type exists for: one visible leg that only
+                # wins if two separate claims both hold.
+                w_c, l_c = _leg_conditions(w), _leg_conditions(l)
                 pieces.append({
                     "fight_id": fight_id,
                     "label": f"{_leg_label(w)} + {_leg_label(l)}",
@@ -151,6 +255,11 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                     "model_prob": w["model_prob"] * l["model_prob"],
                     "decimal_odds": combined_decimal,
                     "is_model": False,
+                    # An unrecognised half makes the WHOLE leg ungradeable --
+                    # grading it on the half we understand would report a
+                    # verdict the leg has not actually earned.
+                    "conditions": (w_c + l_c) if (w_c and l_c) else [],
+                    "fight_key": _fight_key(w),
                 })
 
     # Model-only projected pieces -- only added for fights that had NO real
@@ -187,6 +296,8 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                     "model_prob": row["model_prob"],
                     "decimal_odds": american_to_decimal(proj_odds),
                     "is_model": True,
+                    "conditions": _leg_conditions(row),
+                    "fight_key": _fight_key(row),
                 })
 
     return pieces
@@ -200,13 +311,27 @@ def _combine(pieces: tuple[dict, ...]) -> dict:
     for piece in pieces:
         combined_decimal *= piece["decimal_odds"]
         combined_prob *= piece["model_prob"]
-        legs.append({"label": piece["label"], "odds_display": piece["odds_display"], "is_model": piece.get("is_model", False)})
+        legs.append({
+            "label": piece["label"],
+            "odds_display": piece["odds_display"],
+            "is_model": piece.get("is_model", False),
+            # --- live grading payload ---
+            # decimal_odds was already computed above and thrown away here.
+            # It is what lets a VOIDED leg be divided back out of the slip's
+            # price the way a book would, instead of the slip either dying or
+            # quietly paying the wrong number.
+            "decimal_odds": round(piece["decimal_odds"], 6),
+            "fight_key": piece.get("fight_key"),
+            "conditions": piece.get("conditions") or [],
+        })
         fight_ids.append(piece["fight_id"])
     combined_american = decimal_to_american(combined_decimal)
     return {
         "legs": legs,
         "has_model_legs": any(l["is_model"] for l in legs),
         "fight_ids": fight_ids,
+        "slip_id": _slip_id(fight_ids, legs),
+        "combined_decimal": round(combined_decimal, 6),
         "combined_american": round(combined_american),
         # UNCAPPED. This is the whole slip's price, not a single market --
         # see the cap note in format_american_odds. Individual legs above

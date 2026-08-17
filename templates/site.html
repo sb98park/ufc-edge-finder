@@ -1969,6 +1969,223 @@
   .parlay-note { font-size: var(--t-small); color: var(--muted); margin-top: 8px; line-height: 1.5; }
   .no-parlays { font-size: var(--t-body); color: var(--muted); padding: 4px 0 8px; }
 
+  /* ===================================================================
+     LIVE PARLAY TRACKING
+     ===================================================================
+     Slips grade themselves leg by leg while a card runs, off the same
+     ESPN poll that already paints fight results (see applyLiveScoreboard).
+
+     THE WHOLE LAYOUT ARGUMENT RESTS ON ONE THING: .parlay-leg-num is
+     already an 18x18 circle painted --panel2 ON a --panel2 card -- an
+     invisible, fixed-size box that currently holds only a digit. It
+     becomes the state glyph slot. A leg resolving therefore swaps a
+     glyph inside a box whose dimensions never change, which is why a
+     result landing while the reader is scrolled elsewhere cannot move
+     the page under their thumb. Nothing here adds a column. */
+  .parlay-card > summary { list-style: none; cursor: pointer; }
+  .parlay-card > summary::-webkit-details-marker { display: none; }
+  .parlay-card > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-md); }
+
+  /* THE LIVE HEADER IS A GRID, the pre-card one stays the flex row it has
+     always been. Outside a card window the right-hand slot holds "Model-
+     estimated hit rate: 12.4%" and the two sit side by side comfortably.
+     During a card it holds a state chip plus a sentence naming the leg
+     you're waiting on, and on a 375px phone that sentence ran straight
+     through the payout -- flex had no row to give it. Two rows, with the
+     readout spanning the full width, is the only layout that survives an
+     arbitrary leg label without truncating the one string the reader most
+     wants to finish. */
+  body[data-live-card="1"] .parlay-card > summary {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "odds pips" "read read";
+    align-items: center; column-gap: 8px; row-gap: 5px;
+  }
+  body[data-live-card="1"] .parlay-odds { grid-area: odds; }
+  body[data-live-card="1"] [data-slip-readout] { grid-area: read; }
+  body[data-live-card="1"] .slip-pips { grid-area: pips; justify-self: end; margin-left: 0; }
+  /* Two lines is the ceiling: a same-fight combined leg can carry two
+     markets in one label, and three wrapped lines in a summary stops
+     reading as a header. */
+  body[data-live-card="1"] [data-slip-readout] {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; line-height: 1.45;
+  }
+  [data-slip-readout] .slip-chip { margin-right: 5px; }
+
+  /* RED IS ALREADY SPOKEN FOR on this page: it means FIGHT CANCELLED and
+     an incorrect model pick, and a losing fighter is deliberately dimmed
+     rather than reddened. That reasoning carries over unchanged -- a dead
+     slip is NOT a red card. Red appears in exactly one place here: the
+     cross on the single leg that killed the slip. */
+  .parlay-leg[data-leg-state] .parlay-leg-num svg { width: 11px; height: 11px; display: block; }
+  .parlay-leg[data-leg-state="live"] .parlay-leg-num,
+  .parlay-leg[data-leg-state="won"] .parlay-leg-num,
+  .parlay-leg[data-leg-state="lost"] .parlay-leg-num,
+  .parlay-leg[data-leg-state="void"] .parlay-leg-num,
+  .parlay-leg[data-leg-state="settling"] .parlay-leg-num,
+  .parlay-leg[data-leg-state="unresolved"] .parlay-leg-num { background: transparent; }
+  .parlay-leg[data-leg-state="live"] .parlay-leg-label { color: var(--text); font-weight: 600; }
+  .parlay-leg[data-leg-state="won"] .parlay-leg-num { color: var(--green); }
+  .parlay-leg[data-leg-state="won"] .parlay-leg-label { color: var(--text); }
+  .parlay-leg[data-leg-state="lost"] .parlay-leg-num { color: var(--red); }
+  /* Strikethrough is the COLOUR-INDEPENDENT signal and does the real work;
+     --red rides along on the glyph only. The odds go --muted because that
+     price is no longer live money. */
+  .parlay-leg[data-leg-state="lost"] .parlay-leg-label {
+    color: var(--text-soft); text-decoration: line-through;
+    text-decoration-color: var(--muted); text-decoration-thickness: 1px;
+  }
+  .parlay-leg[data-leg-state="lost"] .parlay-leg-odds { color: var(--muted); }
+  /* A DASH, NOT A CROSS. A void leg did not lose -- giving it the losing
+     treatment would tell the reader their slip is dead when it is in fact
+     still alive at a shorter price. Strikethrough is shared because in both
+     cases the leg is out of the calculation; the glyph carries the rest. */
+  .parlay-leg[data-leg-state="void"] .parlay-leg-num { color: var(--muted); }
+  .parlay-leg[data-leg-state="void"] .parlay-leg-label {
+    color: var(--muted); text-decoration: line-through; text-decoration-color: var(--hairline-strong);
+  }
+  .parlay-leg[data-leg-state="settling"] .parlay-leg-num,
+  .parlay-leg[data-leg-state="unresolved"] .parlay-leg-num { color: var(--muted); }
+  .leg-state-note {
+    font-size: var(--t-micro); color: var(--muted); letter-spacing: 0.3px;
+    text-transform: uppercase; white-space: nowrap;
+  }
+
+  /* THE WASH is a decay to transparent, not a persistent fill: the state is
+     already permanent in the glyph and the strikethrough, so this exists only
+     to catch the eye of someone watching the fight, then get out of the way. */
+  @keyframes leg-settle-won  { from { background: rgba(61,220,132,0.16); } to { background: transparent; } }
+  @keyframes leg-settle-lost { from { background: rgba(255,92,92,0.13); }  to { background: transparent; } }
+  .parlay-leg[data-just-resolved="won"]  { animation: leg-settle-won 900ms ease-out 1; }
+  .parlay-leg[data-just-resolved="lost"] { animation: leg-settle-lost 900ms ease-out 1; }
+
+  /* ONE AWAY -- the emotional peak of the product, and the only state that
+     earns the brand accent. Gold is unused by any other parlay state, and it
+     is right here because green on this page means "a result that already
+     happened" and this is a result that has NOT happened yet.
+     THE 0.55 ALPHA IS A FLOOR, NOT A TASTE CHOICE: rgba(accent, 0.55)
+     composites to roughly #856f2f over --panel2 and measures 3.23:1, which
+     clears SC 1.4.11. At 0.45 it measures ~2.7:1 and fails. Do not soften it.
+     Family identity stays on the 3px left rule -- state goes on the ring, so
+     you can still see at a glance WHICH kind of slip is one leg away. */
+  .parlay-card[data-slip-state="one-away"] {
+    border-color: rgba(var(--accent-rgb), 0.55);
+    animation: slip-one-away 2.6s ease-in-out infinite;
+  }
+  @keyframes slip-one-away {
+    0%, 100% { box-shadow: var(--e2), 0 0 0 1px rgba(var(--accent-rgb),0.18), 0 0 16px rgba(var(--accent-rgb),0.10); }
+    50%      { box-shadow: var(--e2), 0 0 0 1.5px rgba(var(--accent-rgb),0.42), 0 0 28px rgba(var(--accent-rgb),0.22); }
+  }
+  /* The payout leaves its family colour ONLY here -- the one moment the
+     number stops being a category and starts being money. */
+  .parlay-card[data-slip-state="one-away"] .parlay-odds { color: var(--accent-hi); }
+  .parlay-leg[data-leg-final="true"] .parlay-leg-label { color: var(--accent-hi); font-weight: 700; }
+
+  .parlay-card[data-slip-state="cashed"] { border-color: rgba(61,220,132,0.5); }
+
+  /* CASHING WAS THE LEAST-MARKED OF THE THREE BIG MOMENTS. One-away gets the
+     gold ring, dying gets the collapse, and landing a slip got a border
+     colour. One sweep of light across the card, once, then nothing -- the
+     state itself stays carried by the chip and the green border, so this is
+     pure punctuation and removing it costs no information. */
+  .parlay-card[data-slip-state="cashed"][data-celebrate] { position: relative; overflow: hidden; }
+  .parlay-card[data-slip-state="cashed"][data-celebrate]::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(100deg, transparent 30%,
+                rgba(61,220,132,0.16) 48%, rgba(var(--accent-rgb),0.20) 54%, transparent 72%);
+    transform: translateX(-100%);
+    animation: slip-cash-sweep 700ms ease-out 1;
+  }
+  @keyframes slip-cash-sweep { to { transform: translateX(100%); } }
+
+  .count-badge[data-live] { color: var(--accent-hi); border-color: rgba(var(--accent-rgb),0.55); background: rgba(var(--accent-rgb),0.10); }
+
+  /* DEAD SLIPS COLLAPSE; THEY ARE NOT DIMMED. Dimming was measured and it
+     fails: --muted on --panel2 at opacity 0.5 is 2.56:1, under BOTH the
+     4.5:1 text floor and the 3:1 non-text floor. Dimming a slip far enough
+     to read as dead is the same operation as dimming it below WCAG.
+     Collapsing removes the text instead of degrading it, and the one line
+     that survives stays at full contrast on --sunken -- which also sits
+     BELOW the card plane, so the elevation ladder does the recessing that
+     opacity was being asked to do. Hiding was rejected separately: a dead
+     slip still carries which leg killed it, and a page that deletes its own
+     losers is the credibility failure this project exists to avoid. */
+  .parlay-card[data-slip-state="dead"] {
+    background: var(--sunken); border-color: var(--hairline);
+    border-left-color: var(--hairline-strong); box-shadow: none; padding: 10px 16px;
+  }
+  .parlay-card[data-slip-state="dead"] .parlay-odds {
+    font-size: var(--t-sub); color: var(--muted);
+    text-decoration: line-through; text-decoration-color: var(--hairline-strong);
+  }
+  .parlay-card[data-slip-state="dead"]:not([open]) .parlay-legs { display: none; }
+
+  .slip-chip {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: 0.4px;
+    text-transform: uppercase; border-radius: var(--r-sm); padding: 2px 6px;
+    white-space: nowrap; border: 1px solid transparent;
+  }
+  .slip-chip.alive    { color: var(--text-soft); border-color: var(--hairline-strong); }
+  .slip-chip.running  { color: var(--text); border-color: rgba(61,220,132,0.45); }
+  .slip-chip.one-away { color: var(--accent-hi); border-color: rgba(var(--accent-rgb),0.55); background: rgba(var(--accent-rgb),0.10); }
+  .slip-chip.cashed   { color: var(--green); border-color: rgba(61,220,132,0.5); background: rgba(61,220,132,0.10); }
+  .slip-chip.dead,
+  .slip-chip.void     { color: var(--muted); border-color: var(--hairline); }
+  .slip-chip.awaiting { color: var(--accent-cool); border-color: rgba(95,184,201,0.45); }
+
+  /* PIPS: whole-slip state readable without reading. aria-hidden, because
+     the readout beside them already says it in words. */
+  .slip-pips { display: none; gap: 4px; margin-left: 10px; }
+  body[data-live-card="1"] .slip-pips { display: flex; }
+  .slip-pips i { width: 7px; height: 7px; border-radius: 50%; box-sizing: border-box; }
+  /* --muted, NOT --hairline-strong. The hairline tokens are for EDGES
+     between surfaces; as a standalone mark --hairline-strong over --panel2
+     measures 1.52:1 and fails 1.4.11 outright. A pip is a graphical object
+     conveying state, so 3:1 is mandatory and --muted (5.97:1) is the token
+     that clears it. */
+  .slip-pips i[data-pip="pending"] { border: 1.5px solid var(--muted); }
+  .slip-pips i[data-pip="won"]     { background: var(--green); }
+  .slip-pips i[data-pip="live"]    { background: var(--accent); box-shadow: 0 0 5px rgba(var(--accent-rgb),0.7); }
+  .slip-pips i[data-pip="lost"]    { background: var(--red); }
+  .slip-pips i[data-pip="void"]    { background: var(--muted); opacity: 0.55; }
+
+  /* SUMMARY BAR. Filtering, not reordering: it answers "show me what's still
+     alive" across all three families without moving a single card, and so
+     without any of the scroll-anchoring problems reordering creates. */
+  .slip-summary {
+    display: none; gap: 6px; flex-wrap: wrap; align-items: center;
+    position: sticky; top: var(--seg-tabs-h, 44px); z-index: 39;
+    background: var(--bg); padding: 8px 0 10px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  body[data-live-card="1"] .slip-summary { display: flex; }
+  .slip-tally {
+    font-size: var(--t-small); color: var(--text-soft); background: transparent;
+    border: 1px solid var(--hairline-strong); border-radius: var(--r-pill);
+    padding: 4px 10px; cursor: pointer; display: flex; align-items: center; gap: 5px;
+    font-family: inherit;
+  }
+  .slip-tally[aria-pressed="true"] { color: var(--text); border-color: rgba(var(--accent-rgb),0.55); background: rgba(var(--accent-rgb),0.10); }
+  .slip-tally:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  body[data-parlay-filter="alive"] .parlay-card:not([data-slip-state="alive"]):not([data-slip-state="running"]):not([data-slip-state="one-away"]):not([data-slip-state="awaiting"]),
+  body[data-parlay-filter="one-away"] .parlay-card:not([data-slip-state="one-away"]),
+  body[data-parlay-filter="dead"] .parlay-card:not([data-slip-state="dead"]) { display: none; }
+
+  .a11y-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  /* Nothing here may convey state by motion alone -- the glyph, the
+     strikethrough and the chip are all static and all present before any
+     animation runs, so this only removes decoration. */
+  @media (prefers-reduced-motion: reduce) {
+    .parlay-card[data-slip-state="one-away"] { animation: none; }
+    .parlay-leg[data-just-resolved] { animation: none; }
+    .parlay-card[data-slip-state="cashed"][data-celebrate]::after { animation: none; content: none; }
+  }
+
   /* Edge heatmapping - visual intensity scales with how big the model/book disagreement is */
   tr.edge-heat-1 { background: rgba(61, 220, 132, 0.03); }
   tr.edge-heat-2 { background: rgba(61, 220, 132, 0.07); border-left: 2px solid rgba(61, 220, 132, 0.4); }
@@ -4176,6 +4393,51 @@
 </div>
 {% endmacro %}
 
+{#
+  ONE PARLAY CARD. The three families (Bankroll, Lotto, Moonshot) rendered
+  byte-identical markup in three places; live grading would have had to be
+  written and then maintained three times, so it is a macro now.
+
+  A <details> rather than a <div>: the slip collapses when it dies, and the
+  site already uses <details> for .fight-card and .waterfall-block, so this
+  inherits the existing disclosure vocabulary along with native keyboard
+  operation and a real aria-expanded. It ships `open`, and only ever closes
+  under the rules in the live-parlay script -- the pre-card experience of
+  reading every leg is unchanged.
+
+  data-legs carries the grading payload as JSON. It is an attribute rather
+  than a script block because the poller looks legs up per card, and because
+  a card that never grades (no live window, JS off) costs exactly the parse
+  it never performs.
+#}
+{% macro parlay_card(p, family, prob_places) %}
+  <details class="parlay-card reveal-target {{ family }}" open
+           data-slip-id="{{ p.slip_id }}"
+           data-slip-state="open"
+           data-combined-decimal="{{ p.combined_decimal }}"
+           data-payout="{{ p.combined_american_display }}"
+           data-family="{{ family }}"
+           data-legs='{{ p.legs | tojson }}'>
+    <summary class="parlay-top">
+      <div class="parlay-odds">{{ p.combined_american_display }}</div>
+      <div class="parlay-prob" data-slip-readout>Model-estimated hit rate: {{ (p.combined_prob*100)|round(prob_places) }}%</div>
+      <div class="slip-pips" aria-hidden="true" data-slip-pips></div>
+    </summary>
+    <ul class="parlay-legs">
+      {% for leg in p.legs %}
+      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}" data-leg-index="{{ loop.index0 }}">
+        <span class="parlay-leg-num">{{ loop.index }}</span>
+        <span class="parlay-leg-label">{{ leg.label }}</span>
+        <span class="parlay-leg-right">
+          <span class="parlay-leg-odds">{{ leg.odds_display }}</span>
+          {% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+{% endmacro %}
+
 <div class="ambient-embers">
   <div class="ember" style="left:5%; animation-duration:14s; animation-delay:0s; --drift:15px;"></div>
   <div class="ember" style="left:15%; animation-duration:18s; animation-delay:2s; --drift:-20px;"></div>
@@ -4450,7 +4712,11 @@
           </svg>
         </div>
         <div class="hub-card-text">
-          <div class="hub-card-title">Parlays <span class="count-badge">{{ (bankroll_parlays|length) + (lotto_parlays|length) + (moonshot_parlays|length) }}</span></div>
+          {# During a card the count is rewritten to "N alive" by the live
+             parlay grader -- how many slips can still cash is the only
+             number worth carrying to the hub once fights are landing, and
+             it means the state is readable without opening the section. #}
+          <div class="hub-card-title">Parlays <span class="count-badge" id="parlay-hub-badge">{{ (bankroll_parlays|length) + (lotto_parlays|length) + (moonshot_parlays|length) }}</span></div>
           <div class="hub-card-sub">slates across 3 tiers</div>
         </div>
         <span class="hub-card-arrow">→</span>
@@ -5723,6 +5989,25 @@
   </div>
 
   <div class="detail-section" data-section="parlays">
+  {#
+    Live-only. Hidden entirely outside a card window, so the pre-card
+    experience -- studying every slip, fully expanded -- is untouched. The
+    tallies are buttons because they filter; filtering is the cross-cutting
+    view that reordering would otherwise have to provide, and reordering
+    under a reading finger is the most disorienting thing a live page can do.
+  #}
+  <div class="slip-summary" id="slip-summary">
+    <button class="slip-tally" type="button" data-filter="all" aria-pressed="true">All slips</button>
+    <button class="slip-tally" type="button" data-filter="one-away" aria-pressed="false" hidden data-tally="one-away"></button>
+    <button class="slip-tally" type="button" data-filter="alive" aria-pressed="false" hidden data-tally="alive"></button>
+    <button class="slip-tally" type="button" data-filter="dead" aria-pressed="false" hidden data-tally="dead"></button>
+  </div>
+  {#
+    ONE live region for the whole section. Nine of them during a fight card
+    is a screen-reader denial-of-service: a single fight ending can resolve
+    legs across five slips, and that must be one announcement, not five.
+  #}
+  <div class="a11y-only" id="slip-announcer" role="status" aria-live="polite" aria-atomic="true"></div>
   {% if analytics_source_event %}
   <div class="analytics-fallback-notice">{{ icon_calendar() }} This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
   {% endif %}
@@ -5730,24 +6015,7 @@
   <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
   <div class="parlay-subtitle">2-3 leg combos in the +100 to +300 range, built from picks the model favors — including same-fight combos and model-projected legs (labeled "model") for fights with no live prop line yet.</div>
   {% for p in bankroll_parlays %}
-  <div class="parlay-card reveal-target bankroll">
-    <div class="parlay-top">
-      <div class="parlay-odds">{{ p.combined_american_display }}</div>
-      <div class="parlay-prob">Model-estimated hit rate: {{ (p.combined_prob*100)|round(1) }}%</div>
-    </div>
-    <ul class="parlay-legs">
-      {% for leg in p.legs %}
-      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}">
-        <span class="parlay-leg-num">{{ loop.index }}</span>
-        <span class="parlay-leg-label">{{ leg.label }}</span>
-        <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">{{ leg.odds_display }}</span>
-          {% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}
-        </span>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
+  {{ parlay_card(p, "bankroll", 1) }}
   {% endfor %}
   <div class="parlay-note">Assumes each leg is independent — same-card fights aren't perfectly independent in reality, so treat the hit-rate estimate as optimistic. Legs marked "model" have no live book price to compare against.</div>
   {% elif events %}
@@ -5759,24 +6027,7 @@
   <div class="parlay-section-title lotto" id="section-lotto">{{ icon_dice() }} Lotto Parlays</div>
   <div class="parlay-subtitle">Long-shot combos at +1000 or better, any leg count — ranked by the model's best combined odds of hitting, drawing from across the whole card for real variety.</div>
   {% for p in lotto_parlays %}
-  <div class="parlay-card reveal-target lotto">
-    <div class="parlay-top">
-      <div class="parlay-odds">{{ p.combined_american_display }}</div>
-      <div class="parlay-prob">Model-estimated hit rate: {{ (p.combined_prob*100)|round(2) }}%</div>
-    </div>
-    <ul class="parlay-legs">
-      {% for leg in p.legs %}
-      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}">
-        <span class="parlay-leg-num">{{ loop.index }}</span>
-        <span class="parlay-leg-label">{{ leg.label }}</span>
-        <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">{{ leg.odds_display }}</span>
-          {% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}
-        </span>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
+  {{ parlay_card(p, "lotto", 2) }}
   {% endfor %}
   <div class="parlay-note">These are long shots by design — meant as a "worth a small stab" section, not a plan.</div>
   {% elif events %}
@@ -5788,24 +6039,7 @@
   <div class="parlay-section-title moonshot" id="section-moonshot">{{ icon_rocket() }} Moonshot</div>
   <div class="parlay-subtitle">+5000 or better — the kind of number that turns a $5 slip into a story. This has essentially no business hitting, and that's the whole point: pure lottery-ticket energy, ranked by the model's best combined odds among everything that clears the bar.</div>
   {% for p in moonshot_parlays %}
-  <div class="parlay-card reveal-target moonshot">
-    <div class="parlay-top">
-      <div class="parlay-odds">{{ p.combined_american_display }}</div>
-      <div class="parlay-prob">Model-estimated hit rate: {{ (p.combined_prob*100)|round(3) }}%</div>
-    </div>
-    <ul class="parlay-legs">
-      {% for leg in p.legs %}
-      <li class="parlay-leg{{ ' model-leg' if leg.is_model else '' }}">
-        <span class="parlay-leg-num">{{ loop.index }}</span>
-        <span class="parlay-leg-label">{{ leg.label }}</span>
-        <span class="parlay-leg-right">
-          <span class="parlay-leg-odds">{{ leg.odds_display }}</span>
-          {% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}
-        </span>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
+  {{ parlay_card(p, "moonshot", 3) }}
   {% endfor %}
   <div class="parlay-note">{{ icon_ticket() }} This is a lottery ticket, not a strategy — buy it for the dream, not the plan. If it hits, tell everyone. If it doesn't, you knew the deal going in.</div>
   {% elif events %}
@@ -9233,9 +9467,10 @@
         if (!r.ok) return null;
         const ev = await r.json();
         const byComp = {};
+        let complete = true;
         for (const c of (ev.competitions || [])) {
           const ref = c.status && c.status.$ref;
-          if (!ref) continue;
+          if (!ref) { complete = false; continue; }
           try {
             const sr = await fetch(ref.replace(/^http:\/\//i, 'https://'),
                                    { signal: AbortSignal.timeout(8000) });
@@ -9259,11 +9494,41 @@
                   ? ` \u00b7 R${st.period} ${clock}`
                   : ` \u00b7 R${st.period}`;
               }
-              byComp[String(c.id)] = label;
+              // The LABEL is prose for a human; the SLUG and period are the
+              // machine-readable pair that live parlay grading needs. ESPN's
+              // result.name is a closed vocabulary (kotko, submission,
+              // decision---unanimous, ...) -- grading against it rather than
+              // against the display string keeps leg settlement independent
+              // of a copy change here.
+              byComp[String(c.id)] = {
+                label: label,
+                slug: String(res.name || '').toLowerCase(),
+                period: st.period ? Number(st.period) : null,
+                isDecision: isDecision,
+                // THE CLOCK IS NOT OPTIONAL for round props. ESPN counts
+                // DOWN, so "2:30" in round 2 means the fight is 2.5 minutes
+                // into that round -- and a round-2 finish can land either
+                // side of an Over 1.5 line depending on which half it fell
+                // in. Without this a Total Rounds leg would be graded on the
+                // assumption that every stoppage happens exactly at the
+                // midpoint, which is wrong roughly half the time.
+                clock: String(st.displayClock || '').trim(),
+              };
             }
-          } catch (e) { /* one competition failing must not lose the rest */ }
+          } catch (e) {
+            /* one competition failing must not lose the rest -- but it must
+               also not be BAKED IN as though it had succeeded, see below */
+            complete = false;
+          }
         }
-        methodCache[eventId] = byComp;
+        // ONLY CACHE A COMPLETE RESULT. This previously cached byComp
+        // unconditionally, and the early return at the top of this function
+        // means a cached value is never refetched -- so a single transient
+        // per-competition failure permanently stranded that fight's method
+        // for the rest of the session. The poll runs every 45s and methods
+        // don't change once a fight is over, so retrying a partial set costs
+        // one request and fixes a permanent hole.
+        if (complete) methodCache[eventId] = byComp;
         return byComp;
       } catch (e) {
         return null;
@@ -9309,7 +9574,18 @@
                 const names = cs.map(c => (c.athlete && c.athlete.fullName) || '');
                 const key = canonicalKey(names[0] || '', names[1] || '');
                 const fight = schedule.find(f => canonicalKey(f.fighter_a, f.fighter_b) === key);
-                if (fight) paintMethod(fight, byComp[String(comp.id)]);
+                const _m = byComp[String(comp.id)];
+                if (fight && _m) {
+                  paintMethod(fight, _m.label);
+                  // Stash the machine-readable half on the fight so leg
+                  // grading can settle method and round legs off the same
+                  // fetch rather than issuing its own.
+                  fight.method_slug = _m.slug;
+                  fight.end_round = _m.period;
+                  fight.went_distance = _m.isDecision;
+                  fight.end_clock = _m.clock;
+                  gradeAllSlips();
+                }
               }
             }
           });
@@ -9329,8 +9605,20 @@
             if (!st.completed) continue;
 
             const win = cs.find(c => c.winner);
-            if (!win || !win.athlete || !win.athlete.fullName) continue;
             if (fight.result_label) continue;          // already known from the build
+            // A DRAW OR NO CONTEST HAS NO WINNING COMPETITOR. This used to
+            // `continue` on that, so a completed fight with no winner was
+            // skipped on every poll forever and stayed rendered as
+            // unfinished for the rest of the night. It is a completed
+            // result -- flagged as such, and voiding rather than losing any
+            // parlay leg that depended on it.
+            if (!win || !win.athlete || !win.athlete.fullName) {
+              fight.no_winner = true;
+              fight.result_label = 'Draw / No Contest';
+              paintResult(fight);
+              changed = true;
+              continue;
+            }
             // Winner only. Method needs the deeper core-api call and can wait
             // for the next rebuild -- a name appearing within seconds, with the
             // method filling in shortly after, is the right trade.
@@ -9345,7 +9633,12 @@
         // nothing is live, drop the override so update() falls back to its own
         // window logic rather than clinging to a stale "LIVE NOW".
         espnLiveKey = liveKey;
+        // Which fight is in the cage right now, for the live leg glyph. Set
+        // before grading so a leg can read "live" on the same pass that its
+        // fight starts.
+        liveFightKey = liveKey;
         if (changed || liveKey !== null) update();
+        gradeAllSlips();
       }
 
       async function pollLive() {
@@ -9366,6 +9659,434 @@
           console.warn('live update skipped:', e);
         }
       }
+
+      // ===== LIVE PARLAY GRADING =====
+      //
+      // Rides the poll above rather than fetching anything of its own: by the
+      // time this runs, applyLiveScoreboard has already put winner /
+      // no_winner on the schedule entries, and fetchLiveMethods has filled in
+      // method_slug / end_round / went_distance for finished bouts.
+      //
+      // GRADING IS THREE-VALUED. Every condition answers true, false or
+      // UNKNOWN, and a leg is lost if any condition is false, won if all are
+      // true, and unknown otherwise. Two-valued logic would have to treat
+      // "we don't know yet" as one of the two verdicts, and both choices are
+      // wrong: a leg shown as lost when it is merely unsettled is the single
+      // most damaging thing this feature could do.
+      const T = true, F = false, U = null;
+
+      // How long past a fight's ESTIMATED end a leg waits before admitting it
+      // has no result. Generous on purpose: estimated_end_iso is derived from
+      // a schedule, and a card running late is ordinary -- a prelim card
+      // routinely drifts twenty minutes. Too short and every slow night
+      // paints NO RESULT across legs that settle fine ten minutes later,
+      // which would train the reader to ignore the one state that means
+      // "genuinely do not know".
+      const UNRESOLVED_AFTER_MS = 25 * 60 * 1000;
+
+      function andK(vals) {           // Kleene AND
+        if (vals.some(v => v === F)) return F;
+        if (vals.every(v => v === T)) return T;
+        return U;
+      }
+
+      function fightFor(key) {
+        if (!key) return null;
+        return schedule.find(f => canonicalKey(f.fighter_a, f.fighter_b) === canonicalKey(...String(key).split('|'))) || null;
+      }
+
+      function gradeCondition(c, fight) {
+        if (!fight) return U;
+        // A VOIDING EVENT SHORT-CIRCUITS EVERYTHING. A cancelled fight or a
+        // draw/no-contest removes the leg from the slip's maths rather than
+        // losing it -- the slip stays alive at a shorter price, which is
+        // what a book would do and what the reader already expects.
+        if (fight.cancelled) return 'void';
+        if (c.kind === 'winner') {
+          if (fight.no_winner) return 'void';
+          if (!fight.winner) return U;
+          return canonicalKey(fight.winner, '') === canonicalKey(c.fighter || '', '') ? T : F;
+        }
+        if (c.kind === 'method') {
+          if (fight.no_winner) return 'void';
+          if (!fight.method_slug) return U;
+          return (c.any_of || []).some(s => fight.method_slug.startsWith(s)) ? T : F;
+        }
+        if (c.kind === 'rounds') {
+          // A DRAW STILL WENT A CERTAIN LENGTH, so unlike winner and method
+          // this does NOT void on a draw -- the fight's duration is a fact
+          // regardless of who was awarded it. Only a cancellation, handled
+          // above, removes the length from existence.
+          //
+          // A DECISION IS ALWAYS OVER EVERY OFFERED LINE. Total Rounds lines
+          // sit strictly below the scheduled distance (1.5/2.5 on a
+          // three-rounder, 3.5/4.5 on a five), so "went the distance"
+          // settles every one of them without needing to know which
+          // distance it was -- which is fortunate, because the scoreboard
+          // does not say.
+          if (fight.went_distance) return c.op === 'under' ? F : T;
+          if (fight.end_round == null) return U;
+          // ESPN's clock COUNTS DOWN within a five-minute round, so elapsed
+          // time in the final round is 300 minus what it shows. Without a
+          // usable clock this stays UNKNOWN rather than assuming a midpoint
+          // stoppage -- a round-2 finish at 0:30 and one at 4:30 fall on
+          // opposite sides of an Over 1.5 line.
+          const parts = String(fight.end_clock || '').split(':');
+          if (parts.length !== 2) return U;
+          const remain = Number(parts[0]) * 60 + Number(parts[1]);
+          if (!isFinite(remain)) return U;
+          const total = (fight.end_round - 1) + (300 - remain) / 300;
+          return c.op === 'under' ? (total < c.line ? T : F) : (total > c.line ? T : F);
+        }
+        if (c.kind === 'distance') {
+          if (fight.went_distance == null) return U;
+          return (!!fight.went_distance === !!c.value) ? T : F;
+        }
+        return U;
+      }
+
+      function gradeLeg(leg) {
+        const conds = leg.conditions || [];
+        // No recognised conditions means this market is not gradeable at all
+        // (see _leg_conditions in parlay_builder). Permanently unknown is the
+        // honest rendering; guessing is not.
+        if (!conds.length) return { state: 'unresolved' };
+        const fight = fightFor(leg.fight_key);
+        const results = conds.map(c => gradeCondition(c, fight));
+        if (results.some(r => r === 'void')) return { state: 'void', fight: fight };
+        const v = andK(results);
+        if (v === T) return { state: 'won', fight: fight };
+        if (v === F) return { state: 'lost', fight: fight };
+        if (fight && liveFightKey &&
+            canonicalKey(fight.fighter_a, fight.fighter_b) === liveFightKey) {
+          return { state: 'live', fight: fight };
+        }
+        // The winner is known and all resolved conditions passed, so the only
+        // thing outstanding is the deeper method fetch. Transient by nature,
+        // and deliberately quiet -- it lasts seconds.
+        if (fight && fight.winner) return { state: 'settling', fight: fight };
+        // LONG PAST THE FIGHT AND STILL NOTHING. Without this a fight ESPN
+        // never reports -- a name that never matches canonicalKey, a bout
+        // pulled from the scoreboard, a feed that simply skips it -- leaves
+        // its legs 'pending' FOREVER, and the slip goes on claiming to be
+        // alive (or one away) when the truthful answer is that we do not
+        // know. That is the one failure mode here that actively misleads,
+        // because it reads as good news.
+        //
+        // Deliberately NOT rendered as lost. The slip stays in its alive
+        // treatment and the tally counts it under 'alive'; only the leg says
+        // NO RESULT. The Python results fetcher settles it at the next
+        // rebuild, and the page is simply correct from then on.
+        if (fight && fight.estimated_end_iso) {
+          const end = new Date(fight.estimated_end_iso).getTime();
+          if (isFinite(end) && Date.now() > end + UNRESOLVED_AFTER_MS) {
+            return { state: 'unresolved', fight: fight };
+          }
+        }
+        return { state: 'pending', fight: fight };
+      }
+
+      // Order matters: the first match wins. one-away deliberately outranks
+      // running and awaiting -- "one leg from cashing, and that leg is in the
+      // cage right now" is the peak state of this product and must not be
+      // filed under a generic label.
+      function slipState(states) {
+        const live = states.filter(s => s !== 'void');
+        if (states.some(s => s === 'lost')) return 'dead';
+        if (!live.length) return 'void';
+        if (live.every(s => s === 'won')) return 'cashed';
+        const unresolved = live.filter(s => s !== 'won');
+        // AWAITING OUTRANKS ONE-AWAY, and the order matters. one-away means
+        // "one leg left and it is still to come" -- a live shot. A slip whose
+        // single remaining leg has NO RESULT is not one leg from cashing; it
+        // is one leg from an answer nobody has. Checking one-away first would
+        // put the gold ring and "1 leg from cashing" on a slip that might
+        // already have lost.
+        if (unresolved.some(s => s === 'unresolved')) return 'awaiting';
+        if (unresolved.length === 1) return 'one-away';
+        if (unresolved.some(s => s === 'live')) return 'running';
+        if (live.some(s => s === 'won')) return 'alive';
+        return 'open';
+      }
+
+      const GLYPH = {
+        won: '<svg viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M5 13.5 L10.5 19 L21 7.5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        lost: '<svg viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M7 7 L19 19 M19 7 L7 19" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>',
+        void: '–',
+        unresolved: '?',
+        settling: '··',
+        live: '<span class="live-dot-sm"></span>',
+      };
+
+      const CHIP = {
+        alive: 'Alive', running: 'Live', 'one-away': 'One away', cashed: 'Cashed',
+        dead: 'Out', void: 'Void', awaiting: 'Awaiting', open: '',
+      };
+
+      // THE CHIP ALREADY SAYS THE STATE, so this must not say it again --
+      // "Out · Out on leg 2" reads like a bug. Each line here adds the thing
+      // the chip cannot carry: which leg died, or, on a one-away slip, the
+      // one leg you are still waiting on. That last case is the whole point
+      // of the state and the most useful string on the page.
+      function readout(state, states, legs, deadIdx) {
+        const nVoid = states.filter(s => s === 'void').length;
+        const live = states.filter(s => s !== 'void');
+        const won = live.filter(s => s === 'won').length;
+        const left = live.length - won;
+        const voidNote = nVoid ? ` · ${nVoid} void` : '';
+        // Never phrased as a fraction of legs WON -- the tension lives in
+        // what is left, so that is what gets counted.
+        if (state === 'dead') {
+          const l = legs[deadIdx];
+          return `Leg ${deadIdx + 1} · ${l ? l.label : ''}${voidNote}`;
+        }
+        if (state === 'void') return 'No action';
+        // "1 of 1 legs · 1 void" was accurate and unreadable -- cashed means
+        // every surviving leg landed, so the fraction is always n of n and
+        // the denominator carries nothing.
+        if (state === 'cashed') return `${won} leg${won === 1 ? '' : 's'} landed${voidNote}`;
+        if (state === 'one-away') {
+          const i = states.findIndex(s => s !== 'won' && s !== 'void');
+          const l = i >= 0 ? legs[i] : null;
+          return l ? `Needs ${l.label}${voidNote}` : `1 leg to go${voidNote}`;
+        }
+        if (state === 'awaiting') return `${won} landed · ${left} awaiting result${voidNote}`;
+        if (state === 'open') return `${live.length} legs${voidNote}`;
+        return `${won} landed · ${left} to go${voidNote}`;
+      }
+
+      let liveFightKey = null;
+      let hydrating = true;
+      const prevLegState = {};       // slipId -> [state]
+      let announceQueue = [];
+      let announceTimer = null;
+
+      function announce(msg) {
+        if (hydrating) return;
+        announceQueue.push(msg);
+        if (announceTimer) return;
+        // BATCHED. One fight ending can resolve legs across five slips; that
+        // has to be one announcement, not five.
+        announceTimer = setTimeout(() => {
+          const el = document.getElementById('slip-announcer');
+          if (el) el.textContent = announceQueue.join(' ');
+          announceQueue = [];
+          announceTimer = null;
+        }, 1500);
+      }
+
+      function gradeAllSlips() {
+        const cards = document.querySelectorAll('.parlay-card[data-legs]');
+        if (!cards.length) return;
+        const tally = { 'one-away': 0, alive: 0, dead: 0, total: 0, touched: 0 };
+
+        cards.forEach(card => {
+          let legs;
+          try { legs = JSON.parse(card.dataset.legs || '[]'); } catch (e) { return; }
+          if (!legs.length) return;
+
+          const graded = legs.map(gradeLeg);
+          const states = graded.map(g => g.state);
+          const state = slipState(states);
+          const deadIdx = states.indexOf('lost');
+          const slipId = card.dataset.slipId || '';
+          const prev = prevLegState[slipId] || [];
+
+          const rows = card.querySelectorAll('.parlay-leg');
+          let voidDecimal = 1;
+          graded.forEach((g, i) => {
+            const row = rows[i];
+            if (!row) return;
+            row.dataset.legState = g.state;
+            const numEl = row.querySelector('.parlay-leg-num');
+            if (numEl) {
+              numEl.innerHTML = GLYPH[g.state] !== undefined ? GLYPH[g.state] : String(i + 1);
+            }
+            // The one surviving leg on a one-away slip gets promoted. The
+            // colour is redundant with the chip and the copy -- never the
+            // only channel.
+            row.dataset.legFinal = (state === 'one-away' && g.state !== 'won' && g.state !== 'void') ? 'true' : 'false';
+            if (g.state === 'void') voidDecimal *= (legs[i].decimal_odds || 1);
+
+            let note = row.querySelector('.leg-state-note');
+            const noteText = g.state === 'unresolved' ? 'No result'
+                           : g.state === 'void' ? 'Void' : '';
+            if (noteText) {
+              if (!note) {
+                note = document.createElement('span');
+                note.className = 'leg-state-note';
+                (row.querySelector('.parlay-leg-right') || row).appendChild(note);
+              }
+              note.textContent = noteText;
+            } else if (note) { note.remove(); }
+
+            // The wash fires only on a TRANSITION, and never during
+            // hydration -- someone opening the page the morning after should
+            // see total stillness, not nine slips replaying their night.
+            if (!hydrating && prev[i] && prev[i] !== g.state &&
+                (g.state === 'won' || g.state === 'lost')) {
+              row.dataset.justResolved = g.state;
+              setTimeout(() => { delete row.dataset.justResolved; }, 950);
+            }
+          });
+
+          const wasState = card.dataset.slipState;
+          card.dataset.slipState = state;
+
+          const pips = card.querySelector('[data-slip-pips]');
+          if (pips) {
+            pips.innerHTML = states.map(s => {
+              const pip = (s === 'won' || s === 'lost' || s === 'void' || s === 'live') ? s : 'pending';
+              return `<i data-pip="${pip}"></i>`;
+            }).join('');
+          }
+
+          const out = card.querySelector('[data-slip-readout]');
+          if (out) {
+            // KEEP THE MODEL HIT RATE UNTIL THERE IS SOMETHING TO REPLACE IT
+            // WITH. This slot is server-rendered with "Model-estimated hit
+            // rate: 8.6%", which is the whole pre-card value of the section,
+            // and grading ran on every load -- so simply visiting the page on
+            // a Tuesday swapped that for a bare "2 legs". Nothing has
+            // happened yet on a slip whose legs are all pending, and the
+            // honest rendering of nothing having happened is the number that
+            // was already there.
+            if (out.dataset.orig === undefined) out.dataset.orig = out.innerHTML;
+            const untouched = states.every(s => s === 'pending');
+            if (untouched) {
+              out.innerHTML = out.dataset.orig;
+            } else {
+              const chip = CHIP[state];
+              const text = readout(state, states, legs, deadIdx);
+              out.innerHTML = (chip ? `<span class="slip-chip ${state}">${chip}</span> ` : '') +
+                              `<span>${text}</span>`;
+            }
+          }
+          const summary = card.querySelector('summary');
+          if (summary) {
+            summary.setAttribute('aria-label',
+              `${card.dataset.family || ''} slip, ${card.dataset.payout || ''}, ` +
+              `${(CHIP[state] || 'open').toLowerCase()}, ${readout(state, states, legs, deadIdx)}`);
+          }
+
+          // VOID MATH: divide the voided leg back out, exactly as a book
+          // would, and show the original struck through beside it.
+          const odds = card.querySelector('.parlay-odds');
+          if (odds && voidDecimal > 1 && card.dataset.combinedDecimal) {
+            const adj = Number(card.dataset.combinedDecimal) / voidDecimal;
+            const am = adj >= 2 ? `+${Math.round((adj - 1) * 100)}` : `-${Math.round(100 / (adj - 1))}`;
+            odds.innerHTML = `<s>${card.dataset.payout}</s> ${am}`;
+          } else if (odds && odds.innerHTML.indexOf('<s>') === 0) {
+            odds.textContent = card.dataset.payout || odds.textContent;
+          }
+
+          if (state !== wasState && !hydrating) {
+            if (state === 'one-away') {
+              announce(`${card.dataset.family} slip at ${card.dataset.payout} is one leg from cashing.`);
+              // The ONE auto-expansion rule, and it fires once.
+              if (!card.dataset.userCollapsed) card.open = true;
+            } else if (state === 'cashed') {
+              announce(`${card.dataset.family} slip at ${card.dataset.payout} cashed.`);
+              // Once per slip, on the TRANSITION only -- this block already
+              // cannot run during hydration, so opening the page the next
+              // morning stays silent and still rather than replaying the
+              // night's wins.
+              card.dataset.celebrate = '1';
+              setTimeout(() => { delete card.dataset.celebrate; }, 750);
+            } else if (state === 'dead' && wasState !== 'dead') {
+              // A dead slip goes silent forever after this one line -- an
+              // 8-leg moonshot would otherwise narrate six more irrelevant
+              // resolutions.
+              announce(`${card.dataset.family} slip at ${card.dataset.payout} is out on leg ${deadIdx + 1}.`);
+            }
+          }
+          // DEFERRED COLLAPSE. A slip that dies while on screen stays open;
+          // the collapse waits until it cannot be seen, so the page never
+          // reflows under a reading thumb.
+          if (state === 'dead' && card.open && safeToRestructure()) card.open = false;
+
+          tally.total++;
+          if (state !== 'open') tally.touched++;
+          if (state === 'one-away') { tally['one-away']++; tally.alive++; }
+          else if (state === 'alive' || state === 'running' || state === 'awaiting') tally.alive++;
+          else if (state === 'dead') tally.dead++;
+
+          prevLegState[slipId] = states;
+        });
+
+        paintTally(tally);
+      }
+
+      let lastScrollAt = 0;
+      window.addEventListener('scroll', () => { lastScrollAt = Date.now(); }, { passive: true });
+      function safeToRestructure() {
+        return document.visibilityState !== 'visible'
+            || document.body.dataset.section !== 'parlays'
+            || Date.now() - lastScrollAt > 2500;
+      }
+
+      function paintTally(t) {
+        // THE HUB BADGE. Off-card it keeps its build-time slip count; the
+        // moment anything has resolved it switches to how many can still
+        // cash, in the accent, so the hub answers "am I still in this?"
+        // without a tap. It reverts on its own when a rebuild lands.
+        const hub = document.getElementById('parlay-hub-badge');
+        if (hub) {
+          // SWITCH ONLY ONCE SOMETHING HAS ACTUALLY HAPPENED. The first
+          // version tested `alive !== total`, which is true the moment ANY
+          // slip is merely 'open' -- i.e. always, before a card starts -- so
+          // a quiet Tuesday showed "0 alive" beside nine untouched slips.
+          // t.touched counts slips that have left the open state.
+          if (t.touched) {
+            hub.textContent = `${t.alive} alive`;
+            hub.dataset.live = '1';
+          } else {
+            hub.textContent = String(t.total);
+            delete hub.dataset.live;
+          }
+        }
+        const bar = document.getElementById('slip-summary');
+        if (!bar) return;
+        const set = (name, label, n) => {
+          const b = bar.querySelector(`[data-tally="${name}"]`);
+          if (!b) return;
+          b.hidden = !n;
+          b.textContent = `${n} ${label}`;
+        };
+        const all = bar.querySelector('[data-filter="all"]');
+        if (all) all.textContent = `${t.total} slip${t.total === 1 ? '' : 's'}`;
+        set('one-away', 'one away', t['one-away']);
+        set('alive', 'alive', t.alive);
+        set('dead', 'out', t.dead);
+      }
+
+      document.getElementById('slip-summary')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.slip-tally');
+        if (!btn) return;
+        const f = btn.dataset.filter;
+        document.querySelectorAll('.slip-tally').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+        if (f === 'all') delete document.body.dataset.parlayFilter;
+        else document.body.dataset.parlayFilter = f;
+      });
+
+      // Remember a manual collapse so auto-expand never fights the reader.
+      document.addEventListener('toggle', (e) => {
+        const card = e.target.closest && e.target.closest('.parlay-card');
+        if (card && !card.open) card.dataset.userCollapsed = '1';
+      }, true);
+
+      function refreshLiveCardFlag() {
+        const on = insideCardWindow(Date.now());
+        if (on) document.body.dataset.liveCard = '1';
+        else delete document.body.dataset.liveCard;
+      }
+
+      refreshLiveCardFlag();
+      gradeAllSlips();
+      // Hydration is over once the first paint has settled: from here on,
+      // transitions animate and announce.
+      requestAnimationFrame(() => setTimeout(() => { hydrating = false; }, 500));
+      setInterval(refreshLiveCardFlag, 60000);
 
       if (insideCardWindow(Date.now())) pollLive();
       setInterval(pollLive, LIVE_POLL_MS);

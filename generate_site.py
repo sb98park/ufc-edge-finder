@@ -366,8 +366,15 @@ def main():
     #
     # Filtered at the source rather than in each of the three consumers, so a
     # fourth consumer added later inherits the guard instead of re-earning it.
+    # fight_key is STAMPED HERE because this is the only place both the edge
+    # and the fight it belongs to are in scope. Edge rows carry fighter and
+    # opponent, but fight-level markets (Total Rounds, Fight Outcome) set no
+    # opponent at all, so the pair cannot be reconstructed downstream. Live
+    # parlay grading matches on this key against the same canonicalisation the
+    # ESPN poller uses -- see canonicalKey in the template.
     tracked_edges = pd.DataFrame(
-        [edge for event in events for fight in event["fights"]
+        [dict(edge, fight_key=f"{fight.get('fighter_a')}|{fight.get('fighter_b')}")
+         for event in events for fight in event["fights"]
          if not fight.get("cancelled") for edge in fight["edges"]]
     )
 
