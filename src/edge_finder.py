@@ -16,7 +16,7 @@ from src.fight_format import is_five_round as _is_five_round, scheduled_rounds a
 
 from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob, devig_single_sided
 from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
-from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get
+from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get, normalize_division
 
 
 def _fold_name(t):
@@ -368,11 +368,19 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
         fighters_in_fight = group["fighter_a"].iloc[0], group["fighter_b"].iloc[0]
         finish_rates = []
         first_round_rates = []
+        _division = None
         for name in fighters_in_fight:
             stats = _find_fighter(fighters_df, name)
             if stats.empty:
                 continue
             f = stats.iloc[0]
+            # Either corner's listed division answers the question -- they are
+            # fighting each other, so it is one bout at one weight. Taking the
+            # first non-null rather than requiring both keeps the conditioning
+            # alive when one fighter carries no division, which is the case for
+            # 114 of 310 roster entries.
+            if _division is None:
+                _division = normalize_division(f.get("weight_class"))
             total_wins = max(int(f["wins"]), 1)
             finish_rates.append((_get(f, "ko_wins", 0) + _get(f, "sub_wins", 0)) / total_wins)
             if "first_round_finish_pct" in f and pd.notna(f["first_round_finish_pct"]):
@@ -417,7 +425,9 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
             finish = 1.0 - _md["decision"]
             # Fraction of finishes landing before each line. Higher lines
             # capture nearly all of them; the 1.5 line only the early ones.
-            share = finish_share_before(line, scheduled)
+            # Conditioned on division on three-round bouts: the split between
+            # lines moves with weight even when P(finish) does not.
+            share = finish_share_before(line, scheduled, _division)
             model_prob_under = finish * share
         elif line is not None and line <= 1.5 and combined_first_round_rate is not None:
             # the literal, most verifiable case: does it end in round 1

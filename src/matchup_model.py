@@ -35,6 +35,12 @@ WRESTLING_ADVANTAGE_SCALE = 300.0  # legacy fallback path only (see wrestling_ad
 TD_RATE_ADVANTAGE_SCALE = 15.0
 STRIKING_ADVANTAGE_SCALE = 150.0
 DURABILITY_SCALE = 120.0
+# REJECTED BY ITS OWN BACKTEST, kept at the no-op value with the verdict
+# recorded at the term in style_matchup_adjustment. 0.0 is byte-identical to
+# not having the term. Do not raise this without reading that note first --
+# the underlying signal is real and the conclusion is still that it does not
+# belong here.
+CHIN_SCALE = 0.0
 
 # PSEUDO-COUNTS for the durability rate's Beta shrink toward the division's
 # own finish rate. 0.0 is the shipped behaviour: the raw career ratio at full
@@ -1163,6 +1169,57 @@ def style_matchup_adjustment(
     durability_adj = ((finish_loss_rate_b - finish_loss_rate_a) * DURABILITY_SCALE
                       if durability_data_ok else 0.0)
 
+    # MEASURED CHIN -- BUILT, TESTED, AND REJECTED. CHIN_SCALE is 0.0, so this
+    # is a no-op. It is kept, with its numbers, because the signal underneath
+    # it is strong enough that it WILL be proposed again.
+    #
+    # THE IDEA. durability_adj above is built from the method split of a
+    # fighter's LOSSES. data/pit_stats.csv carries kd_against and
+    # fight_seconds on 17,524 fighter-bout rows and the model read neither.
+    # Knockdowns absorbed per 15 minutes measures the same thing denominated
+    # in cage time rather than in defeats, so unlike the proxy it sees a fight
+    # the fighter survived, and its denominator is not frequently 1.
+    #
+    # THE SIGNAL IS REAL. On 4,813 losses from 2010 on, quintiles of this rate
+    # map monotonically onto the chance the loss came by KO/TKO -- 24.9% /
+    # 31.9% / 34.7% / 40.2%, point-biserial r = 0.122, p = 2e-17. It is only
+    # 0.345 correlated with the existing proxy, and a model with BOTH beats
+    # either alone (5-fold CV log loss 0.60985 against 0.61301 and 0.61334).
+    # Every one of those numbers argues for adding this term.
+    #
+    # IT STILL DOES NOT WORK, because all of them answer the wrong question.
+    # They predict the METHOD of a loss. The site publishes P(win). Swept
+    # point-in-time (scripts/validate_chin.py), Brier against CHIN_SCALE = 0:
+    #
+    #     scale   recent window        prior window
+    #      15     +0.00022 (p .12)     +0.00006 (p .71)
+    #      30     +0.00048 (p .08)     +0.00012 (p .66)
+    #      60     +0.00107 (p .04)          --
+    #
+    # Worse at every positive scale in the recent window, MONOTONICALLY worse
+    # as the scale grows, and worse still on the subset with the widest chin
+    # gap -- 0.20664 to 0.21762 at scale 60 on gap > 0.50. That gradient is
+    # what makes this a finding rather than noise: the term does most damage
+    # exactly where it speaks loudest. The prior window is flat in both
+    # directions, and a negative scale does not replicate either (-15 and -30
+    # sit at p = 0.89 and 0.92), so this is not a sign error.
+    #
+    # The likely reason is that being dropped is entangled with a style that
+    # also wins fights. Whatever the mechanism, a signal that predicts HOW a
+    # fighter loses is not thereby a signal about WHETHER they lose, and the
+    # gap between those two claims is where this term died.
+    #
+    # kd_against_per_15 is still emitted by build_pit_stats. The natural place
+    # for it is the METHOD model, which predicts the quantity it actually
+    # tracks; that is untested and is not this term.
+    kd_a, kd_b = _stat(row_a, "kd_against_per_15"), _stat(row_b, "kd_against_per_15")
+    if pd.notna(kd_a) and pd.notna(kd_b):
+        # Sign matches durability: the fighter whose OPPONENT is more
+        # droppable gains. b's rate minus a's, so a high rate on b helps a.
+        chin_adj = (float(kd_b) - float(kd_a)) * CHIN_SCALE
+    else:
+        chin_adj = 0.0
+
     # DATED TO THE FIGHT, NOT TO TODAY. layoff_penalty and quick_return_penalty
     # have always accepted a reference_date and nothing ever passed one, so
     # every historical fight was scored as though it happened this morning.
@@ -1216,9 +1273,13 @@ def style_matchup_adjustment(
     rate_conf = rate_stat_confidence(row_a, row_b)
     striking_adj *= rate_conf
     wrestling_adj *= rate_conf
+    # Chin is a per-minute rate off the same source as striking and wrestling,
+    # so it takes the same sample-size discount. Durability does not, because
+    # it is a count off the win/loss record -- see the note above.
+    chin_adj *= rate_conf
 
     total_adj = (
-        wrestling_adj + striking_adj + durability_adj + layoff_adj
+        wrestling_adj + striking_adj + durability_adj + chin_adj + layoff_adj
         + quick_return_adj + age_cliff_adj + missed_weight_adj + weight_class_change_adj
         + stance_adj + submission_threat_adj + height_adj + short_notice_adj
     )
@@ -1232,6 +1293,7 @@ def style_matchup_adjustment(
         "wrestling_adjustment": wrestling_adj,
         "striking_adjustment": striking_adj,
         "durability_adjustment": durability_adj,
+        "chin_adjustment": chin_adj,
         "submission_threat_adjustment": submission_threat_adj,
         "height_adjustment": height_adj,
         "short_notice_adjustment": short_notice_adj,
@@ -1330,6 +1392,42 @@ def predict_matchup(
     """
     Full pairwise prediction: base rating gap + style-matchup adjustment,
     converted to a win probability, with a breakdown for the UI to explain.
+
+    THERE IS DELIBERATELY NO scheduled_rounds PARAMETER. A main event and a
+    prelim are scored identically here, which looks like an omission and has
+    been raised as one, so the measurement is recorded rather than the
+    argument (scripts/validate_five_round.py).
+
+    The usual claim is that five rounds give the better fighter more time to
+    express an edge, so a three-round-calibrated probability should be
+    UNDERCONFIDENT on a championship-distance fight. Point-in-time, on 827
+    five-round bouts across two disjoint windows, the data says the opposite:
+
+        window        3-round gap    5-round gap
+        recent          -0.0234        -0.0326      (n = 4739 / 563)
+        prior           -0.0415        -0.0530      (n = 2195 / 264)
+
+    where gap is observed hit rate minus mean confidence. Five-round bouts are
+    MORE overconfident than three-round ones, consistently, by about a point.
+    Sharpening -- the correction the standard story implies -- makes it worse
+    in both windows and significantly so at s = 1.15 in the prior window
+    (+0.00247, p = 0.046).
+
+    Flattening is the correction the data actually points at, and it improves
+    Brier in both windows at every level tried. It is NOT shipped, because it
+    never approaches significance (best p = 0.15) and there is no more sample
+    to find: five-round fights are ~10% of the record and that ceiling is
+    structural, not a matter of waiting.
+
+    Read the absolute gaps with the caveat established in
+    validate_probability_calibration.py -- a backtest overstates
+    overconfidence because departed fighters carry no height, reach or age and
+    their style terms gate off. That caveat applies to both columns, which is
+    why the comparison between them is the part worth trusting.
+
+    So: the interaction is real and points the other way from the folklore,
+    and correcting it is below the noise floor. If a future baseline moves it,
+    flattening five-rounders is the direction to try.
     """
     match_a = fighters_df[fighters_df["name"] == fighter_a]
     match_b = fighters_df[fighters_df["name"] == fighter_b]

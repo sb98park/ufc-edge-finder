@@ -297,20 +297,187 @@ _ROUND_FINISH_SHARE = {
     5: [0.368, 0.272, 0.181, 0.106, 0.072],
 }
 
+# ---------------------------------------------------------------------------
+# DIVISION-CONDITIONED THREE-ROUND CURVE
+#
+# The constants above are one curve for every division, and measured on 3,945
+# dated three-round finishes that is wrong in a specific, one-directional way:
+#
+#     men's divisions      R1 share 0.535   (n = 3,683)
+#     women's divisions    R1 share 0.440   (n = 291, 95% CI 0.382-0.499)
+#
+# 0.534 -- what the pooled curve predicts -- sits OUTSIDE the women's interval
+# (binomial p = 0.0015). Under 1.5 is priced directly off this number, so every
+# women's fight on a card was being quoted a first-round finish share nine
+# points too high. Across all eleven divisions the R1 share is ordered almost
+# perfectly by weight (Spearman rho = 0.909, p = 0.0001; chi-square on the
+# division x round table p = 0.0002).
+#
+# WHY THE PRIOR IS A LINE IN WEIGHT rather than the pooled mean. Cutting 3,945
+# finishes eleven ways leaves the women's divisions on 80-110 observations, and
+# shrinking those toward the pooled mean would erase the very fact the ordering
+# establishes -- that a 115lb division belongs BELOW the middle, not at it.
+# Shrinking toward the weight line keeps the gradient and discards only each
+# division's idiosyncratic wiggle, which is what the sample size cannot
+# support. Measured point-in-time it beat flat shrinkage at every K tried.
+#
+# WHAT THE HARNESS ACTUALLY SHOWED (validate_divisional_finish_curve.py, two
+# windows, refit at every scored fight from strictly prior finishes):
+#
+#     arm            log loss   d vs pooled     p     n
+#     shipped        1.01026      +0.00157   0.0147   2500
+#     pooled (PIT)   1.00869           --      --
+#     weight_k800    1.00612      -0.00257   0.1020
+#
+# Read this honestly. The AGGREGATE conditioning result is directionally
+# consistent -- ten of ten arms improved on the pooled curve across both
+# windows -- but it does not clear p < 0.05, because 71% of the sample sits in
+# middle divisions where the correction is nearly nothing (Brier -0.0006). The
+# gain is concentrated where the bias is: on women's fights the R1 Brier moves
+# -0.0061, ten times the effect anywhere else.
+#
+# So this ships as a BIAS CORRECTION on a subgroup where the error is
+# significant and pre-specified, not as an aggregate accuracy win. The separate
+# finding that the frozen constant is beaten by a plain point-in-time refit IS
+# significant in both windows (p = 0.049, p = 0.0147) -- the numbers above were
+# fitted years ago and the sample has moved underneath them.
+#
+# FIVE-ROUND BOUTS STAY POOLED. There are 478 five-round finishes in the entire
+# UFC record, about 43 per division. Nothing there is conditionable and
+# pretending otherwise would fit noise.
+_ROUND_SHARE_SHRINK_K = 800.0
+_MIN_DIVISION_FINISHES = 20
+_MIN_DIVISIONS_FOR_FIT = 4
 
-def finish_share_before(line: float, scheduled_rounds: int = 3) -> float:
+# Nominal limits, used only as the REGRESSOR for the prior -- never as a
+# lookup. A catchweight or an unlisted division falls out of the fit and
+# resolves to the pooled curve rather than needing a weight invented for it.
+_DIVISION_LBS = {
+    "Women's Strawweight": 115, "Women's Flyweight": 125, "Women's Bantamweight": 135,
+    "Women's Featherweight": 145,
+    "Flyweight": 125, "Bantamweight": 135, "Featherweight": 145, "Lightweight": 155,
+    "Welterweight": 170, "Middleweight": 185, "Light Heavyweight": 205, "Heavyweight": 265,
+}
+
+_division_round_shares_cache = None
+
+
+def _norm3(v):
+    s = sum(v)
+    return [x / s for x in v] if s > 0 else [1 / 3] * 3
+
+
+def _weight_line_prior(counts, pooled):
+    """
+    Per-division three-round curve predicted by a weighted least-squares line
+    in division weight, fit across divisions on the round-1 and round-2 shares.
+
+    Divisions enter weighted by their own finish count, so Heavyweight informs
+    the slope more than Women's Featherweight. Round 3 is the remainder, which
+    keeps the vector summing to one without a third fit and without a
+    renormalisation that could reorder the first two.
+    """
+    pts = [(_DIVISION_LBS[d], sum(c), _norm3(c)) for d, c in counts.items()
+           if d in _DIVISION_LBS and sum(c) >= _MIN_DIVISION_FINISHES]
+    if len(pts) < _MIN_DIVISIONS_FOR_FIT:
+        return {}
+    coefs = []
+    for idx in (0, 1):
+        sw = sum(w for _, w, _ in pts)
+        mx = sum(w * x for x, w, _ in pts) / sw
+        my = sum(w * s[idx] for _, w, s in pts) / sw
+        num = sum(w * (x - mx) * (s[idx] - my) for x, w, s in pts)
+        den = sum(w * (x - mx) ** 2 for x, w, _ in pts)
+        b = (num / den) if den > 0 else 0.0
+        coefs.append((my - b * mx, b))
+    out = {}
+    for d, lbs in _DIVISION_LBS.items():
+        r1 = min(max(coefs[0][0] + coefs[0][1] * lbs, 0.05), 0.90)
+        r2 = min(max(coefs[1][0] + coefs[1][1] * lbs, 0.05), 0.90)
+        out[d] = _norm3([r1, r2, max(1.0 - r1 - r2, 0.02)])
+    return out
+
+
+def _division_round_shares():
+    """
+    division -> three-round finish curve, shrunk to the weight line.
+
+    Built once from data/ufc_fight_results.csv. Any failure to read or parse
+    that file leaves this empty and every caller falls back to the pooled
+    curve, which is the shipped behaviour -- a missing data file must never be
+    able to take round props down with it.
+    """
+    global _division_round_shares_cache
+    if _division_round_shares_cache is not None:
+        return _division_round_shares_cache
+
+    shares = {}
+    try:
+        import os
+
+        import pandas as pd
+
+        from .matchup_model import _division_from_bout_label
+
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            os.pardir, "data", "ufc_fight_results.csv")
+        d = pd.read_csv(path)
+        d = d[d["TIME FORMAT"] == "3 Rnd (5-5-5)"]
+        d = d[~d["METHOD"].str.contains("Decision", case=False, na=False)]
+        d = d.assign(_r=pd.to_numeric(d["ROUND"], errors="coerce"),
+                     _d=d["WEIGHTCLASS"].map(_division_from_bout_label))
+        d = d.dropna(subset=["_r", "_d"])
+        d = d[d["_r"].between(1, 3)]
+
+        counts = {}
+        for div, g in d.groupby("_d"):
+            counts[div] = [int((g["_r"] == i).sum()) for i in (1, 2, 3)]
+        if counts:
+            # The pooled curve is computed over EVERY bout, including the
+            # catchweights and the old tournament brackets, because it is
+            # meant to be the all-UFC baseline. Only recognised divisions get
+            # their own curve: _division_from_bout_label faithfully returns
+            # things like 'Ultimate Fighter 1 Middleweight Tournament', and a
+            # label seen once should resolve to the baseline rather than
+            # acquire a curve of its own.
+            total = [sum(c[i] for c in counts.values()) for i in range(3)]
+            pooled = _norm3(total)
+            prior = _weight_line_prior(counts, pooled)
+            k = _ROUND_SHARE_SHRINK_K
+            for div, c in counts.items():
+                if div not in _DIVISION_LBS:
+                    continue
+                p = prior.get(div, pooled)
+                shares[div] = _norm3([c[i] + k * p[i] for i in range(3)])
+    except Exception:
+        shares = {}
+
+    _division_round_shares_cache = shares
+    return shares
+
+
+def finish_share_before(line: float, scheduled_rounds: int = 3, division=None) -> float:
     """
     Fraction of a fight's finishes that occur before `line` rounds elapse.
 
     "Under 2.5" means the fight ends before the midpoint of round 3: all
     finishes in rounds 1 and 2, plus roughly half of round 3's.
 
-    The per-round shares are ESTIMATES -- front-loaded, which is the real
-    pattern, but not fitted. What they guarantee is ordering: P(Under 0.5) <
-    P(Under 1.5) < P(Under 2.5), which is arithmetic rather than a modelling
-    claim and was being violated.
+    On a three-round bout the curve is conditioned on `division` when one is
+    known and recognised -- see the note above for why, and for the limits of
+    what that conditioning was shown to buy. Five-round bouts and unknown
+    divisions use the pooled curve.
+
+    What the shares guarantee either way is ordering: P(Under 0.5) < P(Under
+    1.5) < P(Under 2.5), which is arithmetic rather than a modelling claim and
+    was being violated before this was built from a per-round distribution.
     """
-    shares = _ROUND_FINISH_SHARE.get(int(scheduled_rounds), _ROUND_FINISH_SHARE[3])
+    rounds = int(scheduled_rounds)
+    shares = None
+    if rounds == 3 and division:
+        shares = _division_round_shares().get(str(division).strip())
+    if shares is None:
+        shares = _ROUND_FINISH_SHARE.get(rounds, _ROUND_FINISH_SHARE[3])
     full = int(line)                      # complete rounds below the line
     total = sum(shares[:full])
     if full < len(shares):

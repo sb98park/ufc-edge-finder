@@ -11,6 +11,7 @@ import pandas as pd
 
 from src.rationale import explain_edge, explain_favorite_pick
 from src.model_preview import build_fight_preview, build_full_market_projection
+from src.matchup_model import normalize_division
 from src.method_model import finish_share_before
 from src.fight_format import is_five_round as _is_five_round, scheduled_rounds as _scheduled_rounds
 from src.odds_utils import implied_prob_to_american, format_american_odds
@@ -297,7 +298,11 @@ def _reconcile_round_props(rows: list[dict], fight: dict,
             continue
         matched += 1
         side, line = m.group(1).capitalize(), float(m.group(2))
-        under = finish * finish_share_before(line, scheduled)
+        # Division comes off the FIGHT rather than either roster row: this is
+        # the booked weight class for the bout, which is the right answer when
+        # a fighter is moving up or down and their roster division is stale.
+        under = finish * finish_share_before(line, scheduled,
+                                             normalize_division(fight.get("weight_class")))
         new = dict(r)
         new["model_prob"] = round(under if side == "Under" else 1.0 - under, 4)
         # The edge moves with it -- a stale edge beside a corrected

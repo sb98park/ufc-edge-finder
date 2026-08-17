@@ -197,7 +197,49 @@ def _current_streaks(history_df: pd.DataFrame) -> dict[str, int]:
 # The 16+ cohort improved MOST (-0.0099) despite receiving no bonus itself,
 # because the correction lands on the risers they face. That cohort was
 # picking at 50.2% -- a coin flip -- before this.
-STREAK_K = 20
+#
+# ---------------------------------------------------------------------------
+# RE-VALIDATED AND HALVED, 20 -> 10 (scripts/validate_streak_bonus.py).
+#
+# Everything above was honest when written and is now the OLDEST validation in
+# the model. Four things have since moved underneath it -- point-in-time
+# wrestling and striking rates from data/pit_stats.csv, rebuilt divisional
+# method priors, the durability Beta shrink, and reference_date reaching the
+# style layer's recency term. All four measure recent form, which is what a
+# streak bonus is a PROXY for, so the question is whether the proxy still adds
+# anything once the real thing is present.
+#
+# Point-in-time, two disjoint windows, corners randomised, bootstrap clustered
+# by card. Deltas are Brier against the arm named in the column:
+#
+#     arm    vs k=20 recent    vs k=20 prior    vs k=0 recent   vs k=0 prior
+#     k=0    +0.00029 (.77)    -0.00182 (.076)        --             --
+#     k=10   -0.00034 (.49)    -0.00126 (.016)   -0.00064 (.23)  +0.00055 (.28)
+#     k=30   +0.00111 (.018)   +0.00183 (.0003)       --             --
+#
+# THREE THINGS ARE ESTABLISHED AND ONE IS NOT.
+#
+# 1. The term must not grow. k = 30 is significantly worse in BOTH windows,
+#    the only result here significant in both.
+# 2. k = 10 beats the shipped k = 20 in both windows. It is the only arm never
+#    beaten by anything, which is what it is being shipped on.
+# 3. The bonus only ever touches its intended cohort: fights where the thinner
+#    corner has 9+ prior bouts score BYTE-IDENTICALLY across all four arms, in
+#    both windows. That is the check that the gate works, not a result.
+#
+# NOT ESTABLISHED: that the term earns its place at all. k = 10 against k = 0
+# FLIPS SIGN between the windows (-0.00064, then +0.00055), neither
+# significant. That is the signature of no effect, and it means an earlier
+# recommendation to ablate this to zero is no better supported than keeping
+# it. Halving is what the evidence actually carries: it is the only change
+# that improved on the shipped value twice, and it also halves the term's
+# worst-case contribution from 120 rating points to 60 -- which matters more
+# here than anywhere else in the model, because this is added to the EFFECTIVE
+# RATING and is therefore the one term not bounded by ADJUSTMENT_TOTAL_CAP.
+#
+# If a future baseline makes this flip negative in both windows, retire it.
+# Right now the honest reading is that it is nearly inert and too large.
+STREAK_K = 10
 STREAK_MAX = 6
 STREAK_APPLIES_UNDER = 8
 

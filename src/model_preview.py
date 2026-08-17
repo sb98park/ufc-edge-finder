@@ -208,8 +208,14 @@ def build_full_market_projection(
         # career-rate proxies had no relationship to the method rows and could
         # exceed the finish probability outright.
         _finish3 = (1.0 - _md["decision"]) if _md else min(combined_finish_rate, 0.95)
-        rounds_2_5 = _finish3 * finish_share_before(2.5, 3)
-        _under_1_5 = _finish3 * finish_share_before(1.5, 3)
+        # DIVISION SHIFTS THE SHAPE, not the total. Heavier divisions finish
+        # earlier -- Heavyweight puts 60% of its finishes in round one against
+        # 47% for Women's Strawweight -- so the same P(finish) splits across
+        # the lines differently. Only the SPLIT is conditioned here; _finish3
+        # still comes from the validated fight-level method model.
+        _div = normalize_division(row_a.get("weight_class")) or normalize_division(row_b.get("weight_class"))
+        rounds_2_5 = _finish3 * finish_share_before(2.5, 3, _div)
+        _under_1_5 = _finish3 * finish_share_before(1.5, 3, _div)
         rounds_rows = [
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Under 1.5", "model_prob": round(_under_1_5, 3)},
             {"fighter": f"{fighter_a} vs {fighter_b}", "market": "Total Rounds Over 1.5", "model_prob": round(1 - _under_1_5, 3)},
