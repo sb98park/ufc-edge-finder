@@ -252,19 +252,28 @@ def explain_method(row: dict, fighters_df: pd.DataFrame) -> str:
             f"specific matchup history is a real headwind on the pick."
         )
     elif opp_vulnerability is not None and opp_vulnerability >= 0.45:
-        # opponent is genuinely vulnerable to this specific method -- lead with that
+        # OPPONENT IS VULNERABLE TO THIS SPECIFIC METHOD. Rendered as counts,
+        # because this branch produced the file's single most overclaiming
+        # sentence: "has gone down by KO/TKO in 100% of their career losses"
+        # fired on 31 of 124 method outputs, and the fighters it fired on
+        # mostly had two or three losses. A rate of 100% on three defeats and
+        # a rate of 100% on twelve are the same sentence and completely
+        # different evidence; the count carries its own sample.
+        opp_losses = opp_stats["losses"]
+        opp_n = int(round(opp_vulnerability * opp_losses))
+        own_n = int(round(own_rate * stats["wins"]))
         detail = (
-            f" {opponent} has gone down by {method_lower} in {opp_vulnerability*100:.0f}% of their "
-            f"career losses -- a real, specific vulnerability this matchup plays into, on top of "
-            f"{row['fighter']}'s own {own_rate*100:.0f}% career rate finishing fights that way."
+            f" {opp_n} of {opponent}'s {_count(opp_losses, 'defeat', 'defeats')} have come by "
+            f"{method_lower}, against {own_n} of {row['fighter']}'s "
+            f"{_count(stats['wins'], 'win', 'wins')} finished that way."
         )
     elif abs(div_gap) >= 0.15 and weight_class:
         # fighter's own rate is well off the divisional norm -- that's the interesting part
         comparison = "well above" if div_gap > 0 else "well below"
         detail = (
-            f" {row['fighter']}'s {own_rate*100:.0f}% career rate by {method_lower} runs {comparison} "
-            f"the {divisional_rate*100:.0f}% baseline for {weight_class} -- a real outlier for the "
-            f"division, not just a generic tendency."
+            f" {int(round(own_rate * stats['wins']))} of {row['fighter']}'s "
+            f"{_count(stats['wins'], 'win', 'wins')} have come by {method_lower}, which runs {comparison} "
+            f"the {divisional_rate*100:.0f}% baseline for {weight_class}."
         )
     elif stats["wins"] < 6:
         # small sample -- worth being upfront that this leans on limited data
@@ -299,6 +308,22 @@ def explain_round_betting(row: dict, fighters_df: pd.DataFrame) -> str:
         f"({row['book_fair_prob']*100:.0f}% implied), while the model estimates {row['model_prob']*100:.0f}% "
         f"({row['edge_pct']:+.1f}% edge)."
     )
+    # HOISTED ABOVE THE GATE BELOW. first_round_finish_pct is populated for
+    # well under half the roster, and the early return meant that whenever it
+    # was missing this market shipped nothing but a restatement of the three
+    # numbers already printed above the blurb -- one skeleton on 101 of 124
+    # outputs. The tracked-bout count needs no such column.
+    prof = _length_profile(row["fighter"])
+    opp_prof = _length_profile(row.get("opponent")) if row.get("opponent") else None
+    if prof:
+        past, n = _past_line(prof, 300)
+        inside = n - past
+        detail = f" {inside} of {row['fighter']}'s {n} tracked fights have ended inside the first round"
+        if opp_prof:
+            o_past, o_n = _past_line(opp_prof, 300)
+            detail += f", against {o_n - o_past} of {o_n} for {row['opponent']}"
+        return base + detail + "."
+
     if not stats or stats["first_round_finish_pct"] is None:
         return base
 
@@ -312,6 +337,14 @@ def explain_round_betting(row: dict, fighters_df: pd.DataFrame) -> str:
     # context through explain_edge's otherwise-uniform (row, fighters_df)
     # dispatcher signature, so rather than guess with the wrong number,
     # this sticks to the one real signal that's actually available.
+    # THE COUNT, FROM TRACKED BOUTS, BEFORE THE CAREER RATE. This market asks
+    # whether a fight ends inside round one, and pit_stats holds the clock time
+    # of every tracked bout, so the frequency is directly countable for both
+    # corners. The career rate is a proxy and a percentage of an unstated
+    # denominator; "three of his eleven tracked fights" is the same claim with
+    # its sample attached.
+    #
+    # This branch previously emitted one skeleton on 101 of 124 outputs.
     if rate >= 0.5:
         detail = (
             f" {row['fighter']} has ended {rate*100:.0f}% of career wins in round 1 -- a genuine "
@@ -347,6 +380,26 @@ def explain_total_rounds(row: dict, fighters_df: pd.DataFrame) -> str:
     line_match = re.search(r"(\d+\.\d+)", row["market"])
     line_value = float(line_match.group(1)) if line_match else None
     variant_key = f"{row['fighter']}|{row['market']}"
+
+    # EMPIRICAL FIRST, PROXY SECOND. Everything below this block explains a
+    # rounds line in terms of career FINISH RATE, which is a proxy for fight
+    # length. When both fighters have enough tracked bouts, the actual
+    # frequency of passing this line's clock time is available and is the
+    # thing being priced -- so it leads, and the finish-rate branches become
+    # the fallback they should always have been.
+    #
+    # It also breaks the shape monoculture on its own: the old branches
+    # produced ONE sentence skeleton on 123 of 124 outputs, because every
+    # variant said the same thing about the same statistic. Two counts and
+    # two denominators differ for every pairing and every line.
+    if len(names) == 2 and line_value is not None:
+        emp = _length_clause(names[0], names[1], line_value, is_over)
+        if emp:
+            out = f"{base} {emp[0].upper() + emp[1:]}."
+            dur = _duration_clause(names[0], names[1])
+            if dur:
+                out += f" {dur[0].upper() + dur[1:]}."
+            return out
 
     if len(fighter_stats) == 2:
         (name_a, s_a), (name_b, s_b) = fighter_stats
@@ -478,6 +531,25 @@ def explain_goes_the_distance(row: dict, fighters_df: pd.DataFrame) -> str:
     )
     is_distance = "Goes The Distance" in row["market"]
     variant_key = f"{row['fighter']}|{row['market']}"
+
+    # THE DISTANCE MARKET IS A LENGTH MARKET. Explaining it by career decision
+    # RATE is a proxy for the question "do this pair's fights reach the cards";
+    # the tracked bouts answer it directly. A three-round fight goes the
+    # distance at 900 seconds and a five-rounder at 1500, and this market is
+    # overwhelmingly the former -- so the count below is against the round-3
+    # bell, and the clause says "past that mark" rather than naming a round,
+    # which keeps it true for either format.
+    #
+    # Leads for the same reason as in explain_total_rounds: the old branches
+    # emitted one skeleton on 46 of 124 outputs and three in total.
+    if len(names) == 2:
+        emp = _length_clause(names[0].strip(), names[1].strip(), 2.5, is_distance)
+        if emp:
+            out = f"{base} {emp[0].upper() + emp[1:]}."
+            dur = _duration_clause(names[0].strip(), names[1].strip())
+            if dur:
+                out += f" {dur[0].upper() + dur[1:]}."
+            return out
 
     if unknown_count > 0:
         variants = [
@@ -817,6 +889,93 @@ def _submission_clause(fighter, opponent, st) -> str:
     subs = int(round(st["sub_rate"] * st["wins"]))
     return (f"{subs} of {fighter}'s {_count(st['wins'], 'win', 'wins')} have come by submission, "
             f"a threat {opponent} has to carry into every exchange on the mat")
+
+
+# ---------------------------------------------------------------------------
+# FIGHT-LENGTH PROFILES.
+#
+# The rounds and distance markets were explained entirely in terms of career
+# FINISH RATE, which is a proxy. The quantity those markets actually price is
+# how long a fighter's fights last, and data/pit_stats.csv carries the real
+# duration of all 8,626 tracked bouts. Nothing in this file was reading it.
+#
+# A round-total line maps to an exact clock time -- "Over 2.5" is the fight
+# passing 2:30 of round three, which is 750 seconds -- so the honest sentence
+# is the empirical frequency of precisely the event being priced, from that
+# fighter's own history. That is not a template: it is a different pair of
+# counts for every fighter and every line.
+# ---------------------------------------------------------------------------
+
+_LENGTH_CACHE: dict | None = None
+
+
+def _length_profile(name: str) -> dict | None:
+    """{n, mean_secs, past: fn(secs) -> count} from a fighter's tracked bouts."""
+    global _LENGTH_CACHE
+    if _LENGTH_CACHE is None:
+        try:
+            from scripts.build_pit_stats import load_pit_stats
+            _LENGTH_CACHE = load_pit_stats()
+        except Exception:
+            _LENGTH_CACHE = {}
+    rows = _LENGTH_CACHE.get(str(name).strip().lower(), [])
+    secs = [float(r["fight_seconds"]) for r in rows
+            if r.get("fight_seconds") not in (None, "") and float(r["fight_seconds"]) > 0]
+    if len(secs) < 4:
+        return None      # too few bouts for a frequency to mean anything
+    return {"n": len(secs), "mean": sum(secs) / len(secs), "secs": secs}
+
+
+def _line_seconds(line: float) -> int:
+    """
+    'Over 2.5 rounds' -> 750s. A .5 line is the midpoint of the next round, so
+    2.5 is two full five-minute rounds plus 2:30.
+    """
+    return int(line) * 300 + 150
+
+
+def _past_line(prof: dict, secs_threshold: int) -> tuple[int, int]:
+    """(fights that passed the mark, total tracked)."""
+    return sum(1 for s in prof["secs"] if s > secs_threshold), prof["n"]
+
+
+def _mmss_label(secs: float) -> str:
+    m, s = divmod(int(round(secs)), 60)
+    return f"{m}:{s:02d}"
+
+
+def _length_clause(name_a, name_b, line: float, is_over: bool) -> str | None:
+    """
+    The empirical frequency of the exact event the line prices, for both men.
+
+    Returns None when either side lacks enough tracked bouts, so the caller
+    falls back rather than reporting a fraction of three fights as a rate.
+    """
+    pa, pb = _length_profile(name_a), _length_profile(name_b)
+    if not pa or not pb:
+        return None
+    mark = _line_seconds(line)
+    ca, na = _past_line(pa, mark)
+    cb, nb = _past_line(pb, mark)
+    side = "past" if is_over else "short of"
+    if not is_over:
+        ca, cb = na - ca, nb - cb
+    return (f"{ca} of {name_a}'s {na} tracked fights have finished {side} that mark, "
+            f"and {cb} of {name_b}'s {nb}")
+
+
+def _duration_clause(name_a, name_b) -> str | None:
+    """Average fight length, side by side -- the plainest length fact there is."""
+    pa, pb = _length_profile(name_a), _length_profile(name_b)
+    if not pa or not pb:
+        return None
+    if abs(pa["mean"] - pb["mean"]) < 90:
+        return (f"both men average close to the same fight length -- "
+                f"{_mmss_label(pa['mean'])} for {name_a}, {_mmss_label(pb['mean'])} for {name_b}")
+    longer, shorter = (name_a, name_b) if pa["mean"] > pb["mean"] else (name_b, name_a)
+    pl, ps = (pa, pb) if pa["mean"] > pb["mean"] else (pb, pa)
+    return (f"{longer}'s fights have averaged {_mmss_label(pl['mean'])} against "
+            f"{_mmss_label(ps['mean'])} for {shorter}")
 
 
 # Anchored on the closing "(+8.3% edge)." -- note the decimal point inside the
