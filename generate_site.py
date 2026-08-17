@@ -486,6 +486,23 @@ def main():
     fun_facts = [f for f in all_fun_facts if f["fighter"] in section_fighter_names]
     favorite_picks = top_favorite_picks(tracked_edges, fighters_df, n=5)
 
+    # CARRY THE NAMED RISK ONTO THE FIGHT so log_predictions can store it.
+    # explain_favorite_pick writes pick_falsifier onto the row it is given, so
+    # taking it from there -- rather than recomputing it -- guarantees the risk
+    # we log is the one the reader was actually shown. Recomputing later is not
+    # an option: after the fight, predict_matchup runs against ratings that
+    # already absorbed the result.
+    _fals = {}
+    for _p in favorite_picks:
+        if _p.get("pick_falsifier"):
+            _fals[_pair_key(_p.get("fighter"), _p.get("opponent"))] = _p["pick_falsifier"]
+    if _fals:
+        for _ev in events:
+            for _ft in _ev["fights"]:
+                _k = _pair_key(_ft.get("fighter_a"), _ft.get("fighter_b"))
+                if _k in _fals and _ft.get("preview"):
+                    _ft["preview"]["pick_falsifier"] = _fals[_k]
+
     tracked_edges_list = tracked_edges.to_dict("records") if not tracked_edges.empty else []
     for e in tracked_edges_list:
         # Fight-level rows (GoesTheDistance, "Fight Outcome") never set an

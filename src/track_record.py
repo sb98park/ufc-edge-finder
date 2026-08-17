@@ -25,13 +25,21 @@ import os
 
 from src.odds_utils import american_to_decimal, american_to_implied_prob, remove_vig_two_way
 from src.card_matcher import _normalize_name
-from src.rationale import explain_settled as _explain_settled
+from src.rationale import explain_settled as _explain_settled, falsifier_fired as _falsifier_fired
 
 PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
 FIELDNAMES = [
     "event_name", "fighter_a", "fighter_b", "favorite", "favorite_prob",
     "confidence_label", "likely_method", "pick_odds", "closing_odds", "opponent_odds",
     "favorite_prob_history", "last_updated", "is_lock_of_week", "voided",
+    # THE RISK THE BLURB NAMED, captured pre-fight. Every pick's commentary
+    # ends by naming the strongest thing arguing against it; after the fight
+    # the honest question is whether that is what beat it. It cannot be
+    # recovered later -- regenerating the blurb would run it against ratings
+    # that already absorbed the result, the exact contamination the frozen
+    # pick restore above exists to prevent. Blank on every row logged before
+    # this column existed, which is correct rather than backfillable.
+    "pick_falsifier",
 ]
 # A two-way price this lopsided is a market in the act of resolving, not a
 # line anyone could have bet. 0.97 is deliberately looser than the 0.9995
@@ -258,6 +266,12 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
                 "last_updated": generated_at,
                 "is_lock_of_week": (prior.get("is_lock_of_week", "") if prior else ""),
                 "voided": (prior.get("voided", "") if prior else ""),
+                # SET ONCE, like pick_odds. The named risk belongs to the call
+                # as it was made; a later build re-deriving it from a nudged
+                # model would quietly rewrite what we said we were worried
+                # about.
+                "pick_falsifier": ((prior.get("pick_falsifier") if prior and prior.get("pick_falsifier") else None)
+                                   or preview.get("pick_falsifier") or ""),
             }
 
     _assign_locks_of_week(existing, events, decided_keys)
@@ -371,6 +385,7 @@ def load_logged_predictions_by_key() -> dict:
                 "favorite": row["favorite"],
                 "favorite_prob": prob,
                 "confidence_label": row.get("confidence_label") or None,
+                "pick_falsifier": row.get("pick_falsifier") or None,
                 "likely_method": row.get("likely_method") or None,
             }
     return out
@@ -704,6 +719,7 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "correct": correct,
             "clv": clv,
             "favorite_won": _favorite_won(pred.get("pick_odds"), correct),
+            "pick_falsifier": pred.get("pick_falsifier") or None,
             "pick_odds": float(pred["pick_odds"]) if pred.get("pick_odds") not in (None, "") else None,
             "opponent_odds": float(pred["opponent_odds"]) if pred.get("opponent_odds") not in (None, "") else None,
             "units_result": units_result,
@@ -774,6 +790,16 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             m["band_note"] = f"Picks at this confidence are {w}-{n - w} this season"
         else:
             m["band_note"] = None
+
+        # WHETHER THE NAMED RISK IS WHAT HAPPENED. None for every pick logged
+        # before pick_falsifier existed, for wins, and for risks a result
+        # cannot adjudicate -- see rationale.falsifier_fired. None prints
+        # nothing, which is the point: this is only worth saying when it is
+        # actually known.
+        fired = _falsifier_fired(m.get("pick_falsifier"), bool(m["correct"]), m.get("actual_method"))
+        m["falsifier_note"] = ("The risk we flagged is what happened" if fired is True
+                               else "Not for the reason we flagged" if fired is False
+                               else None)
 
     correct_count = sum(1 for m in matched if m["correct"])
 

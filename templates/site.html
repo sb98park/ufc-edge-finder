@@ -4433,7 +4433,7 @@
                 that reads differently from a winning one. Suppressed under ten
                 settled picks in the band, because a record of 1-2 is not a
                 record. #}
-            {% if r.band_note %}<div class="track-result-band">{{ r.band_note }}</div>{% endif %}
+            {% if r.falsifier_note or r.band_note %}<div class="track-result-band">{% if r.falsifier_note %}{{ r.falsifier_note }}{% if r.band_note %} · {% endif %}{% endif %}{{ r.band_note or '' }}</div>{% endif %}
           </div>
           {% if r.units_result is not none %}
           <div class="units-pick-badge {{ 'positive' if r.units_result >= 0 else 'negative' }}">{{ '+' if r.units_result >= 0 else '' }}{{ r.units_result }}U</div>

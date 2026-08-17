@@ -646,16 +646,16 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
             wrestling = matchup.get("wrestling_adjustment", 0)
             if abs(wrestling) > 8:
                 if wrestling > 0:
-                    signals.append((abs(wrestling), _grappling_clause(fighter, opponent, stats, opp_stats), +1))
+                    signals.append((abs(wrestling), _grappling_clause(fighter, opponent, stats, opp_stats), +1, "own_grappling"))
                 else:
-                    signals.append((abs(wrestling), f"{opponent} is genuinely live on the mat against {fighter}, which tempers the confidence here even with the number where it is", -1))
+                    signals.append((abs(wrestling), f"{opponent} is genuinely live on the mat against {fighter}, which tempers the confidence here even with the number where it is", -1, "opp_grappling"))
 
             striking = matchup.get("striking_adjustment", 0)
             if abs(striking) > 6:
                 if striking > 0:
-                    signals.append((abs(striking), _striking_clause(fighter, opponent, stats, opp_stats), +1))
+                    signals.append((abs(striking), _striking_clause(fighter, opponent, stats, opp_stats), +1, "own_striking"))
                 else:
-                    signals.append((abs(striking), f"{opponent} actually has the sharper striking profile here, which is a real headwind worth weighing against the pick", -1))
+                    signals.append((abs(striking), f"{opponent} actually has the sharper striking profile here, which is a real headwind worth weighing against the pick", -1, "opp_striking"))
 
             durability = matchup.get("durability_adjustment", 0)
             # Finish-loss rate from a thin loss record is noise, not a
@@ -669,9 +669,9 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
                     thin_n = min(stats["losses"], opp_stats["losses"])
                     suppressed.append(f"the model sees a durability gap here, but {thin} has only {_count(thin_n, 'career loss', 'career losses')} on record, which is too thin to read as a pattern")
                 elif durability > 0:
-                    signals.append((abs(durability), _durability_clause(fighter, opponent, stats, opp_stats), +1))
+                    signals.append((abs(durability), _durability_clause(fighter, opponent, stats, opp_stats), +1, "opp_chin"))
                 else:
-                    signals.append((abs(durability), f"{fighter}'s own durability history is a genuine soft spot, which is worth knowing even if the model still leans this way", -1))
+                    signals.append((abs(durability), f"{fighter}'s own durability history is a genuine soft spot, which is worth knowing even if the model still leans this way", -1, "own_chin"))
 
             submission_threat = matchup.get("submission_threat_adjustment", 0)
             # Same small-sample risk as durability above -- a fighter with
@@ -682,9 +682,9 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
                 if not sub_sample_ok:
                     suppressed.append(f"there is a submission-threat gap in the numbers, but on {_count(min(stats['wins'], opp_stats['wins']), 'career win', 'career wins')} it is not yet a pattern")
                 elif submission_threat > 0:
-                    signals.append((abs(submission_threat), _submission_clause(fighter, opponent, stats), +1))
+                    signals.append((abs(submission_threat), _submission_clause(fighter, opponent, stats), +1, "own_subs"))
                 else:
-                    signals.append((abs(submission_threat), f"{opponent} carries a real submission-finish rate of their own, which is a live risk for {fighter} if this fight goes to the ground", -1))
+                    signals.append((abs(submission_threat), f"{opponent} carries a real submission-finish rate of their own, which is a live risk for {fighter} if this fight goes to the ground", -1, "opp_subs"))
 
             layoff_a, layoff_b = matchup.get("layoff_years_a") or 0, matchup.get("layoff_years_b") or 0
             layoff_gap = layoff_b - layoff_a
@@ -693,16 +693,16 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
             # the same breath is contradictory when both are similar, and
             # only means something when there's a real gap between the two.
             if layoff_gap > 0.75 and layoff_b > 1.0:
-                signals.append((layoff_gap * 8, f"{opponent} has not fought in {layoff_b:.1f} years, against {layoff_a:.1f} for {fighter}", +1))
+                signals.append((layoff_gap * 8, f"{opponent} has not fought in {layoff_b:.1f} years, against {layoff_a:.1f} for {fighter}", +1, "opp_layoff"))
             elif layoff_gap < -0.75 and layoff_a > 1.0:
-                signals.append((abs(layoff_gap) * 6, f"{fighter}'s own {layoff_a:.1f}-year layoff is a real variable working against this pick, not for it", -1))
+                signals.append((abs(layoff_gap) * 6, f"{fighter}'s own {layoff_a:.1f}-year layoff is a real variable working against this pick, not for it", -1, "own_layoff"))
 
             if matchup.get("age_cliff_flag_b"):
                 age_b = opp_stats.get("age")
-                signals.append((12, f"{opponent} is {int(age_b)} and past the age this division's fighters typically start declining" if age_b else f"{opponent} is past the age this division's fighters typically start declining", +1))
+                signals.append((12, f"{opponent} is {int(age_b)} and past the age this division's fighters typically start declining" if age_b else f"{opponent} is past the age this division's fighters typically start declining", +1, "opp_age"))
             if matchup.get("age_cliff_flag_a"):
                 age_a = stats.get("age")
-                signals.append((12, f"{fighter}'s own age curve is working against this pick" + (f" -- {int(age_a)}, past the divisional decline point" if age_a else ""), -1))
+                signals.append((12, f"{fighter}'s own age curve is working against this pick" + (f" -- {int(age_a)}, past the divisional decline point" if age_a else ""), -1, "own_age"))
 
     # Supplementary: raw finish-resistance, as a COUNT rather than a rate.
     # "100% of their career losses" on four losses is the single most
@@ -712,7 +712,7 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
         finish_resistance = 1 - (stats["ko_loss_rate"] + stats["sub_loss_rate"])
         if finish_resistance >= 0.75:
             went_long = int(round(finish_resistance * stats["losses"]))
-            signals.append((finish_resistance * 15, f"{fighter} has been stopped {_count(stats['losses'] - went_long, 'time', 'times')} in {_count(stats['losses'], 'defeat', 'defeats')}", +1))
+            signals.append((finish_resistance * 15, f"{fighter} has been stopped {_count(stats['losses'] - went_long, 'time', 'times')} in {_count(stats['losses'], 'defeat', 'defeats')}", +1, "own_chin_good"))
 
     # SIGN-PARTITIONED, not top-2-by-magnitude. Taking the two largest
     # regardless of direction is what produced blurbs whose every sentence
@@ -721,6 +721,11 @@ def explain_favorite_pick(row: dict, fighters_df: pd.DataFrame) -> str:
     # is the asset -- a pick that names what would beat it cannot read as a tout.
     fors = sorted([s for s in signals if s[2] > 0], key=lambda s: s[0], reverse=True)
     againsts = sorted([s for s in signals if s[2] < 0], key=lambda s: s[0], reverse=True)
+    # THE NAMED RISK, exported so it can be stored with the pick. Recovering
+    # it after the fight would mean regenerating this blurb from ratings that
+    # already absorbed the result, which is the contamination the frozen-pick
+    # restore exists to prevent -- so it has to be captured now or not at all.
+    row["pick_falsifier"] = againsts[0][3] if againsts else ""
     top = [fors[0][1]] if fors else []
     if againsts:
         top.append(againsts[0][1])
@@ -924,6 +929,61 @@ def _submission_clause(fighter, opponent, st) -> str:
     subs = int(round(st["sub_rate"] * st["wins"]))
     return (f"{subs} of {fighter}'s {_count(st['wins'], 'win', 'wins')} have come by submission, "
             f"a threat {opponent} has to carry into every exchange on the mat")
+
+
+# ---------------------------------------------------------------------------
+# DID THE NAMED RISK HAPPEN?
+#
+# Every pick now names the strongest thing arguing against it. Once the fight
+# resolves, the honest question is whether that specific thing is what beat it
+# -- but only some of those risks are checkable from a result. A pick that
+# warned about the opponent's striking and then lost by knockout is a clean
+# yes; the same pick losing a decision is not evidence either way, and a
+# layoff or age warning cannot be adjudicated by a method at all.
+#
+# So this returns True only where the method corresponds directly, False only
+# where the pick lost to something the warning specifically did not describe,
+# and None everywhere else. None prints nothing. Guessing here would turn a
+# credibility feature into a worse version of the touting it replaced.
+# ---------------------------------------------------------------------------
+
+# risk kind -> the loss methods that would confirm it
+_FALSIFIER_METHODS = {
+    "opp_striking": {"KO/TKO"},
+    "opp_grappling": {"SUB"},
+    "opp_subs": {"SUB"},
+    "own_chin": {"KO/TKO", "SUB"},
+}
+# Risks a fight result cannot adjudicate. Listed rather than omitted so the
+# distinction is deliberate and survives the next edit.
+_FALSIFIER_UNRESOLVABLE = {"own_layoff", "own_age", ""}
+
+
+def falsifier_fired(kind: str | None, won: bool, actual_method: str | None) -> bool | None:
+    """True / False / None -- see the note above on why None is common."""
+    if won or not kind or kind in _FALSIFIER_UNRESOLVABLE:
+        return None
+    expected = _FALSIFIER_METHODS.get(kind)
+    if not expected:
+        return None
+    m = _method_bucket(actual_method)
+    if m is None:
+        return None
+    return m in expected
+
+
+def _method_bucket(method) -> str | None:
+    """ESPN and fight_results spell methods several ways; normalise to three."""
+    if not method:
+        return None
+    t = str(method).strip().lower()
+    if t.startswith("dec") or "decision" in t:
+        return "DEC"
+    if "sub" in t:
+        return "SUB"
+    if "ko" in t or "tko" in t or "knockout" in t:
+        return "KO/TKO"
+    return None
 
 
 # ---------------------------------------------------------------------------
