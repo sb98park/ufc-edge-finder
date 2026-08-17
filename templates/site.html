@@ -169,6 +169,26 @@
     --r-md: 8px;
     --r-lg: 12px;
     --r-pill: 999px;
+    /* FOCUS HAS ITS OWN COLOUR. It wore --accent, and this file's colour
+       contract (documented at the top of :root) says gold means MODEL, cyan
+       means MARKET and the corner colours mean which fighter. Focus is none
+       of those, so the ring was a fourth meaning on a channel already
+       carrying three -- and on a gold-tinted chip it disappeared into the
+       chip.
+       #7aa8ff measures 7.0:1 on --panel and is deliberately distinct from
+       --corner-blue (#3b82f6), which it sits beside on the waterfall. The
+       dark halo underneath keeps the ring legible on any surface, including
+       the gold ones. */
+    /* ONE SATURATION FOR EVERY GLASS SURFACE. Three floating panes carried
+       three unrelated recipes -- saturate 160%, 180% and 210% -- with the
+       extra contrast and brightness terms varying on no logic. Blur SHOULD
+       scale with surface size and does; saturation should not, and the
+       inconsistency is why the tab bar looked like glass while the segmented
+       control looked like a translucent rectangle over the same content. */
+    --tabbar-max: 560px;
+    --mat-sat: saturate(190%);
+    --focus: #7aa8ff;
+    --focus-halo: 0 0 0 4px rgba(0,0,0,0.6);
     --font-display: 'Space Grotesk', -apple-system, Segoe UI, Roboto, sans-serif;
     /* Type scale. One ladder, so nothing lands on an arbitrary size --
        every step is a deliberate rung rather than a number someone reached
@@ -945,7 +965,7 @@
   }
   .mkt-model-head:hover .unit-hint,
   .mkt-model-head:focus-visible .unit-hint { opacity: 1; }
-  .mkt-model-head:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+  .mkt-model-head:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; box-shadow: var(--focus-halo); }
 
   /* SILHOUETTE. Shaded in each fighter's OWN corner colour rather than a red
      heat ramp: ESPN can use red freely, this site cannot -- red already means
@@ -980,10 +1000,14 @@
   .sil-seg-btn {
     background: none; border: none; cursor: pointer;
     font-size: 0.59375rem; font-weight: 600; letter-spacing: 0.3px;
-    padding: 4px 13px; color: var(--muted); transition: all 0.18s ease;
+    /* Named properties, not `all`. Nothing visible changes today, but this
+       is the only `transition: all` in the file: add a 1px border to the .on
+       state and 146 buttons start relayouting on every toggle. */
+    padding: 4px 13px; color: var(--muted);
+    transition: background-color 0.18s ease-out, color 0.18s ease-out, border-color 0.18s ease-out;
   }
   .sil-seg-btn.on { background: rgba(255,255,255,0.10); color: #eceff3; }
-  .sil-seg-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
+  .sil-seg-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
   .sil-name {
     font-size: 0.59375rem; font-weight: 600; color: #c9ced6;
     text-align: center; margin-top: 5px;
@@ -1138,7 +1162,7 @@
   }
   .mkt-model-head:hover .unit-hint,
   .mkt-model-head:focus-visible .unit-hint { opacity: 1; }
-  .mkt-model-head:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+  .mkt-model-head:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; box-shadow: var(--focus-halo); }
 
 
   /* Corner tint binds a chip to a fighter without repeating the legend. */
@@ -1274,8 +1298,13 @@
     touch-action: pan-y;
     background: rgba(255,255,255,0.05);
     border: 1px solid var(--border);
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    /* Shared saturation, role-scaled blur -- see --mat-sat. This surface
+       overlaps scrolling text and was the one of the three floating panes
+       without a rim or an under-edge, so it read as a translucent rectangle
+       beside a tab bar that reads as glass. */
+    backdrop-filter: blur(24px) var(--mat-sat);
+    -webkit-backdrop-filter: blur(24px) var(--mat-sat);
+    box-shadow: var(--e2);
   }
   .seg-indicator {
     position: absolute; top: 3px; bottom: 3px; left: 0; width: 0;
@@ -1582,13 +1611,26 @@
   .units-roi.negative { color: var(--red); font-weight: 600; }
   .units-sparkline-wrap { margin: 10px 0 8px; }
   .units-tier-breakdown { text-align: left; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+  /* The row's children were all flex-shrink: 0, so at 320px with a 1.3x text
+     scale it measured 274px inside a 220px box and pushed documentElement
+     .scrollWidth past the viewport -- dragging the WHOLE PAGE into horizontal
+     scroll, with the headline units figure as the thing pushed off the edge.
+     Only the label is allowed to give: the numbers beside it are the content
+     and must never be truncated. */
   .units-tier-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: var(--t-small); }
   .units-tier-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .units-tier-dot.high { background: var(--green); box-shadow: 0 0 5px 1px rgba(61,220,132,0.6); }
   .units-tier-dot.medium { background: var(--accent2); box-shadow: 0 0 5px 1px rgba(232,199,102,0.5); }
   .units-tier-dot.low { background: var(--muted); }
   .units-tier-dot.lock { background: var(--text); box-shadow: 0 0 5px 1px rgba(255,255,255,0.05); }
-  .units-tier-label { font-weight: 600; color: var(--text); flex-shrink: 0; }
+  /* flex-shrink: 1, not 0 -- and this is the declaration that matters: an
+     earlier rule setting the same property is overridden by this one, so the
+     fix has to land here. */
+  .units-tier-label {
+    font-weight: 600; color: var(--text);
+    min-width: 0; flex-shrink: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .units-tier-size { color: var(--muted); font-size: var(--t-micro); flex-shrink: 0; }
   .units-tier-count { color: var(--muted); font-size: var(--t-micro); margin-left: auto; }
   .units-tier-value { font-family: var(--font-display); font-weight: 700; width: 56px; text-align: right; flex-shrink: 0; }
@@ -2028,7 +2070,12 @@
     background: rgba(255,255,255,0.03); color: var(--muted);
     border: 1px solid transparent;
   }
-  .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: 124px; min-width: 0; overflow: hidden; }
+  /* clamp, not a fixed 124px. At 320px that column took 47% of the row and
+     123 of 134 fighter names wrapped to two lines, seven to three, with row
+     heights spread across 30/40/45/50/62px. The clamp pins at 124px above
+     ~400px, so the 375px rendering barely moves while the narrow end gets
+     its width back. */
+  .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: clamp(96px, 38%, 124px); min-width: 0; overflow: hidden; }
   .vs-text { display: block; font-size: var(--t-small); font-weight: 700; color: var(--muted); letter-spacing: 0.5px; }
   @media (max-width: 480px) {
     .matchup-fighter .fighter-avatar-wrap { display: none; }
@@ -2377,6 +2424,11 @@
     font-size: var(--t-body); color: #b9bec9; line-height: 1.6;
     white-space: normal;
   }
+  /* Reserve the height the deferred charts will occupy. Opening them shifted
+     content 212px -- the one moment on this site where the page moves out
+     from under a finger. CLS on load is already 0; this is interaction-only,
+     which is why nothing caught it. The count is known at render time. */
+  .other-charts-pending { min-height: var(--charts-reserve, 0px); }
   .chart-block {
     background: var(--panel2); border: 1px solid var(--border); border-radius: var(--r-lg);
     padding: 10px 12px; margin: 8px 0; text-align: center;
@@ -2835,8 +2887,18 @@
        12px there. geom() in initTabDrag mirrors this -- the two MUST move
        together or the pill lands off its label. */
     position: fixed;
-    left: max(12px, env(safe-area-inset-left, 0px));
-    right: max(12px, env(safe-area-inset-right, 0px));
+    /* CAPPED AT 560px. Between roughly 700px and the 1023px hide point the
+       bar stretched to fill the viewport -- at 1023px a 999px capsule with
+       199px tabs and a 48.8px indicator, 45% wider than the content it
+       navigates, so it stopped reading as an iOS pill and became a toolbar
+       with labels marooned in translucency.
+       Expressed as an extra term inside the same max() rather than a
+       max-width, because geom() below derives the bar's box from these
+       insets and must see the same arithmetic. A max-width would change the
+       painted box without changing what JS computes, and the drag indicator
+       would land off its labels. */
+    left: max(12px, env(safe-area-inset-left, 0px), calc((100% - var(--tabbar-max)) / 2));
+    right: max(12px, env(safe-area-inset-right, 0px), calc((100% - var(--tabbar-max)) / 2));
     /* Placed against the HOME INDICATOR, not the screen edge.
        safe-area-inset-bottom is 34px on a button-less iPhone; the indicator
        line sits roughly 8px up and is about 5px tall, so its top edge is
@@ -2896,8 +2958,8 @@
        backdrop, not the opacity value. */
     background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03)),
                 linear-gradient(180deg, rgba(22,26,35,0.04), rgba(12,15,21,0.09));
-    backdrop-filter: blur(52px) saturate(210%) contrast(1.06);
-    -webkit-backdrop-filter: blur(52px) saturate(210%) contrast(1.06);
+    backdrop-filter: blur(52px) var(--mat-sat) contrast(1.06);
+    -webkit-backdrop-filter: blur(52px) var(--mat-sat) contrast(1.06);
     border: 1px solid rgba(255,255,255,0.13);
     /* The bar owns every gesture that starts on it. This replaces the
        preventDefault() the old touchmove handler called: with Pointer
@@ -3054,8 +3116,8 @@
        patch of background is measurably smoother than the bar around it,
        which is what separates "a lighter rectangle" from "a second pane of
        glass". */
-    backdrop-filter: blur(20px) saturate(180%) brightness(1.18);
-    -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.18);
+    backdrop-filter: blur(20px) var(--mat-sat) brightness(1.18);
+    -webkit-backdrop-filter: blur(20px) var(--mat-sat) brightness(1.18);
     box-shadow: none;
     /* transform-origin centre so the press magnification grows outward
        from the pill rather than from its left edge. */
@@ -3080,7 +3142,14 @@
      navigation and the compact-toggle width change. */
   .mobile-tabbar.springing .tabbar-indicator { transition: none; }
   .tabbar-btn > * { position: relative; z-index: 1; }
-  .tabbar-btn.active { color: var(--text); }
+  /* A BORDER, NOT JUST A LIFT. The active pill was a 1.30:1 luminance change
+     against the bar, and WCAG 1.4.11 asks 3:1 of a control that carries
+     state. It worked only because the LABEL also goes white and 600, doing
+     the job the indicator was supposed to do. The prefers-contrast block
+     further down already draws exactly this border -- the default should not
+     wait for a user preference to become legible. */
+  .tabbar-btn.active {
+    border: 1px solid var(--hairline-strong); color: var(--text); }
 
   /* PRESSED STATES. Feedback belongs on pointer-DOWN and has to be instant;
      the moment it lags, directness "falls off a cliff". Twelve interactive
@@ -3477,7 +3546,14 @@
   .tabbar-btn.active .inline-icon { opacity: 1; filter: grayscale(1) brightness(3); }
   /* Label stays bright rather than tinted: with the icon carrying its own
      hue, a gold label would clash against a purple padlock. */
-  .tabbar-btn.active { color: #ffffff; font-weight: 600; }
+  /* A BORDER, NOT JUST A LIFT. The active pill was a 1.30:1 luminance change
+     against the bar, and WCAG 1.4.11 asks 3:1 of a control that carries
+     state. It worked only because the LABEL also goes white and 600, doing
+     the job the indicator was supposed to do. The prefers-contrast block
+     further down already draws exactly this border -- the default should not
+     wait for a user preference to become legible. */
+  .tabbar-btn.active {
+    border: 1px solid var(--hairline-strong); color: #ffffff; font-weight: 600; }
   /* Inset stays 5px in BOTH states. Changing it to 4px when compact would
      break the equal-inset condition the concentric capsule relies on. */
   @media (prefers-reduced-motion: reduce) {
@@ -7803,7 +7879,16 @@
         // of the two is the one that could push the bar in. Taking the max
         // keeps JS's idea of the bar's box no wider than the painted one,
         // which is the direction that matters (too wide is what clips).
-        const inset = Math.max(bar.classList.contains('compact') ? 46 : 12, safeX());
+        // THE THIRD TERM MIRRORS THE CSS max() above. .mobile-tabbar now caps
+        // its width at --tabbar-max, expressed as a centring inset, and this
+        // function derives the bar's box rather than measuring it (see the
+        // note below on why). Omitting the cap here would leave JS believing
+        // the bar is viewport-wide while it paints at 560px, and every tab
+        // hit-test and the drag indicator would be wrong above ~584px.
+        const TABBAR_MAX = parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue('--tabbar-max')) || 560;
+        const capInset = Math.max(0, (viewportW() - TABBAR_MAX) / 2);
+        const inset = Math.max(bar.classList.contains('compact') ? 46 : 12, safeX(), capInset);
         const barW = Math.max(0, viewportW() - inset * 2 - BAR_BORDER * 2);
         const tabW = barW / Math.max(1, btns.length);
         // `left` is the viewport x of the bar's CONTENT box, derived from the
