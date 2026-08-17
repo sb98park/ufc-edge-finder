@@ -526,19 +526,51 @@ def compute_divisional_method_priors(fighters_df: pd.DataFrame) -> dict[str, dic
     if priors:
         return priors
 
-    priors = {}
+    # NORMALISE FIRST, THEN SUM -- and carry counts, not rates, until the end.
+    # This loop used to group on the RAW weight_class and normalise afterwards,
+    # writing straight into priors[div]. "Strawweight" and "Women's
+    # Strawweight" are one real division spelled two ways in fighters.csv, so
+    # whichever group pandas yielded second simply OVERWROTE the first and its
+    # fighters vanished from the prior entirely -- 4 fighters and 50 wins
+    # dropped, moving the division's SUB rate by 9.7 points. That is the same
+    # aliasing bug eb14790 fixed on the lookup side, surviving here because
+    # that commit never touched this branch. Accumulating counts under the
+    # canonical label and dividing once merges the spellings instead.
+    counts: dict[str, dict[str, float]] = {}
     for wc, group in fighters_df.groupby("weight_class"):
-        total_wins = group["wins"].sum()
-        if total_wins <= 0:
-            continue
         div = normalize_division(wc)
         if div is None:
             continue
-        priors[div] = {
-            "KO/TKO": group["ko_wins"].sum() / total_wins,
-            "SUB": group["sub_wins"].sum() / total_wins,
-            "DEC": group["dec_wins"].sum() / total_wins,
-        }
+        bucket = counts.setdefault(div, {"wins": 0.0, "KO/TKO": 0.0, "SUB": 0.0, "DEC": 0.0})
+        bucket["wins"] += float(group["wins"].sum())
+        bucket["KO/TKO"] += float(group["ko_wins"].sum())
+        bucket["SUB"] += float(group["sub_wins"].sum())
+        bucket["DEC"] += float(group["dec_wins"].sum())
+
+    priors = {}
+    for div, bucket in counts.items():
+        # `not (x > 0)` rather than `x <= 0` so a NaN win total is skipped
+        # instead of sailing through the comparison and producing NaN rates.
+        if not (bucket["wins"] > 0):
+            continue
+        priors[div] = {k: bucket[k] / bucket["wins"] for k in ("KO/TKO", "SUB", "DEC")}
+
+    # "_default" IS PART OF THE CONTRACT, not a nicety. divisional_prior_for
+    # resolves an unknown or unlisted division through this key and returns the
+    # caller's own fallback -- the FIGHTER'S OWN RATE -- when it is absent,
+    # which its docstring names as the exact defect it was written to fix. The
+    # primary path guarantees it (_divisional_priors_from_results setdefaults
+    # it before returning); this path did not, so falling back to the roster
+    # silently also fell back to no prior at all. Computed over the whole
+    # roster, INCLUDING fighters with no division, since those are precisely
+    # the rows a default has to speak for.
+    total_wins = float(fighters_df["wins"].sum())
+    if total_wins > 0:
+        priors.setdefault("_default", {
+            "KO/TKO": float(fighters_df["ko_wins"].sum()) / total_wins,
+            "SUB": float(fighters_df["sub_wins"].sum()) / total_wins,
+            "DEC": float(fighters_df["dec_wins"].sum()) / total_wins,
+        })
     return priors
 
 
@@ -617,7 +649,16 @@ def divisional_prior_for(priors: dict, weight_class, method: str, fallback: floa
     return row.get(method, fallback)
 
 
-UFC_RESULTS_PATH = "data/ufc_fight_results.csv"
+# ANCHORED TO THE MODULE, NOT TO THE CWD. As a bare relative path this
+# resolved against whatever directory the process happened to start in, and
+# os.path.exists returning False is not an error here -- it silently selects
+# the roster-aggregate fallback below, which is a materially different (and
+# by this function's own docstring, wrong-in-every-division) set of priors.
+# A caller running from anywhere but the repo root got that substitution with
+# no message. The file sits at <repo>/data/ and this module at <repo>/src/.
+# Still a module-level name so scripts and tests can point it elsewhere.
+UFC_RESULTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                os.pardir, "data", "ufc_fight_results.csv")
 # Below this many real bouts a division's own rate is noisier than the
 # all-UFC average, so the average is used instead. Women's Featherweight has
 # 29 bouts in total; a 29-fight rate is not a prior, it is an anecdote.

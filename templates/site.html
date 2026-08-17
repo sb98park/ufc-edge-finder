@@ -2,11 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  {# maximum-scale + user-scalable stop pinch-zoom. iOS Safari IGNORES these
-     in a normal browser tab (deliberately, since iOS 10) but honours them in
-     a standalone home-screen app -- which is the context where zooming makes
-     the thing feel like a web page rather than an app. #}
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  {# maximum-scale + user-scalable REMOVED. The reasoning for them only ever
+     covered iOS ("Safari ignores them in a normal tab but honours them in a
+     standalone home-screen app"), and stopped there -- but Android Chrome
+     honours user-scalable=no in an ordinary browser tab, which is where most
+     non-iOS traffic lands. That is a flat block on the browser's own zoom
+     mechanism, i.e. the textbook WCAG 2.1 SC 1.4.4 failure, on a page that
+     carries 8px captions ("hold a zone for detail"), 9px factor badges and a
+     9.5px segmented control.
+     Nothing else is lost by dropping them: the other thing they bought was
+     double-tap-to-zoom, and `body { touch-action: manipulation }` below
+     already removes that independently (its own comment says so), with the
+     touchend guard further down as belt and braces. The standalone app gives
+     up pinch, which is exactly the capability accessibility needs back. #}
 <style>html,body{background:#000000}</style>
   {# FIRST thing in <head>, before even the title/icons, and years before the
      big stylesheet block further down. This is the ONLY thing standing
@@ -216,6 +225,12 @@
     90% { opacity: 0.25; }
     100% { transform: translateY(-100vh) translateX(var(--drift, 20px)); opacity: 0; }
   }
+  /* Ten full-viewport, infinite, unattended background animations -- the
+     exact profile the preference exists for, and the one motion surface on
+     the page that had no off switch (the pulses, shimmers, springs and
+     reveals all have one). Hidden rather than `animation: none`, which would
+     leave ten dots frozen at bottom: -10px, i.e. paint work for nothing. */
+  @media (prefers-reduced-motion: reduce) { .ambient-embers { display: none; } }
   /* Prose text wraps at word boundaries (never mid-word). Tables instead
      scroll horizontally on mobile -- forcing table cells to break mid-word
      (e.g. "Pimblett" -> "Pimble"/"tt") was worse than a scrollable table. */
@@ -904,9 +919,23 @@
     opacity: 0; transition: opacity 0.12s ease;
   }
   .sil-tip.on { opacity: 1; }
-  .sil-nodata { opacity: 0.5; }
-  .sil-scale { text-align: center; font-size: 0.5rem; letter-spacing: 0.5px;
-               text-transform: uppercase; color: #55595f; margin-top: 6px; }
+  /* Shown only when the ACTIVE mode has no profile for this fighter. The
+     label is always in the markup and CSS decides, keyed off the two
+     data-has-* flags the macro publishes and the mode class the JS puts on
+     the wrap -- so switching Lands/Absorbs cannot leave a blank figure with
+     nothing explaining it. Default is hidden: no flag set (or both present)
+     means there is a profile to draw. */
+  .sil-nodata { opacity: 0.5; display: none; }
+  .silhouette-wrap.mode-lands[data-has-lands="0"] .sil-nodata,
+  .silhouette-wrap.mode-absorbs[data-has-absorbs="0"] .sil-nodata { display: inline; }
+  /* #55595f on --panel measured 2.41:1 -- against a 4.5:1 requirement, on the
+     one string that tells the reader the silhouettes are interactive at all,
+     set in 8px caps. It was a one-off literal used nowhere else in the file;
+     every palette token passes comfortably (--muted is 6.56:1 here). Quiet is
+     the right intent, but size and letter-spacing are how you get it without
+     dropping under the contrast floor. */
+  .sil-scale { text-align: center; font-size: 0.625rem; letter-spacing: 0.5px;
+               text-transform: uppercase; color: var(--muted); margin-top: 6px; }
 
   .fight-shape { text-align: center; margin-top: 9px; }
   .fight-shape-label { display: block; font-size: 0.6875rem; font-weight: 700; color: #d8dbe2; letter-spacing: 0.2px; }
@@ -1242,10 +1271,24 @@
      reserves the horizontal axis for us while leaving vertical scrolling
      alone. A vertical pan is claimed by the browser and arrives as
      pointercancel, which the handler treats as "abandon the swipe". */
+  /* STOPS ABOVE THE TAB BAR. At z-index 150 against the bar's 90 -- both in
+     the root stacking context -- a full-height strip covered the left 9px of
+     the "Card" tab (the bar starts at 12px + 1px border, the strip ends at
+     22px) in every drawer section. A tap there hit the strip, which captured
+     the pointer, never became a drag, and did nothing at all: a dead 12% of
+     the first tab, present only in the sections this strip is armed for.
+     The offset mirrors the bar's own `bottom` (max(10px, inset - 12px)) plus
+     its ~60px height and a little clearance, so the two track together on
+     both notched and flat hardware. Nothing is painted here, only
+     hit-tested, so ending early costs nothing. */
   #edge-back {
-    position: fixed; left: 0; top: 0; bottom: 0; width: 22px; z-index: 150;
+    position: fixed; left: 0; top: 0; width: 22px; z-index: 150;
+    bottom: calc(max(10px, env(safe-area-inset-bottom, 0px) - 12px) + 68px);
     touch-action: pan-y; pointer-events: none;
   }
+  /* The bar is hidden on desktop, so the strip can own the full height there
+     -- though #edge-back is display:none at that width anyway. */
+  @media (min-width: 1024px) { #edge-back { bottom: 0; } }
   body[data-section="funfacts"] #edge-back,
   body[data-section="favorites"] #edge-back,
   body[data-section="parlays"] #edge-back,
@@ -2276,6 +2319,15 @@
 
   .radar-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
   .radar-chart { display: block; max-width: 100%; height: auto; }
+  /* The axis labels are drawn OUTSIDE the viewBox (the svg carries
+     `overflow: visible`) at fixed offsets, so they scale with the chart but
+     are not accounted for by max-width: 100%. At 320px the longest one,
+     "Submission Resistance", started ~7px left of the card's edge and was
+     shaved to "ubmission Resistance" by details.fight-card's `overflow:
+     clip`. Shrinking the chart pulls the labels in proportionally -- at 90%
+     the same label clears the edge by roughly 10px. Only at the narrowest
+     supported width; at 375px there is already room. */
+  @media (max-width: 359px) { .radar-chart { max-width: 90%; } }
   .radar-polygon { transform: scale(0); transition: transform 1.4s cubic-bezier(0.34,1.4,0.64,1); }
   .radar-chart.revealed .radar-polygon { transform: scale(1); }
   .radar-legend { display: flex; gap: 16px; margin-top: 4px; }
@@ -2509,7 +2561,17 @@
        shadow lifting it off the page, and a FLOATING pill rather than an
        edge-to-edge slab -- detachment is most of what makes it read as
        glass rather than a toolbar. */
-    position: fixed; left: 12px; right: 12px;
+    /* max(inset, 12px) on both sides. NOTHING in this file used
+       safe-area-inset-left/right, while the viewport is viewport-fit=cover --
+       so in landscape on a notched/Dynamic-Island iPhone (the bar is live at
+       852/932px, it only hides at 1024px) the leftmost tab sat under the
+       sensor housing and its left half was not tappable. In portrait both
+       insets are 0 on every device, so this is identical to the old flat
+       12px there. geom() in initTabDrag mirrors this -- the two MUST move
+       together or the pill lands off its label. */
+    position: fixed;
+    left: max(12px, env(safe-area-inset-left, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
     /* Placed against the HOME INDICATOR, not the screen edge.
        safe-area-inset-bottom is 34px on a button-less iPhone; the indicator
        line sits roughly 8px up and is about 5px tall, so its top edge is
@@ -3084,11 +3146,23 @@
   /* Narrow the pill as well as shortening it. Inset grows 12px -> 46px per
      side, so the bar visibly contracts toward the centre rather than only
      losing height. */
-  .mobile-tabbar.compact { left: 46px; right: 46px; }
+  .mobile-tabbar.compact {
+    left: max(46px, env(safe-area-inset-left, 0px));
+    right: max(46px, env(safe-area-inset-right, 0px));
+  }
   .tabbar-btn { transition: padding 0.55s cubic-bezier(0.34,1.4,0.64,1); }
   .tabbar-btn { transition: padding 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1); }
   .tabbar-btn span {
-    max-height: 14px; overflow: hidden;
+    /* 1.1em, not 14px. The label is 0.6875rem with line-height 1, so its line
+       box tracks the user's text setting -- at a 200% browser font size it is
+       22px tall inside a box pinned at 14px, and every tab label lost its
+       lower third (the "g" in Edges lost its descender entirely). This is the
+       "fixed heights on the chrome are still px" item the header comment at
+       the top of this stylesheet flags as outstanding; --seg-tabs-h was
+       already fixed by measuring it in JS. `em` resolves against the span's
+       own font-size, so the max-height transition still animates and the
+       compact state's max-height: 0 is unaffected. */
+    max-height: 1.1em; overflow: hidden;
     transition: max-height 0.55s cubic-bezier(0.34,1.4,0.64,1),
                 opacity 0.2s ease, margin 0.55s cubic-bezier(0.34,1.4,0.64,1);
     transition: max-height 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1),
@@ -3286,9 +3360,31 @@
      These worked only because their text happened to give them height --
      incidental, not designed. Apple's 44pt floor exists because thumbs are
      imprecise; min-height makes it deliberate. */
-  .seg-tab { min-height: 40px; }
-  .market-group-summary { min-height: 40px; }
-  .filter-chip { min-height: 32px; }
+  .seg-tab { min-height: 44px; }
+  .market-group-summary { min-height: 44px; }
+  /* `.filter-chip` MATCHED NOTHING. There is no element with that class in
+     the whole rendered page -- the confidence filter is `.fc-chip` -- so the
+     one rule in this block aimed at the page's primary filtering control has
+     been silently dead for as long as it has existed, leaving those chips at
+     ~25px against the 44pt floor this block invokes. (32px would have been
+     12px short anyway.)
+     The small pill controls take the target as a transparent ::before rather
+     than as min-height: at 9-11px type a 44px-tall pill stops reading as a
+     chip, and the chips sit in rows with their own gaps. Expanding only
+     VERTICALLY means no two chips in the same row can overlap each other,
+     and the ~9px of overhang is small enough not to swallow taps meant for
+     the row above or below. */
+  .fc-chip, .fun-fact-chip, .filter-empty-reset { position: relative; }
+  .fc-chip::before, .fun-fact-chip::before, .filter-empty-reset::before {
+    content: ""; position: absolute; left: 0; right: 0;
+    top: -9px; bottom: -9px;
+  }
+  /* The Lands/Absorbs control is the worst of them at ~19px tall, and it is
+     the striking panel's ONLY control. It gets real height instead of an
+     overhang, because its wrapper .sil-seg is `overflow: hidden` (that is
+     what rounds the .on background into the capsule) and would clip a
+     pseudo-element target away to nothing. */
+  .sil-seg-btn { min-height: 40px; display: inline-flex; align-items: center; }
 
   /* ===== Fight card expand =====
      The most-used interaction on the site was also the least animated --
@@ -3378,6 +3474,33 @@
      Its own rule at the end because the five `body` padding declarations
      across the breakpoints each reset padding wholesale. */
   body { padding-top: calc(env(safe-area-inset-top, 0px) + 9px); }
+  /* Same story on the horizontal axis, and for the same reason: cover
+     extends the view into the side insets in landscape. 16px of body padding
+     is under the ~47px inset on a Dynamic Island phone, so text ran under the
+     housing. Portrait is unaffected (both insets are 0). */
+  body {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  @media (min-width: 1024px) {
+    body {
+      padding-left: max(32px, env(safe-area-inset-left, 0px));
+      padding-right: max(32px, env(safe-area-inset-right, 0px));
+    }
+  }
+  /* THE SAME ORIGIN, for everything that pins to the top of the screen.
+     `position: sticky` resolves its offset against the SCROLLPORT, not
+     against body's padding box -- so `top: 0` means the literal top of a
+     viewport-fit=cover viewport, i.e. exactly the overlap the rule above was
+     written to fix, reappearing on the segmented control and on an expanded
+     fight card's pinned matchup header. Only visible in the standalone
+     home-screen app (a normal browser tab fills that band with its own
+     chrome), which is precisely the context the viewport meta is tuned for.
+     Declared once here so a fourth consumer inherits it rather than starting
+     a fifth hand-synced copy. */
+  :root { --chrome-top: calc(env(safe-area-inset-top, 0px) + 9px); }
+  .seg-tabs { top: var(--chrome-top); }
+  details.fight-card[open] > summary { top: calc(var(--chrome-top) + var(--seg-tabs-h, 44px)); }
 
   /* Every section fills the viewport EXACTLY, no more and no less.
      Short ones (Locks, More) didn't scroll at all, so mobile browsers kept
@@ -3753,7 +3876,14 @@
        data-build-date="{{ generated_at_date }}"
        data-full="Updated {{ generated_at_short }}"
        data-short="Updated {{ generated_at_time_only }}">
-    <span class="live-dot-sm" id="price-pulse" aria-hidden="true"></span>
+    {# Not aria-hidden: this is the page's only live-vs-baked disclosure now
+       that the LIVE chip is gone, and it sits directly beside a BUILD
+       timestamp -- a screen reader that skips it hears "Updated 4:05 PM" and
+       reasonably assumes it covers the prices too. The label is rewritten by
+       markPricesLive() when the feed stalls. #}
+    <span class="live-dot-sm" id="price-pulse" role="img"
+          aria-label="Prices refreshing live. Model numbers are as of the build time shown beside this."
+          title="Prices refreshing live. Model numbers are as of the build time shown beside this."></span>
     <span id="build-stamp">Updated {{ generated_at_short }}</span>
   </div>
 
@@ -3826,8 +3956,8 @@
     <button class="whats-new-dismiss" onclick="event.stopPropagation(); window.__dismissToast();">{{ icon_cross() }}</button>
   </div>
 
-  {# Build time, not price time. "Prices live" refreshes client-side every
-     30s, so it reads as current even if Actions has been broken for days --
+  {# Build time, not price time. Prices refresh client-side every
+     90s, so they read as current even if Actions has been broken for days --
      it would report a healthy feed beside three-day-old model numbers. The
      build time is the one that can actually go stale, and the model is the
      product. The dot carries "prices are updating" better than a second
@@ -4008,9 +4138,9 @@
   <div class="standout-title" id="section-trackrecord">{{ icon_track() }} Model Track Record</div>
   {% if track_record %}
   <div class="track-tabs">
-    <button class="seg-tab active" data-seg-target="tr-overall" onclick="switchSegTab(this)">Overall</button>
+    <button class="seg-tab active" aria-pressed="true" data-seg-target="tr-overall" onclick="switchSegTab(this)">Overall</button>
     {% for group in track_record.results_by_event %}
-    <button class="seg-tab" data-seg-target="tr-event-{{ loop.index0 }}" onclick="switchSegTab(this)">{{ group.event_name }}</button>
+    <button class="seg-tab" aria-pressed="false" data-seg-target="tr-event-{{ loop.index0 }}" onclick="switchSegTab(this)">{{ group.event_name }}</button>
     {% endfor %}
   </div>
   {% endif %}
@@ -4188,7 +4318,7 @@
             <span class="lock-history-event">{{ p.event_name }}</span>
             {% if p.predicted_method %}
             <span class="lock-history-method {{ 'hit' if p.method_correct == true else ('miss' if p.method_correct == false else '') }}">
-              {% if p.method_correct == true %}{{ icon_check() }} Method{% elif p.method_correct == false %}{{ icon_cross() }} Method{% else %}Method —{% endif %} {{ p.predicted_method }}{% if p.method_correct == false and p.actual_method %} (was {{ p.actual_method }}){% endif %}
+              {% if p.method_correct == true %}{{ icon_check() }} Method{% elif p.method_correct == false %}{{ icon_cross() }} Method{% else %}Method —{% endif %} {{ p.predicted_method }}{# method_display for the same reason as the Record tab's result rows: the prediction side is always spelled out ("KO/TKO"), so an unmapped actual made sibling rows read "(was SUB)" and "(was Decision - Unanimous)". #}{% if p.method_correct == false and p.actual_method %} (was {{ p.actual_method | method_display }}){% endif %}
             </span>
             {% endif %}
           </div>
@@ -4282,7 +4412,13 @@
               <span class="track-result-label">Model picked</span> <span class="track-result-name pick">{{ r.predicted_favorite }}</span>{% if r.favorite_prob is not none %} <span class="track-result-conf">({{ (r.favorite_prob * 100) | round | int }}% confident)</span>{% endif %}{% if r.predicted_method %} <span class="track-result-conf">by {{ r.predicted_method }}</span>{% endif %}
             </div>
             <div class="track-result-picks">
-              <span class="track-result-label">{{ 'Actual' if r.correct else 'Winner' }}</span> <span class="track-result-name {{ 'pick' if r.correct else 'actual' }}">{{ r.actual_winner }}</span>{% if r.actual_method %} <span class="track-result-name actual">by {{ r.actual_method }}</span>{% endif %}{% if r.method_correct is not none %} <span class="method-match {{ 'yes' if r.method_correct else 'no' }}">{{ icon_check() if r.method_correct else icon_cross() }} method</span>{% endif %}
+              <span class="track-result-label">{{ 'Actual' if r.correct else 'Winner' }}</span> <span class="track-result-name {{ 'pick' if r.correct else 'actual' }}">{{ r.actual_winner }}</span>{# method_display, same as everywhere else the page prints a method. Without
+   it fight_results.csv's raw "DEC"/"SUB" reached the reader here -- and did
+   so directly under a "Model picked ... by Decision" line and beside a green
+   "check method" tick, so one row asserted the two strings agreed while
+   printing them in two different vocabularies. Unrecognised values (ESPN's
+   "Decision - Unanimous") pass through the filter unchanged. #}
+{% if r.actual_method %} <span class="track-result-name actual">by {{ r.actual_method | method_display }}</span>{% endif %}{% if r.method_correct is not none %} <span class="method-match {{ 'yes' if r.method_correct else 'no' }}">{{ icon_check() if r.method_correct else icon_cross() }} method</span>{% endif %}
             </div>
           </div>
           {% if r.units_result is not none %}
@@ -4323,6 +4459,28 @@
     </div>
   {%- endmacro %}
 
+  {#- Display formatter for a numeric tape/table value. Rounds to one decimal
+      exactly like the `| round(1)` it replaces, then DROPS a trailing ".0".
+      Jinja's round() is a numeric round, not a formatter -- round(75.0, 1) is
+      still the float 75.0 -- so the rounding added to kill
+      "49.64200477326969%" left the one genuinely-float column printing
+      75.0" / 80.0" / 72.0" instead. It cannot just truncate to int: half-inch
+      reaches (75.5") are real and appear in this build. Non-numbers pass
+      straight through rather than crashing the build, so a future caller
+      handing this a pre-formatted string degrades to the old behaviour
+      instead of taking the site down. -#}
+  {% macro num_display(v) -%}
+    {%- if v is number -%}{{ '%g'|format(v|round(1)) }}{%- else -%}{{ v }}{%- endif -%}
+  {%- endmacro %}
+
+  {#- Same, plus the inches mark. Used by the Fighter Comparison table, which
+      had NO formatting at all -- `reach_in ~ '"'` concatenated the raw float
+      straight onto the unit, one row under a Height cell that goes through
+      _format_height and reads 5'10". -#}
+  {% macro reach_display(v) -%}
+    {%- if v is none -%}—{%- else -%}{{ num_display(v) }}"{%- endif -%}
+  {%- endmacro %}
+
   {% macro tape_bar(label, val_a, val_b, unit) %}
     {% if val_a is not none and val_b is not none %}
     {% set total = (val_a + val_b) or 1 %}
@@ -4334,9 +4492,9 @@
           moment one column started coming from a computed rate it rendered
           "49.64200477326969%" across the Tale of the Tape. A display macro
           should not depend on an invariant held somewhere in the ETL. -#}
-      <div class="tape-value left">{{ val_a | round(1) }}{{ unit }}</div>
+      <div class="tape-value left">{{ num_display(val_a) }}{{ unit }}</div>
       <div class="tape-label">{{ label }}</div>
-      <div class="tape-value right">{{ val_b | round(1) }}{{ unit }}</div>
+      <div class="tape-value right">{{ num_display(val_b) }}{{ unit }}</div>
     </div>
     <div class="tape-bar-track">
       {# Widths are final and static now; the wrapper's scaleX does the
@@ -4401,9 +4559,32 @@
      the gap came out WIDER than before -- the opposite of the intent. Outer
      is now x<43 or x>57; inner is 43<=x<=57. #}
   {% set uid = (name ~ '-' ~ side) | lower | replace(' ', '') | replace("'", '') | replace('.', '') %}
-  <div class="silhouette-wrap side-{{ side }}">
+  {#- PER-MODE presence, published on the wrap. zone_profile() returns None
+      per PREFIX ("strikes" vs "absorbed" are different columns), so a fighter
+      can have one profile and not the other -- six do in this build, two of
+      them missing the DEFAULT 'lands' mode. Every paintable value already
+      falls back independently (alpha 0 = unshaded, empty tooltip string = no
+      readout), so the figure went completely blank and the press-and-hold did
+      nothing, while the only "no profile" label was gated on BOTH profiles
+      being absent. paint() reads these to show the label for the active
+      mode. -#}
+  <div class="silhouette-wrap side-{{ side }}"
+       data-has-lands="{{ 1 if prof_lands else 0 }}"
+       data-has-absorbs="{{ 1 if prof_absorbs else 0 }}">
     <div class="sil-tip" data-sil-tip></div>
-    <svg viewBox="0 0 100 200" class="silhouette" role="img" aria-label="Striking zones for {{ name }}">
+    {#- The aria-label carries the NUMBERS, because role="img" makes this
+        svg's entire subtree presentational -- the three <rect>s holding the
+        zone data are hit-tested only, have no tabindex, and the readout div
+        is pointer-events:none with no live region. So a keyboard or screen
+        reader user got "Striking zones for X, image" and none of the six
+        figures the panel exists to convey, from an affordance ("hold a zone
+        for detail") describing an interaction only a pointer can perform.
+        Both modes are stated, so the label stays correct whichever one is
+        showing. -#}
+    <svg viewBox="0 0 100 200" class="silhouette" role="img"
+         aria-label="Striking zones for {{ name }}.
+           {%- if prof_lands %} Lands: head {{ prof_lands.head.share }}%, body {{ prof_lands.body.share }}%, legs {{ prof_lands.leg.share }}%.{% else %} No strikes-landed profile.{% endif %}
+           {%- if prof_absorbs %} Absorbs: head {{ prof_absorbs.head.share }}%, body {{ prof_absorbs.body.share }}%, legs {{ prof_absorbs.leg.share }}%.{% else %} No strikes-absorbed profile.{% endif %}">
       <defs>
         <linearGradient id="sil-{{ uid }}" gradientUnits="userSpaceOnUse" x1="0" y1="5" x2="0" y2="195">
           {% for off, z in [(0,'head'),(0.08,'head'),(0.37,'body'),(0.79,'leg'),(1,'leg')] %}
@@ -4446,7 +4627,12 @@
          back to the radar legend above. Surname only -- it fits under a 78px
          figure and is unambiguous on a two-man card. #}
       <div class="sil-name">{{ name.split()[-1] }}</div>
-      {% if not (prof_lands or prof_absorbs) %}<span class="sil-nodata">no profile</span>{% endif %}
+      {#- Rendered unconditionally and hidden by CSS unless the ACTIVE mode is
+          the missing one -- see .silhouette-wrap[data-has-*] in the
+          stylesheet. Emitting it only when both are missing meant a fighter
+          with lands-but-no-absorbs showed a blank grey figure with no
+          explanation the moment the reader pressed "Absorbs". -#}
+      <span class="sil-nodata">no profile</span>
     </div>
   </div>
   {% endmacro %}
@@ -4527,7 +4713,7 @@
     <tr><td>{{ comparison.a.dec_wins if comparison.a.dec_wins is not none else "—" }}-{{ comparison.a.dec_losses if comparison.a.dec_losses is not none else "—" }}</td><td>Decision</td><td>{{ comparison.b.dec_wins if comparison.b.dec_wins is not none else "—" }}-{{ comparison.b.dec_losses if comparison.b.dec_losses is not none else "—" }}</td></tr>
     <tr><td>{{ comparison.a.age or "—" }}</td><td>Age</td><td>{{ comparison.b.age or "—" }}</td></tr>
     <tr><td>{{ comparison.a.height_display if comparison.a.height_display is not none else "—" }}</td><td>Height</td><td>{{ comparison.b.height_display if comparison.b.height_display is not none else "—" }}</td></tr>
-    <tr><td>{{ (comparison.a.reach_in ~ '"') if comparison.a.reach_in is not none else "—" }}</td><td>Reach</td><td>{{ (comparison.b.reach_in ~ '"') if comparison.b.reach_in is not none else "—" }}</td></tr>
+    <tr><td>{{ reach_display(comparison.a.reach_in) }}</td><td>Reach</td><td>{{ reach_display(comparison.b.reach_in) }}</td></tr>
     <tr><td>{{ comparison.a.stance or "—" }}</td><td>Stance</td><td>{{ comparison.b.stance or "—" }}</td></tr>
     {# Long style values get a smaller size so they hold one line. Applied
        per-VALUE rather than to the whole row: "Striker" shouldn't shrink
@@ -4553,7 +4739,15 @@
     {%- set radius = (size / 2) - 3 -%}
     {%- set circumference = 2 * 3.14159265 * radius -%}
     {%- set offset = circumference * (1 - prob) -%}
-    <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 {{ size }} {{ size }}" class="confidence-ring">
+    {#- Named, and the TIER is stated in words. The ring had no role and no
+        label at all, so it announced as a naked "78" -- no unit, no tier --
+        and the High/Medium/Low distinction (the same vocabulary the filter
+        chips are built on) reached everyone else through hue alone, which
+        collapses under a deuteranopia simulator and fails WCAG 1.4.1.
+        confidence_label was previously consumed only to pick a stroke
+        colour. -#}
+    <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 {{ size }} {{ size }}" class="confidence-ring"
+         role="img" aria-label="{{ (prob*100)|round|int }}% model probability, {{ confidence_label }}">
       <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="#2e2e30" stroke-width="3"/>
       <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="{{ color }}" stroke-width="3"
         stroke-dasharray="{{ circumference }}" stroke-dashoffset="{{ circumference }}" data-target-offset="{{ offset }}" stroke-linecap="round"
@@ -4562,7 +4756,7 @@
     </svg>
   {%- endmacro %}
 
-  {% macro edge_divergence(book_prob, model_prob, edge_pct) %}
+  {% macro edge_divergence(book_prob, model_prob, edge_pct, token=none, odds_at_build=none) %}
     {#- The site's signature visual for its actual thesis: where the model
        disagrees with the market. One horizontal track, two dots (book=cyan,
        model=gold, matching the site-wide model/market color language), and
@@ -4580,7 +4774,20 @@
     {%- set model_pct = (model_prob*100)|round(1) -%}
     {%- set left_pct = [book_pct, model_pct]|min -%}
     {%- set gap_width = (model_pct - book_pct)|abs -%}
-    <div class="edge-divergence">
+    {#- token/odds_at_build carry the SAME live-recompute inputs the Edges
+        table's edge cell uses. The price above this bar carries a
+        data-live-token and is rewritten every 90s, while these dots and the
+        gap between them were baked -- so a card could read "Book Price +250"
+        two lines under "Book 19.5%", which is +413. This macro's own comment
+        insists the highlighted gap IS the edge, "not a decorative bar, the
+        literal data value", and a literal data value cannot be the only
+        stale thing on a card that advertises a live price. Absent token =
+        no recompute and the bar stays exactly as before. -#}
+    <div class="edge-divergence"
+         {%- if token and odds_at_build is not none %} data-divergence-for="{{ token }}"
+         data-model-prob="{{ model_prob }}"
+         data-fair-at-build="{{ book_prob }}"
+         data-odds-at-build="{{ odds_at_build }}"{% endif %}>
       <div class="edge-divergence-track">
         <div class="edge-divergence-fill {{ 'model-high' if model_pct > book_pct else 'model-low' }}" data-target-width="{{ gap_width }}%" style="left: {{ left_pct }}%; width: 0%;"></div>
         <div class="edge-divergence-dot book" style="left: {{ book_pct }}%;">
@@ -4900,7 +5107,17 @@
                 data-model-prob="{{ row.model_prob }}"
                 data-fair-at-build="{{ row.book_fair_prob }}"
                 data-odds-at-build="{{ row.odds_american }}"
-                {%- endif %}>{{ row.edge_pct }}%{% if row.fragile_price %}<span class="edge-flag">*</span>{% endif %}</td>
+                {#- The number lives in its own span so the live edge
+                    recompute has a TEXT-ONLY element to roll. rollTo() wipes
+                    its target with textContent = '' and rebuilds it from
+                    characters, so rolling the <td> itself deleted the
+                    fragile-price asterisk -- and because oldText read back as
+                    "-42.67%*" while the new value was "-42.67%", it did that
+                    even when the edge had not moved at all. The asterisk is
+                    the only warning a phone gets (the title attribute does
+                    nothing on touch), and it marks exactly the rows the site
+                    itself calls unreliable. -#}
+                {%- endif %}><span class="edge-value">{{ row.edge_pct }}%</span>{% if row.fragile_price %}<span class="edge-flag">*</span>{% endif %}</td>
             {% else %}
             <td class="mkt-none">—</td><td class="mkt-none">—</td>
             {% endif %}
@@ -4976,7 +5193,7 @@
           </div>
         </div>
       </div>
-      {{ edge_divergence(p.book_fair_prob, p.model_prob, p.edge_pct) }}
+      {{ edge_divergence(p.book_fair_prob, p.model_prob, p.edge_pct, p.clob_token_id, p.odds_american) }}
       <div class="odds-compare">
         <div class="odds-compare-col">
           <div class="odds-compare-label">Book Price</div>
@@ -5193,7 +5410,7 @@
   {% if segs|length > 1 %}
   <div class="seg-tabs" id="section-thisweekend">
     {% for seg in segs %}
-    <button class="seg-tab{{ ' active' if loop.first }}" data-seg-target="seg-pane-{{ loop.index }}" onclick="switchSegTab(this)">{{ seg|title }}</button>
+    <button class="seg-tab{{ ' active' if loop.first }}" aria-pressed="{{ 'true' if loop.first else 'false' }}" data-seg-target="seg-pane-{{ loop.index }}" onclick="switchSegTab(this)">{{ seg|title }}</button>
     {% endfor %}
   </div>
   <div class="fight-controls" id="fight-controls">
@@ -5207,7 +5424,11 @@
      High and switching to a card with no High picks looks like the tab broke
      -- which is the one real cost of moving the filter below the tabs, so it
      gets fixed here rather than left to be discovered. #}
-  <div class="filter-empty" id="filter-empty" hidden>
+  {# aria-live: this box appears when the confidence filter empties the pane,
+     and it is the only thing explaining why the fight list just went blank.
+     Toggled via `hidden` from JS, which is a silent DOM change -- without a
+     live region a screen-reader user gets no list and no reason. #}
+  <div class="filter-empty" id="filter-empty" role="status" aria-live="polite" hidden>
     <span id="filter-empty-text"></span>
     <button type="button" class="filter-empty-reset" id="filter-empty-reset">Show all</button>
   </div>
@@ -5267,12 +5488,12 @@
   <div class="detail-section" data-section="howitworks">
   <div class="standout-title" id="section-howitworks">{{ icon_sigma() }} How the Model Works</div>
   <div class="track-tabs">
-    <button class="seg-tab active" data-seg-target="hiw-0" onclick="switchSegTab(this)">Base Rating</button>
-    <button class="seg-tab" data-seg-target="hiw-1" onclick="switchSegTab(this)">Fighter-Specific Adjustments</button>
-    <button class="seg-tab" data-seg-target="hiw-2" onclick="switchSegTab(this)">Prop Predictions</button>
-    <button class="seg-tab" data-seg-target="hiw-3" onclick="switchSegTab(this)">Market & Betting Math</button>
-    <button class="seg-tab" data-seg-target="hiw-4" onclick="switchSegTab(this)">Validation</button>
-    <button class="seg-tab" data-seg-target="hiw-5" onclick="switchSegTab(this)">Honest Data Limitations</button>
+    <button class="seg-tab active" aria-pressed="true" data-seg-target="hiw-0" onclick="switchSegTab(this)">Base Rating</button>
+    <button class="seg-tab" aria-pressed="false" data-seg-target="hiw-1" onclick="switchSegTab(this)">Fighter-Specific Adjustments</button>
+    <button class="seg-tab" aria-pressed="false" data-seg-target="hiw-2" onclick="switchSegTab(this)">Prop Predictions</button>
+    <button class="seg-tab" aria-pressed="false" data-seg-target="hiw-3" onclick="switchSegTab(this)">Market & Betting Math</button>
+    <button class="seg-tab" aria-pressed="false" data-seg-target="hiw-4" onclick="switchSegTab(this)">Validation</button>
+    <button class="seg-tab" aria-pressed="false" data-seg-target="hiw-5" onclick="switchSegTab(this)">Honest Data Limitations</button>
   </div>
   <div class="track-record-card">
     <div class="seg-pane active" id="hiw-0">
@@ -5386,8 +5607,23 @@
       <div class="model-factor-card group-green">
         <div class="model-factor-icon">{{ icon_coins() }}</div>
         <div class="model-factor-content">
+          {#- REWRITTEN to describe the sizing the reader can actually see.
+              This card used to explain a tenth-Kelly stake capped at 5% of
+              bankroll and sized from a market-shrunk probability. That number
+              is real -- edge_finder computes suggested_stake_pct -- but it is
+              rendered NOWHERE: `grep suggested_stake_pct` finds zero hits in
+              this template and zero in the built page, because the only
+              template that ever consumed it is the legacy templates/index.html
+              which generate_site.py does not render. Meanwhile the one "stake"
+              on the page is the unit pips on every Track Record row, sized by
+              a flat conviction tier with no Kelly, no bankroll fraction and no
+              market blend in it. Describing machinery a reader cannot see,
+              next to pips sized by a rule it does not mention, invites exactly
+              the wrong inference: that the 5U pip is a Kelly output.
+              If suggested_stake_pct is ever surfaced on the Edges rows, the
+              old copy is in git and should come back with it. -#}
           <div class="model-factor-title">Suggested Stake</div>
-          <div class="model-factor-text">Tenth-Kelly, hard-capped at 5% of bankroll — and sized from a probability that's deliberately shrunk most of the way toward the market's own de-vigged price, not the raw model number. Backtesting showed the model's standalone probabilities carry real but modest signal, while sportsbook closing lines are among the sharpest predictors in sports — so when the model and the market disagree hugely, the stake respects that the market is usually the one that's right. Practical effect: big claimed edges get meaningfully smaller stakes than raw Kelly would suggest, and small edges (under roughly 5 points) stake zero, because after the shrink they no longer clear the vig. That's the system being deliberately humble, not broken.</div>
+          <div class="model-factor-text">Flat units by conviction, not a bankroll percentage: 5 units on a High Confidence pick, 3 on Medium, 1 on Low, and 10 on the single Lock of the Week — the pips beside every result in Track Record. Deliberately simple, and deliberately not advice: a unit is whatever you decide it is, and the tiers exist so the record can be scored consistently rather than to tell anyone what to risk. Results are then priced at the real market odds at pick time, never at the model's own probability, which would only be grading the model against itself.</div>
         </div>
       </div>
       <div class="model-factor-card group-green">
@@ -5465,20 +5701,56 @@
     const hubView = document.getElementById('hub-view');
     const detailView = document.getElementById('detail-view');
 
+    // The pending half of a transition, so a second navigation arriving
+    // inside the 220ms window can finish the first one instead of racing it.
+    // The hub cards are plain onclick divs and stay hittable for the whole
+    // window, and showSection decides its path from
+    // `detailView.style.display === 'block'` -- which this function does not
+    // set until the timeout body runs. So two taps 120ms apart both took the
+    // hub->detail path: the first section was shown under a tab bar already
+    // claiming the second, then the second call re-added the slide-in START
+    // state (opacity 0, translateX) to an already-settled view and slid it in
+    // all over again. One visible double slide-in, and __restoreScroll twice.
+    let __viewTimer = null, __viewFlush = null;
     function transitionViews(oldEl, newEl, direction, onShown) {
+      const wasInFlight = !!__viewFlush;
+      if (__viewFlush) __viewFlush();
+      // If flushing already put the incoming view on screen, this is a second
+      // navigation into the same view: swap the content, don't replay the
+      // animation over a view that is already settled.
+      if (wasInFlight && newEl.style.display === 'block' && oldEl.style.display === 'none') {
+        if (onShown) onShown();
+        return;
+      }
       const outClass = direction === 'forward' ? 'view-slide-out-left' : 'view-slide-out-right';
       const inStartClass = direction === 'forward' ? 'view-slide-in-right-start' : 'view-slide-in-left-start';
+      // Under prefers-reduced-motion the reduce block sets
+      // `#hub-view, #detail-view { transition: none }`, so the out-class
+      // (opacity 0, translateX(-14px)) takes effect on the very next paint
+      // while the incoming view is still display:none -- 220ms of empty page
+      // on EVERY navigation. The delay only ever existed to let the
+      // transition play. Every other motion surface in this file already
+      // takes an instant path under the preference; this was the one that got
+      // worse with it on. Inline matchMedia rather than prefersReducedMotion()
+      // to match the count-up above and to avoid depending on a const
+      // declared 800 lines further down.
+      const reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
       oldEl.classList.add(outClass);
-      setTimeout(() => {
+      function body() {
+        __viewTimer = null; __viewFlush = null;
         oldEl.style.display = 'none';
         oldEl.classList.remove(outClass);
         if (window.__restoreScroll) { window.__restoreScroll(); } else { window.scrollTo(0, 0); }
         newEl.style.display = 'block';
-        newEl.classList.add(inStartClass);
-        void newEl.offsetWidth; // force reflow so the start state is registered before it's removed
-        newEl.classList.remove(inStartClass);
+        if (!reduced) {
+          newEl.classList.add(inStartClass);
+          void newEl.offsetWidth; // force reflow so the start state is registered before it's removed
+          newEl.classList.remove(inStartClass);
+        }
         if (onShown) onShown();
-      }, 220);
+      }
+      __viewFlush = function () { if (__viewTimer) clearTimeout(__viewTimer); body(); };
+      __viewTimer = setTimeout(body, reduced ? 0 : 220);
     }
 
     // Desktop layout (left rail + persistent content pane) kicks in at
@@ -5551,6 +5823,12 @@
           void el.offsetWidth;
           el.classList.add('new-item-glow');
         });
+        // Generic .countup numbers (Track Record's hit rates and donut
+        // centres, Favorite Picks' model confidence). Scoped to the section
+        // being entered, which is the only moment they have layout.
+        if (window.__runCountUp) {
+          window.__runCountUp(document.querySelector('.detail-section[data-section="' + id + '"]'));
+        }
         // Fun-fact count-up: each time the facts section opens, roll the
         // big streak numbers from 0 up to their value. Skipped entirely
         // under prefers-reduced-motion (the static number is already in
@@ -5561,15 +5839,32 @@
             if (!target || target <= 0) return;
             const durationMs = 700;
             const start = performance.now();
+            // CANCEL THE PREVIOUS LOOP FIRST. This runs on every entry into
+            // Fight Facts, and the section is reachable from a hub card, a
+            // tab and a back swipe -- so re-entering inside 700ms left two
+            // loops writing the same element on alternating frames, one
+            // near its end and one near zero. The number visibly ratcheted
+            // 8, 1, 8, 2, 9, 3 instead of counting up. Both loops land on
+            // the target eventually (the ease is monotonic), so the damage
+            // was only the interim garble, but it is the section's headline
+            // number.
+            if (el._countupRaf) cancelAnimationFrame(el._countupRaf);
             function tick(now) {
               const t = Math.min(1, (now - start) / durationMs);
               // ease-out so the last few counts land slowly -- reads as
               // "arriving at" the number rather than a slot machine
               const eased = 1 - Math.pow(1 - t, 3);
-              el.textContent = Math.round(eased * target);
-              if (t < 1) requestAnimationFrame(tick);
+              if (t < 1) {
+                el.textContent = Math.round(eased * target);
+                el._countupRaf = requestAnimationFrame(tick);
+              } else {
+                // Snap to the authored value rather than to a rounded eased
+                // one, so the final frame is exactly what the markup says.
+                el.textContent = el.dataset.countup;
+                el._countupRaf = 0;
+              }
             }
-            requestAnimationFrame(tick);
+            el._countupRaf = requestAnimationFrame(tick);
           });
         }
       }
@@ -5772,8 +6067,17 @@
         // a stale value -- the label itself comes from whichever zone is
         // being touched or hovered.
         clearAllTips();
+        // Tell each figure which mode it is currently showing, so the
+        // "no profile" label can be scoped to the mode that is actually
+        // missing. A fighter can have one profile and not the other, and an
+        // unexplained blank silhouette reads as a rendering failure.
+        document.querySelectorAll('.silhouette-wrap').forEach(w => {
+          w.classList.toggle('mode-lands', mode === 'lands');
+          w.classList.toggle('mode-absorbs', mode === 'absorbs');
+        });
         document.querySelectorAll('.sil-seg-btn').forEach(b => {
           b.classList.toggle('on', b.dataset.silMode === mode);
+          b.setAttribute('aria-pressed', b.dataset.silMode === mode ? 'true' : 'false');
         });
       }
       // Reveal a zone's share on hover (pointer) or press-and-hold (touch).
@@ -5906,11 +6210,27 @@
 
     // Belt and braces for double-tap, which is a separate mechanism from
     // pinch and survives touch-action on some iOS versions.
-    let __lastTap = 0;
+    //
+    // SCOPED TO THE SAME SPOT. Cancelling touchend suppresses the
+    // compatibility mouse events, click included, so "any tap within 300ms of
+    // any previous tap, anywhere" was cancelling ordinary second taps all
+    // over the page: two filter chips in a row, the second of two fight
+    // cards, and -- most often -- a tap that lands right after a scroll
+    // flick, because the touchend that ended the flick also armed the timer.
+    // Everything driven by click was affected; only the tab bar and the
+    // segmented pill escaped, because they run on Pointer Events.
+    // A real double-tap-to-zoom is two taps in nearly the same place, so
+    // requiring proximity keeps the guard the comment above describes while
+    // giving back every tap that was never a double-tap in the first place.
+    const __TAP_SLOP = 40;   // px; iOS's own double-tap tolerance is ~this
+    let __lastTap = 0, __lastTapX = 0, __lastTapY = 0;
     document.addEventListener('touchend', (e) => {
       const now = Date.now();
-      if (now - __lastTap < 300) e.preventDefault();
-      __lastTap = now;
+      const t = e.changedTouches && e.changedTouches[0];
+      const x = t ? t.clientX : 0, y = t ? t.clientY : 0;
+      const near = Math.abs(x - __lastTapX) < __TAP_SLOP && Math.abs(y - __lastTapY) < __TAP_SLOP;
+      if (now - __lastTap < 300 && near) e.preventDefault();
+      __lastTap = now; __lastTapX = x; __lastTapY = y;
     }, { passive: false });
 
     // Loads a fight's secondary movement charts the first time its section is
@@ -6059,8 +6379,20 @@
         // server's scale maths.
         let cumUnits = 0;
         for (let k = 1; k <= i; k++) { if (points[k]) cumUnits += points[k].units; }
-        if (window.__rollTo) window.__rollTo(figure, fmtU(cumUnits));
-        else figure.textContent = fmtU(cumUnits);
+        // WRITTEN DIRECTLY, not rolled. A scrub is direct manipulation: the
+        // number is being driven 1:1 by the finger, so routing it through a
+        // 350ms odometer is both wrong in principle and visibly broken in
+        // practice. show() runs on every mousemove/touchmove (~60-120Hz)
+        // while rollTo() is built for a 90-second price tick -- it wipes the
+        // element, rebuilds a span per changed character, and defers the
+        // .rolling class to the next frame. At scrub rates each rebuild was
+        // destroyed before that frame arrived, so the site's biggest number
+        // rendered as old-and-new digits superimposed (.roll-old is
+        // absolutely positioned over .roll-new until .rolling lands) for the
+        // whole gesture. rollValue is kept in sync so reset()'s odometer --
+        // which IS unattended motion, and appropriate -- still diffs right.
+        figure.textContent = fmtU(cumUnits);
+        figure.dataset.rollValue = fmtU(cumUnits);
         if (dollars) dollars.textContent = fmtD(cumUnits);
 
         if (p) {
@@ -6144,13 +6476,60 @@
         const fairLive = impliedLive * vigFactor;
         const edge = (model - fairLive) * 100;
         const rounded = Math.round(edge * 100) / 100;
-        if (window.__rollTo) { window.__rollTo(cell, rounded.toFixed(2) + '%'); }
-        else { cell.textContent = rounded.toFixed(2) + '%'; }
+        // Roll the .edge-value span, never the <td>: the cell can also hold
+        // the fragile-price asterisk, and rollTo() rebuilds its target from
+        // scratch, so targeting the cell silently deleted that warning marker
+        // on the first refresh. Fall back to the cell for safety if the span
+        // is ever missing.
+        const target = cell.querySelector('.edge-value') || cell;
+        if (window.__rollTo) { window.__rollTo(target, rounded.toFixed(2) + '%'); }
+        else { target.textContent = rounded.toFixed(2) + '%'; }
         cell.classList.toggle('edge-pos', edge > 0);
         cell.classList.toggle('edge-neg', edge <= 0);
       });
     }
-    window.__recomputeEdge = recomputeEdge;
+    // The standout cards' book-vs-model divergence bar, moved by the same
+    // live price and by the same arithmetic as the edge cell above. Without
+    // this the card showed a live "Book Price" beside a baked "Book 19.5%"
+    // dot and a baked gap -- two book numbers on one card, disagreeing, with
+    // the bar's own comment insisting the gap "IS the edge ... the literal
+    // data value". Silently does nothing unless every input is present and
+    // finite, so a card with no token behaves exactly as it did before.
+    function recomputeDivergence(token, liveAmerican) {
+      document.querySelectorAll('[data-divergence-for="' + token + '"]').forEach(block => {
+        const model = parseFloat(block.dataset.modelProb);
+        const fairBuild = parseFloat(block.dataset.fairAtBuild);
+        const impliedBuild = impliedFromAmerican(block.dataset.oddsAtBuild);
+        const impliedLive = impliedFromAmerican(liveAmerican);
+        if (!isFinite(model) || !isFinite(fairBuild) || !impliedBuild || !impliedLive) return;
+        // Same vig-factor trick as recomputeEdge: the client only ever sees
+        // one side of a market, so it cannot devig from scratch.
+        const fairLive = impliedLive * (fairBuild / impliedBuild);
+        const bookPct = Math.max(0, Math.min(100, Math.round(fairLive * 1000) / 10));
+        const modelPct = Math.max(0, Math.min(100, Math.round(model * 1000) / 10));
+        const dot = block.querySelector('.edge-divergence-dot.book');
+        const label = block.querySelector('.edge-divergence-label.book');
+        const fill = block.querySelector('.edge-divergence-fill');
+        if (dot) dot.style.left = bookPct + '%';
+        if (label) label.innerHTML = 'Book<br>' + bookPct.toFixed(1) + '%';
+        if (fill) {
+          const gap = Math.abs(modelPct - bookPct);
+          fill.style.left = Math.min(bookPct, modelPct) + '%';
+          fill.dataset.targetWidth = gap + '%';
+          // Only write the width if the reveal has already run; otherwise the
+          // scroll-reveal still owns it and would animate from the value we
+          // just set instead of from 0.
+          if (fill.style.width && fill.style.width !== '0%') fill.style.width = gap + '%';
+          fill.classList.toggle('model-high', modelPct > bookPct);
+          fill.classList.toggle('model-low', modelPct <= bookPct);
+        }
+      });
+    }
+
+    window.__recomputeEdge = function (token, liveAmerican) {
+      recomputeEdge(token, liveAmerican);
+      recomputeDivergence(token, liveAmerican);
+    };
 
 
     // ===== "More" remembers where you were =====
@@ -6301,6 +6680,10 @@
       }
       return {
         get animating() { return raf !== 0; },
+        // Exposed so a snapped placement can tell "a spring is already headed
+        // exactly here" from "a spring is headed somewhere else" -- without
+        // it, every commit killed its own release spring (see moveTo/place).
+        get target() { return target; },
         start(from, to, velocity, response, damping, onDone) {
           x = from; target = to; v = velocity || 0;
           tune(response, damping);
@@ -6351,6 +6734,16 @@
           // Snapped placement is instant and lets the declared CSS transition
           // ease it -- external switches carry no velocity. Kill any running
           // spring first: JS and CSS must never both write transform.
+          // EXCEPT when that spring is already heading exactly here:
+          // segRelease() springs and then calls switchSegTab, which schedules
+          // place() on the next frame, so the release spring was cancelled
+          // after a single frame and the CSS transition played instead. Same
+          // failure as the bottom tab bar's moveTo.
+          const gTarget = geom(i);
+          if (!frac && spring.animating && Math.abs(spring.target - gTarget.x) < 0.5) {
+            ind.style.width = gTarget.w + 'px';
+            return;
+          }
           endSpring();
           const g = geom(i);
           const off = (frac || 0) * g.w;
@@ -6485,8 +6878,17 @@
           // A flick lands where it is THROWN. Without this the pill settled
           // on whatever segment the finger stopped over, so a hard swipe and
           // a slow nudge produced the same result.
+          // Gated and clamped for the same reason as the bottom tab bar: the
+          // projection is v * 0.499 px against a ~118px segment, so any drag
+          // released while still moving at ordinary speed overshot by a whole
+          // segment -- drag to Prelims, commit Early Prelims.
+          const SEG_FLICK_MIN = 300;   // px/s
+          const wSegNow = geom(0).w;
+          const segProj = segMoved && Math.abs(v) > SEG_FLICK_MIN
+            ? Math.max(-wSegNow, Math.min(wSegNow, projectMomentum(v)))
+            : 0;
           const target = segMoved
-            ? segNearestX(lastX + projectMomentum(v))
+            ? segNearestX(lastX + segProj)
             : segAt(segStartX);
           if (target >= 0) {
             barHover = target;
@@ -6628,6 +7030,9 @@
       const bar = document.getElementById('mobile-tabbar');
       if (!bar) return;
       let lastY = window.scrollY || 0, compact = false;
+      // Declared here rather than beside its listeners because onScroll reads
+      // it; `let` is not hoisted into the temporal dead zone's usable range.
+      let barTouched = false;
       const btns = () => Array.from(bar.querySelectorAll('.tabbar-btn'));
       const btnCount = () => Math.max(1, btns().length);
       const activeIndex = () => btns().findIndex(b => b.classList.contains('active'));
@@ -6644,6 +7049,8 @@
         }
         const dy = y - lastY;
         if (Math.abs(dy) < THRESHOLD) return;
+        // Never recollapse under a live finger -- see barTouched below.
+        if (barTouched) { lastY = y; return; }
         // Near the top the bar always shows its labels -- collapsing there
         // reads as a glitch rather than a response to reading.
         const want = dy > 0 && y > 90;
@@ -6657,28 +7064,23 @@
         // stretch), then corrected itself afterwards (the snap-back). Both
         // must start in the same frame.
         //
-        // At this instant the DOM still reports the OLD width -- layout hasn't
-        // recalculated -- so the target geometry is COMPUTED rather than
-        // measured. Insets are known constants, tabs are equal-width flex
-        // items, so predicting is exact and avoids a forced reflow.
-        const inset = compact ? 46 : 12;
-        // Subtract the bar's 1px border per side: the buttons are flex items
-        // inside the CONTENT box, so using the outer width overstates each
-        // tab by 0.4px -- invisible at index 0 and 1.6px of drift by index 4,
-        // which is precisely the wiggle that grew toward the right-hand tabs.
-        const BAR_BORDER = 1;
-        const barW = Math.max(0, window.innerWidth - inset * 2 - BAR_BORDER * 2);
-        const tabW = barW / btnCount();
-        const idx = activeIndex();
-        if (idx >= 0 && tabW > 0) {
-            const ind = document.getElementById('tabbar-indicator');
-            if (ind) {
-                const PILL_INSET = 5;      // matches moveTo() in initTabDrag
-                ind.style.width = Math.max(0, tabW - PILL_INSET * 2) + 'px';
-                ind.style.transform = 'translateX(' + (idx * tabW + PILL_INSET) + 'px) scale(1)';
-            }
-        }
+        // The class goes on FIRST and initTabDrag's own writer does the move.
+        // This block used to compute the geometry itself and assign
+        // `ind.style.transform = translateX(...) scale(1)` directly, which
+        // broke the single-writer rule initTabDrag documents ("translate and
+        // scale have to be set together or the later assignment silently
+        // drops the other"): it hard-coded scale(1), so a scroll event
+        // arriving while a finger was pressing the bar cancelled the press
+        // magnification while initTabDrag still believed scale was 1.12, and
+        // it never updated initTabDrag's lastX, leaving the pill's idea of
+        // its own position stale until the deferred sync below.
+        // Nothing is lost by delegating: geom() computes from the class, not
+        // from measured layout, so toggling the class first gives it exactly
+        // the target geometry this block used to derive by hand -- including
+        // the 1px border per side and the safe-area inset, which this copy
+        // did not know about.
         bar.classList.toggle('compact', compact);
+        if (window.__tabbarPlaceActive) window.__tabbarPlaceActive();
         // A single measured correction once layout has settled. The computed
         // values above should already be exact, so this is a no-op safety net
         // rather than a visible move -- and because it runs after the
@@ -6693,7 +7095,15 @@
 
       // Any deliberate interaction with the bar restores it, so a tap never
       // lands on a collapsed target the user didn't choose.
+      // Latched while a finger is on the bar. The handler below un-collapses
+      // on touchstart precisely so "a tap never lands on a collapsed target
+      // the user didn't choose" -- but it only did so once, so a momentum
+      // scroll event arriving a frame later put .compact straight back
+      // underneath the pressed finger.
+      bar.addEventListener('touchend', () => { barTouched = false; }, { passive: true });
+      bar.addEventListener('touchcancel', () => { barTouched = false; }, { passive: true });
       bar.addEventListener('touchstart', () => {
+        barTouched = true;
         if (!compact) return;
         compact = false;
         bar.classList.remove('compact');
@@ -6739,6 +7149,15 @@
       const COMMIT_VELOCITY = 350;   // ...or a flick does, however far it got
 
       let pid = null, dragging = false, armed = false, startX = 0, dx = 0, W = 1;
+      // Where the page was when THIS gesture grabbed it. Non-zero only when a
+      // finger lands on a page that is still animating back to rest: the
+      // drag then continues from that offset instead of jumping.
+      let grabDx = 0;
+      // The settle's completion, mirrored out of the spring. createSpring's
+      // cancel() nulls its own callback, and settle() registers the entire
+      // commit through it, so the spring alone cannot tell us whether an
+      // interrupted animation still owes the page a navigation.
+      let pendingDone = null, pendingCommit = false;
       const vel = createVelocityTracker();
       const spring = createSpring(setX);
 
@@ -6764,7 +7183,16 @@
         const r = detailView.getBoundingClientRect();
         document.documentElement.classList.add('swiping-back');
         hubView.style.display = 'block';
-        hubView.style.top = r.top + 'px';
+        // left/width come from the rect because they are exactly what the
+        // paragraph above is about. TOP cannot: the rect is viewport-relative
+        // and #detail-view stays in normal flow during the swipe, so from a
+        // section scrolled 1500px down r.top is about -1500. Pinning a fixed,
+        // overflow:hidden box there put the whole hub above the screen and
+        // the gesture revealed an empty dimmed rectangle -- the menu only
+        // appeared at the very end, when the commit scrolls to 0 and drops it
+        // back into flow. Adding scrollY converts it to the document offset,
+        // which IS where the hub lands (showHub always arrives at scroll 0).
+        hubView.style.top = (r.top + window.scrollY) + 'px';
         hubView.style.left = r.left + 'px';
         hubView.style.width = r.width + 'px';
         hubView.style.bottom = '0';
@@ -6803,28 +7231,59 @@
             cleanup();
             // Abandoned: the hub must go back to being hidden, or it stays
             // in the document underneath the section the user stayed on.
-            hubView.style.display = '';
+            //
+            // Written as an explicit 'none' rather than clearing the inline
+            // style. Clearing hands the answer back to the cascade, which is
+            // only correct while nothing else has navigated during the ~500ms
+            // this spring takes to settle -- and if something has, the
+            // cascade's answer (html.is-mobile #hub-view { display: none })
+            // hides the hub the user was just moved TO, on top of a detail
+            // view that navigation already hid. That is the blank page.
+            // Guarded so an in-flight navigation to the hub wins.
+            if (document.body.dataset.section !== '__hub') {
+              hubView.style.display = 'none';
+            }
           }
         }
+        function finish() { pendingDone = null; pendingCommit = false; done(); }
         // Reduced motion: the DRAG itself is direct manipulation and stays --
         // suppressing a gesture the user is actively driving would be wrong.
         // It's the unattended release animation that gets dropped.
-        if (prefersReducedMotion()) { setX(target); done(); return; }
+        if (prefersReducedMotion()) { setX(target); finish(); return; }
         // Critically damped. A back navigation settling with a bounce would
         // read as the page not being sure it had arrived.
-        spring.start(dx, target, velocity || 0, 0.32, 1.0, done);
+        pendingDone = finish;
+        pendingCommit = commit;
+        spring.start(dx, target, velocity || 0, 0.32, 1.0, finish);
       }
 
       strip.addEventListener('pointerdown', (e) => {
         if (e.button !== 0 && e.pointerType === 'mouse') return;
         if (pid !== null) return;
         if (isDesktopLayout()) return;
+        // A COMMITTED settle must land before anything else is decided. Its
+        // completion -- scrollTo, showHub, cleanup -- is registered as the
+        // spring's done callback, and spring.cancel() nulls that callback, so
+        // grabbing a committing page used to delete the navigation outright:
+        // the section never changed, html.swiping-back stayed on, `dragging`
+        // stayed true (cleanup lives inside done), and the next pointermove
+        // therefore skipped begin() and wrote an absolute offset measured
+        // from a brand-new startX -- snapping a page that was 360px out back
+        // to 10px in one frame. Running it here finishes the navigation, and
+        // the section check below then correctly refuses a back swipe from
+        // the hub. Only the return-to-rest animation stays interruptible.
+        if (pendingDone && pendingCommit) { const landing = pendingDone; spring.cancel(); landing(); }
         if (DRAWER_SECTIONS.indexOf(document.body.dataset.section || '') === -1) return;
         pid = e.pointerId;
         try { strip.setPointerCapture(e.pointerId); } catch (err) {}
         spring.cancel();          // grab a settling page rather than waiting
+        pendingDone = null; pendingCommit = false;
         armed = true;
         startX = e.clientX;
+        // Continue from wherever the interrupted return animation had got to.
+        // Without this the drag is measured from 0 while the page is still
+        // translated, which is the same teleport by another route.
+        grabDx = dragging ? dx : 0;
         vel.clear(); vel.add(startX, performance.now());
       });
 
@@ -6838,8 +7297,9 @@
         if (!dragging) {
           if (x - startX < START_THRESHOLD) return;
           begin();
+          grabDx = 0;             // begin() re-pins from rest
         }
-        setX(Math.max(0, x - startX));
+        setX(Math.max(0, grabDx + x - startX));
       });
 
       function endGesture(commit, velocity) {
@@ -6921,11 +7381,57 @@
       // flex items inside a known inset, so arithmetic gives the final
       // geometry the instant the class changes -- no animation to wait out
       // and no reflow forced.
+      // documentElement.clientWidth, NOT window.innerWidth. The bar is
+      // position:fixed, so its containing block is the initial containing
+      // block -- the viewport MINUS a classic (non-overlay) scrollbar, which
+      // innerWidth includes. On overlay-scrollbar platforms (every phone,
+      // macOS) the two are identical; on Windows/Linux desktop between 768px
+      // and 1023px, where this bar is still shown, the prediction ran ~15px
+      // wide and the rightmost pill was placed past the bar's own content box
+      // and clipped by its overflow:hidden. clientWidth is not animated, so
+      // this keeps the computed-not-measured property the comment defends.
+      function viewportW() {
+        return document.documentElement.clientWidth || window.innerWidth || 0;
+      }
+      // The horizontal safe-area inset, in px, as the CSS above resolves it.
+      // Read from a probe rather than hard-coded, and cached because geom()
+      // runs on every pointermove; invalidated on resize, which is what fires
+      // on rotation (the only time these values change).
+      let _safeX = null;
+      function safeX() {
+        if (_safeX !== null) return _safeX;
+        _safeX = 0;
+        try {
+          const probe = document.createElement('div');
+          probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;' +
+                                'padding-left:env(safe-area-inset-left, 0px);' +
+                                'padding-right:env(safe-area-inset-right, 0px);';
+          document.body.appendChild(probe);
+          const cs = getComputedStyle(probe);
+          _safeX = Math.max(parseFloat(cs.paddingLeft) || 0, parseFloat(cs.paddingRight) || 0);
+          probe.remove();
+        } catch (err) { _safeX = 0; }
+        return _safeX;
+      }
+      window.addEventListener('resize', () => { _safeX = null; }, { passive: true });
+
       function geom(index) {
-        const inset = bar.classList.contains('compact') ? 46 : 12;
-        const barW = Math.max(0, window.innerWidth - inset * 2 - BAR_BORDER * 2);
+        // max(), matching .mobile-tabbar's own left/right declarations. Both
+        // sides of the bar use the same value, so a symmetric max is right
+        // here even though the two insets can differ: the CSS uses the left
+        // inset on the left and the right inset on the right, and the larger
+        // of the two is the one that could push the bar in. Taking the max
+        // keeps JS's idea of the bar's box no wider than the painted one,
+        // which is the direction that matters (too wide is what clips).
+        const inset = Math.max(bar.classList.contains('compact') ? 46 : 12, safeX());
+        const barW = Math.max(0, viewportW() - inset * 2 - BAR_BORDER * 2);
         const tabW = barW / Math.max(1, btns.length);
-        return { tabW, width: Math.max(0, tabW - INSET * 2), x: index * tabW + INSET };
+        // `left` is the viewport x of the bar's CONTENT box, derived from the
+        // same inset rather than measured, so hit-testing and rendering can
+        // never disagree mid-transition. contentW is what a free drag clamps
+        // against, for the same reason.
+        return { tabW, width: Math.max(0, tabW - INSET * 2), x: index * tabW + INSET,
+                 left: inset + BAR_BORDER, contentW: barW };
       }
 
       // SNAPPED position -- external navigation and layout sync. Instant,
@@ -6935,8 +7441,23 @@
       // writing transform, or they ease toward each other's values.
       function moveTo(btn) {
         if (!btn) return;
-        endSpring();
         const g = geom(btns.indexOf(btn));
+        // A release spring that is ALREADY heading exactly here is left to
+        // run. release() starts one and then navigates in the same task, and
+        // showSection's first statement calls back into here -- so endSpring()
+        // cancelled the rAF before a single frame had been integrated, every
+        // time, and what actually played was the fixed 0.55s CSS transition.
+        // That is regression #1 from the primitives' comment block ("NO
+        // VELOCITY. A slow drag and a hard flick both settled in exactly
+        // 0.55s") reappearing through the back door: the spring was only ever
+        // reached by pointercancel, i.e. only when the gesture was ABANDONED.
+        // Any other destination still wins immediately -- JS and CSS must not
+        // both be writing transform.
+        if (spring.animating && Math.abs(spring.target - g.x) < 0.5) {
+          ind.style.width = g.width + 'px';
+          return;
+        }
+        endSpring();
         ind.style.width = g.width + 'px';
         lastX = g.x;
         setX(lastX);
@@ -6990,30 +7511,61 @@
       // produced no movement at all. Tracking the raw touch x makes the
       // highlight feel physically attached to the finger, which is the whole
       // point of the gesture.
+      // COMPUTED, like geom() -- these two were the only readers in this
+      // closure still measuring. The bar transitions left/right over 0.55s
+      // when it collapses, and the collapse is STARTED by the very touch
+      // being measured (initTabBarCollapse removes .compact on touchstart),
+      // so a rect read during a press returned an intermediate box while
+      // geom() already returned the final tab width. btnAt() mixed the two --
+      // a live rect.left with a computed tabW -- and disagreed with the
+      // painted grid over roughly a quarter of the bar, always off by one to
+      // the LEFT. release() re-runs btnAt(startX) for a tap, so that
+      // mismatched index was what committed: tap Record, land on Locks.
       function moveFree(clientX) {
-        const r = bar.getBoundingClientRect();
-        const w = ind.offsetWidth || (bar.offsetWidth / btns.length);
-        let x = clientX - r.left - w / 2;
+        const g = geom(0);
+        const w = g.width || (g.contentW / Math.max(1, btns.length));
+        let x = clientX - g.left - w / 2;
         // Clamp to the same inset, so a drag to either end stops flush with
         // the bar's padding rather than against its border.
-        x = Math.max(INSET, Math.min(x, bar.offsetWidth - w - INSET));
+        x = Math.max(INSET, Math.min(x, g.contentW - w - INSET));
         lastX = x;
         setX(x);
       }
       function btnAt(clientX) {
         // Hit-test against the same computed grid, so selection and rendering
         // can never disagree about where a tab starts.
-        const r = bar.getBoundingClientRect();
-        const x = clientX - r.left - bar.clientLeft;
-        const { tabW } = geom(0);
-        if (tabW <= 0) return null;
-        const i = Math.floor(x / tabW);
+        const g = geom(0);
+        if (g.tabW <= 0) return null;
+        const i = Math.floor((clientX - g.left) / g.tabW);
         return btns[Math.max(0, Math.min(btns.length - 1, i))] || null;
       }
+      // Selection state for BOTH audiences. The visual cue is the class plus
+      // a pill that is aria-hidden, so with nothing else set every tab
+      // announced identically -- "Card, button" / "Edges, button" -- whether
+      // or not it was the current one. aria-current="page" is the right token
+      // here: these are navigation targets, not toggles.
+      function setActive(btn) {
+        btns.forEach(b => {
+          const on = b === btn;
+          b.classList.toggle('active', on);
+          if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+        });
+      }
       function paint(btn) {
-        btns.forEach(b => b.classList.toggle('active', b === btn));
+        setActive(btn);
         moveTo(btn);
       }
+
+      // Re-place the pill on the currently active tab through this closure's
+      // single writer. Used by initTabBarCollapse, which must move the pill in
+      // the same frame it toggles .compact but has no business writing the
+      // transform itself (it cannot know about `scale`, and it left `lastX`
+      // stale). geom() reads the class, so this is exact the instant the
+      // class changes -- no measurement, no reflow.
+      window.__tabbarPlaceActive = function () {
+        const btn = btns.find(b => b.classList.contains('active'));
+        if (btn) moveTo(btn);
+      };
 
       // Keep the indicator aligned with whatever navigation actually happened.
       window.__syncTabBar = function (sectionId) {
@@ -7026,7 +7578,7 @@
         if (!btn && sectionId && sectionId !== 'thisweekend') {
           btn = btns.find(b => b.dataset.tab === '__hub');
         }
-        btns.forEach(b => b.classList.toggle('active', b === btn));
+        setActive(btn);
         if (btn) moveTo(btn);
       };
 
@@ -7089,7 +7641,7 @@
         const btn = btnAt(x);
         if (btn && btn !== hovered) {
           hovered = btn;
-          btns.forEach(b => b.classList.toggle('active', b === btn));
+          setActive(btn);
         }
       });
 
@@ -7103,13 +7655,26 @@
         // the tab nearest THAT is what makes a throw feel thrown -- before
         // this, a hard flick at the last tab landed on whatever the finger
         // was over when it lifted.
+        // ...but Apple's projection is written for a free-scrolling surface,
+        // where the throw distance IS the destination. Snapped to a 5-cell
+        // grid ~73px wide it is essentially always at least one cell too far:
+        // the projection is v * 0.499 px, so an unhurried 200px/s drag
+        // projects 100px -- more than a whole tab -- and lands one past the
+        // finger. Gate it on a real flick (the same threshold the back swipe
+        // commits on) and clamp it to a single cell, so a throw still feels
+        // thrown while a controlled drag lands where it was released.
+        const FLICK_MIN = 300;   // px/s -- matches initBackSwipe's COMMIT_VELOCITY
         const v = moved ? vel.get() : 0;
         if (!moved) {
           hovered = btnAt(startX);
         } else {
-          hovered = btnNearestX(lastX + projectMomentum(v)) || hovered;
+          const tabW = geom(0).tabW;
+          const proj = Math.abs(v) > FLICK_MIN
+            ? Math.max(-tabW, Math.min(tabW, projectMomentum(v)))
+            : 0;
+          hovered = btnNearestX(lastX + proj) || hovered;
         }
-        btns.forEach(b => b.classList.toggle('active', b === hovered));
+        setActive(hovered);
 
         // Order matters: springToBtn adds .springing before .dragging comes
         // off, so the CSS transition never gets a frame to fight the spring.
@@ -7145,7 +7710,7 @@
         dragging = false; moved = false;
         setScale(1);
         const back = committed || btns.find(b => b.classList.contains('active'));
-        if (back) btns.forEach(b => b.classList.toggle('active', b === back));
+        if (back) setActive(back);
         hovered = back || null;
         springToBtn(back, 0);
         bar.classList.remove('dragging');
@@ -7184,7 +7749,11 @@
           const conf = (card.dataset.confidence || '').trim();
           card.classList.toggle('fc-hidden', active !== 'all' && conf !== active);
         });
-        chips.forEach(ch => ch.classList.toggle('on', ch.dataset.filter === active));
+        chips.forEach(ch => {
+          ch.classList.toggle('on', ch.dataset.filter === active);
+          // See switchSegTab: the chosen filter was visible only as a class.
+          ch.setAttribute('aria-pressed', ch.dataset.filter === active ? 'true' : 'false');
+        });
 
         // The filter spans BOTH segments deliberately -- "High confidence" is
         // a lens on the card, not a property of one half of it, and per-tab
@@ -7325,7 +7894,11 @@
       if (!bar) return;
       const btns = Array.from(bar.querySelectorAll('.tabbar-btn'));
       function markActive(sectionId) {
-        btns.forEach(b => b.classList.toggle('active', b.dataset.tab === sectionId));
+        btns.forEach(b => {
+          const on = b.dataset.tab === sectionId;
+          b.classList.toggle('active', on);
+          if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+        });
       }
       btns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -7454,8 +8027,17 @@
         if (isDesktopNow) {
           initDesktopLayoutIfNeeded();
         } else if (__wasDesktopLayout && detailView.style.display === 'block') {
-          detailView.style.display = 'none';
-          hubView.style.display = 'block';
+          // Through showHub(), not two inline display writes. Every other
+          // path into the hub goes through it, and it owns three pieces of
+          // state these writes skipped: body[data-section], the tab bar
+          // indicator (__syncTabBar) and the remembered drawer section. An
+          // iPad rotating from landscape into portrait therefore showed the
+          // hub while data-section still read the section it left and the
+          // freshly-appeared tab bar highlighted a tab whose content was not
+          // on screen. fromSwipe: the views are being swapped because the
+          // LAYOUT changed, so a 220ms hub-vs-detail slide would be animating
+          // a transition the user never asked for.
+          showHub({ fromSwipe: true });
         }
         __wasDesktopLayout = isDesktopNow;
       }, 150);
@@ -7476,7 +8058,16 @@
         requestAnimationFrame(() => _bar.__place(_tabs.indexOf(btn), 0));
       }
       const targetId = btn.dataset.segTarget;
-      btn.parentElement.querySelectorAll('.seg-tab').forEach(t => t.classList.toggle('active', t === btn));
+      // aria-pressed alongside the class. Selection here lived ENTIRELY in
+      // `.active` plus a decorative pill, so every segment announced
+      // identically whether or not it was the one showing -- "Main Card,
+      // button" / "Preliminary Card, button", with nothing to tell them
+      // apart. Same omission on the tab bar, the filter chips and the
+      // Lands/Absorbs control; all four are fixed at their own call sites.
+      btn.parentElement.querySelectorAll('.seg-tab').forEach(t => {
+        t.classList.toggle('active', t === btn);
+        t.setAttribute('aria-pressed', t === btn ? 'true' : 'false');
+      });
       // Scoped to the enclosing detail-section, not the whole document --
       // more than one independent tab group can exist on the page at
       // once (e.g. This Weekend's Main Card/Prelims tabs, and Track
@@ -7530,7 +8121,19 @@
         // Any horizontally scrollable or draggable strip has to be listed
         // here; the tell is always the same, a horizontal gesture doing
         // something at page level.
-        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .mobile-tabbar, .units-chart-wrap, [data-scrollable]')) {
+        // #edge-back is the LEFT EDGE STRIP, which runs its own back swipe on
+        // pointer events. Leaving it off this list meant one finger drove two
+        // handlers that disagree about when a gesture commits (80px here,
+        // half the screen there): drag 100px and this one navigated to the
+        // hub while the strip's own spring was still settling BACK, and the
+        // spring's completion then cleared hubView's inline display -- which
+        // resolves to `display: none` under html.is-mobile. Detail view
+        // hidden by the navigation, hub hidden by the cascade, blank page.
+        // .silhouette-wrap installs a document-level touchmove specifically
+        // so a finger can be dragged across the two striking figures; they
+        // sit ~112px apart, so reading zone percentages cleared MIN_DISTANCE
+        // and switched the segmented pane instead.
+        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .mobile-tabbar, .units-chart-wrap, .silhouette-wrap, #edge-back, [data-scrollable]')) {
           tracking = false; return;
         }
         touchStartX = e.touches[0].clientX;
@@ -7577,18 +8180,59 @@
     // time), on page load and every 90s while the tab is visible. Designed
     // fail-safe: ANY failure (CORS, endpoint change, network, weird data)
     // aborts silently and the page keeps showing baked odds exactly as
-    // before -- and the "LIVE" chip only ever appears after a confirmed
+    // before -- and the pulse dot only ever goes "live" after a confirmed
     // successful fetch, so it can't claim freshness it doesn't have.
-    // Deliberately updates the price text ONLY: fair-prob/edge/parlay math
-    // stays as-of-build (the chip label says so).
+    //
+    // WHAT THIS TOUCHES, exactly: the price text, and the Edges-table edge
+    // cell beside it (via __recomputeEdge below -- the comparison has to move
+    // with the price or a shortening line quietly reads as a bigger edge than
+    // it is). Model probabilities, the standout cards' book-vs-model
+    // divergence bars and every parlay price stay as-of-build.
+    // This comment used to say "price text ONLY ... (the chip label says so)".
+    // Both halves had rotted: the edge recompute was added underneath it, and
+    // the chip it pointed at was replaced by the unlabelled #price-pulse dot,
+    // so the disclosure it was leaning on no longer existed. The dot now
+    // carries an aria-label and a title stating the split (see #price-pulse).
     (function() {
       const els = document.querySelectorAll('[data-live-token]');
       if (!els.length || !window.fetch) return;
-      const tokens = [...new Set([...els].map(el => el.dataset.liveToken))].slice(0, 40);
+      const allTokens = [...new Set([...els].map(el => el.dataset.liveToken))];
 
+      // One tick fetches at most BATCH tokens and the window ADVANCES, so
+      // every market on the page is refreshed within ceil(total/BATCH) ticks.
+      //
+      // The cap itself is deliberate and stays: this is one HTTP request per
+      // token against a third-party endpoint on every visitor's page load,
+      // and firing ~100 at once is the shape of traffic that earns a 429 --
+      // at which point the dot correctly reports a dead feed and NOTHING is
+      // live. What was wrong was not the batch size, it was that the batch
+      // never moved: with a flat .slice(0, 40) the other 54 tokens (the later
+      // cards, i.e. the upcoming fights a reader actually acts on) were
+      // frozen at build time for the whole session, while a page-level pulse
+      // said prices were refreshing. Rotating covers all of them in ~3 ticks.
+      const BATCH = 40;
+      let cursor = 0;
+      function nextBatch() {
+        if (allTokens.length <= BATCH) return allTokens;
+        const out = [];
+        for (let i = 0; i < BATCH; i++) out.push(allTokens[(cursor + i) % allTokens.length]);
+        cursor = (cursor + BATCH) % allTokens.length;
+        return out;
+      }
+
+      // Mirrors the +/-5000 clamp in src/odds_utils.format_american_odds,
+      // which every BAKED price on this page goes through. Without it the
+      // client could repaint a cell the server rendered as -5000 to -8991 on
+      // the next tick: arithmetically correct, but a price no book quotes and
+      // one the Python formatter has an explicit written rule against. Two
+      // visitors, one market, two prices -- and the fresher one is the wrong
+      // shape. The divergence band is exactly the near-certain markets the
+      // page already flags as fragile, which is the worst place to disagree.
+      const MAX_AMERICAN = 5000;
       function toAmerican(p) {
         if (!(p > 0.01 && p < 0.99)) return null;
-        return p >= 0.5 ? '-' + Math.round(100 * p / (1 - p)) : '+' + Math.round(100 * (1 - p) / p);
+        const mag = Math.min(MAX_AMERICAN, Math.round(p >= 0.5 ? 100 * p / (1 - p) : 100 * (1 - p) / p));
+        return (p >= 0.5 ? '-' : '+') + mag;
       }
 
       // A pulse in the meta row says "prices are refreshing" more directly
@@ -7605,19 +8249,43 @@
       // even though the fetch itself was fine.
       // The code was VALID JavaScript, so node --check passed it. A syntax
       // check cannot see a scoping mistake; only calling the thing can.
+      // The dot is the page's ONLY freshness affordance now that the chip is
+      // gone, and it sits beside the BUILD timestamp -- so it has to say
+      // which of the two numbers beside it is which, and it has to say it to
+      // assistive tech as well (it used to be aria-hidden with no text at
+      // all, i.e. a freshness claim made purely by animation).
+      const LIVE_LABEL = 'Prices refreshing live. Model numbers are as of the build time shown beside this.';
+      const STALLED_LABEL = 'Live price feed unavailable. Showing prices as of the build time shown beside this.';
       function markPricesLive(ok) {
         const dot = document.getElementById('price-pulse');
-        if (dot) dot.classList.toggle('stalled', !ok);
+        if (!dot) return;
+        dot.classList.toggle('stalled', !ok);
+        dot.setAttribute('aria-label', ok ? LIVE_LABEL : STALLED_LABEL);
+        dot.setAttribute('title', ok ? LIVE_LABEL : STALLED_LABEL);
       }
 
       async function refresh() {
+        const tokens = nextBatch();
         // Shimmer only on the FIRST fetch. On later ticks the displayed price
-        // is a real, recent value -- shimmering it every 30s would flicker
+        // is a real, recent value -- shimmering it every 90s would flicker
         // constantly and imply the number is unknown when it isn't. The lie
         // this fixes is specifically "stale numbers on load looking current".
+        //
+        // _hasRun was READ here and never written anywhere, so firstLoad was
+        // permanently true and the guard was dead code: every 90s tick and
+        // every tab-return re-shimmered the whole page, which is precisely
+        // the behaviour the paragraph above forbids. Set it BEFORE the await,
+        // not in the finally -- a visibilitychange can land while the
+        // interval's fetch is still in flight, and the second pass must not
+        // re-shimmer a page that is already showing live values.
         const firstLoad = !refresh._hasRun;
+        refresh._hasRun = true;
         if (firstLoad) {
-          document.querySelectorAll('[data-live-token]').forEach(el => el.classList.add('price-updating'));
+          // Only the tokens actually being requested. Painting "refreshing"
+          // onto elements that are not in this batch is a claim the fetch
+          // cannot honour.
+          tokens.forEach(tok => document.querySelectorAll('[data-live-token="' + tok + '"]')
+            .forEach(el => el.classList.add('price-updating')));
         }
         try {
           const results = await Promise.all(tokens.map(tok =>
@@ -7655,7 +8323,10 @@
       // the skeleton PATTERN -- visible "this is being refreshed"
       // feedback -- as a subtle shimmer on top of the still-readable
       // baked values, only during the first fetch after page load.
-      document.querySelectorAll('[data-live-token]').forEach(el => el.classList.add('price-updating'));
+      // The paint itself lives in refresh()'s firstLoad branch, which knows
+      // WHICH tokens this pass will actually request; the unconditional
+      // "shimmer everything" that used to sit here duplicated it and lit up
+      // elements the first batch was never going to touch.
       refresh();
       setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 90000);
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
@@ -8258,15 +8929,31 @@
           // Mark the actual matching cards so it's obvious AT A GLANCE which
           // specific prop/move/result is new, not just a count in the banner.
           [...newStandout, ...newMovements, ...newResults].forEach(item => {
-            const el = document.querySelector(`[data-key="${CSS.escape(item.key)}"]`);
-            if (el && !el.querySelector('.new-badge')) {
+            // querySelectorAll, not querySelector. `data-key` is a SHARED
+            // namespace: track-result rows and lock-pick cards both emit
+            // "a|b", while line cards, standout cards and favorite cards all
+            // emit "fighter|market". Nothing cross-excludes standout props
+            // from favorite picks (they are drawn from the same tracked_edges
+            // frame on different filters), so a Moneyline row can qualify for
+            // both -- and first-match-in-document-order then badged the
+            // standout card and left the identical favorite card unmarked,
+            // while the banner's count included it. No duplicates exist in
+            // today's build; this is latent.
+            // The REAL fix is to namespace the key on both sides
+            // ("standout:Fighter|Market") -- that needs a matching change in
+            // whats_new_snapshot() in generate_site.py, which is not this
+            // file's to make. Badging every match is the half that lives
+            // here, and it is right on its own terms: if a card genuinely
+            // appears twice, both copies are new.
+            document.querySelectorAll(`[data-key="${CSS.escape(item.key)}"]`).forEach(el => {
+              if (el.querySelector('.new-badge')) return;
               const badge = document.createElement('span');
               badge.className = 'new-badge';
               badge.textContent = 'NEW';
               el.style.position = 'relative';
               el.appendChild(badge);
               el.classList.add('new-item-glow');
-            }
+            });
           });
         }
       }
@@ -8280,9 +8967,30 @@
     // itself as the target, so it degrades gracefully to a static number
     // if JS ever fails partway through -- no separate data-value to drift
     // out of sync with the real rendered value).
-    (function() {
-      document.querySelectorAll('.countup').forEach(el => {
-        const text = el.textContent;
+    //
+    // RUN ON SECTION ENTRY, not at parse time. It used to be an IIFE that
+    // swept the whole document once, on load -- and every .countup element on
+    // this page lives in the Track Record or Favorite Picks section, neither
+    // of which is displayed at that moment (mobile shows only This Weekend;
+    // desktop's showSection('thisweekend') sets the others to display:none
+    // ~2600 lines earlier). All 13 measured 0x0, so this animation had never
+    // been seen by anyone. It is the same failure the donut comment records
+    // and fixed for the rings: "These ran on page load, so by the time you
+    // had scrolled to the Record tab the sweep had finished."
+    // Also gains the prefers-reduced-motion gate the fun-fact count-up has --
+    // moot while it was invisible, a real accessibility bug the moment it
+    // starts running.
+    function runCountUp(root) {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      (root || document).querySelectorAll('.countup').forEach(el => {
+        // Idempotent: a section can be entered repeatedly, and two loops on
+        // one element interleave into a number that counts backwards.
+        if (el._countupRaf) cancelAnimationFrame(el._countupRaf);
+        // Expando rather than dataset: some of these are SVG <text> nodes
+        // (the donut centre percentages) and a plain property is the one
+        // thing guaranteed to work on both.
+        const text = el._countupText || el.textContent;
+        el._countupText = text;
         const match = text.match(/-?[\d.]+/);
         if (!match) return;
         const target = parseFloat(match[0]);
@@ -8294,13 +9002,18 @@
         function tick(now) {
           const progress = Math.min((now - start) / duration, 1);
           const eased = 1 - Math.pow(1 - progress, 3);
-          el.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
-          if (progress < 1) requestAnimationFrame(tick);
-          else el.textContent = text;
+          if (progress < 1) {
+            el.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
+            el._countupRaf = requestAnimationFrame(tick);
+          } else {
+            el.textContent = text;
+            el._countupRaf = 0;
+          }
         }
-        requestAnimationFrame(tick);
+        el._countupRaf = requestAnimationFrame(tick);
       });
-    })();
+    }
+    window.__runCountUp = runCountUp;
 
     // Odds/% toggle removed. It was a display preference sitting permanently
     // above the fight list -- prime space for a control people set once, if
@@ -8469,11 +9182,18 @@
             obs.unobserve(el);
             const from = el.dataset.rollFrom, to = el.dataset.rollTo;
             if (!from || !to || from === to) return;
-            // A live tick may already have moved this cell past the baked
-            // price. Replaying a build-time movement on top of a newer number
-            // would show a sequence that never happened.
-            if ((el.textContent || '').trim() !== to) return;
             setTimeout(() => {
+              // A live tick may already have moved this cell past the baked
+              // price. Replaying a build-time movement on top of a newer
+              // number would show a sequence that never happened.
+              // CHECKED INSIDE THE DEFERRED CALLBACK. It used to be checked
+              // before the stagger, which meant the guard was evaluated up to
+              // 630ms before the write it guards -- and the first live fetch
+              // lands in exactly that window on a slow connection. The write
+              // would then overwrite both the cell and rollTo's dataset with
+              // the build-time value, so the stale price stuck until the
+              // market moved again.
+              if ((el.textContent || '').trim() !== to) return;
               el.dataset.rollValue = from;
               if (window.__rollTo) window.__rollTo(el, to);
             }, i * 70);
@@ -8597,7 +9317,9 @@
       const TOUR_KEY = 'ufc-edge-finder-tour-seen';
       try { if (localStorage.getItem(TOUR_KEY)) return; } catch (e) { return; }
 
-      const steps = [
+      // `let`, because unrendered steps are filtered out before the tour
+      // starts -- see the setTimeout at the bottom of this IIFE.
+      let steps = [
         { selector: '.countdown-card', text: 'Live countdown to fight night — automatically switches to live tracking once the card actually starts.' },
         { selector: '.hub-grid', text: 'Everything is organized into sections now — tap any card below to dive in, and use Back to return here.' },
         { selector: '.hub-card.featured', text: 'This Weekend has the full fight-by-fight breakdown — each fight includes a model probability, style-matchup radar, and the reasoning behind the pick.' },
@@ -8619,7 +9341,16 @@
       function showStep(i) {
         if (i >= steps.length) { endTour(); return; }
         const target = document.querySelector(steps[i].selector);
-        if (!target) { showStep(i + 1); return; }
+        // RENDERED, not merely present. Steps 2 and 3 point at the hub, and
+        // on a phone the landing view is the detail pane -- html.is-mobile
+        // #hub-view is display:none -- so querySelector found both elements
+        // and the existing `if (!target)` guard sailed through. Their rects
+        // are 0x0 at (0,0), the highlight lit nothing, and the positioning
+        // maths below clamped the tooltip to the top-left corner, on top of
+        // the event title, saying "tap any card below" with no cards on
+        // screen. Every first-time visitor saw it.
+        const r0 = target ? target.getBoundingClientRect() : null;
+        if (!target || !r0.width || !r0.height) { showStep(i + 1); return; }
 
         if (currentTarget) currentTarget.classList.remove('tour-highlight');
         currentTarget = target;
@@ -8660,7 +9391,22 @@
         document.getElementById('tour-skip-btn').onclick = endTour;
       }
 
-      setTimeout(() => showStep(0), 1200);
+      // Filter to the steps that will actually render BEFORE the first one is
+      // shown, so the "1/3" counter describes the tour the reader is getting
+      // rather than the one the author wrote. On a phone the two hub steps
+      // drop out here (the hub is display:none until you tap More), which is
+      // why the runtime guard in showStep exists as well: this list is taken
+      // once, and layout can change under it.
+      setTimeout(() => {
+        steps = steps.filter(s => {
+          const el = document.querySelector(s.selector);
+          if (!el) return false;
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        });
+        if (!steps.length) { endTour(); return; }
+        showStep(0);
+      }, 1200);
     })();
 
     // Ripple tap effect on all accordion toggles

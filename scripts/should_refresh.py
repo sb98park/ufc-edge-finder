@@ -40,21 +40,87 @@ skipped run.
 
 import csv
 import datetime as dt
+import os
 import subprocess
 import sys
 
+# THE BUILD CLOCK, written by this file and by nothing else. Lives in data/
+# because refresh.yml's commit step is `git add -A -- data/ docs/`, so it is
+# carried to the next run; the runner's checkout is fresh every time, so an
+# on-disk-only marker would always read as "never built".
+STAMP = "data/last_build"
 
-def _minutes_since_last_build():
-    """Minutes since the last commit, or None if git cannot answer."""
+
+def _stamp_time():
+    """The recorded build time from STAMP, or None if it is missing/unreadable."""
+    try:
+        with open(STAMP, encoding="utf-8") as fh:
+            value = fh.read().strip()
+        if not value:
+            return None
+        last = dt.datetime.fromisoformat(value)
+        # A stamp written without a zone is UTC by construction (below); read
+        # it that way rather than letting it default to the runner's locale.
+        return last if last.tzinfo else last.replace(tzinfo=dt.timezone.utc)
+    except (OSError, ValueError):
+        return None
+
+
+def _commit_time():
+    """The last commit's time, or None if git cannot answer."""
     try:
         out = subprocess.run(["git", "log", "-1", "--format=%ct"],
                              capture_output=True, text=True, timeout=20)
         if out.returncode != 0 or not out.stdout.strip():
             return None
-        last = dt.datetime.fromtimestamp(int(out.stdout.strip()), dt.timezone.utc)
-        return (dt.datetime.now(dt.timezone.utc) - last).total_seconds() / 60.0
+        return dt.datetime.fromtimestamp(int(out.stdout.strip()), dt.timezone.utc)
     except (OSError, ValueError, subprocess.SubprocessError):
         return None
+
+
+def record_build_time():
+    """
+    Stamp "a build starts now". Called only when this gate answers BUILD.
+
+    Best-effort on purpose: if the write fails the gate must still let the
+    build through, and the next run simply falls back to the commit time.
+    """
+    try:
+        os.makedirs(os.path.dirname(STAMP) or ".", exist_ok=True)
+        now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+        with open(STAMP, "w", encoding="utf-8") as fh:
+            fh.write(now.isoformat() + "\n")
+    except OSError:
+        pass
+
+
+def _minutes_since_last_build():
+    """
+    Minutes since the most recent build, or None if nothing can answer.
+
+    THE LATER OF TWO CLOCKS, because neither is complete on its own.
+
+    STAMP alone misses the builds that bypass this gate: workflow_dispatch and
+    push always build without consulting it (refresh.yml's cadence step), so a
+    manual refresh would leave the stamp stale and the very next tick would
+    rebuild on top of it.
+
+    The COMMIT alone was the original implementation and it silently stopped
+    working. It relied on "the refresh commits on every build", which was true
+    while docs/ was tracked. It is not any more: refresh.yml stages `data/ docs/`
+    and .gitignore excludes docs/index.html and docs/movements/, so a build that
+    changes no file in data/ -- no priced market to move odds_snapshot.json, no
+    settled fight to log -- makes no commit at all. HEAD's timestamp then
+    freezes, `age + 1.5 >= interval` is true forever, and the throttle inverts
+    into 288 builds a day at exactly the moment there is least to publish.
+
+    Taking the max keeps the old behaviour wherever it was right and stops the
+    clock freezing where it was wrong.
+    """
+    times = [t for t in (_stamp_time(), _commit_time()) if t is not None]
+    if not times:
+        return None
+    return (dt.datetime.now(dt.timezone.utc) - max(times)).total_seconds() / 60.0
 
 
 def main():
@@ -108,9 +174,6 @@ def main():
         else:
             interval, why = 30, "no card close"
 
-        # The refresh commits on every build, so the last commit IS the last
-        # build. More reliable than a state file, which nothing has to
-        # remember to update.
         age = _minutes_since_last_build()
         if age is None:
             print(f"[cadence] {why} ({hours:.0f}h) -- cannot read last build time, proceeding")
@@ -132,4 +195,12 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    code = main()
+    if code == 0:
+        # Stamped HERE rather than at the end of generate_site.py so that a
+        # build which crashes half way still moves the clock. The alternative
+        # hammers: a build that fails leaves no commit and no stamp, so every
+        # tick behind it rebuilds and fails again at full cost. Bounding a
+        # broken build to one attempt per interval is the point of the gate.
+        record_build_time()
+    sys.exit(code)

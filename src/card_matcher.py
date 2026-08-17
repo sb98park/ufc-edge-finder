@@ -865,14 +865,36 @@ def is_pickable_market(row) -> bool:
 
 def price_is_fragile(row) -> bool:
     """
-    Flag an edge that rests on a near-certain outcome.
+    Flag an edge whose NUMBER is unreliable, by either of two routes.
 
     Not a claim the model is wrong -- it is usually closer to right than the
     book here. It is a claim that the EDGE NUMBER is unreliable, because at
     95% true probability the difference between a good and a bad quote is
     worth tens of points of implied probability and the payout is a few
     cents on the dollar either way.
+
+    TWO ROUTES, BECAUSE THE PROBABILITY TEST ALONE DID NOT DELIVER WHAT THE
+    FENCE COMMENT ABOVE PROMISES. That comment says 0.5-round lines are
+    "deliberately NOT deleted from the Edges tab... It is flagged there
+    instead, so the reader knows to distrust the price." The flag was purely
+    probabilistic at NEAR_CERTAIN_HI, so a 0.5 line the model read at 82-88%
+    cleared the threshold and was shown unflagged.
+
+    Measured on a live build: nine "Total Rounds Over 0.5" rows rendered
+    edges of 30-36% at edge-heat-3, the loudest styling on the page, and
+    EIGHT of them carried no warning of any kind -- on the exact market this
+    module calls "a formality" and "a bad quote, not alpha". The fence had
+    been applied to Favorite Picks, standout props and parlays; the promised
+    flag on the one surface that deliberately keeps these rows had a hole in
+    it the size of the market itself.
+
+    An unpickable market is now fragile by construction, whatever the model
+    says about it. The two tests are deliberately separate: the probability
+    one catches a near-certain quote in ANY market, and this one catches a
+    market whose price is structurally untrustworthy at any probability.
     """
+    if not is_pickable_market(row):
+        return True
     try:
         mp = float(row.get("model_prob"))
     except (TypeError, ValueError):

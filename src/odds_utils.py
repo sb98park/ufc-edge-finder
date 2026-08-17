@@ -192,6 +192,11 @@ def edge_percent(model_prob: float, book_fair_prob: float) -> float:
 # 1.055, and GoesTheDistance to 1.049. Applying a 20% correction to a 5%
 # market would strip four times the margin that is actually there and zero
 # out every stake on it.
+# NOT RE-MEASURABLE FROM data/odds_snapshot.json. Both figures above come from
+# real two-sided books. The Polymarket feed we ship SYNTHESISES every "No" side
+# as 1 - price_a (polymarket_source: implied_prob_to_american(1 - price_a)), so
+# every pair in that file sums to exactly 1.0000 by construction. Measuring
+# these constants there returns 1.00 for everything and means nothing.
 PROP_OVERROUND = 1.20          # six-cell method grid, n=5,646 bouts
 TWO_WAY_OVERROUND = 1.05       # totals and distance, measured on the live book
 
@@ -205,6 +210,18 @@ def overround_for_market(market: str | None) -> float:
     silently deletes the bet.
     """
     m = (market or "").lower()
+    # "Fight Method: ..." IS NOT THE SIX-CELL GRID, despite containing the word
+    # "method". It is a fight-level binary -- "does this fight end by KO" vs
+    # "Not KO/TKO" -- built exactly like "Fight Outcome: Goes The Distance":
+    # polymarket_source synthesises the No side as implied_prob_to_american(
+    # 1 - price_a) and emits the Yes/Not pair, so the two sides sum to 1.000 by
+    # construction. Matching it on the bare "method" substring sent a two-way
+    # binary to the 20% six-cell margin, a 4x over-correction -- and the
+    # docstring above says what that does: it silently deletes the bet. Four of
+    # five real Fight Method quotes in data/odds_snapshot.json collapsed to a
+    # zero stake. Checked FIRST, because "fight method" also contains "method".
+    if "fight method" in m:
+        return TWO_WAY_OVERROUND
     if "method" in m or "round betting" in m:
         return PROP_OVERROUND
     return TWO_WAY_OVERROUND
@@ -232,7 +249,21 @@ def devig_single_sided(implied_prob: float, market: str | None = None,
     blend and therefore the stake -- turning a safety mechanism into the
     opposite. Same input, opposite consequences, so only the staking path
     changes.
+
+    NaN IN, NaN OUT -- checked explicitly, for the same IEEE 754 reason
+    implied_prob_to_american checks it (see that docstring). The clamp below
+    is max(0.0, min(1.0, x)), and min(1.0, nan) returns 1.0: Python's min
+    keeps its first argument whenever the comparison is False, and every
+    comparison with NaN is False. So a MISSING price was being clamped UP to
+    a 100%-certain book probability, which is the one direction that must
+    never happen in a staking path -- market_blended_prob turned it into a
+    0.79 blend and kelly_fraction sized the hard 5%-of-bankroll cap, the
+    largest stake this system can emit, off a price nobody quoted.
+    Propagating the NaN instead keeps "we do not know" as "we do not know";
+    kelly_fraction turns it into a zero stake explicitly.
     """
+    if implied_prob != implied_prob:  # true only for NaN
+        return float("nan")
     o = overround if overround is not None else overround_for_market(market)
     if o <= 0:
         return implied_prob
@@ -283,7 +314,16 @@ def kelly_fraction(model_prob: float, american_odds: float, fraction: float = 0.
     real edge that big -- a method-of-victory prop resting on a small
     career sample, a stat that hasn't caught up to recent injury or camp
     news, etc.
+
+    AN UNKNOWN PROBABILITY IS A ZERO STAKE, said out loud rather than left to
+    argument order. NaN already came out of here as 0.0, but only by accident:
+    the return is min(max(0.0, full_kelly), max_stake_pct) and max(0.0, nan)
+    happens to be 0.0 -- swap those two arguments and the same line returns
+    NaN, which is a stake percentage that would render on the page. The guard
+    below makes the intent explicit so a later edit cannot quietly undo it.
     """
+    if model_prob != model_prob or american_odds != american_odds:  # NaN
+        return 0.0
     american_odds = float(american_odds)
     b = (american_odds / 100.0) if american_odds > 0 else (100.0 / -american_odds)
     q = 1 - model_prob

@@ -1,0 +1,292 @@
+{
+  "query": {
+    "date": "2026-07-25",
+    "fighter": "Magomed Ankalaev"
+  },
+  "site_api": {
+    "event_id": "600059667",
+    "event_name": "UFC Fight Night: Ankalaev vs. Guskov",
+    "competition_id": "401892276",
+    "competition_keys": [
+      "broadcast",
+      "broadcasts",
+      "competitors",
+      "date",
+      "details",
+      "endDate",
+      "format",
+      "geoBroadcasts",
+      "<...11 more items...>"
+    ],
+    "details": [
+      {
+        "id": "18325",
+        "type": {
+          "id": "23",
+          "text": "Results"
+        }
+      },
+      {
+        "id": "18244",
+        "type": {
+          "id": "21",
+          "text": "Unofficial Winner Kotko"
+        }
+      },
+      {
+        "id": "18243",
+        "type": {
+          "id": "19",
+          "text": "Fight Over"
+        }
+      },
+      {
+        "id": "18242",
+        "type": {
+          "id": "18",
+          "text": "Round End"
+        }
+      },
+      {
+        "id": "18241",
+        "type": {
+          "id": "16",
+          "text": "Submission Attempt"
+        }
+      },
+      {
+        "id": "18240",
+        "type": {
+          "id": "13",
+          "text": "Takedown"
+        }
+      },
+      {
+        "id": "18239",
+        "type": {
+          "id": "12",
+          "text": "Takedown Attempt"
+        }
+      },
+      {
+        "id": "18238",
+        "type": {
+          "id": "5",
+          "text": "Round Start"
+        }
+      },
+      "<...2 more items...>"
+    ],
+    "status": {
+      "clock": 161.0,
+      "displayClock": "2:41",
+      "period": 5,
+      "type": {
+        "id": "3",
+        "name": "STATUS_FINAL",
+        "state": "post",
+        "completed": true,
+        "description": "Final",
+        "detail": "Final",
+        "shortDetail": "Final"
+      },
+      "featured": false
+    },
+    "type": {
+      "id": "990",
+      "abbreviation": "Light Heavyweight"
+    },
+    "notes": null,
+    "has_linescores": [
+      false,
+      false
+    ],
+    "playByPlayAvailable": true
+  },
+  "core_api": {
+    "event_keys": [
+      "$ref",
+      "competitions",
+      "date",
+      "guid",
+      "id",
+      "league",
+      "links",
+      "name",
+      "<...8 more items...>"
+    ],
+    "all_competition_results": [
+      {
+        "competition_id": "401898030",
+        "weight_class": "Bantamweight",
+        "competitor_ids": [
+          "2591306",
+          "4905308"
+        ],
+        "winner_id": "4905308",
+        "period": 3,
+        "displayClock": "3:07",
+        "result": {
+          "id": 284,
+          "name": "submission",
+          "displayName": "Submission",
+          "description": "Arm Triangle",
+          "displayDescription": "Arm Triangle",
+          "shortDisplayName": "Sub",
+          "target": {
+            "id": 122,
+            "name": "head",
+            "description": "Head",
+            "displayDescription": "Head"
+          }
+        }
+      },
+      {
+        "competition_id": "401886737",
+        "weight_class": "Lightweight",
+        "competitor_ids": [
+          "4339145",
+          "5092398"
+        ],
+        "winner_id": "5092398",
+        "period": 3,
+        "displayClock": "5:00",
+        "result": {
+          "id": 263,
+          "name": "decision---unanimous",
+          "displayName": "Decision - Unanimous",
+          "shortDisplayName": "U Dec"
+        }
+      },
+      {
+        "competition_id": "401874314",
+        "weight_class": "Light Heavyweight",
+        "competitor_ids": [
+          "4379328",
+          "5360467"
+        ],
+        "winner_id": "5360467",
+        "period": 3,
+        "displayClock": "5:00",
+        "result": {
+          "id": 263,
+          "name": "decision---unanimous",
+          "displayName": "Decision - Unanimous",
+          "shortDisplayName": "U Dec"
+        }
+      },
+      {
+        "competition_id": "401874317",
+        "weight_class": "Lightweight",
+        "competitor_ids": [
+          "3093513",
+          "5245078"
+        ],
+        "winner_id": "5245078",
+        "period": 1,
+        "displayClock": "4:44",
+        "result": {
+          "id": 284,
+          "name": "submission",
+          "displayName": "Submission",
+          "description": "D'Arce Choke",
+          "displayDescription": "D'Arce Choke",
+          "shortDisplayName": "Sub",
+          "target": {
+            "id": 122,
+            "name": "head",
+            "description": "Head",
+            "displayDescription": "Head"
+          }
+        }
+      },
+      {
+        "competition_id": "401891531",
+        "weight_class": "Welterweight",
+        "competitor_ids": [
+          "3043484",
+          "5088916"
+        ],
+        "winner_id": "5088916",
+        "period": 2,
+        "displayClock": "3:06",
+        "result": {
+          "id": 356,
+          "name": "kotko",
+          "displayName": "KO/TKO",
+          "description": "Punches",
+          "displayDescription": "Punches",
+          "shortDisplayName": "KO/TKO",
+          "target": {
+            "id": 122,
+            "name": "head",
+            "description": "Head",
+            "displayDescription": "Head"
+          }
+        }
+      },
+      {
+        "competition_id": "401898040",
+        "weight_class": "Light Heavyweight",
+        "competitor_ids": [
+          "2594871",
+          "5369438"
+        ],
+        "winner_id": "5369438",
+        "period": 2,
+        "displayClock": "4:49",
+        "result": {
+          "id": 356,
+          "name": "kotko",
+          "displayName": "KO/TKO",
+          "description": "Kick",
+          "displayDescription": "Kick",
+          "shortDisplayName": "KO/TKO",
+          "target": {
+            "id": 122,
+            "name": "head",
+            "description": "Head",
+            "displayDescription": "Head"
+          }
+        }
+      },
+      {
+        "competition_id": "401874312",
+        "weight_class": "Heavyweight",
+        "competitor_ids": [
+          "4869702",
+          "5147389"
+        ],
+        "winner_id": "5147389",
+        "period": 1,
+        "displayClock": "1:32",
+        "result": {
+          "id": 284,
+          "name": "submission",
+          "displayName": "Submission",
+          "description": "Calf Slicer",
+          "displayDescription": "Calf Slicer",
+          "shortDisplayName": "Sub"
+        }
+      },
+      {
+        "competition_id": "401890156",
+        "weight_class": "Welterweight",
+        "competitor_ids": [
+          "3960340",
+          "4276646"
+        ],
+        "winner_id": "3960340",
+        "period": 3,
+        "displayClock": "5:00",
+        "result": {
+          "id": 263,
+          "name": "decision---unanimous",
+          "displayName": "Decision - Unanimous",
+          "shortDisplayName": "U Dec"
+        }
+      },
+      "<...4 more items...>"
+    ]
+  }
+}

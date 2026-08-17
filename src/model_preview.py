@@ -8,7 +8,7 @@ clearly labeled as a projection rather than a live-market edge.
 
 import pandas as pd
 
-from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get, divisional_prior_for
+from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get, divisional_prior_for, normalize_division
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg, build_percentile_index
 from src.striking_profile import (build_zone_index, zone_profile, position_profile,
                                   fight_shape)
@@ -537,11 +537,25 @@ def build_fight_preview(
                 f"regardless of what their career numbers say."
             )
 
-    reach_diff = _get(row_a, "reach_in", 70) - _get(row_b, "reach_in", 70)
+    # BOTH CORNERS OR NEITHER, the same rule matchup_model applies to every one
+    # of its stats terms: "a differential between a real number and a default
+    # is not a differential". The 70 default is safe in a CENTRED term (compute
+    # _stats_rating's 4.0 * (reach_in - 70) contributes exactly 0 for a
+    # defaulted fighter) and unsafe in a DIFFERENCE, where it invents a gap out
+    # of the distance between a real reach and a placeholder. reach_in is
+    # 295/310 populated, so this is narrow but live: Anthony Wint (78in) vs
+    # Terrance Chatman (unknown) produced "holds a notable reach advantage (8
+    # inches)" in prose on the same page where the Tale of the Tape correctly
+    # rendered no reach row at all, because _fighter_card below maps NaN to
+    # None and tape_bar skips a row with either side missing. Gating on both
+    # corners is what makes the two agree by construction instead of by luck.
+    _reach_a, _reach_b = row_a.get("reach_in"), row_b.get("reach_in")
     reach_note = ""
-    if abs(reach_diff) >= 4:
-        longer = fighter_a if reach_diff > 0 else fighter_b
-        reach_note = f" {longer} also holds a notable reach advantage ({abs(reach_diff):.0f} inches)."
+    if pd.notna(_reach_a) and pd.notna(_reach_b):
+        reach_diff = float(_reach_a) - float(_reach_b)
+        if abs(reach_diff) >= 4:
+            longer = fighter_a if reach_diff > 0 else fighter_b
+            reach_note = f" {longer} also holds a notable reach advantage ({abs(reach_diff):.0f} inches)."
 
     fast_finisher_note = ""
     for name, row in [(fighter_a, row_a), (fighter_b, row_b)]:
@@ -565,10 +579,30 @@ def build_fight_preview(
     age_cliff_note = ""
     for name, row, flagged in [(fighter_a, row_a, matchup.get("age_cliff_flag_a")), (fighter_b, row_b, matchup.get("age_cliff_flag_b"))]:
         if flagged:
-            age_cliff_note += (
-                f" {name} ({int(row['age'])}) is past the typical age cliff for {row['weight_class']} — "
-                f"this division tends to see a real decline past that point, independent of career record."
-            )
+            # NAME THE DIVISION ONLY IF THERE IS ONE. age_cliff_penalty
+            # deliberately keeps firing when the division is unknown -- its
+            # comment says why: the age is real data either way, and 114 of 310
+            # roster fighters carry no division, so gating the whole term off
+            # would discard a real signal. That tolerance is correct there and
+            # fatal here, because this sentence printed row['weight_class']
+            # raw: eight booked fighters trip this flag with a NaN division and
+            # the prose read "past the typical age cliff for nan". The
+            # `real_value` Jinja test that catches NaN elsewhere cannot help --
+            # by the time the template sees this, the NaN is baked into the
+            # middle of an f-string and the sentence is just opaque text.
+            # Dropping the clause matches what the tape already does with a
+            # missing value, and the claim stays true without it.
+            _division = normalize_division(row.get("weight_class"))
+            if _division:
+                age_cliff_note += (
+                    f" {name} ({int(row['age'])}) is past the typical age cliff for {_division} — "
+                    f"this division tends to see a real decline past that point, independent of career record."
+                )
+            else:
+                age_cliff_note += (
+                    f" {name} ({int(row['age'])}) is past the typical age cliff — "
+                    f"fighters tend to see a real decline past that point, independent of career record."
+                )
 
     missed_weight_note = ""
     for name, row in [(fighter_a, row_a), (fighter_b, row_b)]:

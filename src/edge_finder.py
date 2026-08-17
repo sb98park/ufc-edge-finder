@@ -757,10 +757,19 @@ def _score_derived_lines(derived_df, fighters_df, elo_ratings):
             continue
         model_p = _get(row, col, 0) / wins
         imp = r["book_fair_prob"]
+        # NOT PUT THROUGH devig_single_sided, unlike the five priced prop paths
+        # above. Those receive a raw Yes price that still carries the book's
+        # whole margin. This one does not: `imp` is the REMAINDER of a
+        # subtraction inside the book (derive_missing_method_lines), and its
+        # market string is "Method: KO/TKO", so overround_for_market sent it to
+        # the 20% six-cell margin and shaved a further 17% off a number that
+        # was never a quoted Yes price at all. The derived rows are exactly the
+        # thin ones, so that haircut is what decided whether they got a stake:
+        # it zeroed most of them outright.
         rows.append({**r, "model_prob": round(model_p, 3),
                      "edge_pct": round(edge_percent(model_p, imp), 2),
                      "suggested_stake_pct": round(
-                         kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, r.get("market"))), r["odds_american"]) * 100, 2)})
+                         kelly_fraction(market_blended_prob(model_p, imp), r["odds_american"]) * 100, 2)})
     return pd.DataFrame(rows)
 
 
@@ -788,6 +797,20 @@ def derive_missing_method_lines(upcoming_df: pd.DataFrame) -> pd.DataFrame:
     different overrounds. Each binary is normalised against its own No side
     first, which is why the complement rows are kept in the data even though
     the table hides them.
+
+    BUT THE NORMALISATION BELOW IS CURRENTLY A NO-OP, AND SAYING SO IS THE
+    POINT. The paragraph above describes the design, not what this source of
+    data delivers. The "No" rows _devig normalises against are not independent
+    quotes: polymarket_source builds them as implied_prob_to_american(1 -
+    price_a) from the same midpoint as the Yes row, so p_yes + p_no is 1.000000
+    for every FightMethod pair in the feed (measured: n=108, mean 1.0000, min
+    1.0000, max 1.0000) and remove_vig_two_way returns its input unchanged.
+    `derived` is therefore still two effectively-raw midpoints subtracted, and
+    known_p is raw by the admission below. Left in place rather than deleted:
+    it is correct, it costs nothing, and it starts doing real work the moment
+    a genuinely two-sided book is added. What must not happen is a reader
+    trusting this docstring's claim and treating the output as fair --
+    _score_derived_lines does not, and says why.
 
     Only fires when exactly ONE leg is missing; with both unknown, subtraction
     cannot split them and nothing is emitted.

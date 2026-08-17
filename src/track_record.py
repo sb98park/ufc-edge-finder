@@ -164,16 +164,32 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
             # it genuinely represents "the price when the model first had a
             # read on this fight," not a moving target.
             pick_odds = prior.get("pick_odds") if prior and prior.get("pick_odds") not in (None, "") else None
-            if pick_odds is None and current_odds is not None:
+            capturing_pick_odds_now = pick_odds is None and current_odds is not None
+            if capturing_pick_odds_now:
                 pick_odds = current_odds
 
-            # opponent_odds follows the identical set-once timing as pick_odds
-            # -- captured at the same moment, so the two prices are a fair,
-            # honest comparison of "how the market saw both sides right when
-            # we made this call," not one fresh number paired against a
-            # stale one.
+            # opponent_odds is captured ON THE RUN PICK_ODDS IS FIRST CAPTURED,
+            # or not at all -- which is what the "same moment" claim above
+            # actually requires and what two independent set-once blocks did
+            # not deliver. They were independent: each side filled in on the
+            # first run its OWN price resolved, and _favorite_moneyline_odds
+            # needs three fallback tiers precisely because name-matching against
+            # Polymarket fails often enough that one side resolving days after
+            # the other is the expected case, not an edge case. The result is in
+            # the shipped log: Du Plessis/Usman holds -195 against -240, an
+            # implied sum of 1.367, which no simultaneous two-way market can
+            # produce (the other 90 pairs sit at a median of 1.019 and top out
+            # at 1.103). That row then reads as an underdog pick and drags the
+            # published underdog-vs-market baseline.
+            #
+            # Deliberately does NOT gate pick_odds on the opponent's price
+            # being available: pick_odds alone still drives units, CLV and
+            # favorite_won, and _is_underdog documents its own fallback for a
+            # row where only pick_odds was ever captured. So the cost of an
+            # unresolvable opponent price is now a missing second price rather
+            # than a fabricated pairing.
             opponent_odds = prior.get("opponent_odds") if prior and prior.get("opponent_odds") not in (None, "") else None
-            if opponent_odds is None and current_opponent_odds is not None:
+            if capturing_pick_odds_now and opponent_odds is None:
                 opponent_odds = current_opponent_odds
 
             # closing_odds updates every run a live price is available,
@@ -522,6 +538,34 @@ def _method_matches(predicted_method, actual_method) -> bool | None:
     return _bucket(predicted_method) == _bucket(actual_method)
 
 
+# A real two-way moneyline's two implied probabilities sum to a little over
+# 1.00 -- that sum IS the book's margin. Across the 90 coherent pairs already
+# in predictions_log.csv the median is 1.019 and the maximum 1.103. So a pair
+# summing far outside that band is not a wide market, it is two prices that
+# were never quoted at the same time: the log predates the same-run capture
+# above and holds at least one such row (-195 against -240, sum 1.367).
+#
+# Bounds set well clear of anything real rather than snug against the observed
+# range, so this only ever refuses the impossible. An incoherent pair is
+# reported as "opponent price unknown", NOT as a reason to discard the row:
+# _is_underdog then falls back to the sign check it already documents, and
+# _market_expectation skips the row the same way it skips a missing price.
+# Same principle as _clv_result refusing a settled closing price -- decline to
+# use a number that cannot mean what it claims, rather than rewrite history.
+_COHERENT_PAIR_MIN, _COHERENT_PAIR_MAX = 0.90, 1.25
+
+
+def _coherent_opponent_odds(pick_odds, opponent_odds):
+    """opponent_odds if it can be a simultaneous quote against pick_odds, else None."""
+    if pick_odds is None or opponent_odds is None:
+        return None
+    try:
+        total = american_to_implied_prob(float(pick_odds)) + american_to_implied_prob(float(opponent_odds))
+    except (ValueError, TypeError, ZeroDivisionError):
+        return None
+    return opponent_odds if _COHERENT_PAIR_MIN <= total <= _COHERENT_PAIR_MAX else None
+
+
 def _is_underdog(pick_odds, opponent_odds) -> bool | None:
     """
     Relative definition, per explicit user instruction: a pick is the
@@ -548,6 +592,10 @@ def _is_underdog(pick_odds, opponent_odds) -> bool | None:
     """
     if pick_odds is None:
         return None
+    # An incoherent pair is treated exactly like a missing one -- see
+    # _coherent_opponent_odds. The relative comparison below is only better
+    # than the sign check when both prices come from the same moment.
+    opponent_odds = _coherent_opponent_odds(pick_odds, opponent_odds)
     if opponent_odds is None:
         return pick_odds > 0
     try:
@@ -772,7 +820,12 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         """Mean de-vigged market probability on the fighter we picked."""
         vals = []
         for m in picks:
-            po, oo = m.get("pick_odds"), m.get("opponent_odds")
+            po = m.get("pick_odds")
+            # Same coherence gate as _is_underdog: de-vigging a pair that was
+            # never simultaneous produces a "market expectation" the market
+            # never held, and this figure is published as the baseline the
+            # model's accuracy is compared against.
+            oo = _coherent_opponent_odds(po, m.get("opponent_odds"))
             if po is None or oo is None:
                 continue
             try:

@@ -271,6 +271,11 @@ def load_pit_stats(path: str = OUT) -> dict:
 # omitted entirely rather than shrunk, which hands the decision to
 # style_matchup_adjustment's both-corners gate -- the codebase's existing
 # answer to thin data, and one that needs no new fitted constant.
+#
+# That last sentence only holds because enrich_roster CLEARS the roster cell
+# for a column omitted here. It did not at first: omission left fighters.csv's
+# ungated career scrape standing, so the gate removed nothing and the guard
+# was inverted. See the note there.
 MIN_RATE_DENOMINATOR = 5
 
 
@@ -393,6 +398,26 @@ def enrich_roster(fighters_df, when=None, path: str = OUT, min_bouts: int = 3):
     matched timeline -- name mismatches and fighters whose bouts sit outside
     ufcstats.
 
+    THE FALLBACK IS PER FIGHTER, NOT PER COLUMN, which is the fix below.
+    Filling a column only when stats_as_of supplies one made OMISSION mean two
+    opposite things. For a fighter with no timeline it means "we have nothing,
+    use the scrape" -- correct. For a fighter WITH a timeline it means the
+    opposite: MIN_RATE_DENOMINATOR looked at the denominator and refused to
+    state a rate, and leaving the scrape in place then shipped the ungated
+    number in place of the gated one. The scrape has no denominator test at
+    all, so the guard was suppressing the shrinkable value and passing the
+    unshrinkable one, on exactly the thin-data fighters it was written to
+    remove. Bruno Lopes -- the worked example in MIN_RATE_DENOMINATOR's own
+    comment -- still shipped 100% takedown defence, and Cam Rowston shipped a
+    scraped 33.3% against a recomputed 100%.
+
+    So once a fighter HAS a timeline, that timeline is the estimator for all of
+    his rate columns, and "not enough denominator to say" is published as
+    missing. That is the verdict the comment at MIN_RATE_DENOMINATOR intends to
+    hand to style_matchup_adjustment's both-corners gate; it just never reached
+    it. Measured over the current roster it clears 8 cells (4 td_defense_pct, 4
+    td_accuracy_pct) -- the tail, which is what it is for.
+
     `when` defaults to today, and the strictly-before filter in stats_as_of
     means a fighter's own upcoming bout can never be read.
     """
@@ -415,7 +440,10 @@ def enrich_roster(fighters_df, when=None, path: str = OUT, min_bouts: int = 3):
             continue
         filled += 1
         for col in LIVE_RATE_COLUMNS:
-            if s.get(col) is not None:
-                out.at[i, col] = s[col]
+            # NaN rather than pd.NA: these columns arrive from read_csv as
+            # float64 and pandas rejects pd.NA into one. NaN is what a blank
+            # cell in fighters.csv already reads as, and it is what every
+            # consumer's pd.notna() gate is written against.
+            out.at[i, col] = s[col] if s.get(col) is not None else float("nan")
     out.attrs["pit_stats_filled"] = filled
     return out

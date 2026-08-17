@@ -347,17 +347,35 @@ def check_swipe_exclusions(c):
     A horizontally scrollable or draggable strip that isn't excluded from the
     document-level swipe handler navigates the page instead of scrolling
     itself. Caught on the header pill and again on the Record tab's card bar.
+
+    EVERY <style> block, for the same reason check_css_braces has to -- see the
+    note there. This was a re.search for the first block, and the first block
+    is now the one-rule black background at the top of <head>. That block has
+    no rules with overflow-x, so this check iterated nothing and passed
+    instantly. It happened to have no false negative only because both real
+    scrollers were already excluded; the next one added would have sailed
+    through. Joining the blocks also removes the AttributeError that .group(1)
+    raised on a page with no <style> at all.
     """
     m = re.search(r"closest\('([^']*table-scroll[^']*)'\)\)\s*\{\s*\n\s*tracking = false", c)
     if not m:
         return warn("swipe-exclusions", "could not locate the exclusion list")
     excluded = {s.strip() for s in m.group(1).split(",")}
-    css = re.search(r"<style>(.*?)</style>", c, re.DOTALL).group(1)
+    css = "\n".join(re.findall(r"<style>(.*?)</style>", c, re.DOTALL))
+    scanned = 0
     for mm in re.finditer(r"([^{}]+)\{[^}]*overflow-x:\s*auto", css):
         for sel in mm.group(1).split(","):
             sel = sel.strip().split()[0] if sel.strip() else ""
-            if sel.startswith(".") and sel not in excluded:
+            if not sel.startswith("."):
+                continue
+            scanned += 1
+            if sel not in excluded:
                 fail("swipe-exclusions", f"{sel} scrolls horizontally but isn't excluded")
+    # Reported like css-braces', because a count is what makes vacuity
+    # visible: zero scanned selectors on a page that plainly has scrollable
+    # strips is the signature of this check reading the wrong thing again,
+    # and a silent pass is how it hid for as long as it did.
+    print(f"       [swipe-exclusions] checked {scanned} horizontally scrollable selector(s)")
 
 
 def check_unrendered_jinja(c):
@@ -402,20 +420,40 @@ def check_market_string_consistency():
     Modules coin their own market labels -- "FightMethod" vs "Fight Method:",
     "GoesTheDistance" vs "Fight Outcome:". Four separate bugs came from
     downstream code string-matching against the wrong one.
+
+    MOST LABELS ARE f-STRINGS, which the first version could not see. Its
+    pattern was `"market":\\s*f?"([A-Za-z][^"{]*)"` -- the `{` in the negated
+    class means it matched only labels with NO interpolation, so it read 2 of
+    edge_finder's 7 assignments and skipped `f"Fight Method: {sel}"` and
+    `f"Fight Outcome: {row['selection']}"`: precisely the two the docstring
+    above names. It then truncated at the first space, collapsing
+    "Fight Outcome: X" to "Fight" while polymarket's "GoesTheDistance" stayed
+    whole, so even a matched pair landed in different buckets. The check
+    emitted nothing against a codebase that has the drift in it today, and
+    nothing reads as a pass.
+
+    So capture the literal PREFIX up to the first `{` or closing quote, and
+    normalise by dropping a trailing colon and all whitespace rather than
+    truncating -- "Fight Method: " and "FightMethod" then meet in the same
+    bucket, which is the whole point.
     """
     labels = {}
     for path in ("src/edge_finder.py", "src/model_preview.py", "src/polymarket_source.py"):
         if not os.path.exists(path):
             continue
         src = open(path, encoding="utf-8").read()
-        for m in re.finditer(r'"market":\s*f?"([A-Za-z][^"{]*)"', src):
-            labels.setdefault(re.sub(r"[:\s].*$", "", m.group(1)), set()).add(os.path.basename(path))
+        # `"market": token_id` (polymarket's HTTP params, not a label) has no
+        # opening quote and so is correctly invisible to this.
+        for m in re.finditer(r'"market":\s*f?"([A-Za-z][^"]*?)(?:\{|")', src):
+            labels.setdefault(m.group(1), set()).add(os.path.basename(path))
     norm = {}
     for label in labels:
-        norm.setdefault(label.lower().replace(" ", ""), set()).add(label)
+        norm.setdefault(label.rstrip(": ").lower().replace(" ", ""), set()).add(label)
     for key, variants in norm.items():
         if len(variants) > 1:
-            warn("market-labels", f"same market spelled {sorted(variants)}")
+            where = sorted(set().union(*(labels[v] for v in variants)))
+            warn("market-labels",
+                 f"same market spelled {sorted(variants)} across {', '.join(where)}")
 
 
 def check_probability_coherence():

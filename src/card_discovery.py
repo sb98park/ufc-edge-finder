@@ -644,12 +644,36 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
 
         reordered_groups.append(pd.DataFrame(new_order))
 
-    if corrected or mutated:
-        pd.concat(reordered_groups, ignore_index=True).to_csv(future_cards_path, index=False)
-    if short_notice_targets:
-        _flag_short_notice(short_notice_targets)
+    # THE CARD FILE IS WRITTEN LAST, AND THE ORDER IS THE WHOLE POINT.
+    #
+    # These are three separate files and there is no transaction across them,
+    # so the only protection available is choosing which one is allowed to be
+    # the survivor of a crash. Writing the card FIRST was the wrong choice, and
+    # uniquely so, because of the pinning rule documented above: once a row
+    # lands with cancelled=true it is collected into `pinned` on every
+    # subsequent run and never re-enters the branch that populates
+    # `newly_cancelled`. That is what makes the resync idempotent under a
+    # 5-minute cron -- and it also makes _void_predictions_for ONE-SHOT. Any
+    # interruption between the card write and the void (an exception in either
+    # of the two calls, the runner killing the job mid-pass) therefore left the
+    # fight permanently cancelled on the card while its prediction stayed live
+    # in predictions_log.csv, feeding the accuracy, confidence-tier, lock and
+    # units math that _void_predictions_for's own docstring says it must be
+    # excluded from. Not self-healing: the next run sees nothing left to do.
+    # generate_site.py catches and prints exceptions from this function and
+    # renders the page anyway, so the corruption would have shipped quietly.
+    #
+    # Inverted, every partial outcome is recoverable. All three writes are
+    # idempotent, so re-running a prefix costs nothing, and a crash before the
+    # card is persisted means the cancellation was simply not recorded yet --
+    # the next tick sees the same orphaned rows, reaches the same conclusion,
+    # and does the whole thing again.
     if newly_cancelled:
         _void_predictions_for(newly_cancelled)
+    if short_notice_targets:
+        _flag_short_notice(short_notice_targets)
+    if corrected or mutated:
+        pd.concat(reordered_groups, ignore_index=True).to_csv(future_cards_path, index=False)
     return corrected
 
 
@@ -717,7 +741,13 @@ def _void_predictions_for(pairs: list[tuple[str, str]],
         preds = pd.read_csv(predictions_path)
     except (FileNotFoundError, pd.errors.EmptyDataError):
         return 0
-    if preds.empty or "fighter_a" not in preds.columns:
+    # BOTH columns, because the apply below dereferences both. Guarding only
+    # fighter_a meant a log missing fighter_b raised KeyError from inside the
+    # apply -- and since this is the last of the resync's three writes, that
+    # exception is exactly the interruption the write ordering above is there
+    # to survive. Cheap to make it a no-op instead: a schema gap is not
+    # something this function can act on either way.
+    if preds.empty or not {"fighter_a", "fighter_b"} <= set(preds.columns):
         return 0
     if "voided" not in preds.columns:
         preds["voided"] = False

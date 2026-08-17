@@ -66,9 +66,31 @@ jobs:
     # every scheduled run behind it is dropped (GitHub queues only one). That
     # produced a 12-hour gap with no site update two days before a card, and
     # nothing looked broken -- the workflow was simply "in progress".
-    # 12 minutes is generous for a heavy build (six events, 67 fights) and
-    # still bounds a hang to two missed cycles instead of seventy.
-    timeout-minutes: 12
+    # THE INVARIANT: this cap must stay GREATER THAN the sum of the step caps
+    # below plus fixed overhead, and it was not. 12 sat under 4 + 4 + 10 = 18
+    # before checkout, setup and the ~90s pip install were counted at all, so
+    # the step budgets were not budgets -- on any run where both ESPN
+    # backfills went the distance, `Generate site` inherited ~2 of the 10
+    # minutes it is explicitly configured for and the RUNNER KILLED THE JOB.
+    # That is strictly worse than the step death continue-on-error was added
+    # to fix: no artifact upload, no commit, `deploy` skipped on its needs,
+    # and the build produces nothing at all rather than something imperfect.
+    #
+    # Fixed both ways so the arithmetic is true rather than merely closer:
+    # the backfills came down to 2 each (they are additive gap-fillers, see
+    # their own comments) and this came up to 18. Worst case is now 2 + 2 + 10
+    # = 14 capped, plus ~2.5 for checkout/setup/install and ~1 for the
+    # uncapped steps -- about 17.5, inside 18 with the margin on this side of
+    # the cap where it belongs.
+    #
+    # The cost is that a genuine hang now blocks the concurrency group for 18
+    # minutes rather than 12, about one extra missed cycle. That is the right
+    # trade: a hang is rare and the bound is still nowhere near GitHub's
+    # six-hour default, whereas the budget overrun above was reachable by an
+    # ordinary slow ESPN week.
+    #
+    # ANY future step that gains a timeout-minutes must be added to that sum.
+    timeout-minutes: 18
     outputs:
       build: ${{ steps.cadence.outputs.build }}
     steps:
@@ -156,7 +178,13 @@ jobs:
         run: python scripts/merge_results_into_history.py --apply || true
 
       - name: Backfill history gaps from ESPN
-        timeout-minutes: 4
+        # 2, down from 4. Not because 4 was too long for this script, but
+        # because the job cap has to cover this step plus the other one plus
+        # `Generate site`, and `Generate site` is the only one of the three
+        # whose failure produces no site. A backfill is additive and runs ~48
+        # times a day: a slice that gets cut short simply resumes on the next
+        # build and converges. See the job-level timeout comment.
+        timeout-minutes: 2
         # `|| true` IS NOT ENOUGH ON A STEP THAT HAS A TIMEOUT. It catches a
         # non-zero exit from the script; it cannot catch the runner KILLING
         # the step at timeout-minutes, which fails the step and therefore the
@@ -182,7 +210,11 @@ jobs:
         run: python scripts/backfill_history_from_espn.py --apply || true
 
       - name: Backfill per-fight ESPN stats for carded fighters
-        timeout-minutes: 4
+        # 2, down from 4, for the reason given on the step above and in the
+        # job-level timeout comment: the two backfills and `Generate site`
+        # share one job cap, and --missing-only (below) makes a truncated run
+        # cost nothing but time-to-converge.
+        timeout-minutes: 2
         # Same reasoning as the step above: this is optional data enrichment,
         # so it must never be able to stop the site publishing odds and
         # results. It has no cache in CI (data/.espn_cache is gitignored, and
@@ -239,17 +271,69 @@ jobs:
         run: python generate_site.py
 
       - name: Lint rendered output
+        id: lint
         if: steps.cadence.outputs.build == 'yes'
-        # Gates the COMMIT, not the generation -- a page that fails these
-        # checks never reaches the repo, so a stray brace or an undeferred
-        # init can't ship the way both previously did.
+        # WHAT THIS ACTUALLY SITS IN FRONT OF is the artifact upload below,
+        # and therefore the DEPLOY. The old comment here said it gated the
+        # commit -- true when docs/index.html was committed, false since
+        # .gitignore stopped tracking it, and worth correcting because it is
+        # the difference between "this protects the repo" and "this protects
+        # the page the reader gets".
         #
-        # DELIBERATELY NON-BLOCKING (|| true). This job also carries live
-        # fight-night results, and a linter false positive during a card
-        # would freeze the site exactly when it matters most. Failures are
-        # printed loudly in the log; flip to a hard failure once the checks
-        # have run clean across a few weeks of real builds.
-        run: python scripts/lint_site.py || true
+        # STILL NON-BLOCKING, and still for the original reason: this job
+        # carries live fight-night results, and a linter false positive
+        # during a card would freeze the site exactly when it matters most.
+        #
+        # But `|| true` was throwing away the only signal that survives. It
+        # made the step GREEN, so three real failures went out in every build
+        # for an unknown number of days with nothing anywhere saying so --
+        # they were three lines inside a log regenerated ~48 times a day, and
+        # nobody reads those. continue-on-error keeps the job alive exactly
+        # like `|| true` did while turning the step YELLOW in the Actions tab
+        # and in the phone app, which is the part that reaches a person.
+        #
+        # TO MAKE THIS A REAL GATE, the change belongs in the linter first:
+        # it currently exits 1 on any failure, structural or data-dependent,
+        # so a hard gate here would let a model number that moved overnight
+        # freeze the site on fight night -- the exact outcome the original
+        # `|| true` was protecting against. Once scripts/lint_site.py exits
+        # non-zero ONLY for the structural checks (unbalanced HTML, a stray
+        # brace, an undeferred init -- properties of the render that no odds
+        # feed can move), DELETE THE `continue-on-error` LINE ABOVE and this
+        # step becomes the gate on the artifact upload below. Not before.
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python scripts/lint_site.py 2>&1 | tee lint.txt
+
+      - name: Publish the lint result to the run summary
+        # Same pattern as crosscheck.yml, and for the same reason: the run
+        # summary is what the Actions tab and the mobile app show, so a
+        # failure is visible without opening raw logs.
+        #
+        # always() because the point is to report on the run where the linter
+        # FAILED; without it this step inherits the job's failed state and the
+        # summary goes missing precisely when it is needed. The two other
+        # clauses put back what always() removes: a skipped build has no page
+        # to lint, and a build where `Generate site` died never reached the
+        # linter at all, so neither should write an empty section.
+        if: always() && steps.cadence.outputs.build == 'yes' && steps.lint.outcome != 'skipped'
+        run: |
+          {
+            echo "## Rendered-page lint"
+            echo ""
+            if [ ! -f lint.txt ]; then
+              echo "The linter did not run to completion -- see the step log."
+            elif grep -q '^  FAIL' lint.txt; then
+              echo "**$(grep -c '^  FAIL' lint.txt) failure(s) shipped in this build.**"
+            else
+              echo "Clean."
+            fi
+            echo ""
+            echo '```'
+            if [ -f lint.txt ]; then cat lint.txt; fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the built site
         if: steps.cadence.outputs.build == 'yes'
@@ -259,6 +343,30 @@ jobs:
 
       - name: Commit and push if changed
         if: steps.cadence.outputs.build == 'yes'
+        # NON-BLOCKING, because this step runs AFTER the artifact is already
+        # uploaded and it is the last thing in the job. Without this, a
+        # rejected push -- a rebase the ours-driver cannot resolve, a
+        # transient GitHub API error, the remote moving underneath a
+        # queue-slipped run, all of which the comments below describe as
+        # things that really happen here -- failed the refresh job, and the
+        # `deploy` job's `needs: refresh` then evaluated its implicit
+        # success() as false and SKIPPED. A good page, linted and sitting in
+        # a valid uploaded artifact, went unpublished because the bookkeeping
+        # commit behind it failed.
+        #
+        # What is committed here is state for the NEXT run (results, the odds
+        # snapshot, the token cache, the predictions log), not a precondition
+        # for publishing this one. Losing it costs one cycle of state that
+        # the next build regenerates; losing the deploy costs the reader the
+        # page. So the failure is marked non-fatal and stays YELLOW in the
+        # Actions tab rather than red -- visible, but not load-bearing.
+        #
+        # Deliberately NOT paired with a change to the deploy job's `if`.
+        # Relaxing that condition to always() would publish on runs where
+        # `Generate site` itself failed and no artifact was ever uploaded,
+        # which is a red deploy job for a build that correctly produced
+        # nothing. One fix, at the end that is actually optional.
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

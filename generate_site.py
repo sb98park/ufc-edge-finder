@@ -24,6 +24,7 @@ from src.live_props import get_live_props
 from src.card_matcher import (
     load_fight_cards, group_edges_by_card, top_standout_props, top_favorite_picks,
     assign_canonical_fight_ids, group_unmatched_by_fight,
+    is_pickable_market, price_is_fragile,
 )
 from src.power_rating import build_effective_ratings
 from src.odds_utils import implied_prob_to_american, format_american_odds
@@ -62,6 +63,60 @@ def _format_friendly_date(date_str: str) -> str:
         return parsed.strftime("%a, %b %-d")
     except (ValueError, TypeError):
         return date_str
+
+
+def _method_display(value):
+    """
+    Dataset shorthand to the words used everywhere else on the page.
+
+    fight_history.csv stores "DEC" and "SUB" because that is how the raw
+    UFC dataset encodes them, so a last-fight line read "W by DEC against
+    Max Holloway" while the market table two inches below said "Decision".
+    Mapped at DISPLAY time rather than in the data: the stored codes are
+    what the model reads, and rewriting them in place would mean every
+    consumer needed to know about both forms.
+    Anything unrecognised passes through -- ESPN returns full phrases
+    like "Submission (rear-naked choke)" and those are already readable.
+
+    MODULE LEVEL, not a closure inside main(): fight_results.csv carries the
+    same shorthand (7 rows of "DEC"/"SUB" alongside rows of "Decision -
+    Unanimous"), so the concluded-fight labels built ~350 lines above the
+    Jinja environment need it too. It was registered as a template filter
+    only, which meant the two server-side result strings were the one place
+    on the page where a raw "DEC" could reach a reader.
+    """
+    if not isinstance(value, str) or not value.strip():
+        return value
+    return {
+        "dec": "Decision", "decision": "Decision",
+        "sub": "Submission", "submission": "Submission",
+        "ko": "KO/TKO", "tko": "KO/TKO", "ko/tko": "KO/TKO",
+    }.get(value.strip().lower(), value.strip())
+
+
+def _result_label(winner: str, method) -> str:
+    """
+    The one-line "who won and how" used where there is NO arrow beside the
+    fighter's name -- the what's-new feed and the countdown banner's
+    just-concluded line.
+
+    ONE PRODUCER, because there were two: this string was built inline both
+    on the fight object and again on the just_concluded payload, in the same
+    shape by coincidence rather than by construction. Two copies of a display
+    format drift, and the drift is silent.
+
+    Surname only, deliberately: the banner already prints "Islam Makhachev
+    vs. Ian Machado Garry" immediately before it, so the full name would be
+    the third time the winner's name appears in one sentence.
+
+    NOT SHOUTED. The surname was uppercased and the connective was "BY",
+    which is fine for the caps-styled result slot on the fight card but not
+    for this string, which is dropped raw into the middle of a prose line:
+    "Islam Makhachev vs. Ian Machado Garry — MAKHACHEV BY Decision -
+    Unanimous". Casing belongs to the slot that renders the text, and the
+    slot that wants caps (result_method) applies its own.
+    """
+    return f"{str(winner).strip().split()[-1]} by {_method_display(str(method).strip())}".strip()
 
 
 def build_ratings(fighters_df: pd.DataFrame, history_df: pd.DataFrame) -> dict[str, float]:
@@ -359,9 +414,35 @@ def main():
 
     # Same complement filter before standout props are chosen, so a "Not X"
     # row can't take one of the five slots from a real market.
+    #
+    # AND THE SAME MARKET-QUALITY FENCE THE OTHER TWO PICK SURFACES USE.
+    # Favorite Picks applies it (card_matcher.top_favorite_picks) and the
+    # parlay builder applies it (parlay_builder, whose comment records this
+    # exact bug being found there: 13 of 32 legs on one card were Over 0.5
+    # rounds). Standout Props never did, and it is the section at the TOP of
+    # the page -- so the flagship "worth a look" list shipped as four of five
+    # "Total Rounds Over 0.5", each rendered at the hottest heat level with a
+    # 32-38 point divergence bar.
+    #
+    # Those are not edges. A 0.5-round line asks whether the fight passes
+    # 2:30 of round one; Polymarket had all four sitting at even money
+    # (-104/+102/-106/-102) because nobody is pricing them. The gap between a
+    # ~50% quote and a ~99% outcome is the book not making a market, and
+    # presenting it as the model's best find of the week is the single most
+    # misleading thing on the page. card_matcher's fence comment argues this
+    # at length; the argument was never in question here, the filter was just
+    # never wired up on this third surface.
+    #
+    # The Edges tab still shows every one of these, deliberately -- it exists
+    # to show every disagreement, and it flags fragile prices rather than
+    # hiding them. A headline pick list is a recommendation, which is a
+    # different claim.
     _sp_source = tracked_edges
     if not tracked_edges.empty:
-        _keep = [not _is_complement_row(r) for r in tracked_edges.to_dict("records")]
+        _keep = [
+            not _is_complement_row(r) and is_pickable_market(r) and not price_is_fragile(r)
+            for r in tracked_edges.to_dict("records")
+        ]
         _sp_source = tracked_edges[_keep]
     standout_props = top_standout_props(_sp_source, fighters_df, n=5, min_edge=5.0)
 
@@ -592,16 +673,22 @@ def main():
             key = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
             result = finished_results.get(key)
             if result:
-                winner_last = result["winner"].strip().split()[-1].upper()
                 fight["winner"] = result["winner"]
-                fight["result_label"] = f"{winner_last} BY {result['method']}".strip()
+                fight["result_label"] = _result_label(result["winner"], result["method"])
                 # Method on its own, for the card's result line. The winner is
                 # already carried by the arrow beside their name, so repeating
                 # it in the middle spends the widest slot on the card
                 # restating what the arrow just said. result_label keeps the
                 # winner because it's used where there IS no arrow (what's-new
                 # feed, countdown ticker).
-                fight["result_method"] = str(result["method"]).strip().upper()
+                #
+                # Through _method_display BEFORE the caps, not after: the caps
+                # are this slot's own styling, but "DEC" uppercased is still
+                # "DEC". fight_results.csv holds both the shorthand and the
+                # long form, so without the mapping the card printed "DEC"
+                # while the comparison table two sections down printed
+                # "Decision" for the very same fight.
+                fight["result_method"] = _method_display(str(result["method"]).strip()).upper()
                 fight["result_round_time"] = (
                     f"R{result['end_round']} {result['end_time']}"
                     if result["end_round"] and result["end_time"] else None
@@ -847,7 +934,7 @@ def main():
                 just_concluded = {
                     "fighter_a": f["fighter_a"], "fighter_b": f["fighter_b"],
                     "winner": r["winner"],
-                    "result_label": f"{r['winner'].strip().split()[-1].upper()} BY {r['method']}".strip(),
+                    "result_label": _result_label(r["winner"], r["method"]),
                     "result_round_time": f"R{r['end_round']} {r['end_time']}" if r["end_round"] and r["end_time"] else None,
                 }
         fight_schedule, last_confirmed_at = apply_live_corrections(fight_schedule, finished_keys)
@@ -946,27 +1033,9 @@ def main():
         format_american_odds(implied_prob_to_american(float(p))) if p is not None else "")
     env.filters["friendly_date"] = _format_friendly_date
 
-    def _method_display(value):
-        """
-        Dataset shorthand to the words used everywhere else on the page.
-
-        fight_history.csv stores "DEC" and "SUB" because that is how the raw
-        UFC dataset encodes them, so a last-fight line read "W by DEC against
-        Max Holloway" while the market table two inches below said "Decision".
-        Mapped at DISPLAY time rather than in the data: the stored codes are
-        what the model reads, and rewriting them in place would mean every
-        consumer needed to know about both forms.
-        Anything unrecognised passes through -- ESPN returns full phrases
-        like "Submission (rear-naked choke)" and those are already readable.
-        """
-        if not isinstance(value, str) or not value.strip():
-            return value
-        return {
-            "dec": "Decision", "decision": "Decision",
-            "sub": "Submission", "submission": "Submission",
-            "ko": "KO/TKO", "tko": "KO/TKO", "ko/tko": "KO/TKO",
-        }.get(value.strip().lower(), value.strip())
-
+    # Defined at module level (see above) so the concluded-fight result
+    # strings built earlier in this function can use the same mapping the
+    # templates do; this just exposes it to Jinja under its filter name.
     env.filters["method_display"] = _method_display
     env.globals["donut_svg"] = build_donut_svg
     env.globals["damage_svg"] = build_damage_silhouette_svg
