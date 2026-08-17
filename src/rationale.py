@@ -126,6 +126,13 @@ def explain_moneyline(row: dict, fighters_df: pd.DataFrame) -> str:
                 # panel's own warning was that number-stuffing costs more
                 # trust than it buys.
                 base += " " + ". ".join(d[0].upper() + d[1:] for d in drivers[:2]) + "."
+            # THE SAME PRICE ARITHMETIC THE FAVOURITE PICKS GET. This path
+            # opened by restating the model number against the implied one and
+            # then never said what the price actually requires -- so a reader
+            # got the two figures and no statement of the gap between them.
+            price = _price_clause(row)
+            if price:
+                base += f" {price[0].upper() + price[1:]}."
             elif stats and stats["method_data_known"]:
                 base += (
                     f" That's built on a {stats['wins']}-{stats['losses']} record "
@@ -856,11 +863,20 @@ def _grappling_clause(fighter, opponent, st, opp) -> str:
     ctrl_f, ctrl_o = st.get("control_time_pct"), opp.get("control_time_pct")
     if td_f is not None and tdd_o is not None and td_f >= 0.5:
         base = f"{fighter} lands {td_f:.1f} takedowns per fifteen minutes and {opponent} stops {tdd_o:.0f}% of what comes at them"
-        rank = _cohort_extreme(fighter, "td_per_15", want_high=True)
+        rank = (_cohort_note(fighter, "td_per_15", True,
+                             "the most active takedown threat on this card",
+                             "one of the most active takedown threats on this card")
+                or _cohort_note(opponent, "td_defense_pct", False,
+                                "the leakiest takedown defence on this card",
+                                "one of the leakier takedown defences on this card"))
         if rank:
             base += f" -- {rank}"
         if ctrl_f is not None and ctrl_o is not None and ctrl_f - ctrl_o > 8:
-            return base + f", and the control time runs the same way -- {ctrl_f:.0f}% of fight minutes to {ctrl_o:.0f}%"
+            out = base + f", and the control time runs the same way -- {ctrl_f:.0f}% of fight minutes to {ctrl_o:.0f}%"
+            rank = _cohort_note(fighter, "control_time_pct", True,
+                                "more than anyone else booked on this card",
+                                "one of the highest control shares on this card")
+            return out + (f", {rank}" if rank else "")
         return base
     if ctrl_f is not None and ctrl_o is not None and ctrl_f - ctrl_o > 8:
         return f"{fighter} has held position for {ctrl_f:.0f}% of all fight minutes against {ctrl_o:.0f}% for {opponent}, and this is a matchup where that tends to decide things"
@@ -874,11 +890,20 @@ def _striking_clause(fighter, opponent, st, opp) -> str:
     net_o = None if opp.get("slpm") is None or opp.get("sapm") is None else opp["slpm"] - opp["sapm"]
     if slpm_f is not None and sapm_o is not None and slpm_f > 2.0:
         base = f"{fighter} lands {slpm_f:.1f} significant strikes a minute into an opponent who absorbs {sapm_o:.1f}"
-        rank = _cohort_extreme(opponent, "sapm", want_high=True)
+        rank = (_cohort_note(opponent, "sapm", True,
+                             "nobody booked on this card takes more",
+                             "one of the most-hit fighters on this card")
+                or _cohort_note(fighter, "slpm", True,
+                                "the busiest striker on this card",
+                                "one of the busiest strikers on this card"))
         if rank:
             return base + f" -- {rank}"
         if acc_f is not None and acc_o is not None and acc_f - acc_o > 4:
-            return base + f", and is the more accurate of the two at {acc_f:.0f}% to {acc_o:.0f}%"
+            out = base + f", and is the more accurate of the two at {acc_f:.0f}% to {acc_o:.0f}%"
+            rank = _cohort_note(fighter, "strike_accuracy_pct", True,
+                                "the best accuracy on this card",
+                                "one of the best accuracy figures on this card")
+            return out + (f", {rank}" if rank else "")
         return base
     if net_f is not None and net_o is not None and net_f - net_o > 0.8:
         return f"{fighter} is net {net_f:+.1f} strikes a minute, {opponent} {net_o:+.1f} -- the exchange has gone one way for a while"
@@ -1013,17 +1038,49 @@ def set_card_cohort(fighters_df, names) -> None:
     _COHORT = vals or None
 
 
-def _cohort_extreme(name: str, stat: str, want_high: bool) -> str | None:
-    """'the most of anyone booked on this card', when it is unambiguously true."""
+# Rank 1 is a superlative and needs daylight; ranks 2-3 get the softer form,
+# which needs no margin because "among the highest" survives a reshuffle that
+# "the highest" would not.
+COHORT_TOP_N = 3
+COHORT_MIN_POOL = 20
+
+
+def _cohort_note(name: str, stat: str, want_high: bool,
+                 solo: str, among: str) -> str | None:
+    """
+    Where this fighter sits among everyone booked on the card, when it is
+    worth saying and safe to say.
+
+    THE FIRST VERSION OF THIS FIRED ZERO TIMES on a 123-fighter card, and the
+    reason is worth keeping: it accepted only rank 1, so at most one fighter
+    per statistic could ever qualify, and only if that fighter also happened
+    to be the favourite in a blurb that reached the one branch calling it.
+    Three of the six statistics could not clear their margin at all.
+    A claim that can only be true once per card is not a feature.
+
+    Rank 1 still requires clear daylight over rank 2 -- the site rebuilds ~48
+    times a day and a card changes through the week, so a bare "the highest"
+    won by 0.1 contradicts itself by Thursday. Ranks 2 and 3 get "among the",
+    which stays true through exactly that reshuffle.
+    """
     if not _COHORT or stat not in _COHORT:
         return None
     pairs = sorted(_COHORT[stat], key=lambda p: p[1], reverse=want_high)
-    if len(pairs) < 2 or pairs[0][0] != name:
+    if len(pairs) < COHORT_MIN_POOL:
         return None
-    margin = abs(pairs[0][1] - pairs[1][1])
-    if margin < COHORT_MIN_MARGIN[stat]:
-        return None      # too close to survive a card change
-    return "the most of anyone booked on this card" if want_high else "the least of anyone booked on this card"
+    idx = next((i for i, (n, _) in enumerate(pairs) if n == name), None)
+    if idx is None or idx >= COHORT_TOP_N:
+        return None
+    # The caller supplies both phrasings ready-made rather than an adjective
+    # this function bolts "the"/"among the" onto. Assembling them here produced
+    # "among the most absorbed on this card", which is not English -- the
+    # superlative and the plural need different words, and only the caller
+    # knows which statistic reads as what.
+    if idx == 0:
+        margin = abs(pairs[0][1] - pairs[1][1])
+        if margin >= COHORT_MIN_MARGIN[stat]:
+            return solo
+    return among
 
 
 # ---------------------------------------------------------------------------

@@ -25,6 +25,7 @@ import os
 
 from src.odds_utils import american_to_decimal, american_to_implied_prob, remove_vig_two_way
 from src.card_matcher import _normalize_name
+from src.rationale import explain_settled as _explain_settled
 
 PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
 FIELDNAMES = [
@@ -46,6 +47,17 @@ def _is_settled_price(american) -> bool:
     except (TypeError, ValueError, ZeroDivisionError):
         return False
     return p is None or p >= _SETTLED_PROB or p <= (1.0 - _SETTLED_PROB)
+
+
+# Below this many settled picks a band record is a story about a handful of
+# fights. Ten is the same floor _compute_calibration uses before it will draw
+# a bin, kept identical so the two cannot disagree about what counts.
+MIN_BAND_RECORD = 10
+
+
+def _settled_note(won, method, falsifier_fired, band_record):
+    """explain_settled with no original text -- just the appended line."""
+    return _explain_settled("", won, method, falsifier_fired, band_record).strip()
 
 
 MOMENTUM_HISTORY_CAP = 10
@@ -717,6 +729,52 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         return None
 
     total = len(matched)
+    # BAND RECORD, for the morning-after line. Grouped on the same displayed
+    # integer percent the closer bands on, so a pick's blurb and its settled
+    # note cannot disagree about which band it is in.
+    _bands = {}
+    for m in matched:
+        fp = m.get("favorite_prob")
+        if fp is None:
+            continue
+        pct = round(float(fp) * 100)
+        b = ("coinflip" if pct < 55 else "lean" if pct < 65 else
+             "solid" if pct < 75 else "strong")
+        w, n = _bands.get(b, (0, 0))
+        _bands[b] = (w + (1 if m["correct"] else 0), n + 1)
+
+    # ONE FLAT LINE PER SETTLED PICK. See rationale.explain_settled for why the
+    # tone is identical whether it won or lost, and why the band record
+    # publishes whatever it is.
+    #
+    # falsifier_fired is None throughout: the counterargument each blurb names
+    # is not stored on the prediction row, so whether it is what happened
+    # cannot be known after the fact without regenerating the blurb from
+    # post-fight ratings -- which is precisely the contamination
+    # generate_site.py's frozen-pick restore exists to prevent. It needs a
+    # column, captured pre-fight. Until then the note carries the result and
+    # the band and says nothing it cannot support.
+    for m in matched:
+        fp = m.get("favorite_prob")
+        if fp is None:
+            m["settled_note"] = None
+            continue
+        pct = round(float(fp) * 100)
+        b = ("coinflip" if pct < 55 else "lean" if pct < 65 else
+             "solid" if pct < 75 else "strong")
+        # ONLY THE PART THE ROW DOES NOT ALREADY SHOW. explain_settled's full
+        # line opens with "Won by unanimous decision", and this row prints the
+        # winner and the method two lines above -- restating them is the
+        # number-stuffing the review warned about. What is genuinely new is
+        # how the model's picks AT THIS CONFIDENCE have actually done, which
+        # appears nowhere else on the page.
+        rec = _bands.get(b)
+        if rec and rec[1] >= MIN_BAND_RECORD:
+            w, n = rec
+            m["band_note"] = f"Picks at this confidence are {w}-{n - w} this season"
+        else:
+            m["band_note"] = None
+
     correct_count = sum(1 for m in matched if m["correct"])
 
     by_confidence = {}

@@ -1476,6 +1476,13 @@
     border-bottom: 1px solid var(--border);
   }
   .track-result-row:last-child { border-bottom: none; }
+  /* Deliberately quiet -- it is context for the row above, not a claim of its
+     own, and it must read the same after a loss as after a win. */
+  .track-result-band {
+    font-size: 0.6875rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
   .track-result-icon {
     flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
@@ -4420,6 +4427,13 @@
    "Decision - Unanimous") pass through the filter unchanged. #}
 {% if r.actual_method %} <span class="track-result-name actual">by {{ r.actual_method | method_display }}</span>{% endif %}{% if r.method_correct is not none %} <span class="method-match {{ 'yes' if r.method_correct else 'no' }}">{{ icon_check() if r.method_correct else icon_cross() }} method</span>{% endif %}
             </div>
+            {#- THE MORNING-AFTER LINE. Identical wording whether the pick won
+                or lost, which is the point: a product whose differentiator is
+                a public ledger including the misses cannot have a losing note
+                that reads differently from a winning one. Suppressed under ten
+                settled picks in the band, because a record of 1-2 is not a
+                record. #}
+            {% if r.band_note %}<div class="track-result-band">{{ r.band_note }}</div>{% endif %}
           </div>
           {% if r.units_result is not none %}
           <div class="units-pick-badge {{ 'positive' if r.units_result >= 0 else 'negative' }}">{{ '+' if r.units_result >= 0 else '' }}{{ r.units_result }}U</div>
