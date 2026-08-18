@@ -47,30 +47,36 @@ def _ranking_prob(row: dict) -> float:
     multiplicatively, were the one product betting the unblended model.
 
     WHAT THAT COST, AND WHAT THIS BUYS. Measured by
-    scripts/replay_parlay_construction.py, which drives THESE builders over 40
-    real UFC cards with real book prices and exact settlement. Ratio is
+    scripts/replay_parlay_construction.py, which drives THESE builders over
+    250 real UFC cards with real book prices and exact settlement. Ratio is
     published hit rate divided by realised -- 1.00 is honest:
 
                              bankroll                lotto
                         published/realised      published/realised
-        raw model        64.2% / 33.3%  1.93    34.6% /  3.3%  10.37
-        blended (0.30)   43.6% / 30.8%  1.41    11.1% /  3.7%   2.97
+        raw model        73.4% / 40.8%  1.80    45.6% /  8.0%   5.70
+        blended (0.30)   52.1% / 46.8%  1.11    12.9% /  9.3%   1.39
+        blended (0.10)   48.1% / 50.0%  0.96     9.0% /  8.6%   1.04
 
-    The lotto column is the one to look at: unblended, the tier advertised a
-    34.6% hit rate on slips that landed 3.3% of the time. Shrinking toward the
-    market cuts that overstatement from 10.4x to 3.0x.
+    THESE NUMBERS REPLACE AN EARLIER SET TAKEN ON 40 CARDS, which read 1.93 /
+    10.37 raw and 1.41 / 2.97 blended. Those were not wrong measurements, they
+    were a sample six times too small, and every magnitude in them was roughly
+    two to three times overstated. The DIRECTION survived the larger sample --
+    unblended is badly overstated, lotto is worse than bankroll, shrinkage
+    fixes most of it -- but nothing that cites the old magnitudes should be
+    trusted. Re-measure at 250+ cards after any threshold change.
 
     THE CONTROL SEPARATES TWO DIFFERENT FAULTS. Feeding the builders the
     market EXACTLY -- a perfectly calibrated model, no error to find:
 
-        sigma = 0        bankroll 40.4% / 39.2%  1.03
-                         lotto     8.7% /  5.8%  1.51
+        sigma = 0        bankroll 47.0% / 52.8%  0.89
+                         lotto     7.9% /  6.9%  1.14
 
-    Bankroll is honest at 1.03, so all of its remaining bias is model noise.
-    Lotto is 1.51 with NO model error at all, which is construction bias --
-    dependence between legs the product-of-probabilities does not model, and
-    it grows with leg count. Blending cannot fix that half and does not claim
-    to; the exact same-fight joint would.
+    At full sample the construction is close to honest on its own: bankroll is
+    slightly CONSERVATIVE and lotto carries about 14% of residual bias, not
+    the 51% the 40-card run suggested. So most of what is left after shrinking
+    is model noise rather than construction, and the case for the exact
+    same-fight joint rests on the arithmetic of leg dependence rather than on
+    this measurement, which no longer shows much of it.
 
     Why noise is selected rather than merely tolerated: ranking by combined
     probability inside a payout band is algebraically ranking by the model's
@@ -638,11 +644,12 @@ def build_lotto_parlays(tracked_edges: list[dict], model_only_by_fight: dict | N
     One slip, for the reasons on the bankroll builder above.
 
     NOTE FOR WHOEVER TUNES THIS NEXT: measured against a PERFECT model (the
-    sigma = 0 arm of scripts/replay_parlay_construction.py), this tier still
-    publishes a hit rate 1.51x its realised one, where the bankroll tier comes
-    out at 1.03. That gap is construction bias, not model error -- leg
-    dependence a product of marginals cannot represent, growing with leg
-    count -- and shrinking probabilities toward the market does not touch it.
+    sigma = 0 arm of scripts/replay_parlay_construction.py) over 250 cards,
+    this tier publishes a hit rate 1.14x its realised one against bankroll's
+    0.89. That residual is construction bias -- leg dependence a product of
+    marginals cannot represent -- and shrinking toward the market does not
+    touch it. An earlier 40-card run put the same figures at 1.51 and 1.03;
+    the direction held but the magnitude did not, so quote the 250-card ones.
     """
     pieces = _build_candidate_pieces(tracked_edges, model_only_by_fight)
     return _find_parlays(
