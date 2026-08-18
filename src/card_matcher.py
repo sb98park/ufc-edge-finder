@@ -671,6 +671,16 @@ def group_edges_by_card(
                     "book_fair_prob": e.get("book_fair_prob"), "edge_pct": e.get("edge_pct"),
                     "suggested_stake_pct": e.get("suggested_stake_pct"), "has_line": True,
                     "clob_token_id": e.get("clob_token_id"),
+                    # THE HEADLINE NUMBER, carried through to the table beside
+                    # the edge it is so often at odds with. best_book and
+                    # books_quoting travel with it because "EV +3.4%" is only
+                    # meaningful next to the price and the book offering it.
+                    "ev_pct": e.get("ev_pct"),
+                    "vig_cost_pct": e.get("vig_cost_pct"),
+                    "blended_prob": e.get("blended_prob"),
+                    "best_book": e.get("best_book"),
+                    "books_quoting": e.get("books_quoting"),
+                    "source": e.get("source"),
                     "label": build_market_label(e.get("fighter"), e.get("market")),
                     "selection": e.get("selection"),
                     # Kept in the Edges view but MARKED. A near-certain market

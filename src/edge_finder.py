@@ -14,7 +14,7 @@ import pandas as pd
 
 from src.fight_format import is_five_round as _is_five_round, scheduled_rounds as _scheduled_rounds
 
-from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob, devig_single_sided
+from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob, devig_single_sided, american_to_decimal
 from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
 from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get, normalize_division
 
@@ -43,6 +43,102 @@ def _find_fighter(fighters_df, name):
     return fighters_df[fighters_df["name"].map(_fold_name) == folded]
 
 
+def _devig_and_shop(by_source, has_source: bool):
+    """
+    Turn every source's quote on a TWO-WAY market into one fair line and one
+    bettable price per side.
+
+    This is the shared spine of the moneyline and total-rounds builders, and
+    it exists because both broke the same way when the second feed arrived.
+    Three things have to happen in this order and none of them are optional:
+
+    1. DE-VIG WITHIN A SOURCE. Pairing a DraftKings side against a FanDuel
+       side yields a "fair" number belonging to neither book, and against a
+       vig-free Polymarket side it is not even dimensionally consistent.
+    2. AVERAGE INTO A CONSENSUS. A consensus is sharper than any single book
+       and it stops the number the model is judged against from swinging when
+       one book moves alone.
+    3. SHOP THE PRICE, but only among VIG-BEARING sources. Polymarket's
+       midpoint is the reference, not a bet; treating it as shoppable would
+       hand the reader a price no sportsbook will honour -- which is the exact
+       defect this whole rework exists to remove.
+
+    Returns None when no single source quoted both sides, since there is then
+    nothing to de-vig and a one-sided "fair" line would be an invention.
+    """
+    fairs_a, fairs_b, quotes = [], [], []
+    a = b = None
+    for src_name, g in by_source:
+        if len(g) != 2:
+            continue
+        ra, rb = g.iloc[0], g.iloc[1]
+        if a is None:
+            a, b = ra, rb           # first complete pair fixes the ordering
+        elif ra["selection"] != a["selection"]:
+            ra, rb = rb, ra         # keep every source in the same order
+        ia = american_to_implied_prob(ra["odds_american"])
+        ib = american_to_implied_prob(rb["odds_american"])
+        fa, fb = remove_vig_two_way(ia, ib)
+        fairs_a.append(fa)
+        fairs_b.append(fb)
+        if has_source and not bool(ra.get("source_is_vig_free")):
+            quotes.append((src_name, ra, rb))
+
+    if a is None:
+        return None
+
+    fair_a = sum(fairs_a) / len(fairs_a)
+    fair_b = sum(fairs_b) / len(fairs_b)
+    _tot = fair_a + fair_b
+    if _tot > 0:
+        fair_a, fair_b = fair_a / _tot, fair_b / _tot
+
+    def _best(idx: int, fallback):
+        # No book quoting -> fall back to the reference price so nothing
+        # regresses on a Polymarket-only build.
+        if not quotes:
+            return fallback, (fallback.get("source") if has_source else None), 1
+        side = [(nm, (pa, pb)[idx]) for nm, pa, pb in quotes]
+        nm, r = min(side, key=lambda t: american_to_implied_prob(t[1]["odds_american"]))
+        return r, nm, len(side)
+
+    return a, b, fair_a, fair_b, _best(0, a), _best(1, b)
+
+
+def _two_numbers(model_p: float, fair_p: float, odds: float) -> dict:
+    """
+    THE TWO NUMBERS, and they answer different questions.
+
+      edge_pct  raw model against the consensus fair line. "Does the model
+                disagree with the market?" -- a validation question, and the
+                one the site used to lead with.
+      ev_pct    the BLENDED probability against the price you can actually
+                take. "Does this bet return money?" -- the only one that
+                decides anything, and so the one that now leads.
+
+    They disagree usefully. A high edge with negative EV is the near-miss:
+    the model found something real and the vig ate it. A low edge with
+    negative EV is simply nothing there. Reported alone, those two look
+    identical, and the site spent its whole life showing only the first.
+
+    EV IS COMPUTED ON THE BLENDED PROBABILITY, never the raw model. Raw-model
+    EV is flattering by construction -- it is built from the same disagreement
+    the edge measures, so it would report the model's own optimism as profit
+    and reintroduce, one layer down, exactly the bias the blend exists to
+    remove.
+
+    vig_cost_pct is the bridge between the two, in points of implied
+    probability: what the book charges on this side over the fair line.
+    """
+    blended_p = market_blended_prob(model_p, fair_p)
+    return {
+        "blended_prob": round(blended_p, 4),
+        "edge_pct": round(edge_percent(model_p, fair_p), 2),
+        "ev_pct": round((blended_p * american_to_decimal(odds) - 1.0) * 100.0, 2),
+        "vig_cost_pct": round((american_to_implied_prob(odds) - fair_p) * 100.0, 2),
+    }
+
+
 def compute_moneyline_edges(
     upcoming_df: pd.DataFrame, elo_ratings: dict[str, float], fighters_df: pd.DataFrame | None = None,
     fight_history_df: pd.DataFrame | None = None,
@@ -64,31 +160,12 @@ def compute_moneyline_edges(
         # dimensionally consistent.
         by_source = (list(fight_rows.groupby("source")) if has_source
                      else [(None, fight_rows)])
-
-        fairs_a, fairs_b, quotes = [], [], []
-        a = b = None
-        for src_name, g in by_source:
-            if len(g) != 2:
-                continue
-            ra, rb = g.iloc[0], g.iloc[1]
-            if a is None:
-                a, b = ra, rb           # first complete pair fixes the ordering
-            elif ra["selection"] != a["selection"]:
-                ra, rb = rb, ra         # keep every source in the same order
-            ia = american_to_implied_prob(ra["odds_american"])
-            ib = american_to_implied_prob(rb["odds_american"])
-            fa, fb = remove_vig_two_way(ia, ib)
-            fairs_a.append(fa)
-            fairs_b.append(fb)
-            # Only a vig-bearing quote is a price you can actually take.
-            # Polymarket's midpoint is the reference, not the bet.
-            if has_source and not bool(ra.get("source_is_vig_free")):
-                quotes.append((src_name, ra, rb))
-
-        if a is None:
+        shopped = _devig_and_shop(by_source, has_source)
+        if shopped is None:
             print(f"[edge_finder] moneyline skip for fight_id={fight_id!r}: no source "
                   f"quoted both sides -- rows: {len(fight_rows)}")
             continue
+        a, b, fair_a, fair_b, (best_a, book_a, n_a), (best_b, book_b, n_b) = shopped
 
         matchup = None
         if fighters_df is not None:
@@ -103,36 +180,12 @@ def compute_moneyline_edges(
             model_prob_a = 1.0 / (1.0 + 10 ** ((elo_b - elo_a) / 400.0))
         model_prob_b = 1.0 - model_prob_a
 
-        # CONSENSUS FAIR, averaged across whichever sources quoted the fight
-        # and renormalised so the two sides still sum to one. A consensus is
-        # sharper than any single book, and it means the number the model is
-        # judged against does not swing when one book moves alone.
-        fair_a = sum(fairs_a) / len(fairs_a)
-        fair_b = sum(fairs_b) / len(fairs_b)
-        _tot = fair_a + fair_b
-        if _tot > 0:
-            fair_a, fair_b = fair_a / _tot, fair_b / _tot
-
-        # BEST BETTABLE PRICE, per side, across the books. Line shopping is
-        # the one edge here that needs no model to be real. With no book
-        # quoting, fall back to the reference price so nothing regresses on a
-        # Polymarket-only build.
-        def _best(idx: int, fallback):
-            if not quotes:
-                return fallback, (fallback.get("source") if has_source else None), 1
-            side = [(nm, pair[idx]) for nm, pair in
-                    ((q[0], (q[1], q[2])) for q in quotes)]
-            nm, r = min(side, key=lambda t: american_to_implied_prob(t[1]["odds_american"]))
-            return r, nm, len(side)
-
-        best_a, book_a, n_a = _best(0, a)
-        best_b, book_b, n_b = _best(1, b)
-
         for fighter, opponent, model_p, fair_p, priced, book, n_books, ref in [
             (a["selection"], b["selection"], model_prob_a, fair_a, best_a, book_a, n_a, a),
             (b["selection"], a["selection"], model_prob_b, fair_b, best_b, book_b, n_b, b),
         ]:
             odds = priced["odds_american"]
+            nums = _two_numbers(model_p, fair_p, odds)
             rows.append({
                 "fight_id": fight_id,
                 "fighter": fighter,
@@ -148,8 +201,8 @@ def compute_moneyline_edges(
                 # market thinks, cleanly -- and it is what edge is measured
                 # against.
                 "book_fair_prob": round(fair_p, 3),
-                "edge_pct": round(edge_percent(model_p, fair_p), 2),
-                "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, fair_p), odds) * 100, 2),
+                **nums,
+                "suggested_stake_pct": round(kelly_fraction(nums["blended_prob"], odds) * 100, 2),
                 "clob_token_id": priced.get("clob_token_id") or ref.get("clob_token_id"),
                 # Provenance of the PRICE. `src` was written as a bare `row`
                 # here once, which does not exist in this scope, and the
@@ -524,24 +577,60 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
             model_prob_under = combined_finish_rate
         model_prob_under = min(0.95, max(0.05, model_prob_under))
 
-        for _, row in group.iterrows():
-            model_p = model_prob_under if "under" in row["selection"].lower() else (1 - model_prob_under)
-            imp = american_to_implied_prob(row["odds_american"])
+        # TOTALS ARE A TWO-WAY MARKET AND ARE NOW QUOTED BY REAL BOOKS.
+        # TheRundown serves market_id 3, so Over/Under arrives from DraftKings
+        # and FanDuel carrying vig, alongside the vig-free Polymarket pair.
+        # This loop used to emit one row per source with `book_fair_prob` set
+        # to the RAW implied probability -- which silently relabelled a
+        # DraftKings -135 as a 57.4% fair line when fair is 55.9%, and emitted
+        # the same bet three times over, once per feed.
+        #
+        # Same treatment as the moneyline: de-vig inside each source, average
+        # to a consensus, then shop the price among the books only.
+        has_src = "source" in group.columns
+        by_src = (list(group.groupby("source")) if has_src else [(None, group)])
+        shopped = _devig_and_shop(by_src, has_src)
+
+        if shopped is not None:
+            a, b, fair_a, fair_b, (best_a, book_a, n_a), (best_b, book_b, n_b) = shopped
+            emit = [(a, fair_a, best_a, book_a, n_a), (b, fair_b, best_b, book_b, n_b)]
+        else:
+            # NO SOURCE QUOTED BOTH SIDES. A lone vig-free quote is already a
+            # fair price and can be published as one. A lone VIGGED quote
+            # cannot -- its raw implied probability carries the book's whole
+            # margin, and it is exactly that number being labelled "fair" that
+            # this rework exists to stop. Fall back to the proportional
+            # single-sided de-vig rather than dropping the row or lying about
+            # it, and say so in the provenance.
+            emit = []
+            for _, r in group.iterrows():
+                imp_r = american_to_implied_prob(r["odds_american"])
+                fair_r = (imp_r if bool(r.get("source_is_vig_free"))
+                          else devig_single_sided(imp_r, f"Total Rounds {r['selection']}"))
+                emit.append((r, fair_r, r, r.get("source") if has_src else None, 1))
+
+        for ref, fair_p, priced, book, n_books in emit:
+            model_p = (model_prob_under if "under" in str(ref["selection"]).lower()
+                       else 1 - model_prob_under)
+            odds = priced["odds_american"]
+            nums = _two_numbers(model_p, fair_p, odds)
             rows.append({
                 "fight_id": fight_id,
                 "fighter": f"{fighters_in_fight[0]} vs {fighters_in_fight[1]}",
-                "market": f"Total Rounds {row['selection']}",
-                "odds_american": row["odds_american"],
+                "market": f"Total Rounds {ref['selection']}",
+                "odds_american": odds,
                 "model_prob": round(model_p, 3),
-                "book_fair_prob": round(imp, 3),
-                "edge_pct": round(edge_percent(model_p, imp), 2),
-                "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, f"Total Rounds {row['selection']}")), row["odds_american"]) * 100, 2),
-                "clob_token_id": row.get("clob_token_id"),
-            # PROVENANCE TRAVELS WITH THE PRICE. Without it "Book" means
-            # whichever feed happened to carry that market, and a vig-free
-            # peer-to-peer quote gets compared against a vigged one.
-            "source": row.get("source"),
-            "source_is_vig_free": row.get("source_is_vig_free"),
+                "book_fair_prob": round(fair_p, 3),
+                **nums,
+                "suggested_stake_pct": round(kelly_fraction(nums["blended_prob"], odds) * 100, 2),
+                "clob_token_id": priced.get("clob_token_id") or ref.get("clob_token_id"),
+                # PROVENANCE TRAVELS WITH THE PRICE. Without it "Book" means
+                # whichever feed happened to carry that market, and a vig-free
+                # peer-to-peer quote gets compared against a vigged one.
+                "source": priced.get("source"),
+                "source_is_vig_free": priced.get("source_is_vig_free"),
+                "best_book": book,
+                "books_quoting": n_books,
             })
 
     if not rows:
@@ -837,7 +926,75 @@ def find_all_edges(
     frames = [f for f in frames if not f.empty]
     if not frames:
         return pd.DataFrame()
-    return pd.concat(frames, ignore_index=True).sort_values("edge_pct", ascending=False).reset_index(drop=True)
+    out = pd.concat(frames, ignore_index=True)
+    return _finalise_two_numbers(out).sort_values("edge_pct", ascending=False).reset_index(drop=True)
+
+
+def _finalise_two_numbers(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Guarantee every published row carries EV, and that no VIGGED price ever
+    reaches the page with its raw implied probability labelled "fair".
+
+    Two of the seven builders -- moneyline and total rounds -- price two-way
+    markets and do this properly for themselves. The other five handle genuine
+    single-sided props (method cells, goes-the-distance, round betting) that
+    only Polymarket quotes, and a vig-free quote IS its own fair price, so
+    their raw implied probability is correct TODAY.
+
+    That is a fact about the current feed, not about the code. TheRundown's
+    catalogue lists method and round markets for sport 7; the day it starts
+    serving them, those five builders would each relabel a vigged price as
+    fair and overstate the blend, silently, exactly as the totals builder did
+    the day market_id 3 arrived. This pass makes the invariant hold by
+    construction instead of by coincidence:
+
+      vig-free source  -> implied is already fair, nothing to do
+      vigged source    -> proportional single-sided de-vig, since there is no
+                          complement to pair against
+
+    EV is then computed for every row from the price actually carried, so the
+    headline number exists on the whole table rather than only where a book
+    happens to quote both sides.
+    """
+    if df.empty or ("ev_pct" in df.columns and df["ev_pct"].notna().all()):
+        return df
+
+    need = df["ev_pct"].isna() if "ev_pct" in df.columns else pd.Series(True, index=df.index)
+    for i in df.index[need]:
+        odds = df.at[i, "odds_american"]
+        model_p = df.at[i, "model_prob"]
+        fair_p = df.at[i, "book_fair_prob"]
+        if pd.isna(odds) or pd.isna(model_p) or pd.isna(fair_p):
+            continue
+        flag = df.at[i, "source_is_vig_free"] if "source_is_vig_free" in df.columns else True
+        # MISSING PROVENANCE MEANS UNKNOWN, and unknown takes the conservative
+        # branch: assume the price may carry vig. Note `bool(flag)` rather
+        # than `flag is True` -- pandas hands back numpy.bool_, and
+        # `numpy.bool_(True) is True` is False, which would have de-vigged
+        # every vig-free Polymarket row in the table.
+        vig_free = False if (flag is None or pd.isna(flag)) else bool(flag)
+        if not vig_free:
+            fair_p = devig_single_sided(float(fair_p), str(df.at[i, "market"]))
+            df.at[i, "book_fair_prob"] = round(fair_p, 3)
+        nums = _two_numbers(float(model_p), float(fair_p), float(odds))
+        for k, v in nums.items():
+            df.at[i, k] = v
+        # AND SIZE THE BET OFF THE SAME BLEND THE EV IS QUOTED FROM.
+        #
+        # These five builders each computed their own stake as
+        # market_blended_prob(model, devig_single_sided(implied)), applied
+        # unconditionally. On a VIG-FREE price that divides out an overround
+        # nobody charged: the fair probability comes back too low, the blend
+        # with it comes back too low, and Kelly stakes under what its own
+        # inputs justify. Erring small is the safe direction, which is why it
+        # survived unnoticed, but it also meant the stake and the displayed EV
+        # were derived from two different numbers for the same bet.
+        #
+        # One blend per row now, computed once above with provenance taken
+        # into account, and both the headline and the stake read from it.
+        df.at[i, "suggested_stake_pct"] = round(
+            kelly_fraction(nums["blended_prob"], float(odds)) * 100, 2)
+    return df
 
 
 def _score_derived_lines(derived_df, fighters_df, elo_ratings):

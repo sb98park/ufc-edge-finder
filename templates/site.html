@@ -1955,6 +1955,47 @@
   .odds-compare-pct { font-size: var(--t-micro); color: var(--muted); margin-top: 1px; }
   .odds-compare-delta { text-align: center; font-size: var(--t-small); color: var(--accent2); margin: -4px 0 10px; font-weight: 600; }
   .odds-compare-arrow { color: var(--muted); font-size: var(--t-sub); flex-shrink: 0; }
+  /* THE HEADLINE NUMBER. Expected value at the price you can actually take,
+     which is the only figure on this card that decides anything. It replaced
+     the Book-Price-to-Model-Says pair, which said the same thing the
+     divergence bar directly beneath it already draws. */
+  .ev-headline {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    margin: 10px 0 2px; padding: 10px 12px;
+    background: #0f1218; border: 1px solid var(--border); border-radius: var(--r-lg);
+  }
+  .ev-value {
+    font-size: var(--t-h1); font-weight: 800; font-family: var(--font-display);
+    font-variant-numeric: tabular-nums; line-height: 1.05; white-space: nowrap;
+  }
+  .ev-headline.pos { border-color: color-mix(in srgb, var(--green) 34%, var(--border)); }
+  .ev-headline.pos .ev-value { color: var(--green); }
+  /* Negative EV is stated plainly rather than in alarm red. It is the
+     ORDINARY case once vig is charged honestly, and painting the common
+     outcome as an error trains the reader to stop reading the number. */
+  .ev-headline.neg .ev-value { color: var(--text-soft); }
+  .ev-at { font-size: var(--t-small); color: var(--muted); text-align: right; min-width: 0; }
+  .ev-at .ev-price { color: var(--accent-hi); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ev-book { color: var(--accent-cool); font-weight: 600; }
+  /* Deliberately quiet. A fair-price EV is a ceiling, and the caveat should
+     read as a qualifier on the big number rather than compete with it. */
+  .ev-fair { color: var(--muted); font-style: italic; }
+  /* A fair-price EV does not get the green border treatment -- that frame
+     says "there is a bet here", and against a reference price there isn't
+     one yet. The number keeps its colour; the card stops advertising. */
+  .ev-headline.pos.unbettable { border-color: var(--border); }
+  /* The bridge: model, fair, and the vig that separates the edge above from
+     the EV beside it. Three numbers on one line, because their RELATIONSHIP
+     is the point -- read apart they are just trivia. */
+  .ev-bridge {
+    font-size: var(--t-micro); color: var(--muted); margin: 0 4px 2px;
+    display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline;
+  }
+  .ev-bridge b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ev-bridge .bm { color: var(--accent2); }
+  .ev-bridge .bf { color: var(--accent-cool); }
+  .ev-bridge .bv { color: var(--red); }
+  .ev-bridge .bz { color: var(--text-soft); }
   .edge-divergence { margin: 14px 4px 18px; }
   .edge-divergence-track { position: relative; height: 3px; background: var(--border); border-radius: var(--r-sm); margin: 40px 6px 40px; }
   /* Coloured by DIRECTION -- green when the model reads above the book, red
@@ -3077,6 +3118,32 @@
   tr:last-child td { border-bottom: none; }
   .edge-pos { color: var(--green); font-weight: 600; }
   .edge-neg { color: var(--red); }
+  /* FIVE COLUMNS HAVE TO FIT A PHONE. Adding EV pushed the market table 29px
+     past a 375px viewport, and the column that fell off the right edge was
+     the one this page now leads with -- a headline number you have to swipe
+     for is not a headline. Tightening the padding on the numeric columns
+     alone recovers it without touching the market label, which is the only
+     cell whose content is genuinely variable-width. */
+  .mkt-ev, .mkt-model, .mkt-none { padding-left: 5px; padding-right: 5px; }
+  .mkt-ev { font-variant-numeric: tabular-nums; text-align: right; }
+  @media (max-width: 480px) {
+    /* Auto layout sizes the market column to its longest word and lets the
+       numbers overflow off the right edge; fixed percentages make the label
+       absorb the pressure by wrapping instead, which is what it was already
+       doing anyway. Same technique .model-only-table uses above. */
+    .market-group table { table-layout: fixed; }
+    .market-group table th:nth-child(1), .market-group table td:nth-child(1) {
+      width: 37%; white-space: normal; overflow-wrap: break-word;
+    }
+    .market-group table th:nth-child(2), .market-group table td:nth-child(2) { width: 17%; }
+    .market-group table th:nth-child(3), .market-group table td:nth-child(3) { width: 14%; }
+    .market-group table th:nth-child(4), .market-group table td:nth-child(4) { width: 15%; }
+    /* Widest of the numeric columns: "pts" costs more than "%", and the edge
+       column is the one carrying it. Measured at 375px across all 50 market
+       tables on a full card -- this is the narrowest split with zero
+       horizontal overflow anywhere. */
+    .market-group table th:nth-child(5), .market-group table td:nth-child(5) { width: 17%; }
+  }
   .model-only-table td { color: var(--muted); font-style: italic; }
   @media (max-width: 480px) {
     .model-only-table { table-layout: fixed; }
@@ -5919,7 +5986,7 @@
              the one thing this table exists to save them. #}
           <tr><th>Market</th><th class="mkt-model-head" data-unit-toggle
                   title="Tap to switch between model probability and the model's fair price"
-                  role="button" tabindex="0">Model<span class="unit-hint">%</span></th><th>Odds</th><th>Edge %</th></tr>
+                  role="button" tabindex="0">Model<span class="unit-hint">%</span></th><th>Odds</th><th title="Expected value at this price, using the model shrunk toward the market. Edge asks whether the model disagrees; EV asks whether the bet returns money.">EV</th><th title="How far the model's probability sits from the market's fair line.">Edge</th></tr>
           {% for row in g.rows %}
           <tr class="{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}">
             <td class="mkt-label">{{ row.label or row.market }}{% if row.market == 'Moneyline' and row.has_line %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
@@ -5932,6 +5999,19 @@
                 data-odds="{{ row.model_prob | fair_odds }}">{{ (row.model_prob*100)|round(1) }}%</td>
             {% if row.has_line %}
             <td>{{ odds_cell(row) }}</td>
+            {# EV sits BESIDE edge rather than replacing it, because the pair
+               disagreeing is the informative case: a positive edge next to a
+               negative EV is the model finding something real that the vig
+               then eats, and that row is a decision not to bet -- which is
+               invisible if only one of the two numbers is shown. Unlike the
+               edge cell this one is not live-recomputed: EV depends on the
+               blend, and the client cannot re-blend without the fair line it
+               has no way to derive from a single token. A stale EV beside a
+               live edge would be worse than an honest static one, so it
+               carries the build-time price and moves when the page rebuilds. #}
+            <td class="mkt-ev {{ 'edge-pos' if row.ev_pct is real_value and row.ev_pct > 0 else 'edge-neg' }}">
+              {%- if row.ev_pct is real_value %}{{ '%+.1f'|format(row.ev_pct) }}%{% else %}—{% endif -%}
+            </td>
             {# Inputs for LIVE edge recalculation. edge = model - book_FAIR,
                and "fair" means devigged, which needs both sides of a market.
                The client only ever sees one token's price, so it can't devig
@@ -5955,9 +6035,9 @@
                     the only warning a phone gets (the title attribute does
                     nothing on touch), and it marks exactly the rows the site
                     itself calls unreliable. -#}
-                {%- endif %}><span class="edge-value">{{ row.edge_pct }}%</span>{% if row.fragile_price %}<span class="edge-flag">*</span>{% endif %}</td>
+                {%- endif %}><span class="edge-value">{{ '%+.1f'|format(row.edge_pct) }}pts</span>{% if row.fragile_price %}<span class="edge-flag">*</span>{% endif %}</td>
             {% else %}
-            <td class="mkt-none">—</td><td class="mkt-none">—</td>
+            <td class="mkt-none">—</td><td class="mkt-none">—</td><td class="mkt-none">—</td>
             {% endif %}
           </tr>
           {% endfor %}
@@ -6031,19 +6111,51 @@
           </div>
         </div>
       </div>
-      {{ edge_divergence(p.book_fair_prob, p.model_prob, p.edge_pct, p.clob_token_id, p.odds_american) }}
-      <div class="odds-compare">
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Book Price</div>
-          <div class="odds-compare-value book"><span class="live-odds"{% if p.clob_token_id %} data-live-token="{{ p.clob_token_id }}"{% endif %}
-              {%- if p.movement and p.movement.direction != 'flat' and p.movement.from is not none %} data-roll-from="{{ p.movement.from | american }}" data-roll-to="{{ p.odds_american | american }}"{% endif %}>{{ p.odds_american | american }}</span>{{ movement_arrow(p) }}</div>
-        </div>
-        <div class="odds-compare-arrow">→</div>
-        <div class="odds-compare-col">
-          <div class="odds-compare-label">Model Says</div>
-          <div class="odds-compare-value model">{{ p.model_fair_odds }}</div>
-        </div>
+      {#- EV LEADS, EDGE FOLLOWS, AND THE VIG EXPLAINS THE DIFFERENCE.
+          This card led with edge for its whole life -- how far the model
+          strays from the market -- which is a validation statistic, not a
+          reason to bet. It answers "does the model disagree?", and a reader
+          acting on it is betting on disagreement rather than on return.
+          EV answers the question they actually have: at the best price any
+          book is showing, does this return money? So EV is the number in
+          large type, the divergence bar below it keeps edge as a picture,
+          and the bridge line names the vig standing between the two.
+          Guarded on ev_pct because a row that never met a bettable price
+          has no honest EV, and inventing one is the failure this whole
+          rework exists to remove. -#}
+      {% if p.ev_pct is real_value %}
+      <div class="ev-headline {{ 'pos' if p.ev_pct > 0 else 'neg' }}{{ ' unbettable' if p.source_is_vig_free }}">
+        <div class="ev-value">{{ '%+.1f'|format(p.ev_pct) }}%</div>
+        {#- WHICH PRICE THIS EV IS AT, stated rather than implied. A vig-free
+            Polymarket midpoint is the FAIR line, not an order you can fill at
+            a sportsbook, so EV computed against it is a ceiling -- the best
+            case if you could get the fair price -- and calling it "EV at
+            Polymarket" reads as a bet that is available. Naming it "fair
+            price" keeps the number honest without hiding it, and a real book
+            price says the book's name and how many were shopped. -#}
+        <div class="ev-at">EV at <span class="ev-price live-odds"{% if p.clob_token_id %} data-live-token="{{ p.clob_token_id }}"{% endif %}
+            {%- if p.movement and p.movement.direction != 'flat' and p.movement.from is not none %} data-roll-from="{{ p.movement.from | american }}" data-roll-to="{{ p.odds_american | american }}"{% endif %}>{{ p.odds_american | american }}</span>{{ movement_arrow(p) }}<br>
+          {%- if p.source_is_vig_free %}<span class="ev-fair">fair price · no book quote</span>
+          {%- elif p.best_book %}<span class="ev-book">{{ p.best_book }}</span>{% if p.books_quoting and p.books_quoting > 1 %} · best of {{ p.books_quoting }}{% endif %}
+          {%- endif %}</div>
       </div>
+      <div class="ev-bridge">
+        <span>model <b class="bm">{{ (p.model_prob*100)|round|int }}%</b></span>
+        <span>fair <b class="bf">{{ (p.book_fair_prob*100)|round|int }}%</b></span>
+        {#- Red means "this is costing you". A vig-free price costs nothing, so
+            0.0pts renders neutral -- colouring a zero as a charge is exactly
+            the confusion between the fair line and a book price that the rest
+            of this rework exists to remove. -#}
+        {% if p.vig_cost_pct is real_value %}<span>vig <b class="{{ 'bv' if p.vig_cost_pct|abs >= 0.05 else 'bz' }}">{{ '%+.1f'|format(p.vig_cost_pct) }}pts</b></span>{% endif %}
+        {#- POINTS, NOT PERCENT. edge_percent returns (model - fair) * 100 --
+            a difference in percentage POINTS. EV beside it is a true
+            percentage: return on stake. They have carried the same % sign
+            for as long as the site has existed, which was survivable while
+            edge stood alone and is not now that the two sit on one line. -#}
+        <span>edge <b>{{ '%+.1f'|format(p.edge_pct) }}pts</b></span>
+      </div>
+      {% endif %}
+      {{ edge_divergence(p.book_fair_prob, p.model_prob, p.edge_pct, p.clob_token_id, p.odds_american) }}
       {% if p.rationale %}<div class="rationale">{{ p.rationale }}</div>{% endif %}
     </div>
     {% endfor %}
@@ -7365,15 +7477,19 @@
         const vigFactor = fairBuild / impliedBuild;
         const fairLive = impliedLive * vigFactor;
         const edge = (model - fairLive) * 100;
-        const rounded = Math.round(edge * 100) / 100;
+        const rounded = Math.round(edge * 10) / 10;
         // Roll the .edge-value span, never the <td>: the cell can also hold
         // the fragile-price asterisk, and rollTo() rebuilds its target from
         // scratch, so targeting the cell silently deleted that warning marker
         // on the first refresh. Fall back to the cell for safety if the span
         // is ever missing.
         const target = cell.querySelector('.edge-value') || cell;
-        if (window.__rollTo) { window.__rollTo(target, rounded.toFixed(2) + '%'); }
-        else { target.textContent = rounded.toFixed(2) + '%'; }
+        // ONE DECIMAL, AND A SIGN, matching the server-rendered value exactly.
+        // A mismatch here is invisible until the first 90s refresh, at which
+        // point every edge in the table silently reformats.
+        const txt = (rounded >= 0 ? '+' : '') + rounded.toFixed(1) + 'pts';
+        if (window.__rollTo) { window.__rollTo(target, txt); }
+        else { target.textContent = txt; }
         cell.classList.toggle('edge-pos', edge > 0);
         cell.classList.toggle('edge-neg', edge <= 0);
       });
