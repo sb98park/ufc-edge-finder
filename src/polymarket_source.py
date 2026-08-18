@@ -454,28 +454,55 @@ def _parse_multi_outcome_market(
         if round_match:
             round_outcomes.append((int(round_match.group(1)), price))
 
-    # Round-by-round outcomes -> derive Under/Over total-rounds prices at each
-    # boundary by summing cumulative probability (e.g. P(under 2.5) = P(round 1) + P(round 2))
+    # ROUND-BY-ROUND OUTCOMES BECOME A ROUND-START MARKET, NOT A TOTALS LINE.
+    #
+    # This used to emit "Over/Under {n}.5" from the cumulative round
+    # probabilities, and the arithmetic was right while the LABEL was wrong.
+    # After processing round n the cumulative is P(the fight ends in rounds
+    # 1..n), so the complement is P(the fight REACHES round n+1) -- the moment
+    # round n+1 begins. That is not the same bet as Over n.5, which settles at
+    # the midpoint of round n+1 and therefore includes the first half of it.
+    #
+    # Emitting it as a totals line put a round-boundary probability into the
+    # same pool as genuinely quoted Over/Under n.5 prices, where the model
+    # compared them and the grader settled them as though they were the same
+    # market. On a card where Polymarket ran a round-by-round market rather
+    # than a totals market, every rounds edge was computed against the wrong
+    # question.
+    #
+    # It also turns out to be a market worth having in its own right: books
+    # quote "Fight to start round N" directly, and this is a real price for
+    # it rather than a model derivation.
+    #
+    # THE COST IS REAL AND WORTH STATING: on a card whose Polymarket market is
+    # round-by-round, there are now NO total-rounds prices at all, where
+    # before there were wrong ones. A correct Over/Under n.5 cannot be
+    # recovered from round-granular data, because it turns on whether the
+    # fight passes the MIDPOINT of a round and nothing here splits a round in
+    # half. The curve in method_model could estimate that split, but a
+    # modelled number laundered into the "market price" column is the exact
+    # error this project keeps finding. No price beats a wrong one.
     if round_outcomes:
         round_outcomes.sort()
         cumulative = 0.0
         for round_num, price in round_outcomes:
             cumulative += price
-            line = round_num + 0.5
+            starts_round = round_num + 1
             try:
-                under_odds = implied_prob_to_american(min(0.99, cumulative))
-                over_odds = implied_prob_to_american(max(0.01, 1 - cumulative))
+                # Yes = the fight reaches that round. No = it ends before.
+                yes_odds = implied_prob_to_american(max(0.01, 1 - cumulative))
+                no_odds = implied_prob_to_american(min(0.99, cumulative))
             except (ValueError, ZeroDivisionError):
                 continue
             rows.append({
                 "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
-                "market": "TotalRounds", "selection": f"Under {line}", "selection_method": str(line),
-                "odds_american": under_odds,
+                "market": "RoundStart", "selection": f"Starts Round {starts_round}",
+                "selection_method": str(starts_round), "odds_american": yes_odds,
             })
             rows.append({
                 "fight_id": fight_id, "fighter_a": fighter_a, "fighter_b": fighter_b,
-                "market": "TotalRounds", "selection": f"Over {line}", "selection_method": str(line),
-                "odds_american": over_odds,
+                "market": "RoundStart", "selection": f"Ends Before Round {starts_round}",
+                "selection_method": str(starts_round), "odds_american": no_odds,
             })
 
     return rows
