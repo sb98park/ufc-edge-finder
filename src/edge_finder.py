@@ -75,9 +75,12 @@ def compute_moneyline_edges(
         imp_b = american_to_implied_prob(b["odds_american"])
         fair_a, fair_b = remove_vig_two_way(imp_a, imp_b)
 
-        for fighter, opponent, model_p, fair_p, odds, token_id in [
-            (a["selection"], b["selection"], model_prob_a, fair_a, a["odds_american"], a.get("clob_token_id")),
-            (b["selection"], a["selection"], model_prob_b, fair_b, b["odds_american"], b.get("clob_token_id")),
+        # `src` carries the whole row so provenance comes from the side being
+        # priced. An earlier edit referenced a bare `row` here, which does not
+        # exist in this scope -- see the note on the source field below.
+        for fighter, opponent, model_p, fair_p, odds, token_id, src in [
+            (a["selection"], b["selection"], model_prob_a, fair_a, a["odds_american"], a.get("clob_token_id"), a),
+            (b["selection"], a["selection"], model_prob_b, fair_b, b["odds_american"], b.get("clob_token_id"), b),
         ]:
             rows.append({
                 "fight_id": fight_id,
@@ -90,8 +93,13 @@ def compute_moneyline_edges(
                 "edge_pct": round(edge_percent(model_p, fair_p), 2),
                 "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, fair_p), odds) * 100, 2),
                 "clob_token_id": token_id,
-                "source": row.get("source"),
-                "source_is_vig_free": row.get("source_is_vig_free"),
+                # THIS RAISED NameError ON EVERY CALL for several builds. The
+                # provenance edit was applied by pattern across seven edge
+                # builders, six of which had a `row` in scope; this one binds
+                # `a` and `b` instead. Every moneyline edge silently vanished
+                # and the empty parlay pools were misread as thin market data.
+                "source": src.get("source"),
+                "source_is_vig_free": src.get("source_is_vig_free"),
             })
 
     if not rows:

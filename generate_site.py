@@ -340,8 +340,26 @@ def main():
         if edges_df.empty:
             live_error = f"No usable live odds returned right now (source: {source})."
     except Exception as exc:
-        print(f"[generate_site] live odds fetch failed: {exc}")
-        live_error = "Couldn't fetch live odds right now — will retry on the next update."
+        # NAME THE FAILURE HONESTLY. This block covers the fetch AND every
+        # edge computation after it, and it used to report all of them as
+        # "live odds fetch failed". A NameError in compute_moneyline_edges
+        # therefore looked identical to a network outage: the site rendered
+        # with no edges, no standout props and no parlays, and the empty
+        # sections were read as a thin market rather than a code bug. That
+        # cost several builds.
+        #
+        # A network or HTTP error is a fetch problem; anything else is ours.
+        import traceback as _tb
+        _is_network = isinstance(exc, (OSError, TimeoutError)) or \
+            exc.__class__.__module__.startswith(("requests", "urllib", "http"))
+        if _is_network:
+            print(f"[generate_site] live odds FETCH failed: {type(exc).__name__}: {exc}")
+            live_error = "Couldn't fetch live odds right now — will retry on the next update."
+        else:
+            print(f"[generate_site] EDGE COMPUTATION FAILED (this is a bug, not the feed): "
+                  f"{type(exc).__name__}: {exc}")
+            _tb.print_exc()
+            live_error = "Live odds are temporarily unavailable."
 
     # history_df threaded through so the PREVIEW runs the same model as the
     # moneyline edge row -- without it the headline pick omitted the
