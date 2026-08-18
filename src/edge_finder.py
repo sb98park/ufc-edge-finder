@@ -49,14 +49,46 @@ def compute_moneyline_edges(
 ) -> pd.DataFrame:
     rows = []
     ml = upcoming_df[upcoming_df["market"] == "Moneyline"]
+    has_source = "source" in ml.columns
 
-    for fight_id, group in ml.groupby("fight_id"):
-        if len(group) != 2:
-            print(f"[edge_finder] moneyline skip for fight_id={fight_id!r}: {len(group)} row(s) instead of 2 "
-                  f"-- selections: {group['selection'].tolist()}")
-            continue  # need both sides of the moneyline to devig
+    for fight_id, fight_rows in ml.groupby("fight_id"):
+        # ONE FIGHT NOW HAS MORE THAN TWO ROWS. With Polymarket, DraftKings
+        # and FanDuel all quoting, a bout arrives as six moneyline rows, and
+        # the old `len(group) != 2` guard skipped every one of them -- which
+        # would have deleted every moneyline edge the moment the second feed
+        # was switched on.
+        #
+        # De-vigging has to happen WITHIN a source. Pairing a DraftKings side
+        # against a FanDuel side produces a "fair" number belonging to neither
+        # book, and with a vig-free Polymarket side in the mix it is not even
+        # dimensionally consistent.
+        by_source = (list(fight_rows.groupby("source")) if has_source
+                     else [(None, fight_rows)])
 
-        a, b = group.iloc[0], group.iloc[1]
+        fairs_a, fairs_b, quotes = [], [], []
+        a = b = None
+        for src_name, g in by_source:
+            if len(g) != 2:
+                continue
+            ra, rb = g.iloc[0], g.iloc[1]
+            if a is None:
+                a, b = ra, rb           # first complete pair fixes the ordering
+            elif ra["selection"] != a["selection"]:
+                ra, rb = rb, ra         # keep every source in the same order
+            ia = american_to_implied_prob(ra["odds_american"])
+            ib = american_to_implied_prob(rb["odds_american"])
+            fa, fb = remove_vig_two_way(ia, ib)
+            fairs_a.append(fa)
+            fairs_b.append(fb)
+            # Only a vig-bearing quote is a price you can actually take.
+            # Polymarket's midpoint is the reference, not the bet.
+            if has_source and not bool(ra.get("source_is_vig_free")):
+                quotes.append((src_name, ra, rb))
+
+        if a is None:
+            print(f"[edge_finder] moneyline skip for fight_id={fight_id!r}: no source "
+                  f"quoted both sides -- rows: {len(fight_rows)}")
+            continue
 
         matchup = None
         if fighters_df is not None:
@@ -71,35 +103,64 @@ def compute_moneyline_edges(
             model_prob_a = 1.0 / (1.0 + 10 ** ((elo_b - elo_a) / 400.0))
         model_prob_b = 1.0 - model_prob_a
 
-        imp_a = american_to_implied_prob(a["odds_american"])
-        imp_b = american_to_implied_prob(b["odds_american"])
-        fair_a, fair_b = remove_vig_two_way(imp_a, imp_b)
+        # CONSENSUS FAIR, averaged across whichever sources quoted the fight
+        # and renormalised so the two sides still sum to one. A consensus is
+        # sharper than any single book, and it means the number the model is
+        # judged against does not swing when one book moves alone.
+        fair_a = sum(fairs_a) / len(fairs_a)
+        fair_b = sum(fairs_b) / len(fairs_b)
+        _tot = fair_a + fair_b
+        if _tot > 0:
+            fair_a, fair_b = fair_a / _tot, fair_b / _tot
 
-        # `src` carries the whole row so provenance comes from the side being
-        # priced. An earlier edit referenced a bare `row` here, which does not
-        # exist in this scope -- see the note on the source field below.
-        for fighter, opponent, model_p, fair_p, odds, token_id, src in [
-            (a["selection"], b["selection"], model_prob_a, fair_a, a["odds_american"], a.get("clob_token_id"), a),
-            (b["selection"], a["selection"], model_prob_b, fair_b, b["odds_american"], b.get("clob_token_id"), b),
+        # BEST BETTABLE PRICE, per side, across the books. Line shopping is
+        # the one edge here that needs no model to be real. With no book
+        # quoting, fall back to the reference price so nothing regresses on a
+        # Polymarket-only build.
+        def _best(idx: int, fallback):
+            if not quotes:
+                return fallback, (fallback.get("source") if has_source else None), 1
+            side = [(nm, pair[idx]) for nm, pair in
+                    ((q[0], (q[1], q[2])) for q in quotes)]
+            nm, r = min(side, key=lambda t: american_to_implied_prob(t[1]["odds_american"]))
+            return r, nm, len(side)
+
+        best_a, book_a, n_a = _best(0, a)
+        best_b, book_b, n_b = _best(1, b)
+
+        for fighter, opponent, model_p, fair_p, priced, book, n_books, ref in [
+            (a["selection"], b["selection"], model_prob_a, fair_a, best_a, book_a, n_a, a),
+            (b["selection"], a["selection"], model_prob_b, fair_b, best_b, book_b, n_b, b),
         ]:
+            odds = priced["odds_american"]
             rows.append({
                 "fight_id": fight_id,
                 "fighter": fighter,
                 "opponent": opponent,
                 "market": "Moneyline",
+                # THE BEST BETTABLE PRICE, not the reference midpoint. This is
+                # the number the reader can actually take, and every figure
+                # derived from it below now refers to a real bet.
                 "odds_american": odds,
                 "model_prob": round(model_p, 3),
+                # Consensus of every source that quoted both sides, de-vigged
+                # within each source first. This is the FAIR line -- what the
+                # market thinks, cleanly -- and it is what edge is measured
+                # against.
                 "book_fair_prob": round(fair_p, 3),
                 "edge_pct": round(edge_percent(model_p, fair_p), 2),
                 "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, fair_p), odds) * 100, 2),
-                "clob_token_id": token_id,
-                # THIS RAISED NameError ON EVERY CALL for several builds. The
-                # provenance edit was applied by pattern across seven edge
-                # builders, six of which had a `row` in scope; this one binds
-                # `a` and `b` instead. Every moneyline edge silently vanished
-                # and the empty parlay pools were misread as thin market data.
-                "source": src.get("source"),
-                "source_is_vig_free": src.get("source_is_vig_free"),
+                "clob_token_id": priced.get("clob_token_id") or ref.get("clob_token_id"),
+                # Provenance of the PRICE. `src` was written as a bare `row`
+                # here once, which does not exist in this scope, and the
+                # resulting NameError deleted every moneyline edge for several
+                # builds while looking like a thin market.
+                "source": priced.get("source"),
+                "source_is_vig_free": priced.get("source_is_vig_free"),
+                # Line shopping. books_quoting = 1 means nothing was shopped,
+                # which the reader should be told rather than left to assume.
+                "best_book": book,
+                "books_quoting": n_books,
             })
 
     if not rows:
