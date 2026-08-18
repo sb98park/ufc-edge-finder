@@ -31,6 +31,7 @@ from src.power_rating import build_effective_ratings
 from src.odds_utils import implied_prob_to_american, format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
 from src.parlay_ledger import record_slips
+from src.slip_builder import build_leg_inventory
 from src.line_movement import (
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
     load_token_cache, save_token_cache, update_token_cache,
@@ -584,6 +585,16 @@ def main():
         {"bankroll": bankroll_parlays, "lotto": lotto_parlays},
         event_name=(events[0].get("event_name") if events else None),
     )
+
+    # THE LEG INVENTORY for the slip builder. Every leg the card offers,
+    # priced at book-equivalent odds, for the reader to combine themselves --
+    # see src/slip_builder for why that is the product rather than another
+    # generated slate.
+    try:
+        slip_legs = build_leg_inventory(tracked_edges_list)
+    except Exception as e:
+        print(f"[slip_builder] leg inventory failed, builder will be empty: {e}")
+        slip_legs = []
 
     # Notable line movement, SPLIT BY CARD rather than pooled. Sorting one
     # combined list purely by pct_change let a big move on a fight three weeks
@@ -1236,6 +1247,7 @@ def main():
         units_timeseries_svg=units_timeseries_svg,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
+        slip_legs=slip_legs,
         notable_movements=notable_movements,
         notable_movements_upcoming=notable_movements_upcoming,
         live_error=live_error,

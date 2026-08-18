@@ -2064,6 +2064,82 @@
     border-radius: var(--r-sm); padding: 1.5px 5px; letter-spacing: 0.3px; white-space: nowrap;
   }
   .parlay-note { font-size: var(--t-small); color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+  /* ===================================================================
+     SLIP BUILDER
+     ===================================================================
+     The summary card is STICKY because the whole point is watching the
+     numbers move as legs go on and come off. A builder whose total you
+     have to scroll to find is a calculator, not a builder. */
+  .slip-summary-card {
+    position: sticky; top: var(--seg-tabs-h, 44px); z-index: 38;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: var(--r-lg); padding: 12px 14px; margin-bottom: 14px;
+    box-shadow: var(--e2);
+  }
+  .slip-summary-card[data-empty="1"] .sb-live { display: none; }
+  .slip-summary-card:not([data-empty="1"]) .sb-empty { display: none; }
+  .sb-empty { font-size: var(--t-small); color: var(--muted); text-align: center; padding: 4px 0; }
+  .sb-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .sb-payout { font-size: var(--t-h2); font-weight: 700; font-family: var(--font-display); color: var(--accent-hi); line-height: 1.1; }
+  .sb-legcount { font-size: var(--t-micro); color: var(--muted); letter-spacing: 0.3px; text-transform: uppercase; margin-top: 2px; }
+  .sb-clear {
+    font-size: var(--t-micro); color: var(--muted); background: transparent;
+    border: 1px solid var(--hairline-strong); border-radius: var(--r-pill);
+    padding: 3px 9px; cursor: pointer; font-family: inherit; flex-shrink: 0;
+  }
+  .sb-clear:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .sb-rows { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .sb-row { display: flex; justify-content: space-between; gap: 10px; font-size: var(--t-small); color: var(--text-soft); }
+  .sb-row b { font-variant-numeric: tabular-nums; color: var(--text); }
+  /* The zero-edge floor is deliberately quieter than the EV above it: it is
+     context for how much the vig is taking, not a competing estimate. */
+  .sb-dim, .sb-dim b { color: var(--muted); }
+  .sb-note { font-size: var(--t-micro); line-height: 1.5; margin-top: 8px; }
+  .sb-note.warn { color: #ffb347; }
+  .sb-note.bad { color: var(--red); }
+  .sb-note.good { color: var(--green); }
+  .sb-picked { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .sb-picked li {
+    display: flex; justify-content: space-between; gap: 8px; align-items: center;
+    font-size: var(--t-small); color: var(--text-soft);
+    padding: 5px 8px; background: var(--sunken); border-radius: var(--r-md);
+  }
+  .sb-picked button {
+    background: transparent; border: 0; color: var(--muted); cursor: pointer;
+    font-size: var(--t-body); line-height: 1; padding: 0 2px; flex-shrink: 0;
+  }
+
+  .sb-inventory { display: flex; flex-direction: column; gap: 6px; }
+  .sb-fight { background: var(--panel2); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+  .sb-fight > summary {
+    list-style: none; cursor: pointer; padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: var(--t-body); font-weight: 600; color: var(--text);
+  }
+  .sb-fight > summary::-webkit-details-marker { display: none; }
+  .sb-fight > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .sb-fight-count { font-size: var(--t-micro); color: var(--muted); flex-shrink: 0; }
+  .sb-legs { list-style: none; margin: 0; padding: 0 6px 6px; }
+  .sb-leg {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: transparent; border: 1px solid transparent; border-radius: var(--r-md);
+    padding: 8px 8px; cursor: pointer; text-align: left; font-family: inherit;
+    font-size: var(--t-body); color: var(--text-soft);
+  }
+  .sb-leg:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  /* SELECTED IS A BORDER PLUS A TINT, not colour alone -- and the accent is
+     the same one the rest of the site uses for "this is the thing". */
+  .sb-leg[aria-pressed="true"] {
+    border-color: rgba(var(--accent-rgb), 0.55); background: rgba(var(--accent-rgb), 0.10); color: var(--text);
+  }
+  .sb-leg[aria-pressed="true"] .sb-leg-label::before { content: "\2713\00a0"; color: var(--accent-hi); font-weight: 700; }
+  .sb-leg[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .sb-leg-label { flex: 1; min-width: 0; }
+  .sb-leg-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex-shrink: 0; }
+  .sb-leg-odds { font-weight: 700; color: var(--accent-cool); font-variant-numeric: tabular-nums; }
+  .sb-leg-model { font-size: var(--t-micro); color: var(--muted); white-space: nowrap; }
+
   .no-parlays { font-size: var(--t-body); color: var(--muted); padding: 4px 0 8px; }
 
   /* ===================================================================
@@ -6111,6 +6187,67 @@
   </div>
 
   <div class="detail-section" data-section="parlays">
+  {#
+    THE SLIP BUILDER. The two generated slips below it are starting points;
+    this is the tool. It exists because the generated ones were being ignored
+    in favour of hand-built combinations, and because the objective behind
+    them searched for maximum model-vs-market disagreement -- which is this
+    model's WORST cohort (39.1% on 23 logged underdog picks, against 85.2% on
+    61 where it agreed with the market on the winner).
+
+    Everything is priced at BOOK-EQUIVALENT odds. The legs come from
+    Polymarket, which is vig-free and therefore quotes prices no sportsbook
+    will honour; the builder adds a real book's margin back on, per market,
+    before it shows a single number.
+  #}
+  <div class="standout-title" id="section-builder">{{ icon_coins() }} Build a slip</div>
+  <div class="parlay-subtitle">Pick legs from the card. Prices shown are DraftKings/FanDuel-equivalent, not the vig-free source price.</div>
+
+  <div class="slip-summary-card" id="slip-build-summary" data-empty="1">
+    <div class="sb-empty">Tap any leg below to start building.</div>
+    <div class="sb-live" hidden>
+      <div class="sb-top">
+        <div>
+          <div class="sb-payout" data-sb-payout>—</div>
+          <div class="sb-legcount" data-sb-legcount></div>
+        </div>
+        <button class="sb-clear" type="button" data-sb-clear>Clear</button>
+      </div>
+      <div class="sb-rows">
+        <div class="sb-row"><span>Model says</span><b data-sb-prob>—</b></div>
+        <div class="sb-row"><span>Expected value</span><b data-sb-ev>—</b></div>
+        <div class="sb-row sb-dim"><span>If the model has no edge</span><b data-sb-floor>—</b></div>
+      </div>
+      <div class="sb-note" data-sb-note></div>
+      <ul class="sb-picked" data-sb-picked></ul>
+    </div>
+  </div>
+
+  {% if slip_legs %}
+  <div class="sb-inventory">
+    {% for f in slip_legs %}
+    <details class="sb-fight">
+      <summary><span class="sb-fight-name">{{ f.fight_label }}</span><span class="sb-fight-count">{{ f.legs|length }}</span></summary>
+      <ul class="sb-legs">
+        {% for leg in f.legs %}
+        <li><button class="sb-leg" type="button"
+                    data-leg='{{ leg | tojson }}'
+                    data-fight="{{ f.fight_key }}">
+          <span class="sb-leg-label">{{ leg.label }}</span>
+          <span class="sb-leg-right">
+            <span class="sb-leg-odds">{{ leg.odds_book | american }}</span>
+            <span class="sb-leg-model">model {{ (leg.p_model*100)|round|int }}%</span>
+          </span>
+        </button></li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endfor %}
+  </div>
+  {% elif events %}
+  {{ empty_state(icon_coins(), "No legs priced yet", "The card has no two-sided market prices the builder can convert.") }}
+  {% endif %}
+
   {#
     Live-only. Hidden entirely outside a card window, so the pre-card
     experience -- studying every slip, fully expanded -- is untouched. The
@@ -10245,6 +10382,122 @@
         if (document.visibilityState === 'visible') pollLive();
       });
 
+    })();
+
+    // ===== SLIP BUILDER =====
+    //
+    // Everything here is computed at BOOK-EQUIVALENT prices. The legs arrive
+    // already converted (see src/slip_builder) because the source feed is
+    // Polymarket, which is vig-free and therefore quotes numbers no
+    // sportsbook will honour.
+    //
+    // Three quantities, and the third is the one nobody else shows you:
+    //   payout   product of the legs' book decimals -- what you'd actually be
+    //            quoted, and it compounds the margin once per leg
+    //   EV       combined blended probability x payout - 1
+    //   floor    what the same slip returns if the model has NO edge at all.
+    //            That is pure vig, and it is why a fourth leg is expensive.
+    (function() {
+      const card = document.getElementById('slip-build-summary');
+      if (!card) return;
+      const picked = [];        // legs in selection order
+
+      const el = (sel) => card.querySelector(sel);
+      const fmtAm = (d) => {
+        if (!isFinite(d) || d <= 1) return '—';
+        const am = d >= 2 ? Math.round((d - 1) * 100) : -Math.round(100 / (d - 1));
+        return (am > 0 ? '+' : '') + am;
+      };
+
+      function render() {
+        card.dataset.empty = picked.length ? '0' : '1';
+        el('.sb-live').hidden = picked.length === 0;
+        if (!picked.length) { syncButtons(); return; }
+
+        let dec = 1, pBlend = 1, pFair = 1, pBook = 1, methodLegs = 0;
+        for (const l of picked) {
+          dec *= l.decimal_book;
+          pBlend *= l.p_blend;
+          pFair *= l.p_fair;
+          pBook *= l.p_book;
+          if (l.family === 'method') methodLegs++;
+        }
+        const ev = pBlend * dec - 1;
+        const floor = pFair * dec - 1;
+
+        el('[data-sb-payout]').textContent = fmtAm(dec);
+        el('[data-sb-legcount]').textContent =
+          picked.length + (picked.length === 1 ? ' leg' : ' legs');
+        el('[data-sb-prob]').textContent = (pBlend * 100).toFixed(1) + '%';
+        el('[data-sb-ev]').textContent = (ev >= 0 ? '+' : '') + (ev * 100).toFixed(1) + '%';
+        el('[data-sb-floor]').textContent = (floor * 100).toFixed(1) + '%';
+
+        // The note says the single most useful true thing about this slip.
+        const note = el('[data-sb-note]');
+        note.className = 'sb-note';
+        if (picked.length === 1) {
+          note.textContent = 'One leg — no parlay yet. A single bet keeps its edge; a parlay squares it, in whichever direction it points.';
+        } else if (ev <= 0) {
+          note.classList.add('bad');
+          note.textContent = 'Negative at book prices. Parlaying multiplies the legs\u2019 edge together, so combining bets you don\u2019t have an edge on makes it worse, not safer.';
+        } else if (methodLegs) {
+          note.classList.add('warn');
+          note.textContent = methodLegs + (methodLegs === 1 ? ' method leg carries' : ' method legs carry')
+            + ' about 20% margin each, against 4.5% on a moneyline — it needs a much bigger edge to be worth it.';
+        } else {
+          note.classList.add('good');
+          note.textContent = 'Positive at book prices, on the model\u2019s blended numbers. The floor line is what the vig costs you regardless.';
+        }
+
+        const ul = el('[data-sb-picked]');
+        ul.innerHTML = '';
+        picked.forEach((l, i) => {
+          const li = document.createElement('li');
+          const s1 = document.createElement('span');
+          s1.textContent = l.label;
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.setAttribute('aria-label', 'Remove ' + l.label);
+          b.textContent = '\u00d7';
+          b.addEventListener('click', () => { picked.splice(i, 1); render(); });
+          li.append(s1, b);
+          ul.appendChild(li);
+        });
+        syncButtons();
+      }
+
+      function syncButtons() {
+        const keys = new Set(picked.map(l => l.fight_key));
+        document.querySelectorAll('.sb-leg').forEach(btn => {
+          let leg;
+          try { leg = JSON.parse(btn.dataset.leg); } catch (e) { return; }
+          const on = picked.some(l => l.label === leg.label && l.fight_key === leg.fight_key);
+          btn.setAttribute('aria-pressed', String(on));
+          // ONE LEG PER FIGHT. Two legs on the same bout are not independent,
+          // and multiplying them as though they were is the exact error the
+          // generated builder was making. A book would price them as a
+          // same-game parlay; this one simply refuses the combination.
+          btn.disabled = !on && keys.has(leg.fight_key);
+        });
+      }
+
+      document.querySelectorAll('.sb-leg').forEach(btn => {
+        btn.setAttribute('aria-pressed', 'false');
+        btn.addEventListener('click', () => {
+          let leg;
+          try { leg = JSON.parse(btn.dataset.leg); } catch (e) { return; }
+          const i = picked.findIndex(l => l.label === leg.label && l.fight_key === leg.fight_key);
+          if (i >= 0) picked.splice(i, 1);
+          else picked.push(leg);
+          render();
+        });
+      });
+
+      card.querySelector('[data-sb-clear]').addEventListener('click', () => {
+        picked.length = 0; render();
+      });
+
+      render();
     })();
 
     // What's new since your last visit
