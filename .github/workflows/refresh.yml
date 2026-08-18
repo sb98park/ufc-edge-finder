@@ -262,6 +262,14 @@ jobs:
         if: steps.cadence.outputs.build == 'yes'
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          # DraftKings and FanDuel prices via TheRundown. OPTIONAL: without
+          # this secret src/live_props skips the source entirely and the site
+          # runs on Polymarket exactly as before, so adding the secret is the
+          # only step needed to turn it on and removing it is the way to turn
+          # it off. The source is metered (20,000 points/day) and keeps its
+          # own 15-minute clock regardless of this workflow's cadence -- see
+          # the quota arithmetic in src/rundown_source.
+          RUNDOWN_API_KEY: ${{ secrets.RUNDOWN_API_KEY }}
           # Both optional -- unset until the Cloudflare Worker relay
           # (cloudflare-worker/combat-edge-relay.js) is deployed and these
           # two repo secrets are added. Until then, Combat Edge requests
