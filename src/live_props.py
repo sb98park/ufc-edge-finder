@@ -16,6 +16,7 @@ feed, not that scraper -- The Odds API already carries DraftKings
 moneylines under a bookmaker key on the plan this project already uses.
 """
 
+import json
 import os
 from datetime import datetime, timezone
 
@@ -55,6 +56,46 @@ def _bet_key(row: dict) -> tuple:
     pair = _pair_key(row) or frozenset({row.get("fighter_a"), row.get("fighter_b")})
     return (pair, row.get("market"), row.get("selection"),
             row.get("selection_method"), row.get("source"))
+
+
+def _record_source_health(pm_rows, rd_rows, dates) -> None:
+    """
+    Write a one-line, committed record of which sources actually returned
+    prices this build.
+
+    WHY THIS IS WORTH A FILE. TheRundown was wired in, configured with a live
+    secret, and never once called -- the date list it needed was built from a
+    field Polymarket does not have, so it sat behind an empty `if` for days
+    while the site kept quoting Polymarket and looking healthy. Nothing in the
+    repo recorded which feeds contributed, the build log is the only place it
+    would have shown, and logs are not readable after the fact without the gh
+    CLI. The bug was eventually caught sideways, from source labels in the
+    parlay ledger.
+
+    Row counts per source are three lines of code and turn "is the second feed
+    alive?" from an investigation into a `cat`. Committed by the workflow's
+    `git add -A -- data/`, so the answer is in git history rather than in a
+    log that has aged out.
+
+    Never raises: a build must not fail over its own bookkeeping.
+    """
+    try:
+        from collections import Counter
+        counts = Counter(r.get("source") or "Polymarket" for r in pm_rows)
+        counts.update(r.get("source") or "unknown" for r in rd_rows)
+        payload = {
+            "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "rows_by_source": dict(sorted(counts.items())),
+            "rundown_key_set": bool(os.environ.get("RUNDOWN_API_KEY")),
+            "rundown_dates_requested": list(dates or []),
+        }
+        os.makedirs("data", exist_ok=True)
+        with open("data/source_health.json", "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        print(f"[source_health] {payload['rows_by_source']}")
+    except Exception as exc:
+        print(f"[source_health] not written ({exc}) -- continuing")
 
 
 def _today() -> str:
@@ -130,6 +171,7 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
     # Metered, so it fails silently and runs on its own slower clock. A second
     # source must never be able to reduce what the first one already provides.
     rd_rows = []
+    rd_dates: list[str] = []
     if os.environ.get("RUNDOWN_API_KEY"):
         try:
             from src.rundown_source import fetch_rundown_ufc_odds
@@ -165,6 +207,7 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
             # slips are built for; the rest are "Coming Up" listings that
             # quote no prices. So this is a cheap constraint, not a sacrifice.
             dates = dates[:1]
+            rd_dates = dates
 
             if dates:
                 rd_rows = fetch_rundown_ufc_odds(dates)
@@ -183,6 +226,8 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
                       "-- source skipped")
         except Exception as exc:
             print(f"[warn] TheRundown fetch failed ({exc}) -- continuing on Polymarket alone")
+
+    _record_source_health(pm_rows, rd_rows, rd_dates)
 
     combined_rows = pm_rows + rd_rows
 
