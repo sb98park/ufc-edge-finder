@@ -624,26 +624,109 @@
     white-space: nowrap; padding: 3px 10px; background: #241f10; border: 1px solid #3a2f14; border-radius: var(--r-lg);
   }
 
+  /* ===================================================================
+     THE GLASS TOAST
+     ===================================================================
+     A swipe-to-dismiss toast in two layers. The OUTER element is the
+     track: it owns the position, the rounded clip, and the confirm
+     surface that lives underneath. The INNER element is the glass card
+     that the finger actually moves. Separating them is what makes the
+     reveal possible at all -- you cannot show something behind a thing
+     that is itself the thing being moved.
+
+     WHY IT MOVES 1:1. The gesture reads as a physical object only if the
+     card sits exactly under the fingertip for the whole drag, so the
+     transform is written straight from the pointer delta with no easing,
+     no smoothing and no transition. A CSS transition on transform here
+     is the single easiest way to ruin this: it introduces a lag between
+     finger and card that reads instantly as "laggy", and it is why the
+     transition property is scoped to opacity alone. */
   .whats-new-banner {
-    position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 688px; margin: 0 auto; z-index: 200;
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    background: linear-gradient(135deg, #0f2a1e, #1c1c1e 70%); border: 1px solid #1e4a2f;
-    border-radius: var(--r-lg); padding: 10px 14px; font-size: var(--t-body);
-    
-    animation: toast-in 0.35s ease-out, banner-glow 2.4s ease-in-out 0.35s 4;
+    /* ABOVE THE TAB BAR, not on top of it. The old banner sat at a flat
+       bottom: 16px and overlapped the bar on a phone. Same expression the
+       other bar-clearing fixed element uses: the safe-area inset, floored,
+       plus the bar's own height. */
+    position: fixed; left: 16px; right: 16px; max-width: 688px; margin: 0 auto; z-index: 200;
+    /* The tab bar is 61px tall and floats 10px off the bottom, so it ends at
+       71px; 79 leaves a real gap rather than the 7px that reads as two glass
+       surfaces touching. */
+    bottom: calc(max(10px, env(safe-area-inset-bottom, 0px) - 12px) + 79px);
+    border-radius: var(--r-pill); overflow: hidden;
+    animation: toast-in 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    touch-action: pan-y;                  /* let the page scroll vertically */
   }
-  .whats-new-banner.toast-out { animation: toast-out 0.35s ease-in forwards; }
+  .whats-new-banner.toast-out { animation: toast-out 0.32s ease-in forwards; }
+
+  /* THE CONFIRM SURFACE, underneath. It is not a static icon that gets
+     uncovered -- it GROWS from the trailing edge, so its width is
+     always exactly the gap the card has opened. That is what makes the
+     check feel attached to the finger rather than revealed by it. */
+  .toast-confirm {
+    position: absolute; inset: 0 auto 0 0; width: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(61,220,132,0.22), rgba(61,220,132,0.10));
+    border-radius: var(--r-pill);
+    pointer-events: none;
+  }
+  .toast-confirm svg { width: 22px; height: 22px; flex-shrink: 0; }
+  /* The tick scales with commitment rather than appearing at a threshold:
+     a gesture that is 20% of the way there should look 20% committed. */
+  .toast-confirm-mark { transform: scale(var(--confirm-scale, 0.4)); opacity: var(--confirm-opacity, 0); }
+
+  .toast-card {
+    position: relative; display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px; font-size: var(--t-body);
+    border-radius: var(--r-pill);
+    /* GLASS. --mat-sat is the saturation boost the site's other glass
+       surfaces use; without it a blurred dark backdrop goes grey and the
+       panel reads as flat plastic rather than frosted.
+       THE TOKEN IS THE WHOLE FUNCTION -- `saturate(190%)`, not `190%`. Writing
+       saturate(var(--mat-sat)) yields saturate(saturate(190%)), which is
+       invalid, and an invalid value drops the ENTIRE backdrop-filter
+       declaration rather than just that one function: the glass silently
+       became a flat translucent panel with no blur at all. Match the idiom
+       used by the site's other glass surface and interpolate it bare. */
+    background: rgba(28, 30, 34, 0.72);
+    backdrop-filter: blur(18px) var(--mat-sat);
+    -webkit-backdrop-filter: blur(18px) var(--mat-sat);
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--e3);
+    will-change: transform;
+    cursor: pointer;
+  }
+  /* No backdrop-filter support -> an opaque panel rather than a
+     see-through one, which would be unreadable over a fight card. */
+  @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .toast-card { background: var(--panel2); }
+  }
+  .toast-icon {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(61,220,132,0.14); color: var(--green);
+  }
+  .toast-icon svg { width: 15px; height: 15px; }
+  .toast-body { flex: 1; min-width: 0; }
+  /* BLOCK, because these are spans. Left inline they ran together into one
+     paragraph and the subtitle read as a trailing clause of the headline
+     rather than as secondary text. */
+  .toast-title { display: block; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .toast-sub { display: block; font-size: var(--t-small); color: var(--muted); line-height: 1.35; margin-top: 1px; }
+  .toast-hint {
+    font-size: var(--t-micro); color: var(--muted); letter-spacing: 0.3px;
+    text-transform: uppercase; white-space: nowrap; flex-shrink: 0; opacity: 0.75;
+  }
+
   @keyframes toast-in {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(22px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   @keyframes toast-out {
     from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(10px); }
+    to { opacity: 0; transform: translateY(12px); }
   }
-  @keyframes banner-glow {
-    0%, 100% { box-shadow: 0 0 8px 0px rgba(61, 220, 132, 0.15); }
-    50% { box-shadow: 0 0 16px 3px rgba(61, 220, 132, 0.35); }
+  @media (prefers-reduced-motion: reduce) {
+    .whats-new-banner { animation: none; }
+    .whats-new-banner.toast-out { animation: none; opacity: 0; }
   }
   .new-badge {
     position: absolute; top: -7px; right: -7px; background: linear-gradient(135deg, #3ddc84, #2ab568);
@@ -4612,9 +4695,26 @@
   {% endif %}
   </div>
 
-  <div id="whats-new-banner" class="whats-new-banner" style="display:none; cursor:pointer;" onclick="window.__goToWhatsNew();">
-    <div class="whats-new-text" id="whats-new-text"></div>
-    <button class="whats-new-dismiss" onclick="event.stopPropagation(); window.__dismissToast();">{{ icon_cross() }}</button>
+  {# Two layers on purpose -- see the CSS. The outer div is the track and
+     owns the confirm surface; the inner .toast-card is the only thing the
+     finger moves. role="status" rather than "alert": this is new information,
+     not an interruption, and alert would cut across whatever a screen reader
+     is already saying. #}
+  <div id="whats-new-banner" class="whats-new-banner" style="display:none;" role="status" aria-live="polite">
+    <div class="toast-confirm" data-toast-confirm aria-hidden="true">
+      <span class="toast-confirm-mark">
+        <svg viewBox="0 0 26 26" fill="none"><path d="M5 13.5 L10.5 19 L21 7.5" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </div>
+    <div class="toast-card" data-toast-card onclick="window.__goToWhatsNew();">
+      <span class="toast-icon" aria-hidden="true">
+        <svg viewBox="0 0 26 26" fill="none"><path d="M13 4 L15.6 10.2 L22 11 L17.3 15.3 L18.6 21.5 L13 18.3 L7.4 21.5 L8.7 15.3 L4 11 L10.4 10.2 Z" fill="currentColor"/></svg>
+      </span>
+      <span class="toast-body">
+        <span class="toast-title" id="whats-new-text"></span>
+        <span class="toast-sub" id="whats-new-sub">Tap to view · swipe to dismiss</span>
+      </span>
+    </div>
   </div>
 
   {# Build time, not price time. Prices refresh client-side every
@@ -10170,6 +10270,122 @@
         setTimeout(() => { banner.style.display = 'none'; }, 300);
       };
 
+      // ===== SWIPE TO DISMISS =====
+      //
+      // The card tracks the finger EXACTLY. No transition, no easing, no
+      // smoothing on the drag -- transform is written straight from the
+      // pointer delta every move. Any interpolation between finger and card
+      // is perceived immediately as lag, and it is the one thing that would
+      // make this feel cheap rather than physical.
+      //
+      // The confirm surface behind it is sized to the gap the card opens, so
+      // the check is not "revealed" by the swipe, it is DRAGGED OPEN by it.
+      // Its tick scales and fades with how committed the gesture is rather
+      // than snapping in at a threshold, so a half-finished swipe looks half
+      // finished.
+      (function() {
+        const banner = document.getElementById('whats-new-banner');
+        if (!banner) return;
+        const card = banner.querySelector('[data-toast-card]');
+        const confirm = banner.querySelector('[data-toast-confirm]');
+        if (!card || !confirm) return;
+
+        const reduced = window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const tracker = createVelocityTracker(100);
+        let startX = 0, dx = 0, dragging = false, decided = false, width = 0;
+
+        // A third of the way is enough to mean it. Combined with the velocity
+        // test below, a fast flick commits from much less -- which is how a
+        // real flick behaves, and it is why distance alone is not the rule.
+        const DISMISS_AT = 0.33;
+        const FLICK_VELOCITY = 420;          // px/s
+
+        function paint(x) {
+          // Rightward only. A leftward pull rubber-bands at a third of the
+          // distance: the gesture stays alive under the finger, but the card
+          // tells you plainly that this is not the way out.
+          const shown = x >= 0 ? x : x / 3;
+          card.style.transform = `translate3d(${shown}px, 0, 0)`;
+          const open = Math.max(0, shown);
+          confirm.style.width = open + 'px';
+          const t = width ? Math.min(1, open / (width * DISMISS_AT)) : 0;
+          confirm.style.setProperty('--confirm-scale', (0.4 + 0.6 * t).toFixed(3));
+          confirm.style.setProperty('--confirm-opacity', t.toFixed(3));
+        }
+
+        const spring = createSpring(paint);
+
+        card.addEventListener('pointerdown', (e) => {
+          if (e.pointerType === 'mouse' && e.button !== 0) return;
+          spring.cancel();
+          width = banner.getBoundingClientRect().width;
+          startX = e.clientX;
+          dx = 0; dragging = true; decided = false;
+          tracker.clear();
+          tracker.add(e.clientX, e.timeStamp);
+          // Capture keeps the gesture alive if the finger leaves the card,
+          // but it is an optimisation, not a requirement -- and it CAN throw
+          // (a pointer already released, an element being detached). Letting
+          // that escape aborts the rest of the handler and leaves the drag
+          // half-initialised, which is a worse outcome than simply not having
+          // capture.
+          try { card.setPointerCapture(e.pointerId); } catch (_) {}
+        });
+
+        card.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          dx = e.clientX - startX;
+          // Until the gesture has declared itself horizontal, do nothing --
+          // otherwise a vertical scroll that starts on the toast drags it
+          // sideways. touch-action: pan-y keeps the page scrolling either way.
+          if (!decided) {
+            if (Math.abs(dx) < 6) return;
+            decided = true;
+          }
+          tracker.add(e.clientX, e.timeStamp);
+          paint(dx);
+        });
+
+        function release(e, cancelled) {
+          if (!dragging) return;
+          dragging = false;
+          try { card.releasePointerCapture(e.pointerId); } catch (_) {}
+          const v = tracker.get();
+          // A CANCELLED POINTER NEVER COMMITS. pointercancel means the
+          // gesture was taken away -- an incoming call, the system's own
+          // edge-swipe, the browser deciding it owns the touch -- not that
+          // the user finished it. Treating a cancel like a release dismissed
+          // the toast on an interruption the user never asked for, which is
+          // both wrong and unrecoverable: the thing is gone and there is
+          // nothing to swipe back.
+          const past = !cancelled && dx > width * DISMISS_AT;
+          const flicked = !cancelled && v > FLICK_VELOCITY && dx > 24;
+          if (past || flicked) {
+            // Carry the finger's own velocity into the exit so the card
+            // leaves at the speed it was thrown, rather than restarting from
+            // rest at a fixed duration.
+            const target = width + 40;
+            if (reduced) { paint(target); window.__dismissToast(); return; }
+            spring.start(dx, target, v, 0.32, 1.0, () => window.__dismissToast());
+          } else {
+            // Snap back with a little overshoot -- the card is returning to a
+            // rest position it wants to be at, and a critically damped return
+            // reads as sullen where a slight bounce reads as elastic.
+            if (reduced) { paint(0); return; }
+            spring.start(dx, 0, v, 0.34, 0.72);
+          }
+        }
+        card.addEventListener('pointerup', (e) => release(e, false));
+        card.addEventListener('pointercancel', (e) => release(e, true));
+
+        // A click only counts if the pointer barely moved. Without this every
+        // swipe would also navigate, because the card carries the tap target.
+        card.addEventListener('click', (e) => {
+          if (Math.abs(dx) > 8) { e.stopPropagation(); e.preventDefault(); }
+        }, true);
+      })();
+
       let goToTarget = 'standout';
       window.__goToWhatsNew = function() {
         window.__dismissToast();
@@ -10191,7 +10407,7 @@
           if (newMovements.length > 0) parts.push(`${newMovements.length} new notable move${newMovements.length > 1 ? 's' : ''}`);
           if (newResults.length > 0) parts.push(`${newResults.length} new result${newResults.length > 1 ? 's' : ''}`);
           document.getElementById('whats-new-text').textContent = `Since your last visit: ${parts.join(' · ')}`;
-          document.getElementById('whats-new-banner').style.display = 'flex';
+          document.getElementById('whats-new-banner').style.display = 'block';
           setTimeout(window.__dismissToast, 7000);
 
           // Send to Track Record only when results are the sole new thing --
