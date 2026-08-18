@@ -608,8 +608,22 @@ def _select_diverse(results: list[dict], max_results: int) -> list[dict]:
     return selected
 
 
-def build_bankroll_builder_parlays(tracked_edges: list[dict], model_only_by_fight: dict | None = None, max_results: int = 3) -> list[dict]:
-    """2-3 piece combos landing roughly +100 to +300, from legs the model favors (>50%)."""
+def build_bankroll_builder_parlays(tracked_edges: list[dict], model_only_by_fight: dict | None = None, max_results: int = 1) -> list[dict]:
+    """
+    2-3 piece combos landing roughly +100 to +300, from legs the model favors (>50%).
+
+    ONE SLIP, NOT THREE. Publishing three at a unit each is a three-unit
+    position, and if the ranking means anything then three units on the best
+    slip beats one unit on each of the top three -- splitting stake across a
+    best, a second-best and a third-best is a strictly worse allocation. If
+    the ranking does NOT mean anything, publishing three does not rescue it
+    either; it just spreads the same error over more bets.
+
+    The three were also never three independent bets. They are drawn greedily
+    from one ranked list over the same small pool, routinely share legs, and
+    the diversity helpers widen their own overlap tolerance rather than return
+    short -- so the effective sample was always closer to one.
+    """
     pieces = _build_candidate_pieces(tracked_edges, model_only_by_fight)
     return _find_parlays(
         pieces, leg_counts=(2, 3), min_american=100, max_american=320,
@@ -617,8 +631,19 @@ def build_bankroll_builder_parlays(tracked_edges: list[dict], model_only_by_figh
     )
 
 
-def build_lotto_parlays(tracked_edges: list[dict], model_only_by_fight: dict | None = None, max_results: int = 3) -> list[dict]:
-    """+1000 or higher combos, 2-5 pieces -- leg count doesn't matter, only the payout does."""
+def build_lotto_parlays(tracked_edges: list[dict], model_only_by_fight: dict | None = None, max_results: int = 1) -> list[dict]:
+    """
+    +1000 or higher combos, 2-5 pieces -- leg count doesn't matter, only the payout does.
+
+    One slip, for the reasons on the bankroll builder above.
+
+    NOTE FOR WHOEVER TUNES THIS NEXT: measured against a PERFECT model (the
+    sigma = 0 arm of scripts/replay_parlay_construction.py), this tier still
+    publishes a hit rate 1.51x its realised one, where the bankroll tier comes
+    out at 1.03. That gap is construction bias, not model error -- leg
+    dependence a product of marginals cannot represent, growing with leg
+    count -- and shrinking probabilities toward the market does not touch it.
+    """
     pieces = _build_candidate_pieces(tracked_edges, model_only_by_fight)
     return _find_parlays(
         pieces, leg_counts=(2, 3, 4, 5), min_american=1000, max_american=None,
@@ -626,16 +651,23 @@ def build_lotto_parlays(tracked_edges: list[dict], model_only_by_fight: dict | N
     )
 
 
-def build_moonshot_parlays(tracked_edges: list[dict], model_only_by_fight: dict | None = None, max_results: int = 3) -> list[dict]:
-    """
-    +5000 or higher, any leg count from 2 up to 8. This has essentially no
-    business hitting -- it's the "why not" tier, built purely for fun. Even
-    the longest of long shots still gets ranked by the model's best combined
-    probability among everything that clears the bar, so it's the "best
-    worst bet" rather than a totally random pile of legs.
-    """
-    pieces = _build_candidate_pieces(tracked_edges, model_only_by_fight)
-    return _find_parlays(
-        pieces, leg_counts=(2, 3, 4, 5, 6, 7, 8), min_american=5000, max_american=None,
-        min_leg_prob=0.05, max_results=max_results, label="moonshot",
-    )
+# The MOONSHOT TIER WAS DELETED, and it is worth recording why rather than
+# leaving a gap in the sequence for someone to helpfully restore.
+#
+# It was +5000 or better at up to 8 legs, published three at a time, and its
+# own copy called it a lottery ticket. Four separate measurements agreed:
+#
+#   - it went 0 for 21 in a rule replay over settled cards, -100% ROI
+#   - its payout band caps the true hit rate at 1.96% by arithmetic, so 0/21
+#     is the EXPECTED result rather than a bad run
+#   - 2-to-8-leg combinations over a 30-piece pool is 8,656,906 slips per
+#     card, about 62 seconds of every 300-second rebuild, and it made the
+#     tier impossible to validate at any scale -- a 60-card replay does not
+#     finish. A product whose quality cannot be measured even in principle
+#     is hard to defend on any other ground.
+#   - vig compounds hardest at length: a slip that is exactly FAIR on
+#     Polymarket is about -23% at 8 legs once placed at a real book, which
+#     exceeds any plausible model edge before the first leg is even chosen.
+#
+# min_leg_prob was also dead: price_is_fragile rejects anything at or below
+# 0.10 first, so the tier's advertised 0.05 floor never bound on anything.

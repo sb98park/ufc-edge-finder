@@ -29,7 +29,7 @@ from src.card_matcher import (
 )
 from src.power_rating import build_effective_ratings
 from src.odds_utils import implied_prob_to_american, format_american_odds
-from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays, build_moonshot_parlays
+from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
 from src.parlay_ledger import record_slips
 from src.line_movement import (
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
@@ -563,7 +563,6 @@ def main():
     try:
         bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight)
         lotto_parlays = build_lotto_parlays(tracked_edges_list, model_only_by_fight)
-        moonshot_parlays = build_moonshot_parlays(tracked_edges_list, model_only_by_fight)
     except Exception as e:
         # Never let a parlay-building bug take the whole site down with it --
         # confirmed live: a single fighter with a NaN power rating (missing
@@ -574,7 +573,7 @@ def main():
         # fixed at the source now, but this stays as a second line of
         # defense against whatever the next one turns out to be.
         print(f"[parlays] build failed unexpectedly, continuing without parlay sections: {e}")
-        bankroll_parlays, lotto_parlays, moonshot_parlays = [], [], []
+        bankroll_parlays, lotto_parlays = [], []
 
     # WRITE DOWN WHAT WE PUBLISHED. Nine slips a week have been going out
     # ungraded while single picks are scored to three decimals on the same
@@ -582,7 +581,7 @@ def main():
     # not exist. Merged on slip_id, so the 5-minute rebuild cycle leaves nine
     # rows per card rather than nine per render.
     record_slips(
-        {"bankroll": bankroll_parlays, "lotto": lotto_parlays, "moonshot": moonshot_parlays},
+        {"bankroll": bankroll_parlays, "lotto": lotto_parlays},
         event_name=(events[0].get("event_name") if events else None),
     )
 
@@ -1237,7 +1236,6 @@ def main():
         units_timeseries_svg=units_timeseries_svg,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
-        moonshot_parlays=moonshot_parlays,
         notable_movements=notable_movements,
         notable_movements_upcoming=notable_movements_upcoming,
         live_error=live_error,

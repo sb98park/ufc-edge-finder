@@ -21,7 +21,7 @@ inputs and auditing needs the reasoning:
   slip_id            stable across rebuilds, so re-publishing the same slip
                      on the next 5-minute render updates rather than
                      duplicates it
-  tier               bankroll / lotto / moonshot
+  tier               bankroll / lotto
   event              which card, so slips can be clustered by event -- the
                      effective sample size is EVENTS, not slips, and any
                      honest interval has to know that
@@ -111,7 +111,7 @@ def record_slips(slips_by_tier: dict, event_name: str | None,
     """
     Merge the current render's slips into the ledger. Returns rows written.
 
-    slips_by_tier: {"bankroll": [...], "lotto": [...], "moonshot": [...]}
+    slips_by_tier: {"bankroll": [...], "lotto": [...]}
     """
     try:
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")

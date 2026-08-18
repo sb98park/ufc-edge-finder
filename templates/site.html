@@ -2008,7 +2008,7 @@
 
   .parlay-section-title { font-size: var(--t-sub); margin: 28px 0 10px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
   /* The 28px top margin exists to separate the SECOND and later parlay
-     headings (Bankroll, Lotto, Moonshot) from the cards above them. At the
+     headings (Bankroll, Lotto) from the cards above them. At the
      very top of a section there is nothing above to separate from, so it is
      pure dead space -- and it showed up only on Edges because that is the
      one section whose first heading is a .parlay-section-title. Every other
@@ -2020,7 +2020,6 @@
   .detail-section > .parlay-section-title:first-child { margin-top: 0; }
   .parlay-section-title.bankroll { color: var(--green); }
   .parlay-section-title.lotto { color: var(--muted); }
-  .parlay-section-title.moonshot { color: #ffb347; }
   /* White, matching the other section titles. Grey read as a disabled or
      secondary heading when it labels a first-class section. */
   .parlay-section-title.movement { color: #ffffff; }
@@ -2037,14 +2036,10 @@
   }
   .parlay-card.bankroll { border-left-color: #3ddc84; }
   .parlay-card.lotto { border-left-color: var(--muted); }
-  .parlay-card.moonshot { border-left-color: #ffb347; }
   .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .parlay-odds { font-size: var(--t-h2); font-weight: 700; font-family: var(--font-display); }
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
   .parlay-card.lotto .parlay-odds { color: var(--muted); }
-  .parlay-card.moonshot .parlay-odds {
-    color: #ffb347;
-  }
   .parlay-prob { font-size: var(--t-small); color: var(--muted); }
   /* The raw model figure, deliberately quieter than the shrunk one beside it:
      it is context for how far the model is being trusted, not a second
@@ -4496,7 +4491,7 @@
 {% endmacro %}
 
 {#
-  ONE PARLAY CARD. The three families (Bankroll, Lotto, Moonshot) rendered
+  ONE PARLAY CARD. The families (Bankroll, Lotto) rendered
   byte-identical markup in three places; live grading would have had to be
   written and then maintained three times, so it is a macro now.
 
@@ -4843,7 +4838,7 @@
              parlay grader -- how many slips can still cash is the only
              number worth carrying to the hub once fights are landing, and
              it means the state is readable without opening the section. #}
-          <div class="hub-card-title">Parlays <span class="count-badge" id="parlay-hub-badge">{{ (bankroll_parlays|length) + (lotto_parlays|length) + (moonshot_parlays|length) }}</span></div>
+          <div class="hub-card-title">Parlays <span class="count-badge" id="parlay-hub-badge">{{ (bankroll_parlays|length) + (lotto_parlays|length) }}</span></div>
           <div class="hub-card-sub">slates across 3 tiers</div>
         </div>
         <span class="hub-card-arrow">→</span>
@@ -6140,11 +6135,11 @@
   {% endif %}
   {% if bankroll_parlays %}
   <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
-  <div class="parlay-subtitle">2-3 leg combos in the +100 to +300 range, built from picks the model favors — including same-fight combos and model-projected legs (labeled "model") for fights with no live prop line yet.</div>
+  <div class="parlay-subtitle">The single best 2-3 leg combo in the +100 to +300 range, from picks the model favors. One slip rather than three: if the ranking means anything, backing the best one beats spreading the same stake across the top three.</div>
   {% for p in bankroll_parlays %}
   {{ parlay_card(p, "bankroll", 1) }}
   {% endfor %}
-  <div class="parlay-note">Assumes each leg is independent — same-card fights aren't perfectly independent in reality, so treat the hit-rate estimate as optimistic. Legs marked "model" have no live book price to compare against.</div>
+  <div class="parlay-note">Fights on the same card were checked for correlation and behave independently, so multiplying across them is sound. The estimate is still optimistic for a different reason: picking the best slip out of many inflates whatever it was ranked on. Legs marked "model" have no live book price to compare against.</div>
   {% elif events %}
   <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
   {{ empty_state(icon_coins(), "No bankroll parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
@@ -6152,7 +6147,7 @@
 
   {% if lotto_parlays %}
   <div class="parlay-section-title lotto" id="section-lotto">{{ icon_dice() }} Lotto Parlays</div>
-  <div class="parlay-subtitle">Long-shot combos at +1000 or better, any leg count — ranked by the model's best combined odds of hitting, drawing from across the whole card for real variety.</div>
+  <div class="parlay-subtitle">One long-shot slip at +1000 or better, any leg count. Hit rate is shown after shrinking the model toward the market price, so it is lower — and more honest — than the model alone would claim.</div>
   {% for p in lotto_parlays %}
   {{ parlay_card(p, "lotto", 2) }}
   {% endfor %}
@@ -6160,18 +6155,6 @@
   {% elif events %}
   <div class="parlay-section-title lotto" id="section-lotto">{{ icon_dice() }} Lotto Parlays</div>
   {{ empty_state(icon_dice(), "No lotto parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
-  {% endif %}
-
-  {% if moonshot_parlays %}
-  <div class="parlay-section-title moonshot" id="section-moonshot">{{ icon_rocket() }} Moonshot</div>
-  <div class="parlay-subtitle">+5000 or better — the kind of number that turns a $5 slip into a story. This has essentially no business hitting, and that's the whole point: pure lottery-ticket energy, ranked by the model's best combined odds among everything that clears the bar.</div>
-  {% for p in moonshot_parlays %}
-  {{ parlay_card(p, "moonshot", 3) }}
-  {% endfor %}
-  <div class="parlay-note">{{ icon_ticket() }} This is a lottery ticket, not a strategy — buy it for the dream, not the plan. If it hits, tell everyone. If it doesn't, you knew the deal going in.</div>
-  {% elif events %}
-  <div class="parlay-section-title moonshot" id="section-moonshot">{{ icon_rocket() }} Moonshot</div>
-  {{ empty_state(icon_rocket(), "No moonshot parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
   {% endif %}
   </div>
 
@@ -10162,7 +10145,7 @@
               setTimeout(() => { delete card.dataset.celebrate; }, 750);
             } else if (state === 'dead' && wasState !== 'dead') {
               // A dead slip goes silent forever after this one line -- an
-              // 8-leg moonshot would otherwise narrate six more irrelevant
+              // long multi-leg slip would otherwise narrate several more irrelevant
               // resolutions.
               announce(`${card.dataset.family} slip at ${card.dataset.payout} is out on leg ${deadIdx + 1}.`);
             }

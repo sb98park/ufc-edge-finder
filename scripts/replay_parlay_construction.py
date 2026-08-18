@@ -15,7 +15,7 @@ settleable. That is ~500 usable cards -- roughly 500x the forward rate,
 available today.
 
 Critically, this drives the SHIPPED functions -- build_bankroll_builder_parlays,
-build_lotto_parlays, build_moonshot_parlays -- rather than a reimplementation.
+build_lotto_parlays -- rather than a reimplementation.
 What is under test is the construction, and the construction is held fixed
 while the probability source is swapped.
 
@@ -63,7 +63,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.parlay_builder import (  # noqa: E402
-    build_bankroll_builder_parlays, build_lotto_parlays, build_moonshot_parlays)
+    build_bankroll_builder_parlays, build_lotto_parlays)
 from src.odds_utils import decimal_to_american, implied_prob_to_american  # noqa: E402
 from src.method_model import finish_share_before  # noqa: E402
 
@@ -212,8 +212,7 @@ def grade(slip, truth):
 
 
 TIERS = (("bankroll", build_bankroll_builder_parlays),
-         ("lotto", build_lotto_parlays),
-         ("moonshot", build_moonshot_parlays))
+         ("lotto", build_lotto_parlays))
 
 
 def run(sigma, events, tiers, seed=7):
@@ -262,16 +261,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sigmas", type=float, nargs="+", default=[0.0, 0.42, 0.83])
     ap.add_argument("--events", type=int, default=180)
-    # MOONSHOT IS OFF BY DEFAULT, and the reason is a finding rather than a
-    # convenience. At a full card the piece pool hits MAX_POOL_SIZE = 30, and
-    # 2-to-8-leg combinations over 30 pieces is 8,656,906 slips PER CARD. A
-    # 60-card replay is half a billion combinations, which does not finish.
-    # The tier cannot be validated at any useful scale -- not because the data
-    # is missing, but because its own search space forbids it. A product whose
-    # quality is unmeasurable in principle is hard to defend on any other
-    # ground, and this is the same 8.7M that costs ~62s of every 300s rebuild.
+    # Both surviving tiers run by default. The moonshot tier that used to be
+    # excluded here -- because 8,656,906 combinations per card made it
+    # impossible to replay at any useful scale -- has since been deleted, and
+    # that unmeasurability was one of the arguments for deleting it. The full
+    # reasoning is recorded in src/parlay_builder.
     ap.add_argument("--tiers", nargs="+", default=["bankroll", "lotto"],
-                    choices=["bankroll", "lotto", "moonshot"])
+                    choices=["bankroll", "lotto"])
     a = ap.parse_args()
 
     print(f"{'sigma':>6} {'tier':<10} {'slips':>6} {'published':>10} {'realised':>9} "
