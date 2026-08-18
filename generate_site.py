@@ -21,7 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.elo import EloRatingSystem
 from src.edge_finder import find_all_edges
-from src.live_props import get_live_props
+from src.live_props import get_live_props, record_edge_health
 from src.card_matcher import (
     load_fight_cards, group_edges_by_card, top_standout_props, top_favorite_picks,
     assign_canonical_fight_ids, group_unmatched_by_fight,
@@ -331,6 +331,7 @@ def main():
         all_known_cards = pd.concat([cards_df, future_cards_df], ignore_index=True)
         upcoming_df = assign_canonical_fight_ids(upcoming_df, all_known_cards)
         edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings, history_df)
+        record_edge_health(edges_df)
 
         if not edges_df.empty:
             edge_records = edges_df.to_dict("records")

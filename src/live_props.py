@@ -284,3 +284,47 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
 
     source_label = " + ".join(sources_used) if len(sources_used) > 1 else sources_used[0]
     return pd.DataFrame(deduped), source_label
+
+def record_edge_health(edges_df) -> None:
+    """
+    Merge edge-level provenance into data/source_health.json.
+
+    row counts alone proved TheRundown was ALIVE (28 DraftKings rows, 13
+    FanDuel) while every published leg still said Polymarket -- so the prices
+    were arriving and losing. Arriving and being selected are separate
+    questions and the row counts only answer the first.
+
+    This answers the second: which book actually won each bet, and how many
+    books were shopped. `best_book: Polymarket` on a moneyline means no
+    vig-bearing source quoted BOTH sides of that fight, since _devig_and_shop
+    excludes vig-free prices from shopping and falls back to the reference
+    only when the quote list is empty.
+    """
+    try:
+        if edges_df is None or getattr(edges_df, "empty", True):
+            return
+        payload = {}
+        try:
+            with open("data/source_health.json", encoding="utf-8") as fh:
+                payload = json.load(fh)
+        except (OSError, ValueError):
+            pass
+        two_way = edges_df[edges_df["market"].astype(str).str.startswith(
+            ("Moneyline", "Total Rounds"))] if "market" in edges_df else edges_df
+        def _counts(col):
+            if col not in two_way:
+                return {}
+            return {str(k): int(v) for k, v in two_way[col].value_counts().items()}
+        payload["edges_two_way"] = {
+            "n": int(len(two_way)),
+            "best_book": _counts("best_book"),
+            "books_quoting": _counts("books_quoting"),
+        }
+        with open("data/source_health.json", "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        print(f"[source_health] best_book {payload['edges_two_way']['best_book']} "
+              f"books_quoting {payload['edges_two_way']['books_quoting']}")
+    except Exception as exc:
+        print(f"[source_health] edge health not written ({exc}) -- continuing")
+
