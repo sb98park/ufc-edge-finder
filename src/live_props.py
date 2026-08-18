@@ -17,6 +17,7 @@ moneylines under a bookmaker key on the plan this project already uses.
 """
 
 import os
+from datetime import datetime, timezone
 
 import pandas as pd
 
@@ -54,6 +55,11 @@ def _bet_key(row: dict) -> tuple:
     pair = _pair_key(row) or frozenset({row.get("fighter_a"), row.get("fighter_b")})
     return (pair, row.get("market"), row.get("selection"),
             row.get("selection_method"), row.get("source"))
+
+
+def _today() -> str:
+    """UTC date as YYYY-MM-DD, for discarding cards that have already run."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
@@ -127,13 +133,54 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
     if os.environ.get("RUNDOWN_API_KEY"):
         try:
             from src.rundown_source import fetch_rundown_ufc_odds
-            dates = sorted({str(r.get("start_date") or "")[:10]
-                            for r in pm_rows if r.get("start_date")})
-            dates = [d for d in dates if len(d) == 10]
+            # DATES COME FROM THE CARDS, NOT FROM THE PRICES.
+            #
+            # This read `r.get("start_date") for r in pm_rows` and Polymarket
+            # rows have no such key -- it is not in their schema at all. So
+            # `dates` was unconditionally empty, `if dates` was never true,
+            # and fetch_rundown_ufc_odds was NEVER CALLED in production. No
+            # exception, no log line, nothing: the integration sat behind an
+            # empty list looking installed. It was caught only because every
+            # moneyline and totals leg in the published slate still said
+            # "Polymarket", and _devig_and_shop falls back to the reference
+            # price exactly when no book quoted.
+            #
+            # known_fighters already carries (fighter_a, fighter_b, date) --
+            # the date was in this function's own argument the whole time.
+            dates = sorted({str(t[2])[:10] for t in (known_fighters or [])
+                            if isinstance(t, (tuple, list)) and len(t) > 2 and t[2]}
+                           - {"None", "nan", ""})
+            dates = [d for d in dates if len(d) == 10 and d >= _today()]
+
+            # ONE DATE, AND THE QUOTA IS WHY. The free tier allows 20,000 data
+            # points a day, where a point is one participant x one line x one
+            # book. With main_line=true a 13-fight card is roughly 104 points
+            # (52 moneyline + 52 totals), so at this source's own 15-minute
+            # clock -- 96 pulls a day -- one date costs ~10,000 points. Two
+            # dates would sit exactly at the cap and nine (this repo tracks
+            # eight future cards alongside the live one) would be ~90,000,
+            # four and a half times over.
+            #
+            # The nearest card is also the only one the edges, standouts and
+            # slips are built for; the rest are "Coming Up" listings that
+            # quote no prices. So this is a cheap constraint, not a sacrifice.
+            dates = dates[:1]
+
             if dates:
                 rd_rows = fetch_rundown_ufc_odds(dates)
                 if rd_rows:
                     sources_used.append("DraftKings/FanDuel")
+                else:
+                    print(f"[rundown] key is set and {dates[0]} was requested, "
+                          f"but no book prices came back")
+            else:
+                # NEVER SILENT AGAIN. A configured, metered source returning
+                # nothing is a fault; a configured source that is never even
+                # called is a worse one, and the only reason the last failure
+                # went unnoticed for days is that this branch printed nothing.
+                print("[rundown] RUNDOWN_API_KEY is set but no usable card date "
+                      f"was derived from {len(known_fighters or [])} tracked bout(s) "
+                      "-- source skipped")
         except Exception as exc:
             print(f"[warn] TheRundown fetch failed ({exc}) -- continuing on Polymarket alone")
 
