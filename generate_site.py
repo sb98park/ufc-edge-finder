@@ -530,14 +530,34 @@ def main():
         if pd.isna(e.get("opponent")):
             e["opponent"] = None
 
+    # THE CANCELLED FILTER HAS TO BE REPEATED HERE, and the comment on
+    # tracked_edges above is the reason it was missed: it says the guard lives
+    # "at the source ... so a fourth consumer added later inherits the guard",
+    # and then this dict -- built twelve lines below it, feeding the same three
+    # parlay builders -- inherited nothing, because it is a second source
+    # rather than a consumer of the first.
+    #
+    # Live consequence, confirmed in a published build: the Moonshot slate
+    # carried "Kody Steele vs Gauge Young Over 1.5 rounds" on a bout marked
+    # cancelled=True in fight_cards.csv. A cancelled fight cannot settle, so
+    # that slip could never win and never lose.
+    #
+    # fight_key is stamped for the same reason it is stamped on tracked_edges:
+    # model-only rows carry a canonical fight_id with no "|" in it whenever
+    # the fight has any real edges, so parlay_builder._fight_key fell through
+    # to None and the live grader -- which matches legs on fight_key -- could
+    # never settle a slip containing one.
     model_only_by_fight = {}
     for event in events_for_model_only:
         for fight in event["fights"]:
+            if fight.get("cancelled") or not fight.get("model_only_rows"):
+                continue
             fid = fight["edges"][0]["fight_id"] if fight["edges"] else None
-            if fid is None and fight.get("model_only_rows"):
-                fid = f"{fight['fighter_a']}|{fight['fighter_b']}"
-            if fid is not None and fight.get("model_only_rows"):
-                model_only_by_fight[fid] = fight["model_only_rows"]
+            if fid is None:
+                fid = f"{fight.get('fighter_a')}|{fight.get('fighter_b')}"
+            key = f"{fight.get('fighter_a')}|{fight.get('fighter_b')}"
+            model_only_by_fight[fid] = [dict(r, fight_key=key)
+                                        for r in fight["model_only_rows"]]
 
     try:
         bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight)

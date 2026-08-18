@@ -169,6 +169,18 @@ def _is_contradiction(leg_a: dict, leg_b: dict) -> bool:
     is_decision = any(m.startswith("Method: DEC") for m in markets)
     is_finish_method = any(m.startswith("Method: KO") or m.startswith("Method: SUB") for m in markets)
     is_under = any("Under" in m for m in markets)
+    # "Over" was never tested, and that asymmetry cost real money. A decision
+    # means the fight reached the final bell, so it went OVER every line a
+    # book offers -- those lines sit strictly below the scheduled distance.
+    # Measured on 5,645 three-round bouts: P(Over 2.5 | DEC) = 0.9997 and
+    # P(Over 1.5 | DEC) = 1.0000, i.e. the same claim stated twice.
+    # "Fighter A by Decision + Over 2.5 rounds" was therefore a legal piece
+    # that multiplied two prices together and published roughly +410 for a bet
+    # whose real probability is the decision probability alone, fair around
+    # +199. The second leg added no risk and doubled the advertised payout --
+    # exactly the double-count the four rules below already exist to prevent,
+    # on the mirror-image case.
+    is_over = any("Over" in m for m in markets)
     is_ends_in_finish = any("Ends In Finish" in m for m in markets)
     is_goes_distance = any("Goes The Distance" in m for m in markets)
 
@@ -180,6 +192,8 @@ def _is_contradiction(leg_a: dict, leg_b: dict) -> bool:
         return True  # redundant: "wins by KO/TKO or SUB" already IS "ends in finish"
     if is_decision and is_goes_distance:
         return True  # redundant: "wins by decision" already IS "goes the distance"
+    if is_decision and is_over:
+        return True  # redundant: a decision goes OVER every offered line -- see above
     return False
 
 
@@ -361,7 +375,9 @@ def _find_parlays(
         eligible = sorted(eligible, key=lambda p: p["model_prob"], reverse=True)[:MAX_POOL_SIZE]
 
     results = []
-    best_miss = None  # track the closest we got, even if nothing qualified
+    # The closest near-miss, kept as (american, combo) and only turned into a
+    # real parlay if the slate ends up empty and the log line needs it.
+    best_miss_am, best_miss_combo = None, None
 
     for count in leg_counts:
         if len(eligible) < count:
@@ -371,19 +387,49 @@ def _find_parlays(
             if len(set(fight_ids)) != len(fight_ids):
                 continue  # no two pieces from the same fight
 
-            parlay = _combine(combo)
-
-            if best_miss is None or abs(parlay["combined_american"] - min_american) < abs(best_miss["combined_american"] - min_american):
-                best_miss = parlay
-
-            if parlay["combined_american"] < min_american:
+            # AND NO TWO PIECES FROM THE SAME FIGHTER. Deduping on fight_id
+            # alone is not enough: a fighter can appear on one card twice --
+            # usually because a bout was rebooked or cancelled and its
+            # replacement kept one corner -- and those are two DIFFERENT
+            # fight_ids. Confirmed live: a published Moonshot slip carried
+            # "Kody Steele vs Gauge Young Over 1.5 rounds" beside "Gauge Young
+            # vs Stan Dorsainvil -- Ends In Finish", multiplying two legs that
+            # cannot both happen as though they were independent risks.
+            keys = [p.get("fight_key") for p in combo if p.get("fight_key")]
+            fighters = [n.strip().lower() for k in keys for n in str(k).split("|")]
+            if len(set(fighters)) != len(fighters):
                 continue
-            if max_american is not None and parlay["combined_american"] > max_american:
+
+            # BAND CHECK BEFORE _combine, not after. _combine builds nested
+            # dicts and hashes a slip id, at ~7us a call, and it was running on
+            # EVERY combination -- 8,656,906 of them for Moonshot, about 62
+            # seconds of a 300-second rebuild cycle, almost all of it on slips
+            # discarded microseconds later. The product of the decimals is the
+            # only thing the band needs and it costs a multiply.
+            _dec = 1.0
+            for p in combo:
+                _dec *= p["decimal_odds"]
+            _am = decimal_to_american(_dec)
+            if _am < min_american or (max_american is not None and _am > max_american):
+                # best_miss exists only to explain an EMPTY slate in a log
+                # line, so the losing combo is remembered as a tuple and built
+                # into a parlay once, after the search. Materialising it here
+                # put _combine back on the reject path -- which is most of the
+                # search -- and gave back most of what moving the band check
+                # bought.
+                if best_miss_am is None or abs(_am - min_american) < abs(best_miss_am - min_american):
+                    best_miss_am, best_miss_combo = _am, combo
                 continue
-            results.append(parlay)
+
+            # Past the band check above, so this one is a keeper by
+            # construction -- the three re-checks that used to live here are
+            # gone with it, and the near-miss is only tracked on the reject path
+            # where it means something.
+            results.append(_combine(combo))
 
     if not results:
         distinct_fights = len({p["fight_id"] for p in eligible})
+        best_miss = _combine(best_miss_combo) if best_miss_combo else None
         print(f"[{label}] no combos found: {len(eligible)} eligible pieces across {distinct_fights} distinct fights "
               f"(need >= {min(leg_counts)} distinct fights). "
               f"Closest miss: {best_miss['combined_american_display'] if best_miss else 'none tried'} "
