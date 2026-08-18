@@ -24,7 +24,7 @@ from src.edge_finder import find_all_edges
 from src.live_props import get_live_props, record_edge_health
 from src.odds_utils import measure_overrounds, set_measured_overrounds
 from src.card_matcher import (
-    load_fight_cards, group_edges_by_card, top_standout_props, top_favorite_picks,
+    load_fight_cards, group_edges_by_card, top_standout_props, top_disagreement_props, top_favorite_picks,
     assign_canonical_fight_ids, group_unmatched_by_fight,
     is_pickable_market, price_is_fragile,
 )
@@ -505,7 +505,10 @@ def main():
             for r in tracked_edges.to_dict("records")
         ]
         _sp_source = tracked_edges[_keep]
-    standout_props = top_standout_props(_sp_source, fighters_df, n=5, min_edge=5.0)
+    standout_props = top_standout_props(_sp_source, fighters_df, n=5)
+    # The old headline list, kept behind a disclosure with its record attached
+    # rather than deleted -- see top_disagreement_props.
+    disagreement_props = top_disagreement_props(_sp_source, fighters_df, n=5, min_edge=5.0)
 
     # Fun facts: genuinely notable patterns for fighters on the current
     # card (active method streaks, career purity, win streaks) -- gated
@@ -1254,6 +1257,7 @@ def main():
         future_events=future_events,
         unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
         standout_props=standout_props,
+        disagreement_props=disagreement_props,
         fun_facts=fun_facts,
         fun_facts_by_fighter=fun_facts_by_fighter,
         favorite_picks=favorite_picks,
@@ -1332,7 +1336,7 @@ def main():
             written += 1
             total += len(frag)
 
-    print(f"Wrote {OUTPUT_PATH} ({len(events)} events, {len(future_events)} future events, {len(standout_props)} standout props flagged)")
+    print(f"Wrote {OUTPUT_PATH} ({len(events)} events, {len(future_events)} future events, {len(standout_props)} agreed reads, {len(disagreement_props)} disagreements)")
     print(f"Wrote {written} movement fragment(s), {total/1e6:.2f}MB deferred out of the page")
 
 

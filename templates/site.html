@@ -1996,6 +1996,21 @@
   .ev-bridge .bf { color: var(--accent-cool); }
   .ev-bridge .bv { color: var(--red); }
   .ev-bridge .bz { color: var(--text-soft); }
+  /* THE DEMOTED DISAGREEMENT LIST. Deliberately plain: no heat, no green, no
+     large type. It is reference material about the model's behaviour, and
+     anything that made it look like a recommendation would undo the point of
+     moving it down here. */
+  .disagreement-block { margin-top: 18px; }
+  .disagreement-warning {
+    font-size: var(--t-micro); color: var(--muted); line-height: 1.5;
+    padding: 10px 12px; margin: 0 0 6px;
+    background: rgba(255, 92, 92, 0.05);
+    border: 1px solid rgba(255, 92, 92, 0.18); border-radius: var(--r-md);
+  }
+  .disagreement-warning b { color: var(--red); font-weight: 700; }
+  .disagreement-nums { text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .dn-model { font-size: var(--t-micro); color: var(--accent2); font-weight: 600; }
+  .dn-market { font-size: var(--t-micro); color: var(--accent-cool); }
   .edge-divergence { margin: 14px 4px 18px; }
   .edge-divergence-track { position: relative; height: 3px; background: var(--border); border-radius: var(--r-sm); margin: 40px 6px 40px; }
   /* Coloured by DIRECTION -- green when the model reads above the book, red
@@ -4923,8 +4938,8 @@
           </svg>
         </div>
         <div class="hub-card-text">
-          <div class="hub-card-title">Standout Props <span class="count-badge">{{ standout_props|length }}</span></div>
-          <div class="hub-card-sub">flagged right now</div>
+          <div class="hub-card-title">Clearest Reads <span class="count-badge">{{ standout_props|length }}</span></div>
+          <div class="hub-card-sub">where model and market agree</div>
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
@@ -5737,7 +5752,7 @@
       <div class="edge-divergence-track">
         <div class="edge-divergence-fill {{ 'model-high' if model_pct > book_pct else 'model-low' }}" data-target-width="{{ gap_width }}%" style="left: {{ left_pct }}%; width: 0%;"></div>
         <div class="edge-divergence-dot book" style="left: {{ book_pct }}%;">
-          <span class="edge-divergence-label book">Book<br>{{ book_pct }}%</span>
+          <span class="edge-divergence-label book">Market<br>{{ book_pct }}%</span>
         </div>
         <div class="edge-divergence-dot model" style="left: {{ model_pct }}%;">
           <span class="edge-divergence-label model">Model<br>{{ model_pct }}%</span>
@@ -6173,10 +6188,21 @@
   {% endif %}
 
   {% if standout_props %}
-  <div class="standout-title" id="section-standout">{{ icon_flame() }} Standout Props · {{ event_matchup }}</div>
+  <div class="standout-title" id="section-standout">{{ icon_flame() }} Clearest Reads · {{ event_matchup }}</div>
+  {#- WHAT THIS SECTION IS, said before the cards rather than left to be
+      inferred. It used to be "Standout Props" -- the biggest model-vs-market
+      disagreements -- and that name promised edges the logged record does not
+      support. These are the calls the model is most confident about among
+      those the market also backs, which is a smaller and truer claim. -#}
+  <div class="parlay-subtitle">The five fights the model reads most clearly <em>and</em> the market agrees on — the cohort that has won 85% across 7 logged cards. Most price negative once the vig is charged: that is what a likely winner costs, not a reason to take it.</div>
   <div class="standout-grid">
     {% for p in standout_props %}
-    <div class="standout-card reveal-target heat-{{ 3 if p.edge_pct|abs >= 20 else (2 if p.edge_pct|abs >= 10 else 1) }}" data-key="{{ p.fighter }}|{{ p.market }}">
+    {#- The heat-N class that used to live here was dead -- only tr.edge-heat-N
+        has styles, never .standout-card.heat-N -- and it was keyed on |edge|,
+        which after the selection change would have burned brightest on the
+        card where the model disagrees with the market MOST. Removed rather
+        than re-keyed: a class with no rules is not a design decision. -#}
+    <div class="standout-card reveal-target" data-key="{{ p.fighter }}|{{ p.market }}">
       <div class="standout-top">
         <div>
           <div class="standout-main">{{ p.fighter }}<span class="standout-vs">{% if p.opponent is real_value %} (vs. {{ p.opponent }}){% endif %}</span></div>
@@ -6240,7 +6266,44 @@
     {% endfor %}
   </div>
   {% else %}
-  {{ empty_state(icon_flame(), "No standout props right now", "The model isn't seeing a meaningful disagreement with the market on this card yet — check back as odds update.") }}
+  {{ empty_state(icon_flame(), "No clear reads on this card", "The model and the market aren't lining up confidently on any fight here yet — check back as odds update.") }}
+  {% endif %}
+
+  {#- THE OLD HEADLINE LIST, DEMOTED RATHER THAN DELETED.
+      These are the fights where the model disagrees with the market, which is
+      what this section used to lead with. The disagreements are real
+      information and hiding them would be hiding the model's own behaviour --
+      but they are the cohort its logged record says it gets wrong, so they sit
+      collapsed, behind their own record, instead of being the first thing on
+      the page. The record is stated in the summary itself: a reader who never
+      opens this still sees the number that matters about it. -#}
+  {% if disagreement_props %}
+  <details class="market-group disagreement-block">
+    <summary class="market-group-summary">
+      <span class="mg-name">Where the model disagrees with the market</span>
+      <span class="mg-meta">{{ disagreement_props | length }} · won 39% of the time</span>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="disagreement-warning">
+      Across 7 logged cards the model took the market underdog 23 times and won
+      <b>39.1%</b> of them — while the market's own price implied 36.1%, which is
+      almost exactly right. On the same cards, the fights where model and market
+      <em>agreed</em> won 85.2%. These are shown because the disagreement is real
+      and worth seeing, not because it has been profitable.
+    </div>
+    {% for p in disagreement_props %}
+    <div class="line-card" data-key="{{ p.fighter }}|{{ p.market }}">
+      <div>
+        <div class="line-matchup">{{ p.fighter }}{% if p.opponent is real_value %} vs {{ p.opponent }}{% endif %}</div>
+        <div class="line-market">{{ p.market | clear_market(p.fighter) }} · {{ p.odds_american | american }}{% if p.best_book and not p.source_is_vig_free %} at {{ p.best_book }}{% endif %}</div>
+      </div>
+      <div class="disagreement-nums">
+        <div class="dn-model">model {{ (p.model_prob*100)|round|int }}%</div>
+        <div class="dn-market">market {{ (p.book_fair_prob*100)|round|int }}%</div>
+      </div>
+    </div>
+    {% endfor %}
+  </details>
   {% endif %}
   </div>
 
@@ -7600,7 +7663,10 @@
         const label = block.querySelector('.edge-divergence-label.book');
         const fill = block.querySelector('.edge-divergence-fill');
         if (dot) dot.style.left = bookPct + '%';
-        if (label) label.innerHTML = 'Book<br>' + bookPct.toFixed(1) + '%';
+        // 'Market', matching the server-rendered label. These two drifted
+        // apart the moment the macro was relabelled: the page rendered
+        // "Market" and the first 90s refresh silently rewrote it to "Book".
+        if (label) label.innerHTML = 'Market<br>' + bookPct.toFixed(1) + '%';
         if (fill) {
           const gap = Math.abs(modelPct - bookPct);
           fill.style.left = Math.min(bookPct, modelPct) + '%';
