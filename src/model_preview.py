@@ -724,6 +724,15 @@ def build_fight_preview(
         "favorite": favorite,
         "favorite_prob": round(favorite_prob, 3),
         "method_distribution": _md,
+        # THE FULL 2x3 GRID, exposed rather than discarded. Each row sums to
+        # that fighter's win probability and each column to the fight-level
+        # method probability, so every "Double Chance" market a book offers
+        # ("by KO/TKO or Submission", "by KO/TKO or on Points") is a two-cell
+        # sum of it -- markets the odds feed does not carry but the model can
+        # already answer. See src/recommendations.
+        "method_grid": [[round(v, 4) for v in row] for row in _grid],
+        "method_grid_fighters": [fighter_a, fighter_b],
+        "scheduled_rounds": 5 if is_five_round else 3,
         "underdog": underdog,
         "likely_method": likely_method,
         "likely_method_rate": round(method_rates[likely_method], 3),

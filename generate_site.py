@@ -31,7 +31,7 @@ from src.power_rating import build_effective_ratings
 from src.odds_utils import implied_prob_to_american, format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
 from src.parlay_ledger import record_slips
-from src.slip_builder import build_leg_inventory
+from src.recommendations import build_recommendations
 from src.line_movement import (
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
     load_token_cache, save_token_cache, update_token_cache,
@@ -590,11 +590,15 @@ def main():
     # priced at book-equivalent odds, for the reader to combine themselves --
     # see src/slip_builder for why that is the product rather than another
     # generated slate.
+    # LEGS THE MODEL RECOMMENDS, each with the price it needs to be worth
+    # taking. Double Chance and round-start markets are derived from the
+    # method grid and the round curve -- the feed does not quote them, so the
+    # output is a threshold rather than an edge. See src/recommendations.
     try:
-        slip_legs = build_leg_inventory(tracked_edges_list)
+        model_legs = build_recommendations(events, tracked_edges_list)
     except Exception as e:
-        print(f"[slip_builder] leg inventory failed, builder will be empty: {e}")
-        slip_legs = []
+        print(f"[recommendations] failed, section will be empty: {e}")
+        model_legs = []
 
     # Notable line movement, SPLIT BY CARD rather than pooled. Sorting one
     # combined list purely by pct_change let a big move on a fight three weeks
@@ -1247,7 +1251,7 @@ def main():
         units_timeseries_svg=units_timeseries_svg,
         bankroll_parlays=bankroll_parlays,
         lotto_parlays=lotto_parlays,
-        slip_legs=slip_legs,
+        model_legs=model_legs,
         notable_movements=notable_movements,
         notable_movements_upcoming=notable_movements_upcoming,
         live_error=live_error,

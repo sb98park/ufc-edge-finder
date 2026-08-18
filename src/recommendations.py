@@ -1,0 +1,241 @@
+"""
+Legs the model recommends, each with the price it needs to be worth taking.
+
+WHAT THIS IS FOR. The site's odds feed carries four markets: moneyline,
+method, total rounds, and goes-the-distance. The markets actually being bet
+are not those. From a winning eight-leg slip: six legs were DOUBLE CHANCE
+("by KO/TKO or Submission", "by KO/TKO or on Points"), two were round-start
+markets ("fight to start round 2"), one was a moneyline. None of the first
+eight are in the feed.
+
+Every one of them is nevertheless a pure derivation from what the model
+already computes, so the gap is in the PRICE, not in the probability:
+
+  Double Chance   reconcile_fighter_methods returns a 2x3 grid whose rows sum
+                  to each fighter's win probability and whose columns sum to
+                  the fight-level method split. Any "A by X or Y" market is a
+                  two-cell sum of that grid.
+  Round start     "does the fight reach round N" is one minus the chance it
+                  ends before N, which is P(finish) times the division-
+                  conditioned share of finishes landing before that point.
+
+SO THIS PUBLISHES A THRESHOLD, NOT AN EDGE. Without a quoted price there is
+no edge to compute and claiming one would be an invention. What the model can
+say honestly is: here is the probability, and here is the price at which
+backing it becomes worthwhile. The reader looks up their book and compares.
+That is a smaller claim than an EV figure and it is one the data actually
+supports.
+
+THE PRICE THRESHOLD, AND WHY IT IS NOT SIMPLY 1/p. Break-even is 1/p. The
+threshold demands a margin above it (REQUIRED_EDGE) for two reasons that both
+push the same way: these legs are selected -- publishing the model's most
+confident calls means publishing wherever its error happens to be most
+favourable -- and the model's probability is itself uncertain. A leg quoted
+exactly at break-even is a coin flip on the model being right, which is not
+a recommendation.
+
+WHY THE GRID IS RESCALED TOWARD THE MARKET FIRST. The grid is built from the
+model's own win probability, and multiplying model-only numbers is what made
+the old parlay builder overstate itself by 1.80x on two legs. The moneyline
+IS quoted, so each fighter's row is rescaled so it sums to their win
+probability blended toward the de-vigged market price. The method split
+within a fighter is left alone -- that is the part the market says nothing
+about -- while the part the market does price gets shrunk toward it.
+"""
+
+from src.method_model import finish_share_before
+from src.odds_utils import implied_prob_to_american, market_blended_prob
+
+# Margin over break-even a leg must clear before it is worth backing. 1.05 is
+# roughly one moneyline leg's worth of vig, and it is the floor the betting
+# audit derived independently: below it the required raw model edge stops
+# being attainable, above ~1.08 almost nothing on a card qualifies.
+REQUIRED_EDGE = 1.05
+
+# Below this the model is not confident enough for the threshold to mean
+# much, and the price it would demand is longer than any book offers.
+MIN_PROB = 0.12
+
+# How many legs of any ONE market type the list will show. Keeps the range of
+# the card visible instead of whichever market happens to sit highest on the
+# probability scale.
+MAX_PER_MARKET = 5
+
+_METHODS = ("KO/TKO", "Submission", "Decision")
+
+# The Double Chance markets books actually offer, as index pairs into a
+# fighter's row of the grid. "Submission or on Points" exists too but is
+# rarely quoted, so it is not published rather than shown and unfindable.
+_DOUBLE_CHANCE = (
+    ((0, 1), "by KO/TKO or Submission"),
+    ((0, 2), "by KO/TKO or on Points"),
+)
+
+
+def _threshold(p: float) -> int | None:
+    """American price at which a leg of probability p clears REQUIRED_EDGE."""
+    if not p or p <= 0 or p >= 1:
+        return None
+    implied_needed = p / REQUIRED_EDGE
+    if implied_needed <= 0 or implied_needed >= 1:
+        return None
+    return int(round(implied_prob_to_american(implied_needed)))
+
+
+def _blended_win_probs(preview: dict, market_probs: dict | None) -> list[float] | None:
+    """
+    Each fighter's win probability, shrunk toward the de-vigged moneyline
+    where one is quoted. Returns None when the preview has no grid.
+    """
+    names = preview.get("method_grid_fighters") or []
+    grid = preview.get("method_grid") or []
+    if len(names) != 2 or len(grid) != 2:
+        return None
+    out = []
+    for i, name in enumerate(names):
+        p_model = sum(grid[i])
+        mk = (market_probs or {}).get(name)
+        out.append(market_blended_prob(p_model, mk) if mk else p_model)
+    return out
+
+
+def _rescaled_grid(preview: dict, market_probs: dict | None):
+    grid = preview.get("method_grid") or []
+    if len(grid) != 2:
+        return None, None
+    names = preview.get("method_grid_fighters") or []
+    blended = _blended_win_probs(preview, market_probs)
+    if not blended:
+        return None, None
+    out = []
+    for i in range(2):
+        total = sum(grid[i])
+        # Rescale the row to the blended win probability, keeping the method
+        # split inside it untouched -- the market prices WHO wins, not HOW.
+        scale = (blended[i] / total) if total > 0 else 0.0
+        out.append([v * scale for v in grid[i]])
+    return out, names
+
+
+def legs_for_fight(fight: dict, market_probs: dict | None = None) -> list[dict]:
+    """
+    Every derivable leg for one fight, each with its model probability and the
+    price it needs. `market_probs` maps fighter name -> de-vigged moneyline
+    probability, when the feed quoted one.
+    """
+    preview = fight.get("preview") or {}
+    grid, names = _rescaled_grid(preview, market_probs)
+    if not grid:
+        return []
+    fa, fb = fight.get("fighter_a"), fight.get("fighter_b")
+    key = f"{fa}|{fb}"
+    legs = []
+
+    for i, name in enumerate(names):
+        row = grid[i]
+        # DOUBLE CHANCE -- the market six of eight legs on the reference slip
+        # used, and the one the feed does not carry.
+        for (a, b), phrase in _DOUBLE_CHANCE:
+            p = row[a] + row[b]
+            if p < MIN_PROB:
+                continue
+            th = _threshold(p)
+            if th is None:
+                continue
+            legs.append({
+                "fight_key": key, "fight_label": f"{fa} vs {fb}",
+                "fighter": name, "market": "Double Chance",
+                "label": f"{name} {phrase}",
+                "p_model": round(p, 4), "min_price": th,
+                "why": f"{_METHODS[a]} {row[a]*100:.0f}% + {_METHODS[b]} {row[b]*100:.0f}%",
+            })
+
+    # ROUND-START MARKETS. "Fight to start round N" is one minus the chance it
+    # ends before round N begins -- i.e. before N-1 complete rounds elapse.
+    md = preview.get("method_distribution") or {}
+    p_finish = 1.0 - float(md.get("decision") or 0.0) if md else None
+    sched = int(preview.get("scheduled_rounds") or 3)
+    division = fight.get("weight_class")
+    if p_finish:
+        for n in range(2, sched + 1):
+            ends_before = p_finish * finish_share_before(float(n - 1), sched, division)
+            p = 1.0 - ends_before
+            if p < MIN_PROB or p >= 0.995:
+                continue
+            th = _threshold(p)
+            if th is None:
+                continue
+            legs.append({
+                "fight_key": key, "fight_label": f"{fa} vs {fb}",
+                "fighter": None, "market": "Round start",
+                "label": f"Fight to start round {n} — Yes",
+                "p_model": round(p, 4), "min_price": th,
+                "why": f"{ends_before*100:.0f}% chance it ends first",
+            })
+    return legs
+
+
+def build_recommendations(events: list[dict], tracked_edges: list[dict] | None = None,
+                          limit: int = 12) -> list[dict]:
+    """
+    The card's derivable legs, most confident first.
+
+    RANKED BY PROBABILITY, and that is defensible here in a way it was not in
+    the old parlay builder. There, probability was maximised INSIDE a payout
+    band, which pins the price and makes it algebraically a hunt for the
+    model's largest optimistic error. Here there is no band and no quoted
+    price, so ranking by probability is simply "the calls the model is most
+    confident about" -- which is also the cohort this model is good at: it
+    hits 85.2% on the 61 logged picks where it agreed with the market on the
+    winner, against 39.1% on the 23 where it took the underdog.
+    """
+    market_probs: dict = {}
+    for row in tracked_edges or []:
+        if str(row.get("market")) == "Moneyline":
+            p = row.get("book_fair_prob")
+            if p is not None and p == p:
+                market_probs[row.get("fighter")] = float(p)
+
+    legs = []
+    for event in events or []:
+        for fight in event.get("fights") or []:
+            if fight.get("cancelled"):
+                continue
+            try:
+                legs.extend(legs_for_fight(fight, market_probs))
+            except Exception:
+                continue          # one bad fight must not empty the section
+    legs.sort(key=lambda l: -l["p_model"])
+
+    # ONE LEG PER FIGHT, and this is a correctness constraint rather than a
+    # presentation one. Two legs on the same bout are not independent, so they
+    # cannot both go in a parlay at the quoted prices -- a book would price
+    # them as a same-game parlay instead. Publishing several legs from one
+    # fight invites exactly the combination that cannot be taken.
+    #
+    # It also fixes the ranking, which without it produced a wall of
+    # near-identical "Fight to start round 2" rows: that market is the highest
+    # probability leg on most fights, so a pure probability sort returns the
+    # same market thirteen times and buries every other option on the card.
+    best_per_fight: dict = {}
+    for leg in legs:
+        best_per_fight.setdefault(leg["fight_key"], leg)
+    picked = list(best_per_fight.values())
+
+    # AND A CAP PER MARKET TYPE, because raw probability is not comparable
+    # ACROSS markets. "Fight to start round 2" is structurally the highest
+    # probability leg on almost every card -- it is roughly one minus the
+    # chance of a first-round finish -- so a pure probability sort returned it
+    # for eight of twelve fights and buried every Double Chance option. That
+    # ordering reflects which market sits highest on the probability scale,
+    # not which leg is the better call, and a reader building a slip needs the
+    # range of what the card offers rather than one market repeated.
+    per_market: dict = {}
+    out = []
+    for leg in picked:
+        m = leg["market"]
+        if per_market.get(m, 0) >= MAX_PER_MARKET:
+            continue
+        per_market[m] = per_market.get(m, 0) + 1
+        out.append(leg)
+    return out[:limit]
