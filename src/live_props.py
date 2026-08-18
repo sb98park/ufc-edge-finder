@@ -285,7 +285,7 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
     source_label = " + ".join(sources_used) if len(sources_used) > 1 else sources_used[0]
     return pd.DataFrame(deduped), source_label
 
-def record_edge_health(edges_df) -> None:
+def record_edge_health(edges_df, tracked_edges_list=None) -> None:
     """
     Merge edge-level provenance into data/source_health.json.
 
@@ -301,6 +301,7 @@ def record_edge_health(edges_df) -> None:
     only when the quote list is empty.
     """
     try:
+        from collections import Counter
         if edges_df is None or getattr(edges_df, "empty", True):
             return
         payload = {}
@@ -320,11 +321,37 @@ def record_edge_health(edges_df) -> None:
             "best_book": _counts("best_book"),
             "books_quoting": _counts("books_quoting"),
         }
+        # SPLIT BY MARKET, because the aggregate hid the thing that mattered.
+        # "DraftKings 26, Polymarket 114" reads like partial coverage; broken
+        # out it says DraftKings won every moneyline and no total, which is a
+        # completely different fact about the feed.
+        ml = two_way[two_way["market"].astype(str) == "Moneyline"]
+        payload["moneyline"] = {
+            "n": int(len(ml)),
+            "best_book": {str(k): int(v) for k, v in ml["best_book"].value_counts().items()}
+                         if "best_book" in ml else {},
+            "source": {str(k): int(v) for k, v in ml["source"].value_counts().items()}
+                      if "source" in ml else {},
+        }
+        # WHAT THE PARLAY BUILDER ACTUALLY CONSUMES, which is not the same
+        # object as edges_df: it is the tracked card's rows after card_matcher
+        # has matched them to fights. The published slips kept saying
+        # "Polymarket" on moneylines during a build whose edges_df showed
+        # DraftKings winning all 28 sides of that card, and there is no way to
+        # tell which of the two is wrong without measuring both.
+        if tracked_edges_list:
+            tml = [r for r in tracked_edges_list if str(r.get("market")) == "Moneyline"]
+            payload["tracked_moneyline"] = {
+                "n": len(tml),
+                "source": dict(Counter(str(r.get("source")) for r in tml)),
+                "best_book": dict(Counter(str(r.get("best_book")) for r in tml)),
+            }
         with open("data/source_health.json", "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2, sort_keys=True)
             fh.write("\n")
         print(f"[source_health] best_book {payload['edges_two_way']['best_book']} "
-              f"books_quoting {payload['edges_two_way']['books_quoting']}")
+              f"books_quoting {payload['edges_two_way']['books_quoting']} "
+              f"tracked_ml {payload.get('tracked_moneyline', {}).get('source')}")
     except Exception as exc:
         print(f"[source_health] edge health not written ({exc}) -- continuing")
 

@@ -581,6 +581,7 @@ def main():
                                         for r in fight["model_only_rows"]]
 
     try:
+        record_edge_health(edges_df, tracked_edges_list)
         bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight)
         lotto_parlays = build_lotto_parlays(tracked_edges_list, model_only_by_fight)
     except Exception as e:
