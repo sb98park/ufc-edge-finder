@@ -21,6 +21,7 @@ faking a number.
 import csv
 import datetime as dt
 import json
+import math
 import os
 
 from src.odds_utils import american_to_decimal, american_to_implied_prob, remove_vig_two_way
@@ -31,6 +32,10 @@ PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
 FIELDNAMES = [
     "event_name", "fighter_a", "fighter_b", "favorite", "favorite_prob",
     "confidence_label", "likely_method", "pick_odds", "closing_odds", "opponent_odds",
+    # THE DE-VIGGED PROBABILITY AT EACH OF THOSE TWO MOMENTS, and the pair CLV
+    # is actually graded on. See _clv_result for why the American prices above
+    # cannot do that job any more.
+    "pick_fair_prob", "closing_fair_prob",
     "favorite_prob_history", "last_updated", "is_lock_of_week", "voided",
     # THE RISK THE BLURB NAMED, captured pre-fight. Every pick's commentary
     # ends by naming the strongest thing arguing against it; after the fight
@@ -91,7 +96,7 @@ def _loose_name(name: str) -> tuple:
     return (parts[0], parts[-1]) if parts else (_normalize_name(name),)
 
 
-def _favorite_moneyline_odds(fight: dict, favorite: str) -> float | None:
+def _favorite_moneyline_edge(fight: dict, favorite: str) -> dict | None:
     """
     Confirmed real gap in production (July 2026): 11 of 12 fights on one
     card never got pick_odds/closing_odds logged despite Polymarket
@@ -118,17 +123,17 @@ def _favorite_moneyline_odds(fight: dict, favorite: str) -> float | None:
 
     for edge in ml_edges:
         if edge.get("fighter") == favorite:
-            return edge.get("odds_american")
+            return edge
 
     norm_favorite = _normalize_name(favorite)
     for edge in ml_edges:
         if _normalize_name(str(edge.get("fighter", ""))) == norm_favorite:
-            return edge.get("odds_american")
+            return edge
 
     loose_favorite = _loose_name(favorite)
     for edge in ml_edges:
         if _loose_name(str(edge.get("fighter", ""))) == loose_favorite:
-            return edge.get("odds_american")
+            return edge
 
     if ml_edges:
         print(f"[track_record] no Moneyline odds match for favorite {favorite!r} in "
@@ -136,6 +141,29 @@ def _favorite_moneyline_odds(fight: dict, favorite: str) -> float | None:
               f"exact/normalized/loose matching -- raw fighter names on this fight's "
               f"Moneyline edges: {[e.get('fighter') for e in ml_edges]!r}")
     return None
+
+
+def _favorite_moneyline_odds(fight: dict, favorite: str) -> float | None:
+    """The matched edge's American price, or None."""
+    edge = _favorite_moneyline_edge(fight, favorite)
+    return edge.get("odds_american") if edge else None
+
+
+def _fair_prob_of(edge: dict | None) -> float | None:
+    """
+    The de-vigged probability behind a moneyline edge.
+
+    This is the quantity CLV is graded on, because unlike the American price
+    it does not change when the SOURCE changes -- see _clv_result.
+    """
+    if not edge:
+        return None
+    p = edge.get("book_fair_prob")
+    try:
+        p = float(p)
+    except (TypeError, ValueError):
+        return None
+    return p if 0.0 < p < 1.0 else None
 
 
 def log_predictions(events: list[dict], generated_at: str, decided_keys: set | None = None) -> None:
@@ -174,7 +202,9 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
             fighter_key = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
             if fighter_key in decided_keys:
                 continue  # locked in -- don't let post-result model changes rewrite history
-            current_odds = _favorite_moneyline_odds(fight, preview["favorite"])
+            _fav_edge = _favorite_moneyline_edge(fight, preview["favorite"])
+            current_odds = _fav_edge.get("odds_american") if _fav_edge else None
+            current_fair = _fair_prob_of(_fav_edge)
             opponent_name = fight["fighter_b"] if preview["favorite"] == fight["fighter_a"] else fight["fighter_a"]
             current_opponent_odds = _favorite_moneyline_odds(fight, opponent_name)
             prior = existing.get(key)
@@ -187,6 +217,12 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
             capturing_pick_odds_now = pick_odds is None and current_odds is not None
             if capturing_pick_odds_now:
                 pick_odds = current_odds
+
+            # Set once, on the same run and from the same edge as pick_odds,
+            # so the pair genuinely describes one moment.
+            pick_fair_prob = prior.get("pick_fair_prob") if prior and prior.get("pick_fair_prob") not in (None, "") else None
+            if pick_fair_prob is None and capturing_pick_odds_now:
+                pick_fair_prob = current_fair
 
             # opponent_odds is captured ON THE RUN PICK_ODDS IS FIRST CAPTURED,
             # or not at all -- which is what the "same moment" claim above
@@ -233,8 +269,14 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
             # Anything past _SETTLED_PROB is refused and the last genuine
             # pre-settlement price is kept instead.
             closing_odds = prior.get("closing_odds") if prior else None
+            closing_fair_prob = prior.get("closing_fair_prob") if prior else None
             if current_odds is not None and not _is_settled_price(current_odds):
                 closing_odds = current_odds
+                # Advances together with closing_odds and under the same
+                # settled-price guard, so the fair pair can never be one run
+                # out of step with the price pair.
+                if current_fair is not None:
+                    closing_fair_prob = current_fair
 
             # Rolling favorite_prob history, for the momentum indicator --
             # if the model's favorite FLIPS between runs, start a fresh
@@ -262,6 +304,8 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
                 "pick_odds": pick_odds if pick_odds is not None else "",
                 "closing_odds": closing_odds if closing_odds is not None else "",
                 "opponent_odds": opponent_odds if opponent_odds is not None else "",
+                "pick_fair_prob": pick_fair_prob if pick_fair_prob is not None else "",
+                "closing_fair_prob": closing_fair_prob if closing_fair_prob is not None else "",
                 "favorite_prob_history": json.dumps(new_history),
                 "last_updated": generated_at,
                 "is_lock_of_week": (prior.get("is_lock_of_week", "") if prior else ""),
@@ -468,38 +512,84 @@ def _pair_key(fighter_a: str, fighter_b: str) -> frozenset:
     return frozenset({fighter_a.strip().lower(), fighter_b.strip().lower()})
 
 
-def _clv_result(pick_odds, closing_odds) -> dict | None:
+def _clv_result(pick_odds, closing_odds,
+                pick_fair_prob=None, closing_fair_prob=None) -> dict | None:
     """
-    Beating the closing line means the pick-time price was BETTER value than
-    the closing price for the same side -- i.e. the market moved TOWARD the
-    model's favorite by fight night (odds shortened), meaning the model saw
-    something the market hadn't fully priced in yet. This is independent of
-    whether the bet actually won: a fighter can lose straight-up while the
-    model still correctly anticipated real market movement, which is the
+    Beating the closing line means the market moved TOWARD the model's pick by
+    fight night -- the model saw something the market had not fully priced.
+    Independent of whether the bet won: a fighter can lose straight-up while
+    the model still correctly anticipated real market movement, which is the
     whole point of CLV as a model-quality metric distinct from raw record.
+
+    GRADED ON THE DE-VIGGED PROBABILITY, NOT THE AMERICAN PRICE, and that is a
+    correctness requirement rather than a refinement.
+
+    `odds_american` is no longer one feed's number. It is the best BETTABLE
+    price where a sportsbook quoted and the vig-free fair line where none did,
+    and books post lines progressively through the week -- so a pick captured
+    before its book arrived and closed after it flips basis mid-flight. The
+    price then appears to shorten by exactly the vig. Measured: a bet whose
+    price never moved at all scored beat_clv=True with +1.7 to +2.4% CLV on
+    every one of three test prices, always in the flattering direction. That
+    would have inflated the one number on this site claiming to show edge
+    INDEPENDENTLY of results.
+
+    De-vigging removes precisely the quantity that changes when the source
+    does, so fair-at-pick against fair-at-close compares like with like no
+    matter which feed quoted at either end. It is also the better statistical
+    object: CLV should measure the market's view of the true probability
+    moving, not the bookmaker's margin changing.
+
+    Falls back to the American pair for rows logged before those columns
+    existed, and says which basis it used so a mixed sample can be split.
     """
-    if not pick_odds or not closing_odds:
-        return None
-    # Refuse a settled price even if one is already sitting in the log. The
-    # capture-side guard stops new ones arriving; this stops the 14 rows
-    # written before that guard existed from being graded, without having to
-    # rewrite history. A resolved market at 0.9995 would score beat_clv=True
-    # on every winning pick by construction -- see the note at the capture
-    # site on why that makes CLV circular.
-    if _is_settled_price(closing_odds):
-        return None
-    try:
-        pick_prob = 1 / american_to_decimal(float(pick_odds))
-        closing_prob = 1 / american_to_decimal(float(closing_odds))
-    except (ValueError, ZeroDivisionError):
-        return None
-    beat_clv = closing_prob > pick_prob
-    return {
-        "pick_odds": float(pick_odds), "closing_odds": float(closing_odds),
+    def _f(v):
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return None
+        return v if 0.0 < v < 1.0 else None
+
+    pf, cf = _f(pick_fair_prob), _f(closing_fair_prob)
+    if pf is not None and cf is not None:
+        pick_prob, closing_prob, basis = pf, cf, "fair"
+    else:
+        # LEGACY ROWS ONLY. Same guards as before: no price, no grade; and a
+        # settled market at 0.9995 is the RESULT wearing a closing line, which
+        # would score beat_clv=True on every winning pick by construction.
+        if not pick_odds or not closing_odds:
+            return None
+        if _is_settled_price(closing_odds):
+            return None
+        try:
+            pick_prob = 1 / american_to_decimal(float(pick_odds))
+            closing_prob = 1 / american_to_decimal(float(closing_odds))
+        except (ValueError, ZeroDivisionError):
+            return None
+        # NaN SURVIVES EVERY GUARD ABOVE. `not float("nan")` is False, so a
+        # missing price passes the emptiness check; NaN compares False against
+        # the settled threshold; and the arithmetic raises nothing, it just
+        # propagates. The result was 24 rows scoring beat_clv=False with a NaN
+        # clv_pct, which then poisoned the mean of the whole cohort. Same
+        # IEEE 754 trap the single-sided de-vig documents.
+        if not (math.isfinite(pick_prob) and math.isfinite(closing_prob)):
+            return None
+        basis = "price"
+
+    out = {
         "pick_prob": round(pick_prob, 4), "closing_prob": round(closing_prob, 4),
-        "beat_clv": beat_clv,
+        "beat_clv": closing_prob > pick_prob,
         "clv_pct": round((closing_prob - pick_prob) * 100, 1),
+        # Which pair this was graded on. A sample mixing the two is not one
+        # sample, and without this nobody downstream can tell.
+        "basis": basis,
     }
+    try:
+        out["pick_odds"] = float(pick_odds)
+        out["closing_odds"] = float(closing_odds)
+    except (TypeError, ValueError):
+        pass
+    return out
 
 
 UNITS_BY_CONFIDENCE = {
@@ -696,7 +786,8 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         if not pred:
             continue
         correct = pred["favorite"].strip().lower() == result["winner"].strip().lower()
-        clv = _clv_result(pred.get("pick_odds"), pred.get("closing_odds"))
+        clv = _clv_result(pred.get("pick_odds"), pred.get("closing_odds"),
+                          pred.get("pick_fair_prob"), pred.get("closing_fair_prob"))
         # Method correctness only means something when the winner pick was
         # ALSO right -- "predicted the wrong fighter, but nailed the
         # method" isn't a real signal worth scoring, so this is only
@@ -817,11 +908,40 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
     clv_stats = None
     if clv_eligible:
         clv_beats = sum(1 for m in clv_eligible if m["clv"]["beat_clv"])
+        # THE SAMPLE IS MIXED, and pooling it silently would hide that.
+        # Rows logged before the fair-probability columns existed are graded
+        # on the American price pair, which is the basis that inflated CLV
+        # whenever a pick changed source mid-week. Those rows are still
+        # counted -- throwing away months of history would be worse -- but the
+        # split is published so the headline can be read with the right amount
+        # of trust, and so the price-basis share visibly shrinks as fair-basis
+        # rows accumulate.
+        by_basis = {}
+        for m in clv_eligible:
+            b = m["clv"].get("basis", "price")
+            by_basis[b] = by_basis.get(b, 0) + 1
+        fair_only = [m for m in clv_eligible if m["clv"].get("basis") == "fair"]
+        # CARDS, NOT PICKS, is the honest denominator for how much this is
+        # worth reading. Thirteen picks from one night share a market regime,
+        # a slate of opponents and one set of late-money conditions; they are
+        # nothing like thirteen independent observations. The published
+        # percentage is over picks, but the card count sits beside it so the
+        # sample cannot look larger than it is.
+        clv_cards = len({m.get("event_name") for m in clv_eligible if m.get("event_name")})
         clv_stats = {
+            "cards": clv_cards,
             "total": len(clv_eligible),
             "beat": clv_beats,
             "beat_pct": round(clv_beats / len(clv_eligible) * 100, 1),
             "avg_clv_pct": round(sum(m["clv"]["clv_pct"] for m in clv_eligible) / len(clv_eligible), 1),
+            "by_basis": by_basis,
+            # The uncontaminated subset, reported separately because it is the
+            # only part of this that is trustworthy without qualification.
+            "fair_total": len(fair_only),
+            "fair_beat_pct": (round(sum(1 for m in fair_only if m["clv"]["beat_clv"])
+                                    / len(fair_only) * 100, 1) if fair_only else None),
+            "fair_avg_clv_pct": (round(sum(m["clv"]["clv_pct"] for m in fair_only)
+                                       / len(fair_only), 1) if fair_only else None),
         }
 
     calibration = _compute_calibration(matched)

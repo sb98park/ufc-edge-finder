@@ -78,11 +78,19 @@ def remove_vig_two_way(prob_a: float, prob_b: float) -> tuple[float, float]:
 DEFAULT_BOOK_OVERROUND = 0.045
 
 
-def add_estimated_vig(prob_a: float, prob_b: float, overround: float = DEFAULT_BOOK_OVERROUND) -> tuple[float, float]:
+def add_estimated_vig(prob_a: float, prob_b: float, overround: float | None = None) -> tuple[float, float]:
     """
     Inverse of remove_vig_two_way: takes a fair pair (should sum to ~1) and
     inflates both sides so they sum to (1 + overround), approximating what a
     real sportsbook's vig-inclusive prices would look like.
+
+    OMITTING `overround` NOW MEANS "whatever the books are actually charging",
+    resolved at call time. It used to bind DEFAULT_BOOK_OVERROUND at import,
+    so callers that passed nothing -- the rationale copy among them -- kept
+    quoting a constant estimated from historical data even on a build where
+    DraftKings and FanDuel were quoting the very card being described. Falls
+    back to that same constant when nothing was measurable, so a
+    Polymarket-only build behaves exactly as before.
 
     Uses the POWER METHOD, not simple proportional scaling: raises each
     probability to a shared exponent m < 1 (solved per-pair via bisection so
@@ -110,6 +118,10 @@ def add_estimated_vig(prob_a: float, prob_b: float, overround: float = DEFAULT_B
     on very short prices that no smooth formula fully replicates -- but the
     right shape and much closer in magnitude.
     """
+    if overround is None:
+        measured = _MEASURED_OVERROUND.get("two_way")
+        overround = (measured - 1.0) if measured is not None else DEFAULT_BOOK_OVERROUND
+
     fair_a, fair_b = remove_vig_two_way(prob_a, prob_b)
     target = 1.0 + overround
     # Degenerate edge cases: a probability already at/near 0 or 1 can't be
@@ -201,6 +213,89 @@ PROP_OVERROUND = 1.20          # six-cell method grid, n=5,646 bouts
 TWO_WAY_OVERROUND = 1.05       # totals and distance, measured on the live book
 
 
+# MEASURED OVERROUND, when the feed can supply one. The constants above were
+# measured historically off data/external_odds.csv and are still the fallback,
+# but DraftKings and FanDuel now quote live -- so what they ACTUALLY charge on
+# this card beats a figure averaged over 5,646 old bouts. Populated once per
+# build by set_measured_overrounds(); empty means nothing was measurable and
+# the constants stand.
+_MEASURED_OVERROUND: dict[str, float] = {}
+
+# A book's margin is not stable enough across two quotes to be worth trusting,
+# and one weird line should not move the number every consumer reads.
+MIN_QUOTES_TO_TRUST_MEASURED = 4
+
+
+def set_measured_overrounds(by_family: dict | None) -> None:
+    """Install this build's measured margins. Call once, before pricing."""
+    _MEASURED_OVERROUND.clear()
+    for k, v in (by_family or {}).items():
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            continue
+        # A margin below 1.0 is arbitrage, not vig, and above 1.5 is a broken
+        # pair rather than a real market. Either means the measurement is
+        # wrong, and a wrong margin is worse than a stale one.
+        if 1.0 < v < 1.5:
+            _MEASURED_OVERROUND[str(k)] = v
+
+
+def measure_overrounds(rows) -> dict:
+    """
+    What the books are really charging, per market family, from two-sided
+    vig-bearing quotes in the current feed.
+
+    Only a single source's own two sides are ever summed. Pairing DraftKings
+    against FanDuel produces a margin belonging to neither book and can even
+    come out below 1.0 when they disagree, which is the arbitrage the guard in
+    set_measured_overrounds refuses.
+
+    Returns {"two_way": x, "prop": y, "_counts": {...}} with families omitted
+    when too few quotes were found to trust the average.
+    """
+    groups: dict = {}
+    for r in rows or []:
+        if r.get("source_is_vig_free", True):
+            continue                      # a vig-free price has no margin
+        odds = r.get("odds_american")
+        if odds is None:
+            continue
+        fam = "prop" if overround_family(r.get("market")) == "prop" else "two_way"
+        # The line has to be part of the key or Over 1.5 gets summed with
+        # Under 2.5 -- two different markets that both look two-sided.
+        key = (r.get("fight_id"), r.get("market"), r.get("source"),
+               str(r.get("selection_method") or ""))
+        groups.setdefault((fam, key), []).append(float(odds))
+
+    sums: dict = {}
+    for (fam, _key), prices in groups.items():
+        if len(prices) != 2:
+            continue
+        total = sum(american_to_implied_prob(p) for p in prices)
+        sums.setdefault(fam, []).append(total)
+
+    out: dict = {"_counts": {k: len(v) for k, v in sums.items()}}
+    for fam, vals in sums.items():
+        if len(vals) >= MIN_QUOTES_TO_TRUST_MEASURED:
+            vals = sorted(vals)
+            # Median, not mean: one mispriced pair on a thin undercard bout
+            # should not drag the figure every stake on the site is sized from.
+            mid = len(vals) // 2
+            out[fam] = vals[mid] if len(vals) % 2 else (vals[mid - 1] + vals[mid]) / 2
+    return out
+
+
+def overround_family(market: str | None) -> str:
+    """Which margin regime a market string belongs to. See overround_for_market."""
+    m = (market or "").lower()
+    if "fight method" in m:
+        return "two_way"
+    if "method" in m or "round betting" in m:
+        return "prop"
+    return "two_way"
+
+
 def overround_for_market(market: str | None) -> float:
     """
     The margin to strip for a given market string.
@@ -209,6 +304,12 @@ def overround_for_market(market: str | None) -> float:
     under-correction leaves a stake slightly too large, an over-correction
     silently deletes the bet.
     """
+    fam = overround_family(market)
+    # THE MEASURED FIGURE WINS WHERE THERE IS ONE. Falls through to the
+    # historical constant when this build saw too few book quotes to trust.
+    measured = _MEASURED_OVERROUND.get(fam)
+    if measured is not None:
+        return measured
     m = (market or "").lower()
     # "Fight Method: ..." IS NOT THE SIX-CELL GRID, despite containing the word
     # "method". It is a fight-level binary -- "does this fight end by KO" vs

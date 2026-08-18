@@ -18,7 +18,7 @@ dollars are on each side) that no free source provides.
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from src.odds_utils import american_to_decimal, add_estimated_vig, implied_prob_to_american, format_american_odds
 from src.polymarket_source import fetch_price_history
@@ -28,6 +28,10 @@ SNAPSHOT_PATH = "data/odds_snapshot.json"
 TOKEN_CACHE_PATH = "data/clob_token_cache.json"
 NOTABLE_MOVEMENT_THRESHOLD_PCT = 15.0
 MAX_HISTORY_POINTS = 30
+# How long an untouched bet stays in the snapshot. Long enough to survive a
+# quiet stretch between cards, short enough that orphaned keys -- settled
+# fights, and every entry stranded by a key-format change -- do not accumulate.
+STALE_ENTRY_DAYS = 45
 
 # CORNER COLOURS, matching the waterfall. Fighter A was gold and fighter B a
 # neutral grey -- so the chart said "model" in the site's colour language
@@ -98,9 +102,44 @@ def update_token_cache(edges: list[dict], cache: dict) -> dict:
     return updated
 
 
+def _price_basis(row: dict) -> str:
+    """
+    Which KIND of price this row carries: a bettable book quote, or the
+    vig-free reference line shown when no book quoted.
+
+    These are not comparable and must never share a history series. See
+    _bet_key_str.
+    """
+    flag = row.get("source_is_vig_free")
+    # Unknown provenance is treated as a reference line: the conservative
+    # branch, since mistaking a book price for a fair one merely splits a
+    # series while the reverse silently fabricates a move.
+    if flag is None:
+        return "fair"
+    try:
+        return "fair" if bool(flag) else "book"
+    except (TypeError, ValueError):
+        return "fair"
+
+
 def _bet_key_str(row: dict) -> str:
-    """String key for JSON serialization (JSON dict keys must be strings)."""
-    return f"{row.get('fighter', '')}|{row.get('market', '')}"
+    """
+    String key for JSON serialization (JSON dict keys must be strings).
+
+    THE PRICE BASIS IS PART OF THE KEY, and leaving it out fabricated line
+    moves. `odds_american` used to be one feed's number; it is now the best
+    BETTABLE price where a book quoted and the vig-free fair line where none
+    did. Books post lines progressively through the week, so a fight flips
+    from the second to the first mid-week -- and keyed only on fighter|market,
+    that flip appended a book price onto a series of fair ones and the site
+    reported a move that never happened. Measured at 2.2-5.2% depending on the
+    price, which is simply the vig being mistaken for market action.
+
+    Splitting the series means a fight that gains a book quote shows no
+    movement until it has been quoted twice. That is correct: there is no
+    prior bettable price to have moved from.
+    """
+    return f"{row.get('fighter', '')}|{row.get('market', '')}|{_price_basis(row)}"
 
 
 def load_snapshot() -> dict:
@@ -125,7 +164,19 @@ def load_snapshot() -> dict:
 def save_snapshot(edges: list[dict], previous_snapshot: dict) -> dict:
     """Appends current odds onto each bet's history and writes the result to disk."""
     now = datetime.now(timezone.utc).isoformat()
-    new_snapshot = {k: {"history": list(v.get("history", []))} for k, v in previous_snapshot.items()}
+    # PRUNE WHAT WILL NEVER MATCH AGAIN. This carried every key it had ever
+    # seen forward unconditionally, which was survivable while keys were
+    # stable. Adding the price basis to the key orphaned every pre-existing
+    # entry at a stroke, and a settled card's bets never appear again either,
+    # so without this the file only grows.
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=STALE_ENTRY_DAYS)).isoformat()
+    new_snapshot = {}
+    for k, v in previous_snapshot.items():
+        hist = list(v.get("history", []))
+        last = hist[-1].get("timestamp") if hist else None
+        if last is not None and str(last) < cutoff:
+            continue
+        new_snapshot[k] = {"history": hist}
 
     for row in edges:
         if row.get("odds_american") is None:

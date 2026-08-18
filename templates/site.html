@@ -5177,8 +5177,17 @@
     <div class="clv-badge">
       <div class="clv-badge-label">{{ icon_target() }} Beat the Closing Line</div>
       <div class="clv-badge-value countup">{{ track_record.clv_stats.beat_pct }}%</div>
-      <div class="clv-badge-sub">{{ track_record.clv_stats.beat }}/{{ track_record.clv_stats.total }} picks · avg {{ '+' if track_record.clv_stats.avg_clv_pct >= 0 else '' }}{{ track_record.clv_stats.avg_clv_pct }}pp move toward the model's side</div>
-      <div class="clv-explainer">When we pick a fighter, the betting market has already priced in a chance they win. "Beating the closing line" means that by fight night — after sharp bettors and late info had moved the price — the market came around <em>closer to our side</em> than it was when we made the pick. It's a sign the model saw something worth backing before the crowd fully caught on, independent of whether that fighter actually won.</div>
+      <div class="clv-badge-sub">{{ track_record.clv_stats.beat }}/{{ track_record.clv_stats.total }} picks{% if track_record.clv_stats.cards %} across {{ track_record.clv_stats.cards }} card{{ '' if track_record.clv_stats.cards == 1 else 's' }}{% endif %} · avg {{ '+' if track_record.clv_stats.avg_clv_pct >= 0 else '' }}{{ track_record.clv_stats.avg_clv_pct }}pts</div>
+      {#- COPY THAT DOES NOT ASSERT THE RESULT. This read "It's a sign the
+          model saw something worth backing before the crowd fully caught on"
+          -- a claim that only holds above 50%, printed regardless of the
+          number directly above it. Measured on the corrected basis the figure
+          is currently under 50, so the old sentence was arguing against its
+          own headline. It now describes what the number MEASURES and states
+          plainly which side of the line the model is on, and the card count
+          sits in the line above because thirteen picks from one night are not
+          thirteen independent tests. -#}
+      <div class="clv-explainer">When we pick a fighter, the market has already priced in a chance they win. This tracks where that price ended up by fight night, after sharp money and late information moved it — <em>independently of whether the fighter actually won</em>. Above 50% means the market tended to move toward our side after we called it. Below means it moved away. {% if track_record.clv_stats.beat_pct is real_value and track_record.clv_stats.beat_pct < 50 %}It currently sits below 50, so on this sample the model is not anticipating the market.{% endif %} Fight markets are thin and a handful of cards is a small test, so read it as a running check rather than a verdict.</div>
     </div>
     {% endif %}
     {% if track_record.market_baseline %}

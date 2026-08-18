@@ -22,6 +22,7 @@ from jinja2 import Environment, FileSystemLoader
 from src.elo import EloRatingSystem
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props, record_edge_health
+from src.odds_utils import measure_overrounds, set_measured_overrounds
 from src.card_matcher import (
     load_fight_cards, group_edges_by_card, top_standout_props, top_favorite_picks,
     assign_canonical_fight_ids, group_unmatched_by_fight,
@@ -330,6 +331,16 @@ def main():
         upcoming_df, source = get_live_props(known_fighters=_tracked)
         all_known_cards = pd.concat([cards_df, future_cards_df], ignore_index=True)
         upcoming_df = assign_canonical_fight_ids(upcoming_df, all_known_cards)
+        # WHAT THE BOOKS ARE REALLY CHARGING, measured before anything is
+        # priced. The overround constants were averaged off 5,646 historical
+        # bouts; DraftKings and FanDuel now quote this card live, so the real
+        # margin is available and every consumer -- staking, the slip builder,
+        # the rationale copy -- reads it through overround_for_market.
+        # Falls back to the constants when too few book quotes were seen.
+        _measured = measure_overrounds(upcoming_df.to_dict("records"))
+        set_measured_overrounds(_measured)
+        print(f"[vig] measured overrounds {_measured}")
+
         edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings, history_df)
         record_edge_health(edges_df)
 

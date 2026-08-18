@@ -47,8 +47,8 @@ than left out -- with its own vig applied on the way out, since the summed
 fair price is not a book price either.
 """
 
-from src.odds_utils import (american_to_decimal, add_estimated_vig, implied_prob_to_american,
-                            market_blended_prob, overround_for_market)
+from src.odds_utils import (american_to_decimal, add_estimated_vig, american_to_implied_prob,
+                            implied_prob_to_american, market_blended_prob, overround_for_market)
 
 # Markets the builder will offer. Anything else on the card is either already
 # excluded upstream by is_pickable_market / price_is_fragile, or is a market
@@ -93,7 +93,25 @@ def _leg(row: dict, label: str, market: str, p_model: float, p_fair: float) -> d
         return None
     if not (0.0 < p_fair < 1.0) or not (0.0 < p_model < 1.0):
         return None
-    p_book, am_book = _book_price(p_fair, market)
+    # A REAL BOOK PRICE BEATS A RECONSTRUCTED ONE. _book_price exists because
+    # every leg used to come from Polymarket, which is vig-free and therefore
+    # not a price anyone can take -- so a sportsbook-equivalent had to be
+    # synthesised from an assumed margin. Where DraftKings or FanDuel actually
+    # quoted, that assumption is now redundant and strictly worse than the
+    # number sitting in the row: it is the difference between "roughly what a
+    # book would charge" and "what this book is charging".
+    #
+    # The synthesis stays for everything the books do not cover, which is
+    # still most of the card and all of the method markets.
+    if row.get("source_is_vig_free") is False and row.get("odds_american") is not None:
+        am_book = float(row["odds_american"])
+        p_book = american_to_implied_prob(am_book)
+        book_is_real = True
+    else:
+        p_book, am_book = _book_price(p_fair, market)
+        book_is_real = False
+    if not (0.0 < p_book < 1.0):
+        return None
     return {
         "fight_key": row.get("fight_key"),
         "fighter": row.get("fighter"),
@@ -111,6 +129,11 @@ def _leg(row: dict, label: str, market: str, p_model: float, p_fair: float) -> d
         "odds_book": round(float(am_book)),
         "odds_source": round(float(row.get("odds_american") or 0)),
         "decimal_book": round(1.0 / p_book, 6),
+        # Whether the payout above is a quoted price or a reconstruction. A
+        # builder that cannot tell the reader which is which is the failure
+        # this module's docstring already calls the worst one available.
+        "book_is_real": book_is_real,
+        "book_source": row.get("source") if book_is_real else None,
         "conditions": row.get("conditions") or [],
     }
 

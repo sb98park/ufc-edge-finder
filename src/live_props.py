@@ -346,6 +346,18 @@ def record_edge_health(edges_df, tracked_edges_list=None) -> None:
                 "source": dict(Counter(str(r.get("source")) for r in tml)),
                 "best_book": dict(Counter(str(r.get("best_book")) for r in tml)),
             }
+        # The margins actually in force this build, read back from where the
+        # pricing code gets them. A silent fallback to the historical constant
+        # looks identical to a measurement in every other output.
+        try:
+            from src.odds_utils import _MEASURED_OVERROUND, overround_for_market
+            payload["overround"] = {
+                "measured": {k: round(v, 4) for k, v in _MEASURED_OVERROUND.items()},
+                "in_force": {"two_way": round(overround_for_market("Moneyline"), 4),
+                             "prop": round(overround_for_market("Method: KO/TKO"), 4)},
+            }
+        except Exception:
+            pass
         with open("data/source_health.json", "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2, sort_keys=True)
             fh.write("\n")
