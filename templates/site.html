@@ -660,9 +660,12 @@
   /* THE CONFIRM SURFACE, underneath. It is not a static icon that gets
      uncovered -- it GROWS from the trailing edge, so its width is
      always exactly the gap the card has opened. That is what makes the
-     check feel attached to the finger rather than revealed by it. */
+     check feel attached to the finger rather than revealed by it.
+     The left anchor here is only a starting position: paint() rewrites
+     left/right inline each frame so the surface opens from whichever
+     edge the card is moving away from. */
   .toast-confirm {
-    position: absolute; inset: 0 auto 0 0; width: 0;
+    position: absolute; top: 0; bottom: 0; left: 0; width: 0;
     display: flex; align-items: center; justify-content: center;
     background: linear-gradient(135deg, rgba(61,220,132,0.22), rgba(61,220,132,0.10));
     border-radius: var(--r-pill);
@@ -4706,7 +4709,7 @@
         <svg viewBox="0 0 26 26" fill="none"><path d="M5 13.5 L10.5 19 L21 7.5" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
     </div>
-    <div class="toast-card" data-toast-card onclick="window.__goToWhatsNew();">
+    <div class="toast-card" data-toast-card role="button" tabindex="0">
       <span class="toast-icon" aria-hidden="true">
         <svg viewBox="0 0 26 26" fill="none"><path d="M13 4 L15.6 10.2 L22 11 L17.3 15.3 L18.6 21.5 L13 18.3 L7.4 21.5 L8.7 15.3 L4 11 L10.4 10.2 Z" fill="currentColor"/></svg>
       </span>
@@ -8996,7 +8999,16 @@
         // so a finger can be dragged across the two striking figures; they
         // sit ~112px apart, so reading zone percentages cleared MIN_DISTANCE
         // and switched the segmented pane instead.
-        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .mobile-tabbar, .units-chart-wrap, .silhouette-wrap, #edge-back, [data-scrollable]')) {
+        // .whats-new-banner is the glass toast, which runs its own
+        // horizontal drag on pointer events. Left off this list, one finger
+        // drove BOTH handlers: the toast rubber-banded left while this one
+        // counted the same 80px as a section swipe and navigated the page
+        // underneath it. That is the exact failure the paragraph above
+        // describes twice already -- a horizontal gesture doing something at
+        // page level -- and it is why a leftward swipe on the toast looked
+        // like it "worked" despite the toast itself refusing to dismiss that
+        // way.
+        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .mobile-tabbar, .units-chart-wrap, .silhouette-wrap, #edge-back, .whats-new-banner, [data-scrollable]')) {
           tracking = false; return;
         }
         touchStartX = e.touches[0].clientX;
@@ -10302,12 +10314,16 @@
         const FLICK_VELOCITY = 420;          // px/s
 
         function paint(x) {
-          // Rightward only. A leftward pull rubber-bands at a third of the
-          // distance: the gesture stays alive under the finger, but the card
-          // tells you plainly that this is not the way out.
-          const shown = x >= 0 ? x : x / 3;
-          card.style.transform = `translate3d(${shown}px, 0, 0)`;
-          const open = Math.max(0, shown);
+          // SYMMETRIC. This used to travel rightward only, rubber-banding a
+          // leftward pull at a third of the distance -- which was a deliberate
+          // choice and the wrong one. Whichever way the thumb naturally falls
+          // is the way the gesture should go, and a one-handed grip favours
+          // the direction the asymmetry was punishing. The confirm surface
+          // simply anchors to whichever edge the gap opened on.
+          card.style.transform = `translate3d(${x}px, 0, 0)`;
+          const open = Math.abs(x);
+          if (x >= 0) { confirm.style.left = '0'; confirm.style.right = 'auto'; }
+          else { confirm.style.right = '0'; confirm.style.left = 'auto'; }
           confirm.style.width = open + 'px';
           const t = width ? Math.min(1, open / (width * DISMISS_AT)) : 0;
           confirm.style.setProperty('--confirm-scale', (0.4 + 0.6 * t).toFixed(3));
@@ -10359,13 +10375,21 @@
           // the toast on an interruption the user never asked for, which is
           // both wrong and unrecoverable: the thing is gone and there is
           // nothing to swipe back.
-          const past = !cancelled && dx > width * DISMISS_AT;
-          const flicked = !cancelled && v > FLICK_VELOCITY && dx > 24;
+          const mag = Math.abs(dx);
+          const past = !cancelled && mag > width * DISMISS_AT;
+          const flicked = !cancelled && Math.abs(v) > FLICK_VELOCITY && mag > 24;
           if (past || flicked) {
             // Carry the finger's own velocity into the exit so the card
             // leaves at the speed it was thrown, rather than restarting from
             // rest at a fixed duration.
-            const target = width + 40;
+            //
+            // A FLICK OVERRIDES POSITION for direction. Drag the card right,
+            // change your mind and flick it back left, and it should leave to
+            // the LEFT -- following the throw rather than where the card
+            // happened to be sitting when you reversed.
+            const dir = (Math.abs(v) > FLICK_VELOCITY) ? (v > 0 ? 1 : -1)
+                                                       : (dx > 0 ? 1 : -1);
+            const target = dir * (width + 40);
             if (reduced) { paint(target); window.__dismissToast(); return; }
             spring.start(dx, target, v, 0.32, 1.0, () => window.__dismissToast());
           } else {
@@ -10379,11 +10403,25 @@
         card.addEventListener('pointerup', (e) => release(e, false));
         card.addEventListener('pointercancel', (e) => release(e, true));
 
-        // A click only counts if the pointer barely moved. Without this every
+        // A click only counts if the pointer barely moved -- otherwise every
         // swipe would also navigate, because the card carries the tap target.
-        card.addEventListener('click', (e) => {
-          if (Math.abs(dx) > 8) { e.stopPropagation(); e.preventDefault(); }
-        }, true);
+        //
+        // NAVIGATION LIVES HERE rather than on an inline onclick attribute,
+        // and the reason is listener ORDER. An inline handler is registered
+        // when the attribute is parsed, which is long before this script
+        // runs. At the target element itself, listeners fire in registration
+        // order regardless of the capture flag -- so on a tap that landed on
+        // the card's own padding rather than one of its children, the inline
+        // onclick would have run FIRST and stopPropagation here would have
+        // been too late to stop it. Owning both halves keeps the guard
+        // genuinely in front of the action.
+        card.addEventListener('click', () => {
+          if (Math.abs(dx) > 8) return;
+          window.__goToWhatsNew();
+        });
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.__goToWhatsNew(); }
+        });
       })();
 
       let goToTarget = 'standout';
