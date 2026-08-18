@@ -166,6 +166,99 @@ def _fair_prob_of(edge: dict | None) -> float | None:
     return p if 0.0 < p < 1.0 else None
 
 
+# THE MOMENT REAL SPORTSBOOK PRICES FIRST REACHED THIS PIPELINE.
+#
+# Before this, TheRundown was configured but never actually invoked -- the
+# date list it needed was built from a field Polymarket does not have -- so
+# every price ever written to predictions_log came from Polymarket, which is
+# peer-to-peer and carries no margin. For those rows the quoted price IS the
+# fair line, which is what makes the migration below sound rather than a
+# guess. After this instant a price may carry vig, and de-vigging it by
+# assumption would be exactly the fabrication this all exists to avoid.
+_BOOK_PRICES_LIVE_FROM = "2026-08-18T19:39:17+00:00"
+
+
+def _backfill_legacy_fair_probs(row: dict) -> dict:
+    """
+    Fill pick_fair_prob / closing_fair_prob on rows written before those
+    columns existed. Runs on every load, and is a no-op once a row has them.
+
+    WHY THIS LIVES IN THE PIPELINE RATHER THAN A ONE-OFF SCRIPT. It WAS a
+    one-off script, and the data commit it produced was silently dropped by a
+    rebase against a concurrent CI auto-refresh -- so the 77 recovered rows
+    vanished and the next build rewrote the file without the columns at all.
+    A migration that has to be remembered is a migration that gets clobbered;
+    this one repairs itself on every run no matter what else touches the file.
+
+    Only rows predating _BOOK_PRICES_LIVE_FROM are touched, because only for
+    those is the stored price known to be vig-free. A later row missing its
+    fair value is left blank and simply goes ungraded, which is the honest
+    outcome -- CLV skips what it cannot compare.
+    """
+    if not row:
+        return row
+    last = str(row.get("last_updated") or "")
+    for src, dst in (("pick_odds", "pick_fair_prob"),
+                     ("closing_odds", "closing_fair_prob")):
+        if str(row.get(dst) or "").strip():
+            continue
+        # An empty last_updated is treated as legacy: nothing written since
+        # the columns landed can lack it.
+        if last and _iso_after(last, _BOOK_PRICES_LIVE_FROM):
+            continue
+        price = row.get(src)
+        if price in (None, ""):
+            continue
+        try:
+            price = float(price)
+        except (TypeError, ValueError):
+            continue
+        if _is_settled_price(price):
+            continue        # the result wearing a closing line -- see _clv_result
+        p = american_to_implied_prob(price)
+        if 0.0 < p < 1.0:
+            row[dst] = round(p, 4)
+    return row
+
+
+def _parse_log_stamp(value: str):
+    """
+    last_updated as a tz-aware datetime, or None.
+
+    THE LOG DOES NOT STORE ISO. generate_site writes "%Y-%m-%d %I:%M %p ET"
+    in America/New_York -- "2026-08-18 02:19 PM ET" -- which fromisoformat
+    cannot read. Parsing only ISO meant every row on file failed to parse,
+    and since an unparseable stamp is treated as legacy, EVERY future row
+    would have qualified for a migration meant only for the historical ones.
+    """
+    from datetime import datetime, timezone
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except (ValueError, TypeError):
+        pass
+    if text.endswith(" ET"):
+        try:
+            from zoneinfo import ZoneInfo
+            naive = datetime.strptime(text[:-3].strip(), "%Y-%m-%d %I:%M %p")
+            return naive.replace(tzinfo=ZoneInfo("America/New_York")).astimezone(timezone.utc)
+        except Exception:
+            return None
+    return None
+
+
+def _iso_after(a: str, b: str) -> bool:
+    """True when timestamp a is strictly later than b."""
+    pa, pb = _parse_log_stamp(a), _parse_log_stamp(b)
+    if pa is None or pb is None:
+        # An unparseable stamp is treated as legacy, matching a blank one --
+        # the conservative direction, since these rows predate the columns.
+        return False
+    return pa > pb
+
+
 def log_predictions(events: list[dict], generated_at: str, decided_keys: set | None = None) -> None:
     """
     Keeps the LATEST prediction per (event, fighter_a, fighter_b),
@@ -191,7 +284,7 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
         with open(PREDICTIONS_LOG_PATH, newline="") as f:
             for row in csv.DictReader(f):
                 key = (row["event_name"], row["fighter_a"], row["fighter_b"])
-                existing[key] = row
+                existing[key] = _backfill_legacy_fair_probs(row)
 
     for event in events:
         for fight in event.get("fights", []):
