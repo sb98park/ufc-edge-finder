@@ -30,8 +30,80 @@ import re
 
 import pandas as pd
 
-from src.odds_utils import american_to_decimal, decimal_to_american, format_american_odds, implied_prob_to_american
+from src.odds_utils import (american_to_decimal, decimal_to_american, format_american_odds,
+                            implied_prob_to_american, market_blended_prob)
 from src.card_matcher import is_pickable_market, price_is_fragile
+
+
+def _ranking_prob(row: dict) -> float:
+    """
+    The probability a leg is RANKED and COMBINED on: the model shrunk toward
+    the market's de-vigged price, exactly as edge_finder already does before
+    sizing any single bet.
+
+    WHY THIS EXISTS AT ALL. Every other consumer of these rows passes
+    model_prob through market_blended_prob before kelly_fraction. This module
+    read model_prob raw -- so parlays, the one product where errors compound
+    multiplicatively, were the one product betting the unblended model.
+
+    WHAT THAT COST, AND WHAT THIS BUYS. Measured by
+    scripts/replay_parlay_construction.py, which drives THESE builders over 40
+    real UFC cards with real book prices and exact settlement. Ratio is
+    published hit rate divided by realised -- 1.00 is honest:
+
+                             bankroll                lotto
+                        published/realised      published/realised
+        raw model        64.2% / 33.3%  1.93    34.6% /  3.3%  10.37
+        blended (0.30)   43.6% / 30.8%  1.41    11.1% /  3.7%   2.97
+
+    The lotto column is the one to look at: unblended, the tier advertised a
+    34.6% hit rate on slips that landed 3.3% of the time. Shrinking toward the
+    market cuts that overstatement from 10.4x to 3.0x.
+
+    THE CONTROL SEPARATES TWO DIFFERENT FAULTS. Feeding the builders the
+    market EXACTLY -- a perfectly calibrated model, no error to find:
+
+        sigma = 0        bankroll 40.4% / 39.2%  1.03
+                         lotto     8.7% /  5.8%  1.51
+
+    Bankroll is honest at 1.03, so all of its remaining bias is model noise.
+    Lotto is 1.51 with NO model error at all, which is construction bias --
+    dependence between legs the product-of-probabilities does not model, and
+    it grows with leg count. Blending cannot fix that half and does not claim
+    to; the exact same-fight joint would.
+
+    Why noise is selected rather than merely tolerated: ranking by combined
+    probability inside a payout band is algebraically ranking by the model's
+    CLAIMED edge, so the search actively seeks the legs where the model is
+    most wrong in the optimistic direction. Shrinking toward the market
+    removes most of the error the search would otherwise be hunting.
+
+    This repo's own evidence says that disagreement is mostly error:
+    validate_market_blend.py records the model picking the market favourite
+    40/47 (85%) and picking AGAINST the market 9/21 (43%) -- worse than a coin
+    flip.
+
+    A MISSING PRICE MEANS NO BLEND IS POSSIBLE. Model-only projected legs
+    carry no book_fair_prob because no book quoted them; they are priced at
+    implied_prob_to_american(model_prob), so their edge ratio is exactly 1.000
+    by construction. They pass through unshrunk here, which is the honest
+    handling of "there is no market to shrink toward" -- but it also means
+    they can only ever inflate a slip's advertised payout, never its real
+    value. Whether they belong in a parlay at all is a product question, left
+    alone here.
+
+    The 0.30 weight is inherited rather than chosen: it is the same constant
+    the rest of the site sizes with, and its own docstring calls it a
+    conservative heuristic rather than a fitted value. Fitting it -- and
+    testing whether a logit-space blend beats this linear one, which matters
+    most in the tails where lotto legs live -- is what
+    scripts/replay_parlay_construction.py exists to do.
+    """
+    p = row.get("model_prob")
+    book = row.get("book_fair_prob")
+    if p is None or book is None or book != book:      # NaN-safe
+        return p
+    return market_blended_prob(float(p), float(book))
 
 WINNER_FAMILY = {"Moneyline"}  # "Method: X" markets are matched by prefix below
 LENGTH_FAMILY_PREFIXES = ("Total Rounds", "Fight Outcome")
@@ -245,7 +317,12 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                 "fight_id": fight_id,
                 "label": _leg_label(leg),
                 "odds_display": format_american_odds(leg["odds_american"]),
-                "model_prob": leg["model_prob"],
+                # RANKED on the shrunk probability, DISPLAYED as the raw one.
+                # The edge % the site shows is by definition model-vs-book, so
+                # the raw number still has a job; it just must not be the one
+                # that gets multiplied.
+                "model_prob": _ranking_prob(leg),
+                "model_prob_raw": leg["model_prob"],
                 "decimal_odds": american_to_decimal(leg["odds_american"]),
                 "is_model": False,
                 "conditions": _leg_conditions(leg),
@@ -266,7 +343,8 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                     "fight_id": fight_id,
                     "label": f"{_leg_label(w)} + {_leg_label(l)}",
                     "odds_display": format_american_odds(decimal_to_american(combined_decimal)),
-                    "model_prob": w["model_prob"] * l["model_prob"],
+                    "model_prob": _ranking_prob(w) * _ranking_prob(l),
+                    "model_prob_raw": w["model_prob"] * l["model_prob"],
                     "decimal_odds": combined_decimal,
                     "is_model": False,
                     # An unrecognised half makes the WHOLE leg ungradeable --
@@ -307,7 +385,8 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                     "fight_id": fight_id,
                     "label": _leg_label(row),
                     "odds_display": format_american_odds(proj_odds),
-                    "model_prob": row["model_prob"],
+                    "model_prob": _ranking_prob(row),
+                    "model_prob_raw": row["model_prob"],
                     "decimal_odds": american_to_decimal(proj_odds),
                     "is_model": True,
                     "conditions": _leg_conditions(row),
@@ -320,11 +399,13 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
 def _combine(pieces: tuple[dict, ...]) -> dict:
     combined_decimal = 1.0
     combined_prob = 1.0
+    combined_prob_raw = 1.0
     legs = []
     fight_ids = []
     for piece in pieces:
         combined_decimal *= piece["decimal_odds"]
         combined_prob *= piece["model_prob"]
+        combined_prob_raw *= piece.get("model_prob_raw", piece["model_prob"])
         legs.append({
             "label": piece["label"],
             "odds_display": piece["odds_display"],
@@ -352,6 +433,10 @@ def _combine(pieces: tuple[dict, ...]) -> dict:
         # keep the cap, where the realism argument does apply.
         "combined_american_display": format_american_odds(combined_american, cap=None),
         "combined_prob": round(combined_prob, 4),
+        # The unshrunk product, kept so the gap between what the model claims
+        # and what it is trusted for stays visible rather than being quietly
+        # replaced.
+        "combined_prob_raw": round(combined_prob_raw, 4),
     }
 
 

@@ -387,10 +387,6 @@
     0% { background-position: 200% 0; }
     100% { background-position: -100% 0; }
   }
-  .made-with-love {
-    text-align: center; font-size: var(--t-small); color: var(--muted); letter-spacing: 0.3px;
-    margin-top: 4px; padding-bottom: 24px; font-style: italic;
-  }
   .meta-row { font-size: var(--t-small); color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
   .meta-sep { color: var(--border); margin: 0 2px; }
   .countdown-card {
@@ -1763,8 +1759,24 @@
     border: 1px solid var(--border); border-left: 3px solid #8a8f9a;
     border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 12px;
   }
+  /* RESPONSIBLE GAMBLING. Same card shell as the disclaimer above it, with
+     the accent moved to the left rule so it reads as a distinct block rather
+     than more small print -- but NOT alarm-coloured. --red on this page means
+     fight cancelled and incorrect pick, and borrowing it here would both
+     collide with that vocabulary and make the block easy to pattern-match as
+     a warning banner and skip. --accent-cool is calm and unused nearby. */
+  .disclaimer-card.rg-card { border-left-color: var(--accent-cool); }
+  .disclaimer-card.rg-card a {
+    color: var(--accent-cool); font-weight: 600; text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .disclaimer-card.rg-card a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   .disclaimer-meta {
-    font-size: var(--t-small); color: var(--muted); text-align: center; margin-bottom: 4px;
+    font-size: var(--t-small); color: var(--muted); text-align: center;
+    /* Was margin-bottom: 4px, with the sign-off line beneath it carrying a
+       24px padding-bottom. That line is gone, so this is now the last thing
+       in the section and inherits the job of keeping it off the tab bar. */
+    margin-bottom: 4px; padding-bottom: 24px; line-height: 1.6;
   }
 
   details.info-card {
@@ -1948,6 +1960,10 @@
     color: #ffb347;
   }
   .parlay-prob { font-size: var(--t-small); color: var(--muted); }
+  /* The raw model figure, deliberately quieter than the shrunk one beside it:
+     it is context for how far the model is being trusted, not a second
+     estimate the reader should choose between. */
+  .prob-raw { color: var(--text-dim, var(--muted)); opacity: 0.72; white-space: nowrap; }
   .parlay-legs { list-style: none; margin: 0; padding: 0; }
   .parlay-leg {
     font-size: var(--t-body); padding: 7px 8px; border-bottom: 1px dashed var(--border);
@@ -4420,7 +4436,15 @@
            data-legs='{{ p.legs | tojson }}'>
     <summary class="parlay-top">
       <div class="parlay-odds">{{ p.combined_american_display }}</div>
-      <div class="parlay-prob" data-slip-readout>Model-estimated hit rate: {{ (p.combined_prob*100)|round(prob_places) }}%</div>
+      {# "Model-estimated" is no longer the right words. This number is the
+         model SHRUNK TOWARD THE MARKET PRICE -- the same treatment the rest of
+         the site applies before sizing any single bet, and which the parlay
+         path skipped until now. The raw model figure is shown beside it, in
+         the muted colour, because the gap between what the model claims and
+         what it is trusted for is the honest thing to surface rather than
+         quietly swap. On 501 replayed cards the raw number ran 1.74x high on
+         bankroll slips and 6.76x on lottos. #}
+      <div class="parlay-prob" data-slip-readout>Est. hit rate: {{ (p.combined_prob*100)|round(prob_places) }}%{% if p.combined_prob_raw and (p.combined_prob_raw - p.combined_prob) | abs > 0.001 %} <span class="prob-raw">model alone {{ (p.combined_prob_raw*100)|round(prob_places) }}%</span>{% endif %}</div>
       <div class="slip-pips" aria-hidden="true" data-slip-pips></div>
     </summary>
     <ul class="parlay-legs">
@@ -6350,10 +6374,41 @@
     <div class="disclaimer-card">
       For analysis and education only, not betting advice. A flagged edge means the model disagrees
       with the market — it doesn't mean it's right. Sanity-check against recent form, injuries, and
-      camp news. Please gamble responsibly.
+      camp news.
     </div>
-    <div class="disclaimer-meta">{{ icon_barchart() }} Odds via {{ source or "unavailable" }} · refreshes every 15 min</div>
-    <div class="made-with-love">Made with love, by yours truly, SBP 🤍</div>
+    {# THE RESPONSIBLE-GAMBLING BLOCK.
+       It lives here, in its own card, rather than trailing the sentence above
+       as "please gamble responsibly" -- which is what it used to be, and which
+       is a phrase that costs nothing and points nowhere. A resource someone
+       can actually use is the point; a sign-off is not.
+       The page it sits behind headlines a unit total, a dollar conversion at
+       $100/unit, and a 9/9 locks badge, and now animates a slip one leg from
+       cashing. That is the argument for the block existing at all. #}
+    <div class="disclaimer-card rg-card">
+      <strong>21+ only, and only where betting is legal.</strong> Nothing here is an inducement to
+      bet, and no model is a substitute for your own judgement. Bet only what you can afford to lose.
+      <br><br>
+      If gambling has stopped being fun — if you're chasing losses, betting more than you meant to,
+      or hiding it — the National Problem Gambling Helpline is free, confidential, and available
+      24/7 in all 50 states. Call or text <strong>1-800-MY-RESET</strong> (1-800-697-3738), or
+      <a href="https://www.ncpgambling.org/chat" target="_blank" rel="noopener noreferrer">chat online</a>.
+      {# NOT "1-800-GAMBLER". That is a different, state-level line, and the
+         .org domain first used for it here did not resolve at all -- a dead
+         helpline link is worse than no link. Verified against the National
+         Council on Problem Gambling: the national helpline rebranded to
+         1-800-MY-RESET (1-800-697-3738), and 1800myreset.org 301s to the
+         chat page linked above. The number is written out in full beside the
+         mnemonic because someone in trouble should not have to translate
+         letters to digits on a keypad. #}
+    </div>
+    {# CADENCE, CORRECTED. This read "refreshes every 15 min", which matched
+       nothing in the system: the site rebuilds every 5 minutes (refresh.yml
+       cron */5), The Odds API responses are cached for 60 (ODDS_CACHE_TTL_SEC),
+       and the Polymarket midpoints on the page are re-fetched client-side
+       every 90 seconds while the tab is open. The last of those is what a
+       reader is actually looking at, so it is the one quoted -- with the
+       rebuild cadence beside it rather than instead of it. #}
+    <div class="disclaimer-meta">{{ icon_barchart() }} Odds via {{ source or "unavailable" }} · live prices refresh every 90s while this page is open · full rebuild every 5 min</div>
   </div>
 
   </div>

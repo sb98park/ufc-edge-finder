@@ -30,6 +30,7 @@ from src.card_matcher import (
 from src.power_rating import build_effective_ratings
 from src.odds_utils import implied_prob_to_american, format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays, build_moonshot_parlays
+from src.parlay_ledger import record_slips
 from src.line_movement import (
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
     load_token_cache, save_token_cache, update_token_cache,
@@ -574,6 +575,16 @@ def main():
         # defense against whatever the next one turns out to be.
         print(f"[parlays] build failed unexpectedly, continuing without parlay sections: {e}")
         bankroll_parlays, lotto_parlays, moonshot_parlays = [], [], []
+
+    # WRITE DOWN WHAT WE PUBLISHED. Nine slips a week have been going out
+    # ungraded while single picks are scored to three decimals on the same
+    # page; nothing recorded them, so the record was not merely bad, it did
+    # not exist. Merged on slip_id, so the 5-minute rebuild cycle leaves nine
+    # rows per card rather than nine per render.
+    record_slips(
+        {"bankroll": bankroll_parlays, "lotto": lotto_parlays, "moonshot": moonshot_parlays},
+        event_name=(events[0].get("event_name") if events else None),
+    )
 
     # Notable line movement, SPLIT BY CARD rather than pooled. Sorting one
     # combined list purely by pct_change let a big move on a fight three weeks
