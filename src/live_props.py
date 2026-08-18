@@ -16,6 +16,8 @@ feed, not that scraper -- The Odds API already carries DraftKings
 moneylines under a bookmaker key on the plan this project already uses.
 """
 
+import os
+
 import pandas as pd
 
 from src.polymarket_source import fetch_polymarket_ufc_props
@@ -33,9 +35,25 @@ def _pair_key(row: dict) -> frozenset | None:
 
 
 def _bet_key(row: dict) -> tuple:
-    """Full identity of a specific bet -- fighter pair + market + exact selection, not just the fight."""
+    """
+    Full identity of a specific bet -- fighter pair + market + exact selection,
+    not just the fight.
+
+    SOURCE IS PART OF THE IDENTITY. The same bet quoted by Polymarket, by
+    DraftKings and by FanDuel is three rows that must all survive, because
+    they answer different questions: the vig-free midpoint is the FAIR line
+    the model is measured against, and the two book prices are what can
+    actually be bet. Deduping across sources would silently keep whichever
+    happened to arrive first and throw away either the reference or the
+    bettable price.
+
+    Within a single source a duplicate is still a duplicate -- Polymarket
+    genuinely lists the same fight under two market objects at different
+    prices -- so the de-duplication below still has work to do.
+    """
     pair = _pair_key(row) or frozenset({row.get("fighter_a"), row.get("fighter_b")})
-    return (pair, row.get("market"), row.get("selection"), row.get("selection_method"))
+    return (pair, row.get("market"), row.get("selection"),
+            row.get("selection_method"), row.get("source"))
 
 
 def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
@@ -98,7 +116,28 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
     # Polymarket hadn't covered; with that source gone there is nothing to
     # merge, but the de-duplication below still matters -- Polymarket alone
     # can list the same fight under two separate markets.
-    combined_rows = pm_rows
+    # THE BOOK PRICES, alongside rather than instead of Polymarket. These
+    # carry vig and are bettable, so they are the BOOK; Polymarket keeps its
+    # role as the FAIR line precisely because it has no margin in it. Both are
+    # needed and neither substitutes for the other -- see src/rundown_source.
+    #
+    # Metered, so it fails silently and runs on its own slower clock. A second
+    # source must never be able to reduce what the first one already provides.
+    rd_rows = []
+    if os.environ.get("RUNDOWN_API_KEY"):
+        try:
+            from src.rundown_source import fetch_rundown_ufc_odds
+            dates = sorted({str(r.get("start_date") or "")[:10]
+                            for r in pm_rows if r.get("start_date")})
+            dates = [d for d in dates if len(d) == 10]
+            if dates:
+                rd_rows = fetch_rundown_ufc_odds(dates)
+                if rd_rows:
+                    sources_used.append("DraftKings/FanDuel")
+        except Exception as exc:
+            print(f"[warn] TheRundown fetch failed ({exc}) -- continuing on Polymarket alone")
+
+    combined_rows = pm_rows + rd_rows
 
     # STAMP THE SOURCE ON EVERY ROW.
     #
