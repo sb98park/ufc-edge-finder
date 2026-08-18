@@ -90,6 +90,8 @@ def compute_moneyline_edges(
                 "edge_pct": round(edge_percent(model_p, fair_p), 2),
                 "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, fair_p), odds) * 100, 2),
                 "clob_token_id": token_id,
+                "source": row.get("source"),
+                "source_is_vig_free": row.get("source_is_vig_free"),
             })
 
     if not rows:
@@ -256,6 +258,11 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
             "edge_pct": round(edge_percent(model_p, imp), 2),
             "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, f"Method: {row['selection_method']}")), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
+            # PROVENANCE TRAVELS WITH THE PRICE. Without it "Book" means
+            # whichever feed happened to carry that market, and a vig-free
+            # peer-to-peer quote gets compared against a vigged one.
+            "source": row.get("source"),
+            "source_is_vig_free": row.get("source_is_vig_free"),
         })
 
     if not rows:
@@ -313,6 +320,11 @@ def compute_round_betting_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataF
             "edge_pct": round(edge_percent(model_p, imp), 2),
             "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, "Round Betting: Round 1")), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
+            # PROVENANCE TRAVELS WITH THE PRICE. Without it "Book" means
+            # whichever feed happened to carry that market, and a vig-free
+            # peer-to-peer quote gets compared against a vigged one.
+            "source": row.get("source"),
+            "source_is_vig_free": row.get("source_is_vig_free"),
         })
 
     if not rows:
@@ -456,6 +468,11 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 "edge_pct": round(edge_percent(model_p, imp), 2),
                 "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, f"Total Rounds {row['selection']}")), row["odds_american"]) * 100, 2),
                 "clob_token_id": row.get("clob_token_id"),
+            # PROVENANCE TRAVELS WITH THE PRICE. Without it "Book" means
+            # whichever feed happened to carry that market, and a vig-free
+            # peer-to-peer quote gets compared against a vigged one.
+            "source": row.get("source"),
+            "source_is_vig_free": row.get("source_is_vig_free"),
             })
 
     if not rows:
@@ -551,6 +568,11 @@ def compute_goes_the_distance_edges(upcoming_df: pd.DataFrame, fighters_df: pd.D
             "edge_pct": round(edge_percent(model_p, imp), 2),
             "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, f"Fight Outcome: {row['selection']}")), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
+            # PROVENANCE TRAVELS WITH THE PRICE. Without it "Book" means
+            # whichever feed happened to carry that market, and a vig-free
+            # peer-to-peer quote gets compared against a vigged one.
+            "source": row.get("source"),
+            "source_is_vig_free": row.get("source_is_vig_free"),
         })
 
     if not rows:
@@ -666,6 +688,11 @@ def find_fight_method_edges(upcoming_df, fighters_df, effective_ratings=None):
             "edge_pct": round(edge_percent(model_p, imp), 2),
             "suggested_stake_pct": round(kelly_fraction(market_blended_prob(model_p, devig_single_sided(imp, f"Fight Method: {sel}")), row["odds_american"]) * 100, 2),
             "clob_token_id": row.get("clob_token_id"),
+            # PROVENANCE TRAVELS WITH THE PRICE. Without it "Book" means
+            # whichever feed happened to carry that market, and a vig-free
+            # peer-to-peer quote gets compared against a vigged one.
+            "source": row.get("source"),
+            "source_is_vig_free": row.get("source_is_vig_free"),
         })
 
     if not rows:
@@ -900,5 +927,12 @@ def derive_missing_method_lines(upcoming_df: pd.DataFrame) -> pd.DataFrame:
                 "edge_pct": None, "suggested_stake_pct": None,
                 "clob_token_id": None,
                 "derived_from": f"{p_fight:.3f} fight-level minus {known_p:.3f} {known_name}",
+                # NOT A QUOTED PRICE. This side was never posted by anyone --
+                # it is the remainder of a subtraction between two prices that
+                # were. Labelling it with the feed's name would claim a quote
+                # that does not exist, which is exactly the ambiguity that made
+                # 16 implausible method legs unattributable in the builder.
+                "source": "derived",
+                "source_is_vig_free": None,
             })
     return pd.DataFrame(rows)

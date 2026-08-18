@@ -66,6 +66,17 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
             events = fetch_mma_odds()
             rows = to_upcoming_rows(events)
             if rows:
+                # STAMPED HERE TOO, and this is the case the flag exists for.
+                # This path returns real sportsbook moneylines, which carry
+                # the book's margin; the Polymarket path below returns
+                # peer-to-peer midpoints, which carry none. Treating the two
+                # as one "Book" price silently compares a vigged number
+                # against a vig-free one, and the whole edge calculation is
+                # the difference between a model probability and exactly this
+                # number.
+                for r in rows:
+                    r.setdefault("source", "The Odds API")
+                    r.setdefault("source_is_vig_free", False)
                 return pd.DataFrame(rows), "The Odds API (moneyline only)"
         except Exception as exc:
             # Both sources failed. This used to raise RuntimeError, which
@@ -88,6 +99,27 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
     # merge, but the de-duplication below still matters -- Polymarket alone
     # can list the same fight under two separate markets.
     combined_rows = pm_rows
+
+    # STAMP THE SOURCE ON EVERY ROW.
+    #
+    # Until now the provenance of a price existed only as one global label
+    # ("Odds via Polymarket"), so a row could not say where it came from. That
+    # was survivable with a single source. It stops being survivable the
+    # moment a second one carries different markets, because "Book" then means
+    # different things on different rows and the reader cannot tell which.
+    #
+    # It matters more here than in most products because the sources are not
+    # merely different books, they are different KINDS of price. Polymarket
+    # and Kalshi are peer-to-peer and vig-free; DraftKings and FanDuel carry
+    # roughly 4.5% on a moneyline and 20% on a method grid. An edge computed
+    # against one is not comparable to an edge computed against the other, and
+    # averaging or ranking them together silently mixes the two.
+    for row in combined_rows:
+        row.setdefault("source", "Polymarket")
+        # Vig-free sources need a different treatment everywhere a price is
+        # converted to a probability, so the flag travels with the row rather
+        # than being re-derived from the name at each call site.
+        row.setdefault("source_is_vig_free", True)
 
     # Final safety net: the same specific bet can show up twice at two
     # different prices (confirmed live) -- most likely from Polymarket

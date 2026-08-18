@@ -111,6 +111,12 @@ def _ranking_prob(row: dict) -> float:
         return p
     return market_blended_prob(float(p), float(book))
 
+# Model-projected legs are priced at the model's own probability, so their
+# edge ratio is 1.000 by construction. Kept as a named switch rather than
+# deleted code so the reasoning at the call site stays attached to something
+# real, and so re-enabling it is a deliberate act.
+ALLOW_MODEL_ONLY_LEGS = False
+
 WINNER_FAMILY = {"Moneyline"}  # "Method: X" markets are matched by prefix below
 LENGTH_FAMILY_PREFIXES = ("Total Rounds", "Fight Outcome")
 
@@ -333,6 +339,7 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                 "is_model": False,
                 "conditions": _leg_conditions(leg),
                 "fight_key": _fight_key(leg),
+                "source": leg.get("source"),
             })
 
         # combined winner+length pieces, skipping real contradictions
@@ -358,6 +365,10 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                     # verdict the leg has not actually earned.
                     "conditions": (w_c + l_c) if (w_c and l_c) else [],
                     "fight_key": _fight_key(w),
+                    # Both halves come off the same fight, so they share a
+                    # feed; if they somehow did not, the combination is not
+                    # one a single book would price anyway.
+                    "source": w.get("source") or l.get("source"),
                 })
 
     # Model-only projected pieces -- only added for fights that had NO real
@@ -374,7 +385,28 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
     # real market price backing the number at all, just a model estimate).
     # Confirmed live: legs at -599 and -567 were slipping into real parlay
     # slates with nothing catching them.
-    if model_only_by_fight:
+    # MODEL-ONLY LEGS NO LONGER ENTER PARLAYS.
+    #
+    # These are priced at implied_prob_to_american(model_prob) -- the model's
+    # own number turned into odds -- so their edge ratio is exactly 1.000 by
+    # construction. They can never improve a slip's real value; they can only
+    # inflate its advertised payout with a price nobody quoted.
+    #
+    # This was left in place through two audits that both recommended removing
+    # it. What settled it was stamping provenance on every row: on the very
+    # first build after that landed, ALL SEVEN published parlay legs came back
+    # `source: model`. The site was publishing a full slate of parlays built
+    # entirely from prices it had invented, rendered in American odds
+    # indistinguishable from a real quote.
+    #
+    # It also cannot serve the point of the product. The premise is comparing
+    # what a book offers against what the model thinks; a leg with no book
+    # price has nothing on one side of that comparison.
+    #
+    # They remain on the Edges tab, where they are labelled as projections and
+    # inform without pretending to be bettable. If a card has too little real
+    # coverage to build a slip, the honest output is no slip.
+    if ALLOW_MODEL_ONLY_LEGS and model_only_by_fight:
         MAX_MODEL_LEG_JUICE = -400
         for fight_id, rows in model_only_by_fight.items():
             if fight_id in by_fight:
@@ -397,6 +429,9 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
                     "is_model": True,
                     "conditions": _leg_conditions(row),
                     "fight_key": _fight_key(row),
+                    # Projected, not quoted. Naming a feed here would claim a
+                    # price nobody posted.
+                    "source": "model",
                 })
 
     return pieces
@@ -424,6 +459,11 @@ def _combine(pieces: tuple[dict, ...]) -> dict:
             "decimal_odds": round(piece["decimal_odds"], 6),
             "fight_key": piece.get("fight_key"),
             "conditions": piece.get("conditions") or [],
+            # Which feed priced this leg. With more than one source in play,
+            # a slip can silently mix a vig-free peer-to-peer quote with a
+            # vigged sportsbook one, and the ledger has to record which so a
+            # graded result means something later.
+            "source": piece.get("source"),
         })
         fight_ids.append(piece["fight_id"])
     combined_american = decimal_to_american(combined_decimal)

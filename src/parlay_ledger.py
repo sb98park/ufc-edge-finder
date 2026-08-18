@@ -99,6 +99,7 @@ def _leg_record(leg: dict) -> dict:
         "decimal_odds": leg.get("decimal_odds"),
         "is_model": bool(leg.get("is_model")),
         "fight_key": leg.get("fight_key"),
+        "source": leg.get("source"),
         # The grading predicates, stored rather than re-derived. _leg_label
         # builds prose and prose is not a protocol; if the copy changes next
         # year, a slip logged today must still be settleable.
