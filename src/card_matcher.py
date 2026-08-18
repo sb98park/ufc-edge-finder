@@ -681,6 +681,10 @@ def group_edges_by_card(
                     "best_book": e.get("best_book"),
                     "books_quoting": e.get("books_quoting"),
                     "source": e.get("source"),
+                    # Without this the price cell cannot tell a vig-free
+                    # reference line from a real book quote, and every row
+                    # fell through to printing the raw source name.
+                    "source_is_vig_free": e.get("source_is_vig_free"),
                     "label": build_market_label(e.get("fighter"), e.get("market")),
                     "selection": e.get("selection"),
                     # Kept in the Edges view but MARKED. A near-certain market

@@ -3124,8 +3124,36 @@
      for is not a headline. Tightening the padding on the numeric columns
      alone recovers it without touching the market label, which is the only
      cell whose content is genuinely variable-width. */
-  .mkt-ev, .mkt-model, .mkt-none { padding-left: 5px; padding-right: 5px; }
-  .mkt-ev { font-variant-numeric: tabular-nums; text-align: right; }
+  .mkt-ev, .mkt-model, .mkt-none, .mkt-price, .mkt-edge { padding-left: 5px; padding-right: 5px; }
+  .mkt-ev, .mkt-edge, .mkt-price { font-variant-numeric: tabular-nums; }
+  /* EV IS THE ONLY COLOURED NUMBER IN THE ROW. Edge was painted green/red
+     too, which gave the demoted validation stat exactly the same visual
+     weight as the number a reader acts on -- two signals shouting the same
+     direction, and the eye cannot tell which one is the point. */
+  /* Held on one line so the fragile-price asterisk cannot break away from
+     the number it qualifies -- adrift on its own row it reads as a stray
+     bullet rather than a warning. Measured clip-free from 320px up. */
+  .mkt-edge { color: var(--muted); font-weight: 500; white-space: nowrap; }
+  /* WHOSE PRICE. Sits under the number, so naming the source costs row
+     height rather than the column width there is none of. */
+  .price-src {
+    display: block; font-size: 9px; letter-spacing: 0.3px; line-height: 1.5;
+    text-transform: uppercase; font-weight: 700;
+  }
+  .price-src.book { color: var(--accent-cool); }
+  .price-src.fair { color: var(--muted); font-weight: 600; text-transform: none;
+                    font-style: italic; letter-spacing: 0; }
+  .price-shopped { color: var(--green); margin-left: 2px; }
+  /* THE HEADER RAN TOGETHER. "MODEL %" and "ODDS" collided into "MODEL %ODDS"
+     because the unit-hint is inline and the next header had no leading gap. */
+  .mkt-model-head .unit-hint { margin-right: 3px; }
+  /* Unit in the header rather than repeated down the column. Not the same as
+     .unit-hint, which is dotted to advertise that the Model header is
+     tappable -- this one is a label and must not imply a control. */
+  .unit-tag {
+    font-size: 8px; font-weight: 600; letter-spacing: 0.2px; opacity: 0.65;
+    margin-left: 2px; text-transform: lowercase;
+  }
   @media (max-width: 480px) {
     /* Auto layout sizes the market column to its longest word and lets the
        numbers overflow off the right edge; fixed percentages make the label
@@ -3133,16 +3161,47 @@
        doing anyway. Same technique .model-only-table uses above. */
     .market-group table { table-layout: fixed; }
     .market-group table th:nth-child(1), .market-group table td:nth-child(1) {
-      width: 37%; white-space: normal; overflow-wrap: break-word;
+      width: 34%; white-space: normal; overflow-wrap: break-word;
     }
-    .market-group table th:nth-child(2), .market-group table td:nth-child(2) { width: 17%; }
-    .market-group table th:nth-child(3), .market-group table td:nth-child(3) { width: 14%; }
+        /* 18%, not 16%: the pinned "MODEL %" header needs 61px and 16% gave
+       it 54, so it clipped silently against the container's hidden
+       overflow -- the failure mode that comes with removing a scroller. */
+    .market-group table th:nth-child(2), .market-group table td:nth-child(2) { width: 18%; }
+    /* Price carries the book tag beneath it, so it gets the extra room. */
+    .market-group table th:nth-child(3), .market-group table td:nth-child(3) { width: 17%; }
     .market-group table th:nth-child(4), .market-group table td:nth-child(4) { width: 15%; }
     /* Widest of the numeric columns: "pts" costs more than "%", and the edge
        column is the one carrying it. Measured at 375px across all 50 market
        tables on a full card -- this is the narrowest split with zero
        horizontal overflow anywhere. */
-    .market-group table th:nth-child(5), .market-group table td:nth-child(5) { width: 17%; }
+    .market-group table th:nth-child(5), .market-group table td:nth-child(5) { width: 16%; }
+
+    /* NO HORIZONTAL SCROLLING, AT ALL.
+       The columns are fixed percentages and every cell wraps, so these tables
+       cannot overflow -- but .table-scroll still declared `overflow-x: auto`
+       with `-webkit-overflow-scrolling: touch`, and on iOS that makes the
+       region rubber-band sideways even when the content fits exactly. It
+       reads as a broken layout inviting you to scroll to something that is
+       not there. The container stops being a scroller for these tables. */
+    .market-group .table-scroll {
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: auto;
+    }
+    .market-group table td, .market-group table th {
+      white-space: normal; overflow-wrap: break-word;
+    }
+    /* The edge cell opts back OUT of wrapping, and needs td in the selector
+       to do it: `.mkt-edge` alone is (0,1,0) against the (0,1,2) rule above
+       and silently lost, which is why the fragile-price asterisk kept
+       breaking onto its own line after the first attempt. Measured clip-free
+       from 320px up. */
+    .market-group table td.mkt-edge { white-space: nowrap; }
+    /* The Model header is NOT pinned to one line, deliberately. Pinning it
+       made it clip instead of wrap the moment the column was narrower than
+       its text -- silently, because the container's overflow is now hidden.
+       Percentages scale with the viewport and "MODEL %" does not, so on a
+       320px screen there is no width that fits it. Wrapping to two lines is
+       the honest degradation; at 18% it stays on one line from ~360px up. */
   }
   .model-only-table td { color: var(--muted); font-style: italic; }
   @media (max-width: 480px) {
@@ -5302,8 +5361,19 @@
   </div>
   </div>
 
-  {% macro odds_cell(row) -%}
+  {% macro odds_cell(row, show_source=false) -%}
     <span class="live-odds"{% if row.clob_token_id %} data-live-token="{{ row.clob_token_id }}"{% endif %}>{{ row.odds_american | american }}</span>
+    {#- WHOSE PRICE THIS IS, on the row rather than in a legend. The column
+        showed -147/+147 on one fight and a DraftKings number on the next with
+        nothing to tell them apart -- and a perfectly symmetric pair like
+        -147/+147 is the signature of a vig-free line, so a reader who noticed
+        was right to be suspicious. Roughly half the card has no book quote at
+        all, which makes this a per-row fact and not a footnote. -#}
+    {%- if show_source %}
+      {%- if row.source_is_vig_free or (row.best_book is not real_value and row.source == 'Polymarket') %}<span class="price-src fair" title="No sportsbook quoted this market. Shown is the vig-free fair line, which is a reference price rather than a bet you can place.">fair</span>
+      {%- elif row.best_book is real_value %}<span class="price-src book" title="Best price across the books that quoted this market{{ ' (' ~ row.books_quoting ~ ' quoting)' if row.books_quoting and row.books_quoting > 1 }}">{{ 'DK' if row.best_book == 'DraftKings' else ('FD' if row.best_book == 'FanDuel' else row.best_book) }}{% if row.books_quoting and row.books_quoting > 1 %}<span class="price-shopped" title="Both books quoted -- this is the better of the two">•</span>{% endif %}</span>
+      {%- endif %}
+    {%- endif %}
     {%- if row.movement %}
       {%- if row.movement.direction == 'shortening' %}<span class="movement-tag shortening{{ ' notable' if row.movement.notable else '' }}">{{ icon_trendup() }}{{ row.movement.pct_change }}%</span>{% endif %}
       {%- if row.movement.direction == 'drifting' %}<span class="movement-tag drifting{{ ' notable' if row.movement.notable else '' }}">{{ icon_trenddown() }}{{ row.movement.pct_change }}%</span>{% endif %}
@@ -5986,7 +6056,7 @@
              the one thing this table exists to save them. #}
           <tr><th>Market</th><th class="mkt-model-head" data-unit-toggle
                   title="Tap to switch between model probability and the model's fair price"
-                  role="button" tabindex="0">Model<span class="unit-hint">%</span></th><th>Odds</th><th title="Expected value at this price, using the model shrunk toward the market. Edge asks whether the model disagrees; EV asks whether the bet returns money.">EV</th><th title="How far the model's probability sits from the market's fair line.">Edge</th></tr>
+                  role="button" tabindex="0">Model<span class="unit-hint">%</span></th><th title="The price this EV is computed at: the best of the books that quoted it, or the vig-free fair line where none did.">Price</th><th title="Expected value at this price, using the model shrunk toward the market. Edge asks whether the model disagrees; EV asks whether the bet returns money.">EV</th><th title="How far the model's probability sits from the market's fair line, in percentage points.">Edge<span class="unit-tag">pts</span></th></tr>
           {% for row in g.rows %}
           <tr class="{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}">
             <td class="mkt-label">{{ row.label or row.market }}{% if row.market == 'Moneyline' and row.has_line %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
@@ -5998,7 +6068,7 @@
                 data-pct="{{ (row.model_prob*100)|round(1) }}%"
                 data-odds="{{ row.model_prob | fair_odds }}">{{ (row.model_prob*100)|round(1) }}%</td>
             {% if row.has_line %}
-            <td>{{ odds_cell(row) }}</td>
+            <td class="mkt-price">{{ odds_cell(row, show_source=true) }}</td>
             {# EV sits BESIDE edge rather than replacing it, because the pair
                disagreeing is the informative case: a positive edge next to a
                negative EV is the model finding something real that the vig
@@ -6018,7 +6088,7 @@
                from scratch -- instead it derives the build-time vig factor
                from (fair / implied) and applies the same correction to the
                live price. Vig doesn't move meaningfully between polls. #}
-            <td class="{{ 'edge-pos' if row.edge_pct > 0 else 'edge-neg' }}{{ ' edge-fragile' if row.fragile_price }}"
+            <td class="mkt-edge{{ ' edge-fragile' if row.fragile_price }}"
                 {%- if row.fragile_price %} title="Near-certain market: the book price here is thin and the edge figure is unreliable"{% endif %}
                 {%- if row.clob_token_id and row.model_prob is not none and row.book_fair_prob is not none %}
                 data-edge-for="{{ row.clob_token_id }}"
@@ -6035,7 +6105,7 @@
                     the only warning a phone gets (the title attribute does
                     nothing on touch), and it marks exactly the rows the site
                     itself calls unreliable. -#}
-                {%- endif %}><span class="edge-value">{{ '%+.1f'|format(row.edge_pct) }}pts</span>{% if row.fragile_price %}<span class="edge-flag">*</span>{% endif %}</td>
+                {%- endif %}><span class="edge-value">{{ '%+.1f'|format(row.edge_pct) }}</span>{% if row.fragile_price %}<span class="edge-flag">*</span>{% endif %}</td>
             {% else %}
             <td class="mkt-none">—</td><td class="mkt-none">—</td><td class="mkt-none">—</td>
             {% endif %}
@@ -7487,11 +7557,15 @@
         // ONE DECIMAL, AND A SIGN, matching the server-rendered value exactly.
         // A mismatch here is invisible until the first 90s refresh, at which
         // point every edge in the table silently reformats.
-        const txt = (rounded >= 0 ? '+' : '') + rounded.toFixed(1) + 'pts';
+        // Bare number: the unit lives in the column header, because "pts" on
+        // every row cost more width than a 320px screen had to give.
+        const txt = (rounded >= 0 ? '+' : '') + rounded.toFixed(1);
         if (window.__rollTo) { window.__rollTo(target, txt); }
         else { target.textContent = txt; }
-        cell.classList.toggle('edge-pos', edge > 0);
-        cell.classList.toggle('edge-neg', edge <= 0);
+        // Deliberately NOT toggling edge-pos/edge-neg any more. Edge is the
+        // demoted number and renders neutral; colour belongs to EV, which is
+        // the one a reader acts on. Leaving these on repainted the column
+        // green/red on the first 90s refresh and undid the hierarchy.
       });
     }
     // The standout cards' book-vs-model divergence bar, moved by the same
