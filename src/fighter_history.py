@@ -49,6 +49,7 @@ treating it as missing would have understated coverage badly.
 from __future__ import annotations
 
 import csv
+import re
 import unicodedata
 from collections import defaultdict
 from datetime import datetime
@@ -108,6 +109,24 @@ def _ctrl_seconds(cell):
         return None
 
 
+def _scheduled_rounds(time_format) -> int | None:
+    """
+    How many rounds the bout was SCHEDULED for, from ufc_fight_results'
+    TIME FORMAT column.
+
+    Counted from the parenthetical rather than the leading number, because the
+    leading number lies on the old formats: "1 Rnd + OT (12-3)" is two periods
+    and "3 Rnd + OT (5-5-5-5)" is four. Counting the segments is exact for
+    every format in the file, modern or otherwise. "No Time Limit" (31 bouts,
+    all pre-2000) has no scheduled count and returns None.
+    """
+    m = re.search(r"\(([^)]*)\)", str(time_format or ""))
+    if not m:
+        return None
+    segs = [p for p in m.group(1).split("-") if p.strip()]
+    return len(segs) or None
+
+
 def _event_dates() -> dict:
     """EVENT -> ISO date, from ufc_event_details.csv."""
     out = {}
@@ -132,7 +151,11 @@ def build_fighter_history(names, stats_path=STATS, results_path=RESULTS) -> dict
     Returns {folded: [bout, ...]} newest first, where a bout is:
 
         o    opponent display name
-        e    event name, for the expanded header ("UFC 319 · 5 rounds")
+        e    event name, for the expanded header
+        sr   rounds the bout was SCHEDULED for (None if no time limit).
+             A five-round fight that ended in the fourth still had a fifth,
+             and the shape of the fight is not the same as a three-rounder
+             that went the distance -- the UI draws the unfought rounds.
         w    1 won, 0 lost, None neither (draw, no contest, unrecorded)
         m    method ("KO/TKO", "Submission", "Decision - Unanimous", ...)
         er   round the fight ended in
@@ -215,6 +238,7 @@ def build_fighter_history(names, stats_path=STATS, results_path=RESULTS) -> dict
             history[folded].append({
                 "o": opponent,
                 "e": event,
+                "sr": _scheduled_rounds(res.get("TIME FORMAT")),
                 "w": won,
                 "m": (res.get("METHOD") or "").strip(),
                 "er": (res.get("ROUND") or "").strip(),

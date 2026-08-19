@@ -4944,6 +4944,7 @@
      "UFC Fight Night: Hernandez vs. Pereira" and it crushed both names to
      four characters and an ellipsis. */
   .fdr-ev { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+  .fdr-ghost-note { font-size: var(--t-micro); color: var(--muted); margin-top: 6px; font-style: italic; }
   .fdr-key { display: flex; align-items: center; gap: 12px; margin-top: 11px; padding-top: 9px; border-top: 1px solid var(--hairline); }
   .fdr-key span { font-size: var(--t-micro); color: var(--muted); display: flex; align-items: center; gap: 4px; }
   .fdr-key i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
@@ -4962,6 +4963,14 @@
   .fdr-rr-op { background: linear-gradient(270deg, rgba(59,130,246,0.55), var(--corner-blue)); height: 100%; }
   .fdr-rr-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.2); }
   .fdr-rr-p { font-size: var(--t-micro); color: var(--text-soft); width: 28px; text-align: right; flex: none; font-variant-numeric: tabular-nums; font-weight: 600; }
+  /* A round that was SCHEDULED and never happened. Drawn as an empty slot so
+     "finished in the fourth of five" is visibly different from "went the
+     distance in a three-rounder" -- without it, both render as N full bars
+     and the shape of the fight is lost. Dashed and hollow because the round
+     is absent, not zero: nobody scored 0% in it. */
+  .fdr-rr.ghost .fdr-rr-l { opacity: 0.45; }
+  .fdr-rr.ghost .fdr-rr-bar { background: none; border: 1px dashed var(--hairline-strong); }
+  .fdr-rr.ghost .fdr-rr-p { color: var(--muted); opacity: 0.6; }
   .fdr-det { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--hairline); }
   .fdr-det span { font-size: var(--t-micro); color: var(--muted); padding: 1px 0; }
   .fdr-det b { font-size: var(--t-micro); color: var(--text-soft); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
@@ -9094,20 +9103,33 @@
       function fightBody(b, subject) {
         const me = surname(subject), them = surname(b.o);
         const rounds = (b.rs || []).length;
+        // Scheduled, not fought. A fight that ended early still HAD the rounds
+        // it never reached, and that is exactly what tells you the finish was
+        // early rather than a decision.
+        const sched = (b.sr && b.sr > rounds) ? b.sr : rounds;
         const head =
           (b.e ? '<div class="fdr-ev">' + esc(b.e) + '</div>' : '') +
           '<div class="fdr-vs">' +
             '<span class="fdr-vs-a">' + esc(me) + '</span>' +
             '<span class="fdr-vs-mid">' +
-              (rounds ? rounds + ' round' + (rounds === 1 ? '' : 's') : '') + '</span>' +
+              (sched ? sched + ' round' + (sched === 1 ? '' : 's') : '') + '</span>' +
             '<span class="fdr-vs-b">' + esc(them) + '</span>' +
           '</div>';
-        const rr = (b.rs || []).map((sh, i) =>
+        let rr = (b.rs || []).map((sh, i) =>
           '<div class="fdr-rr"><span class="fdr-rr-l">R' + (i + 1) + '</span>' +
           '<div class="fdr-rr-bar"><div class="fdr-rr-me" style="width:' + sh + '%"></div>' +
           '<div class="fdr-rr-op" style="width:' + (100 - sh) + '%"></div>' +
           '<div class="fdr-rr-mid"></div></div>' +
           '<span class="fdr-rr-p">' + sh + '%</span></div>').join('');
+        for (let i = rounds; i < sched; i++) {
+          rr += '<div class="fdr-rr ghost"><span class="fdr-rr-l">R' + (i + 1) + '</span>' +
+                '<div class="fdr-rr-bar"></div>' +
+                '<span class="fdr-rr-p">&mdash;</span></div>';
+        }
+        if (sched > rounds) {
+          rr += '<div class="fdr-ghost-note">Finished in round ' + rounds +
+                ' of ' + sched + '</div>';
+        }
         const key =
           '<div class="fdr-key">' +
             '<span><i style="background:var(--corner-red)"></i>' + esc(me) + '</span>' +
