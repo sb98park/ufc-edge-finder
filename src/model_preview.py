@@ -9,6 +9,31 @@ clearly labeled as a projection rather than a live-market edge.
 import pandas as pd
 
 from src.matchup_model import predict_matchup, classify_style, compute_divisional_method_priors, blend_method_probability, build_factor_badges, build_probability_waterfall, _get, divisional_prior_for, normalize_division
+from src.ufc_method_rates import rates_or_prior
+
+
+def _wc(row):
+    """
+    A row's weight class, as a string.
+
+    NOT _get() -- that one is `float(row[col])` and returns a numeric default,
+    so asking it for a weight class raises ValueError on the first fighter.
+    Only ever feeds the divisional-prior fallback, so a missing value is fine:
+    divisional_prior_for resolves None through its own _default row.
+    """
+    try:
+        v = row.get("weight_class")
+    except AttributeError:
+        return None
+    if v is None:
+        return None
+    try:
+        import pandas as _pd
+        if _pd.isna(v):
+            return None
+    except Exception:
+        pass
+    return str(v).strip() or None
 from src.radar_chart import compute_radar_metrics, build_radar_chart_svg, build_percentile_index
 from src.striking_profile import (build_zone_index, zone_profile, position_profile,
                                   fight_shape)
@@ -95,18 +120,23 @@ def build_full_market_projection(
 
     # Fight-level method distribution, so the Fight props group can always
     # show all three answers even when a market for one of them doesn't exist.
-    # Denominators are TOTAL FIGHTS, matching how the model was trained --
-    # dividing win-methods by wins and loss-methods by losses is the skew that
-    # produced a 60% submission probability on a fight the model had no
-    # business being confident about.
+    # UFC-ONLY RATES. These used to divide career finish counts by career
+    # wins+losses, from fighters.csv, while the model was trained on UFC-only
+    # point-in-time profiles. Measured over the booked roster: career fights
+    # 21.9 against UFC 10.4, own_ko_rate 1.49x too high, own_sub_rate 1.61x
+    # too high, opp_ko_lost 0.61x too LOW -- pre-UFC records pad wins and
+    # fights while adding almost no losses, so a fighter arrived looking both
+    # more finishing and more durable than he is. Net effect on the published
+    # numbers was P(decision) 4.95pp too low on 43 of 51 booked fights, which
+    # is the market's own error at the market's own size.
+    # See src/ufc_method_rates.py. Thin UFC history falls back to the
+    # divisional prior, which is itself computed from real UFC bouts.
     _md = None
     try:
-        _na = max(int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0)), 1)
-        _nb = max(int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0)), 1)
-        _koa, _kob = _get(row_a, "ko_wins", 0) / _na, _get(row_b, "ko_wins", 0) / _nb
-        _sua, _sub = _get(row_a, "sub_wins", 0) / _na, _get(row_b, "sub_wins", 0) / _nb
-        _kla, _klb = _get(row_a, "ko_losses", 0) / _na, _get(row_b, "ko_losses", 0) / _nb
-        _sla, _slb = _get(row_a, "sub_losses", 0) / _na, _get(row_b, "sub_losses", 0) / _nb
+        _koa, _sua, _kla, _sla = rates_or_prior(
+            fighter_a, divisional_priors, _wc(row_a))
+        _kob, _sub, _klb, _slb = rates_or_prior(
+            fighter_b, divisional_priors, _wc(row_b))
         _gap = abs(effective_ratings.get(fighter_a, 1500)
                    - effective_ratings.get(fighter_b, 1500)) / 400.0 if effective_ratings else 0.0
         _md = method_probabilities(
@@ -145,15 +175,17 @@ def build_full_market_projection(
     for row, opp_row, own_name, opp_name in (
         (row_a, row_b, fighter_a, fighter_b), (row_b, row_a, fighter_b, fighter_a)
     ):
-        n_own = max(int(_get(row, "wins", 0)) + int(_get(row, "losses", 0)), 1)
-        n_opp = max(int(_get(opp_row, "wins", 0)) + int(_get(opp_row, "losses", 0)), 1)
+        _ko, _sub_r, _unused_kl, _unused_sl = rates_or_prior(
+            own_name, divisional_priors, _wc(row))
+        _o_ko, _o_sub, _o_kl, _o_sl = rates_or_prior(
+            opp_name, divisional_priors, _wc(opp_row))
         gap = ((effective_ratings.get(own_name, 1500) - effective_ratings.get(opp_name, 1500)) / 400.0
                if effective_ratings else 0.0)
         seeds.append(method_given_win(
-            own_ko_rate=_get(row, "ko_wins", 0) / n_own,
-            own_sub_rate=_get(row, "sub_wins", 0) / n_own,
-            opp_ko_lost=_get(opp_row, "ko_losses", 0) / n_opp,
-            opp_sub_lost=_get(opp_row, "sub_losses", 0) / n_opp,
+            own_ko_rate=_ko,
+            own_sub_rate=_sub_r,
+            opp_ko_lost=_o_kl,
+            opp_sub_lost=_o_sl,
             elo_gap=gap,
         ))
     grid = reconcile_fighter_methods(seeds[0], seeds[1], prob_a, prob_b, _md)
@@ -462,15 +494,14 @@ def build_fight_preview(
 
     # Fight-level method distribution for the Fight props group, so it can
     # show all three answers even when a market for one is unpriced.
-    # Denominators are TOTAL FIGHTS, matching how the model was trained.
+    # UFC-only rates -- see src/ufc_method_rates.py and the note at the other
+    # call site above.
     _md = None
     try:
-        _na = max(int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0)), 1)
-        _nb = max(int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0)), 1)
-        _koa, _kob = _get(row_a, "ko_wins", 0) / _na, _get(row_b, "ko_wins", 0) / _nb
-        _sua, _sub = _get(row_a, "sub_wins", 0) / _na, _get(row_b, "sub_wins", 0) / _nb
-        _kla, _klb = _get(row_a, "ko_losses", 0) / _na, _get(row_b, "ko_losses", 0) / _nb
-        _sla, _slb = _get(row_a, "sub_losses", 0) / _na, _get(row_b, "sub_losses", 0) / _nb
+        _koa, _sua, _kla, _sla = rates_or_prior(
+            fighter_a, divisional_priors, _wc(row_a))
+        _kob, _sub, _klb, _slb = rates_or_prior(
+            fighter_b, divisional_priors, _wc(row_b))
         _gap = abs(effective_ratings.get(fighter_a, 1500)
                    - effective_ratings.get(fighter_b, 1500)) / 400.0 if effective_ratings else 0.0
         _md = method_probabilities(
@@ -494,15 +525,17 @@ def build_fight_preview(
     # The rule is the same one this codebase keeps relearning: display the
     # number that is displayed, not an input to it.
     def _seed_for(own_row, opp_row, own_name, opp_name):
-        n_o = max(int(_get(own_row, "wins", 0)) + int(_get(own_row, "losses", 0)), 1)
-        n_p = max(int(_get(opp_row, "wins", 0)) + int(_get(opp_row, "losses", 0)), 1)
+        _ko, _sb, _kl_unused, _sl_unused = rates_or_prior(
+            own_name, divisional_priors, _wc(own_row))
+        _o_ko, _o_sb, _o_kl, _o_sl = rates_or_prior(
+            opp_name, divisional_priors, _wc(opp_row))
         g = ((effective_ratings.get(own_name, 1500) - effective_ratings.get(opp_name, 1500)) / 400.0
              if effective_ratings else 0.0)
         return method_given_win(
-            own_ko_rate=_get(own_row, "ko_wins", 0) / n_o,
-            own_sub_rate=_get(own_row, "sub_wins", 0) / n_o,
-            opp_ko_lost=_get(opp_row, "ko_losses", 0) / n_p,
-            opp_sub_lost=_get(opp_row, "sub_losses", 0) / n_p,
+            own_ko_rate=_ko,
+            own_sub_rate=_sb,
+            opp_ko_lost=_o_kl,
+            opp_sub_lost=_o_sl,
             elo_gap=g,
         )
 

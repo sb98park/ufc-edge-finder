@@ -16,6 +16,7 @@ from src.fight_format import is_five_round as _is_five_round, scheduled_rounds a
 
 from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob, devig_single_sided, american_to_decimal
 from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
+from .ufc_method_rates import rates_or_prior
 from .matchup_model import (predict_matchup, compute_divisional_method_priors,
                             blend_method_probability, divisional_prior_for, _get,
                             normalize_division)
@@ -291,25 +292,44 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
             if matchup:
                 # FITTED seed, matching model_preview exactly -- one source
                 # for the shape, as the totals already share one reconciler.
+                # UFC-ONLY RATES, AND THIS FILE MUST MATCH model_preview.
+                # reconcile_fighter_methods runs iterative proportional
+                # fitting -- it forces the grid's rows to the win
+                # probabilities and its columns to the fight-level method
+                # split. IPF converges only when both margins describe the
+                # same object, so seeding the PRICED path from career rates
+                # while the model-only path seeds from UFC rates makes the two
+                # margins disagree and the grid stops summing to 1.
+                # Not a theory: fixing model_preview alone took the linter
+                # from 1 failure to 17, with six method rows summing to 116.2%
+                # on Mederos/Jones. The reconciler's own docstring records a
+                # previous fix missing this exact caller.
+                def _wcls(row):
+                    # NOT _get(): that coerces to float, and a weight class is
+                    # a string.
+                    try:
+                        v = row.get("weight_class")
+                    except AttributeError:
+                        return None
+                    if v is None or (isinstance(v, float) and v != v):
+                        return None
+                    return str(v).strip() or None
+
                 def _seed(own, opp, own_name, opp_name):
-                    n_o = max(int(_get(own, "wins", 0)) + int(_get(own, "losses", 0)), 1)
-                    n_p = max(int(_get(opp, "wins", 0)) + int(_get(opp, "losses", 0)), 1)
+                    o_ko, o_sub, _okl, _osl = rates_or_prior(own_name, divisional_priors, _wcls(own))
+                    _pko, _psub, p_kl, p_sl = rates_or_prior(opp_name, divisional_priors, _wcls(opp))
                     g = ((elo_ratings.get(own_name, 1500) - elo_ratings.get(opp_name, 1500)) / 400.0
                          if elo_ratings else 0.0)
                     return method_given_win(
-                        own_ko_rate=_get(own, "ko_wins", 0) / n_o,
-                        own_sub_rate=_get(own, "sub_wins", 0) / n_o,
-                        opp_ko_lost=_get(opp, "ko_losses", 0) / n_p,
-                        opp_sub_lost=_get(opp, "sub_losses", 0) / n_p,
+                        own_ko_rate=o_ko,
+                        own_sub_rate=o_sub,
+                        opp_ko_lost=p_kl,
+                        opp_sub_lost=p_sl,
                         elo_gap=g,
                     )
                 seeds = [_seed(a, b, name_a, name_b), _seed(b, a, name_b, name_a)]
-                n_a = max(int(_get(a, "wins", 0)) + int(_get(a, "losses", 0)), 1)
-                n_b = max(int(_get(b, "wins", 0)) + int(_get(b, "losses", 0)), 1)
-                koa, kob = _get(a, "ko_wins", 0) / n_a, _get(b, "ko_wins", 0) / n_b
-                sua, sub_ = _get(a, "sub_wins", 0) / n_a, _get(b, "sub_wins", 0) / n_b
-                kla, klb = _get(a, "ko_losses", 0) / n_a, _get(b, "ko_losses", 0) / n_b
-                sla, slb = _get(a, "sub_losses", 0) / n_a, _get(b, "sub_losses", 0) / n_b
+                koa, sua, kla, sla = rates_or_prior(name_a, divisional_priors, _wcls(a))
+                kob, sub_, klb, slb = rates_or_prior(name_b, divisional_priors, _wcls(b))
                 gap = abs(elo_ratings.get(name_a, 1500) - elo_ratings.get(name_b, 1500)) / 400.0 if elo_ratings else 0.0
                 dist = method_probabilities(
                     ko_press=koa * klb + kob * kla, sub_press=sua * slb + sub_ * sla,

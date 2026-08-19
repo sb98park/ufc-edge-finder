@@ -9307,8 +9307,15 @@
       // straight from the pointer delta, which is the same rule the toast
       // swipe and the tab-bar pill follow and the one thing that would make
       // this feel cheap if broken.
-      (function initSheetDrag() {
-        const handle = document.getElementById('fdrawer-handle');
+      // The handle is resolved HERE, in initFighterDrawer, which is registered
+      // as a DOMContentLoaded callback and therefore known to run after the
+      // markup exists. initSheetDrag then queries nothing itself and cannot
+      // be moved somewhere undeferred without the missing argument making
+      // that obvious. Previously it did its own getElementById and was safe
+      // only because of where it happened to be called from -- lint flagged
+      // exactly that, and lint was right.
+      const dragHandle = document.getElementById('fdrawer-handle');
+      (function initSheetDrag(handle) {
         if (!handle) return;
         const tracker = createVelocityTracker(100);
         let startY = 0, dy = 0, dragging = false, height = 0;
@@ -9374,7 +9381,7 @@
         }
         handle.addEventListener('pointerup', release);
         handle.addEventListener('pointercancel', release);
-      })();
+      })(dragHandle);
 
       scrim.addEventListener('click', close);
       document.getElementById('fdrawer-close').addEventListener('click', close);
