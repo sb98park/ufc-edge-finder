@@ -4981,7 +4981,24 @@
      underline on the fighter names in the collapsed row, which put two
      meanings on one region -- tap the name and you could not tell whether the
      card would expand or a panel would open. Here nothing competes. */
-  .scout-row { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; }
+  /* Three columns: fighter A, the label, fighter B. Row 1 is the buttons and
+     row 2 is each fighter's attribute badges, so a badge sits directly under
+     the name it belongs to. Grid rather than nested flex because the two
+     columns must line up EXACTLY -- the badges only carry meaning through
+     which side they are on. */
+  .scout-badges {
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    gap: 6px 7px; align-items: center; margin: 0 0 10px;
+  }
+  .scout-badges > .scout-pill:first-of-type, .scout-badges > .scout-gap:first-of-type { grid-column: 1; grid-row: 1; }
+  .scout-badges > .scout-lbl { grid-column: 2; grid-row: 1; }
+  .scout-badges > .scout-pill.corner-b, .scout-badges > .scout-gap + .scout-lbl + .scout-gap { grid-column: 3; grid-row: 1; }
+  /* align-self: start on row 2. The grid centres its items, and with one
+     fighter carrying four badges and the other one, centring started the two
+     groups at different heights -- 564 against 583 -- so a pair that should
+     read as two columns of the same table read as two loose clusters. */
+  .scout-badges > .factor-badges { grid-column: 1; grid-row: 2; margin-top: 0; align-self: start; }
+  .scout-badges > .factor-badges.right { grid-column: 3; grid-row: 2; align-self: start; }
   .scout-lbl {
     font-size: var(--t-micro); color: var(--muted); text-transform: uppercase;
     letter-spacing: 0.5px; font-weight: 600; flex: none;
@@ -6597,33 +6614,39 @@
          Down here nothing competes for the tap, and it is the moment a reader
          is already asking "why this pick?". Corner colours, matching the
          matchup above. #}
-      {% if fight.fighter_a_key or fight.fighter_b_key %}
-      <div class="scout-row">
-        <span class="scout-lbl">Scout</span>
+      {# ===== SCOUT + ATTRIBUTES, ONE BLOCK =====
+         These were two stacked rows and the split was the problem: the
+         attribute badges have always been left-for-A / right-for-B, and
+         putting a full-width scout row between them and the names broke the
+         column the badges rely on to mean anything.
+
+         Now the scout buttons ARE the column heads. A three-column grid --
+         1fr / auto / 1fr -- puts each button over its own badges, with the
+         label between them, echoing the VS in the matchup header above. The
+         badges stop floating and get a heading that names whose they are. #}
+      {% set _has_badges = fight.preview and ((fight.preview.comparison.a.badges) or (fight.preview.comparison.b.badges)) %}
+      {% if fight.fighter_a_key or fight.fighter_b_key or _has_badges %}
+      <div class="scout-badges">
         {% if fight.fighter_a_key %}
         <button type="button" class="scout-pill corner-a" data-fighter-key="{{ fight.fighter_a_key }}"
                 aria-label="Fight history for {{ fight.fighter_a }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_a.split(' ')[-1] }}</span></button>
-        {% endif %}
+        {% else %}<span class="scout-gap" aria-hidden="true"></span>{% endif %}
+        <span class="scout-lbl">Scout</span>
         {% if fight.fighter_b_key %}
         <button type="button" class="scout-pill corner-b" data-fighter-key="{{ fight.fighter_b_key }}"
                 aria-label="Fight history for {{ fight.fighter_b }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_b.split(' ')[-1] }}</span></button>
-        {% endif %}
-      </div>
-      {% endif %}
-      {% if fight.preview %}
-      {# The factor badges, moved in from the summary. They are the REASONING
-         -- which attributes favour whom -- so they belong with the pick they
-         explain rather than in front of it. #}
-      {% if (fight.preview.comparison.a.badges) or (fight.preview.comparison.b.badges) %}
-      <div class="matchup-badges-row">
+        {% else %}<span class="scout-gap" aria-hidden="true"></span>{% endif %}
+        {% if _has_badges %}
         <div class="factor-badges">
           {% if fight.preview.comparison.a.badges %}{% for b in fight.preview.comparison.a.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
         </div>
         <div class="factor-badges right">
           {% if fight.preview.comparison.b.badges %}{% for b in fight.preview.comparison.b.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
         </div>
+        {% endif %}
       </div>
       {% endif %}
+      {% if fight.preview %}
       {% if fight.result_stats %}
       <div class="result-stats-block">
         <div class="result-stats-title">{{ icon_barchart() }} Fight Overview</div>
