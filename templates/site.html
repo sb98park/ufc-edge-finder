@@ -633,6 +633,9 @@
        that is already a positive pick it stated the obvious twice. */
     border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px;
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+    /* --e2, matching .standout-card -- byte-identical component, same hover
+       lift and same press, so it should rest at the same rung. */
+    box-shadow: var(--e2);
   }
   .favorite-card:active { transform: scale(0.98); }
   @media (hover: hover) {
@@ -646,6 +649,9 @@
     background: var(--panel2);
     border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px;
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+    /* --e2, matching .standout-card -- byte-identical component, same
+       hover lift and same press, so it should rest at the same rung. */
+    box-shadow: var(--e2);
   }
   .lock-pick-card:active { transform: scale(0.98); }
   @media (hover: hover) {
@@ -818,6 +824,9 @@
   .track-record-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg);
     padding: 12px 16px; margin-bottom: 16px;
+    /* --e1. Resting list card: a hairline under-edge so it separates from
+       the page without pretending to float. */
+    box-shadow: var(--e1);
   }
   .track-record-title { font-size: var(--t-body); font-weight: 600; color: var(--accent); margin-bottom: 6px; }
   /* ONE horizontal inset down the whole Record column. Measured top to
@@ -830,6 +839,9 @@
     margin: 10px 0 16px; padding: 12px 16px; border-radius: var(--r-lg);
     background: linear-gradient(160deg, rgba(212,175,55,0.08), var(--panel2) 60%);
     border: 1px solid var(--border);
+    /* --e1. Resting list card: a hairline under-edge so it separates from
+       the page without pretending to float. */
+    box-shadow: var(--e1);
   }
   .event-summary-name { font-size: var(--t-small); font-weight: 600; color: var(--muted); text-align: center; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
   .brag-headline {
@@ -847,6 +859,9 @@
     margin: 0 0 16px; padding: 12px 14px; border-radius: var(--r-lg);
     background: linear-gradient(135deg, rgba(212,175,55,0.1), var(--panel2) 70%);
     border: 1px solid rgba(212,175,55,0.3);
+    /* --e1. Resting list card: a hairline under-edge so it separates from
+       the page without pretending to float. */
+    box-shadow: var(--e1);
   }
   .lock-of-week-title {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
@@ -868,6 +883,9 @@
     margin: 0 0 16px; padding: 12px 16px; border-radius: var(--r-lg);
     background: linear-gradient(135deg, rgba(255,255,255,0.05), var(--panel2) 70%);
     border: 1px solid rgba(255,255,255,0.05);
+    /* --e1. Resting list card: a hairline under-edge so it separates from
+       the page without pretending to float. */
+    box-shadow: var(--e1);
   }
   .underdog-title {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
@@ -1049,11 +1067,17 @@
     background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid rgba(255,255,255,0.05);
   }
   .fun-fact-chip.gold { background: rgba(212,175,55,0.12); color: var(--accent); border-color: rgba(212,175,55,0.4); }
+  /* .hot had NO RULE. It fell through to the base 5%-white fill, so the eight
+     chips carrying "Riding a 9-fight win streak" rendered as grey circles
+     with a bolt glyph floating in the middle of a card -- they read as failed
+     image placeholders, and the tier named "hot" was the coldest thing on the
+     page. --red is the site's heat colour and the bolt already implies it. */
+  .fun-fact-chip.hot { background: rgba(255,92,92,0.12); color: var(--red); border-color: rgba(255,92,92,0.35); }
   .fun-fact-chip.legendary {
     color: var(--accent);
     border: 1px solid transparent;
     background:
-      linear-gradient(#20222c, #20222c) padding-box,
+      linear-gradient(var(--panel2), var(--panel2)) padding-box,
       linear-gradient(120deg, var(--accent-hi), var(--accent), var(--accent2), var(--accent-hi)) border-box;
     /* Static gradient, no sweep. The animation ran 4s x 5 -- twenty seconds
        of unattended motion -- with no reduced-motion path anywhere near it.
@@ -1365,10 +1389,15 @@
       display: inline; animation: factTextExpand 0.35s ease-out;
     }
   }
+  /* 0.28, not 0.05. The gold and legendary variants below both start at
+     0.35 and fade to 0; this one held 0.05 across all three stops, so the
+     only thing animating was a spread nobody could see -- a 1.09:1 ring
+     advertising that the chip is tappable. Still fades to 0 like its
+     siblings, so it reads as a pulse rather than a permanent halo. */
   @keyframes factChipPulse {
-    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.05); }
-    70% { box-shadow: 0 0 0 7px rgba(255,255,255,0.05); }
-    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.05); }
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.28); }
+    70% { box-shadow: 0 0 0 7px rgba(255,255,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
   }
   @keyframes factChipPulseGold {
     0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.35); }
@@ -1453,7 +1482,10 @@
        a vertical pan mid-gesture it fires pointercancel, which reverts. */
     touch-action: pan-y;
     background: rgba(255,255,255,0.05);
-    border: 1px solid var(--border);
+    /* --hairline-strong, matching .mobile-tabbar and .tour-tooltip. --border
+       is the rule between rows of DATA; a floating glass pane needs the
+       brighter rim, and this was the only one of the three not using it. */
+    border: 1px solid var(--hairline-strong);
     /* Shared saturation, role-scaled blur -- see --mat-sat. This surface
        overlaps scrolling text and was the one of the three floating panes
        without a rim or an under-edge, so it read as a translucent rectangle
@@ -1795,7 +1827,10 @@
   .units-tier-dot.high { background: var(--green); box-shadow: 0 0 5px 1px rgba(61,220,132,0.6); }
   .units-tier-dot.medium { background: var(--accent2); box-shadow: 0 0 5px 1px rgba(232,199,102,0.5); }
   .units-tier-dot.low { background: var(--muted); }
-  .units-tier-dot.lock { background: var(--text); box-shadow: 0 0 5px 1px rgba(255,255,255,0.05); }
+  /* 0.55, not 0.05 -- a --hairline-soft alpha pasted into a glow slot. Its
+     three siblings glow at 0.5-0.6; this one, marking the highest-conviction
+     tier on the page, was the only one that did not visibly glow at all. */
+  .units-tier-dot.lock { background: var(--text); box-shadow: 0 0 5px 1px rgba(255,255,255,0.55); }
   /* flex-shrink: 1, not 0 -- and this is the declaration that matters: an
      earlier rule setting the same property is overridden by this one, so the
      fix has to land here. */
@@ -2048,7 +2083,7 @@
   }
   .odds-compare {
     display: flex; align-items: center; gap: 10px; margin: 10px 0;
-    background: #0f1218; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 12px;
+    background: var(--sunken); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 12px;
   }
   .odds-compare-col { flex: 1; text-align: center; min-width: 0; }
   .odds-compare-label { font-size: var(--t-micro); text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; }
@@ -2068,7 +2103,7 @@
   .ev-headline {
     display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
     margin: 10px 0 2px; padding: 10px 12px;
-    background: #0f1218; border: 1px solid var(--border); border-radius: var(--r-lg);
+    background: var(--sunken); border: 1px solid var(--border); border-radius: var(--r-lg);
   }
   .ev-value {
     font-size: var(--t-h1); font-weight: 800; font-family: var(--font-display);
@@ -2247,6 +2282,9 @@
   .parlay-card {
     border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 10px;
     background: var(--panel2); border: 1px solid var(--border); border-left: 3px solid var(--border);
+    /* --e1. Resting list card: a hairline under-edge so it separates from
+       the page without pretending to float. */
+    box-shadow: var(--e1);
   }
   .parlay-card.bankroll { border-left-color: #3ddc84; }
   .parlay-card.lotto { border-left-color: var(--muted); }
@@ -2293,6 +2331,9 @@
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     background: var(--panel2); border: 1px solid var(--border);
     border-radius: var(--r-lg); padding: 10px 14px;
+    /* --e1. Resting list card: a hairline under-edge so it separates from
+       the page without pretending to float. */
+    box-shadow: var(--e1);
   }
   .ml-main { min-width: 0; flex: 1; }
   .ml-label { font-size: var(--t-body); font-weight: 600; color: var(--text); line-height: 1.35; }
@@ -2530,7 +2571,10 @@
   .event-header { margin: 26px 0 10px; }
   .event-name { font-size: var(--t-h3); font-weight: 600; }
   .event-date { color: var(--muted); font-size: var(--t-body); }
-  .future-event-card { border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden; }
+  .future-event-card { border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden;
+    /* --e1. Resting list card: a hairline under-edge so it separates from
+       the page without pretending to float. */
+    box-shadow: var(--e1); }
   .future-event-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; cursor: pointer; list-style: none; }
   .future-event-summary::-webkit-details-marker { display: none; }
   .future-event-summary-text { min-width: 0; }
@@ -2751,7 +2795,7 @@
 
   .replacement-badge {
     color: #c3c8d2; font-size: var(--t-micro); font-weight: 600; text-transform: uppercase;
-    background: #23262d; border: 1px solid rgba(255,255,255,0.10);
+    background: var(--panel2); border: 1px solid rgba(255,255,255,0.10);
     border-radius: var(--r-lg); padding: 2px 7px; display: inline-flex; align-items: center; gap: 3px;
     margin-bottom: 3px;
     white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
@@ -2963,7 +3007,11 @@
   /* 38%, up from 26%. The bars are the figure in a figure/ground pair where
      the ground had more room than the figure -- half again the length to
      differ in, on the only element here that encodes a magnitude. */
-  .wf-bar-cell { flex: 0 0 38%; height: 8px; background: rgba(255,255,255,0.04); border-radius: var(--r-sm); overflow: hidden; }
+  /* --sunken as the track. At rgba(255,255,255,0.04) the fill-to-track
+     contrast was 1.13:1 across 84 waterfall blocks -- the bar and the groove
+     it sits in were nearly the same colour, which is most of why the bars
+     read as decoration. --sunken takes it to 1.24:1. */
+  .wf-bar-cell { flex: 0 0 38%; height: 8px; background: var(--sunken); border-radius: var(--r-sm); overflow: hidden; }
   .wf-bar { display: block; height: 100%; border-radius: var(--r-sm); min-width: 2px; }
   /* "pos" means the factor pushes toward the FAVOURITE -- so the colour
      depends on which corner the favourite is in, not on the sign. */
@@ -3102,9 +3150,12 @@
     box-shadow: 0 0 0 3px var(--accent), 0 0 24px rgba(212,175,55,0.5) !important;
     border-radius: var(--r-lg);
   }
+  /* z-index 302, floating over a 0.65 scrim, with box-shadow: none -- the
+     topmost surface in the app had less material than a resting card. */
   .tour-tooltip {
     position: fixed; z-index: 302; max-width: 260px; background: var(--panel);
     border: 1px solid var(--accent); border-radius: var(--r-lg); padding: 12px 14px;
+    box-shadow: var(--e3);
      font-size: var(--t-body); line-height: 1.5;
   }
   .tour-tooltip-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
@@ -3490,6 +3541,9 @@
   .line-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg);
     padding: 12px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    /* --e1. Resting list card: a hairline under-edge so it separates from
+       the page without pretending to float. */
+    box-shadow: var(--e1);
   }
   .line-matchup { font-size: var(--t-lead); font-weight: 600; }
   .line-market { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
@@ -3548,7 +3602,7 @@
        rail and its content are visible at the same time (on mobile you
        navigate AWAY from the hub-card grid entirely, so highlighting
        one item there would never be seen). */
-    .hub-card.rail-active { background: linear-gradient(145deg, #23283a, #242426 65%); }
+    .hub-card.rail-active { background: linear-gradient(145deg, var(--panel2), #242426 65%); }
   
 
     /* Content pane: always visible (mobile JS toggles this via inline
@@ -4386,7 +4440,12 @@
   details.fight-card[open] > summary {
     position: sticky; top: var(--seg-tabs-h, 44px); z-index: 39;
     background: var(--panel);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.38);
+    /* On the ladder. This was `0 6px 16px rgba(0,0,0,0.38)` -- the one
+       floating surface in the app with a cast shadow and no specular rim,
+       which is what made a pinned summary read as a flat slab sitting on the
+       content rather than a raised edge of it. --e3 is the rung for a surface
+       that floats above the scroll. */
+    box-shadow: var(--e3);
     border-bottom: 1px solid var(--border);
   }
   /* Trim the vertical cost while pinned: the avatars and chip rows are
@@ -11866,7 +11925,13 @@
        hidden at the 1024px breakpoint rather than existing in both places. -->
   <nav class="mobile-tabbar" id="mobile-tabbar" aria-label="Main"><span class="tabbar-indicator" id="tabbar-indicator" aria-hidden="true"></span>
     <button class="tabbar-btn" data-tab="thisweekend">{{ icon_calendar() }}<span>Card</span></button>
-    <button class="tabbar-btn" data-tab="standout">{{ icon_target() }}<span>Edges</span></button>
+    {#- "Reads", not "Edges". Every card in this section renders
+        .ev-headline.neg.unbettable, every price is suffixed "fair", and the
+        section's own title already says "Clearest Reads". The tab promised an
+        edge and the first line beneath it said there isn't one -- a
+        five-character nav label undercutting the most careful writing in the
+        product. -#}
+    <button class="tabbar-btn" data-tab="standout">{{ icon_target() }}<span>Reads</span></button>
     <button class="tabbar-btn" data-tab="locks">{{ icon_lock() }}<span>Locks</span></button>
     <button class="tabbar-btn" data-tab="track">{{ icon_barchart() }}<span>Record</span></button>
     <button class="tabbar-btn" data-tab="__hub">{{ icon_list() }}<span>More</span></button>
