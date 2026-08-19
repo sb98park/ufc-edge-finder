@@ -3186,9 +3186,14 @@
   .price-src.fair { color: var(--muted); font-weight: 600; text-transform: none;
                     font-style: italic; letter-spacing: 0; }
   .price-shopped { color: var(--green); margin-left: 2px; }
-  /* THE HEADER RAN TOGETHER. "MODEL %" and "ODDS" collided into "MODEL %ODDS"
-     because the unit-hint is inline and the next header had no leading gap. */
-  .mkt-model-head .unit-hint { margin-right: 3px; }
+  /* NO MARGIN HERE. This carried margin-right: 3px to stop "MODEL %" running
+     into "ODDS" back when the header cells wrapped and had no reliable gap.
+     The 5px cell padding on each side does that job now -- and the 3px was
+     inside the content box, so it made the header 61px wide in a 60px cell.
+     Every one of the 18 Model headers on the page was clipping its "%" by a
+     pixel, under a container whose overflow is hidden, so nothing showed.
+     Measured 61 -> 60 with this removed. */
+  .mkt-model-head .unit-hint { margin-right: 0; }
   /* Unit in the header rather than repeated down the column. Not the same as
      .unit-hint, which is dotted to advertise that the Model header is
      tappable -- this one is a label and must not imply a control. */
