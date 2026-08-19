@@ -1510,6 +1510,44 @@
     -webkit-backdrop-filter: blur(24px) var(--mat-sat);
     box-shadow: var(--e2);
   }
+  /* ===== THE STICKY BACKDROP =====
+     .seg-tabs is a 95%-transparent pill (rgba(255,255,255,0.05)) that spans
+     358px of a 390px viewport and pins at top: 9px. So while it was stuck,
+     content scrolling past it had THREE ways through: the 16px of bare page
+     down each side, the 9px gap above it, and the glass itself, whose blur
+     softens content without hiding it. Nothing behind it was opaque -- the
+     section and the body are both transparent over a black page.
+
+     Reported as "content goes underneath it", and that is exactly right. The
+     fight-card summary below has never had this problem because it is a solid
+     rgb(28,28,30); the pill just looked like a header without behaving as one.
+
+     Painted BEHIND the pill's own glass (z-index: -1 inside its stacking
+     context) so the frosted look survives, and stretched past the gutters and
+     up beyond the viewport top so nothing can pass around it.
+
+     ONLY WHEN STUCK. Unpinned, this element sits in flow under the countdown
+     banner, and an always-on backdrop would paint a black slab over it. The
+     .stuck class comes from a sentinel + IntersectionObserver rather than a
+     scroll handler, so it costs nothing per frame. */
+  .seg-tabs.stuck::before {
+    content: ""; position: absolute; z-index: -1;
+    left: -24px; right: -24px; bottom: 0; top: -220px;
+    background: var(--bg);
+    pointer-events: none;
+  }
+  /* Zero-height probe directly above the pill. Once it leaves the top of the
+     viewport the pill is pinned -- which is what "stuck" means, and is more
+     reliable than comparing scrollY against an offset that moves whenever
+     anything above it resizes. */
+  /* 1px, NOT 0. IntersectionObserver is unreliable on a zero-AREA target --
+     a 0-height element can report intersectionRatio 0 whether it is on screen
+     or not, which would latch the bar permanently "stuck" and paint the
+     backdrop over the countdown banner at rest. One pixel of page height is a
+     fair price for a probe that actually fires, and the check below reads
+     isIntersecting rather than the ratio for the same reason. */
+  .seg-tabs-sentinel { height: 1px; margin: 0 0 -1px; padding: 0; }
+
   .seg-indicator {
     position: absolute; top: 3px; bottom: 3px; left: 0; width: 0;
     border-radius: var(--r-pill); background: rgba(255,255,255,0.10);
@@ -7282,6 +7320,11 @@
      The scroll anchor lands here now -- tapping Card should arrive at the
      card picker, not at a filter row. #}
   {% if segs|length > 1 %}
+  {# Zero-height probe for the stuck backdrop -- see .seg-tabs.stuck::before.
+     Must sit immediately BEFORE the pill and outside it: an IntersectionObserver
+     on a sticky element never reports it leaving, because sticky is exactly
+     what stops it leaving. #}
+  <div class="seg-tabs-sentinel" aria-hidden="true"></div>
   <div class="seg-tabs" id="section-thisweekend">
     {% for seg in segs %}
     <button class="seg-tab{{ ' active' if loop.first }}" aria-pressed="{{ 'true' if loop.first else 'false' }}" data-seg-target="seg-pane-{{ loop.index }}" onclick="switchSegTab(this)">{{ seg|title }}</button>
@@ -9451,6 +9494,35 @@
       document.addEventListener('DOMContentLoaded', initFighterDrawer);
     } else {
       initFighterDrawer();
+    }
+
+    // ===== Stuck state for the card picker =====
+    // .seg-tabs is a translucent pill with 16px of bare page down each side
+    // and a 9px gap above it, so while pinned it let content scroll straight
+    // past through the gutters and through the glass. The backdrop that fixes
+    // that must only exist while it is actually pinned, or it paints a slab
+    // over the countdown banner it sits under at rest.
+    //
+    // A sentinel rather than a scroll listener: no work per frame, and no
+    // offset to recompute when anything above it changes height.
+    function initSegTabsStuck() {
+      if (!('IntersectionObserver' in window)) return;
+      document.querySelectorAll('.seg-tabs-sentinel').forEach(sentinel => {
+        const bar = sentinel.nextElementSibling;
+        if (!bar || !bar.classList.contains('seg-tabs')) return;
+        new IntersectionObserver(([e]) => {
+          // The sentinel is above the bar, so it leaving the top of the
+          // viewport is precisely the moment the bar starts sticking.
+          // isIntersecting, not intersectionRatio: the ratio of a 1px probe is
+          // fragile and reads 0 in cases where the probe is plainly visible.
+          bar.classList.toggle('stuck', !e.isIntersecting);
+        }, { threshold: 0 }).observe(sentinel);
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSegTabsStuck);
+    } else {
+      initSegTabsStuck();
     }
 
     // ===== Scroll-end fade on the event selector =====
