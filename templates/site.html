@@ -1530,11 +1530,33 @@
      banner, and an always-on backdrop would paint a black slab over it. The
      .stuck class comes from a sentinel + IntersectionObserver rather than a
      scroll handler, so it costs nothing per frame. */
-  .seg-tabs.stuck::before {
-    content: ""; position: absolute; z-index: -1;
-    left: -24px; right: -24px; bottom: 0; top: -220px;
-    background: var(--bg);
-    pointer-events: none;
+  .seg-tabs.stuck {
+    /* A BOX-SHADOW, NOT A PSEUDO-ELEMENT. The first attempt used
+       `::before { z-index: -1 }` and it painted the pill's own outline away:
+       inside a stacking context a negative-z child paints AFTER the element's
+       background and border, not before, so the black backdrop covered the
+       oval. It also left a hairline of that border peeking out underneath,
+       because `bottom: 0` on an absolutely positioned box measures from the
+       PADDING box and this element carries 3px of padding plus a 1px border.
+       Both symptoms, one cause -- reported as "the container disappears and
+       leaves a faint grey line".
+
+       An OUTER box-shadow is painted outside the border box and BEHIND the
+       element, which is the layer actually wanted, so the border and the
+       frosted fill survive untouched.
+
+       The geometry is a small identity rather than a magic number. A shadow
+       offset up by Y with spread S covers from (top - S - Y) to
+       (bottom + S - Y); setting Y = S makes the bottom edge land exactly on
+       the element's own bottom, so it fills the gutters and everything above
+       and stops dead at the pill. 400px covers 800px of headroom and 400px
+       each side against a 16px gutter.
+
+       Listed LAST so it paints behind --e2's own shadows rather than over
+       them. */
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06),
+                0 4px 12px rgba(0,0,0,0.36),
+                0 -400px 0 400px var(--bg);
   }
   /* Zero-height probe directly above the pill. Once it leaves the top of the
      viewport the pill is pinned -- which is what "stuck" means, and is more
