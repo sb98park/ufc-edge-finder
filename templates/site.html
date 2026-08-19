@@ -1484,7 +1484,18 @@
   .track-tabs {
     display: flex; flex-wrap: nowrap; overflow-x: auto; border-bottom: 1px solid var(--border);
     margin: 4px 0 14px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    /* Measured clientWidth 370 against scrollWidth 1540 -- 1,170px of event
+       names off-screen, with the scrollbar hidden, no fade, no peek and no
+       indicator. It rendered "Overall | UFC 330: Makhachev vs. Machado Garry
+       | UFC I" cut dead at the viewport edge, directly above the equity
+       curve. A hard edge reads as a layout bug; a fade reads as "there is
+       more this way", which is the truth. */
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
   }
+  /* Dropped at the end of the scroll -- a fade still showing when there is
+     nothing left to reach is the same lie in the other direction. */
+  .track-tabs.scrolled-end { -webkit-mask-image: none; mask-image: none; }
   .track-tabs::-webkit-scrollbar { display: none; }
   .track-tabs .seg-tab { flex: 0 0 auto; white-space: nowrap; padding: 11px 12px; }
   .seg-pane { display: none; }
@@ -1739,6 +1750,19 @@
   .baseline-bar-fill.model { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
   .baseline-bar-fill.market { background: var(--muted); }
   .baseline-value { font-size: var(--t-body); font-weight: 700; font-family: var(--font-display); width: 40px; text-align: right; flex-shrink: 0; }
+  /* NESTED, so it stops drawing itself. .track-record-card and .units-block
+     both compute background rgb(28,28,30) with a 1px rgb(46,46,48) border --
+     two concentric, identical rounded rects, one inside the other. The result
+     was content starting at x=50 with 302px of width in a 402px viewport:
+     25% chrome around the widest data panel in the app, on the narrowest
+     surface it has. Stripping the inner box gives the equity curve 34px back.
+     Not --panel2 for the inner one: that keeps the whole 34px cost in order
+     to draw a distinction nobody asked for. */
+  /* Descendant, not child: .units-block sits inside .seg-pane.active inside
+     the card, so `>` matched nothing. */
+  .track-record-card .units-block {
+    background: none; border: 0; padding: 0 0 14px; margin-top: 0;
+  }
   .units-block {
     margin: 16px 0; padding: 16px 16px 14px; border-radius: var(--r-lg); text-align: center;
     /* Flat panel. A 10% gold radial wash sat over this, which is what read as
@@ -2930,8 +2954,16 @@
   .waterfall-row.base { border-bottom: 1px dashed var(--border); padding-bottom: 8px; margin-bottom: 3px; }
   .waterfall-row.cap .wf-label { font-style: italic; }
   .wf-label { flex: 1 1 auto; min-width: 0; font-size: var(--t-small); font-weight: 600; color: var(--text); }
-  .wf-why { display: block; font-size: var(--t-micro); font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 1px; }
-  .wf-bar-cell { flex: 0 0 26%; height: 8px; background: rgba(255,255,255,0.04); border-radius: var(--r-sm); overflow: hidden; }
+  /* ONE LINE. At 151px against an 81px bar, this footnote was wider than the
+     quantity it footnotes and wrapped to two lines on every row, which is
+     most of why an open card ran so long. Truncating costs the tail of an
+     explanation; keeping it cost the component its proportions. */
+  .wf-why { display: block; font-size: var(--t-micro); font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 38%, up from 26%. The bars are the figure in a figure/ground pair where
+     the ground had more room than the figure -- half again the length to
+     differ in, on the only element here that encodes a magnitude. */
+  .wf-bar-cell { flex: 0 0 38%; height: 8px; background: rgba(255,255,255,0.04); border-radius: var(--r-sm); overflow: hidden; }
   .wf-bar { display: block; height: 100%; border-radius: var(--r-sm); min-width: 2px; }
   /* "pos" means the factor pushes toward the FAVOURITE -- so the colour
      depends on which corner the favourite is in, not on the sign. */
@@ -2949,7 +2981,11 @@
   .fav-red .wf-delta.neg { color: var(--corner-blue); }
   .fav-blue .wf-delta.pos { color: var(--corner-blue); }
   .fav-blue .wf-delta.neg { color: var(--corner-red); }
-  .wf-run { display: block; font-size: var(--t-micro); color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 1px; }
+  /* The running total -- 50.0 -> 51.9 -> 60.4 -> 65.5 -> 68.9 -- is the
+     cumulative build that makes this a waterfall rather than a list, and it
+     was set at 9px --muted: the faintest text in the panel. It should be the
+     spine you read down. */
+  .wf-run { display: block; font-size: var(--t-small); color: var(--text-soft); font-variant-numeric: tabular-nums; margin-top: 1px; }
   .waterfall-total {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
     margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: var(--t-body);
@@ -4044,11 +4080,12 @@
      glance and puts every remaining section on one screen. */
   @media (max-width: 1023px) {
     .hub-grid { display: block; }
-    .hub-card {
-      display: flex; align-items: center; gap: 12px;
-      padding: 13px 14px; margin: 0 0 8px;
-      min-height: 0; border-radius: var(--r-lg);
-    }
+    /* A `.hub-card` rule sat here declaring display, align-items, gap,
+       padding, margin, min-height and border-radius. Every one of those seven
+       is re-declared by the .hub-card rule in the SECOND
+       `@media (max-width: 1023px)` block below, at equal specificity and
+       later in the file -- so none of it ever applied. Deleted rather than
+       left to be read as live by whoever edits this next. */
     .hub-card .hub-card-title { font-size: var(--t-lead); margin: 0; }
     .hub-card .hub-card-sub {
       font-size: var(--t-small); margin: 2px 0 0;
@@ -4108,13 +4145,24 @@
     .hub-group-header {
       font-size: var(--t-small); font-weight: 600; letter-spacing: 0.06em;
       text-transform: uppercase; color: var(--muted);
-      margin: 18px 4px 7px; opacity: 0.75;
+      /* Flush with the group it heads. The grid already carries the app's
+         16px inset -- cards start at x=16 -- so any horizontal margin here
+         pushes the header off its own group's left edge, which is where an
+         iOS-style grouped list puts it. It had 4px and sat at x=20; 16px
+         would have put it at 32. Vertical is asymmetric on purpose: a wider
+         gap above than below binds the header downward to its group rather
+         than letting it float between two. */
+      margin: 24px 0 8px; opacity: 0.75;
     }
     .hub-grid > .hub-group-header:first-child { margin-top: 4px; }
 
     .hub-card {
       display: flex; align-items: center; gap: 12px;
-      padding: 11px 13px; margin: 0; min-height: 0;
+      /* 52px floor. Rows measured 53/52/53/54/53/53 -- content-driven, so a
+         row whose label happens to be short would sit visibly shallower than
+         its neighbours. Also puts every row comfortably past the 44px touch
+         minimum by design rather than by accident. */
+      padding: 11px 13px; margin: 0; min-height: 52px;
       background: var(--panel);
       /* SIDES ONLY. With a top border here, a row boundary showed B's full
          width top border (1px) plus A's inset ::after from x=52 onward --
@@ -4146,7 +4194,15 @@
        surface divided, rather than boxes stacked. */
     .hub-card[data-row="first"]::after,
     .hub-card[data-row="mid"]::after {
-      content: ""; position: absolute; left: 52px; right: 0; bottom: 0;
+      /* WRITTEN AS THE SUM IT IS. 52px was measured correct for a tinted icon
+         tile that has since been removed, and it now stops 3px short of the
+         text it is supposed to align with -- an absolutely positioned box is
+         offset from the containing block's PADDING box, so the divider drew
+         at page x=69 against text at x=72. Composing it from the three things
+         that actually place the text means the next change to any of them
+         carries the divider with it, instead of leaving another stale
+         literal. */
+      content: ""; position: absolute; left: calc(13px + 30px + 12px); right: 0; bottom: 0;
       height: 1px; background: var(--border);
     }
     .hub-card { position: relative; }
@@ -8667,6 +8723,40 @@
       document.addEventListener('DOMContentLoaded', initTabBarCollapse);
     } else {
       initTabBarCollapse();
+    }
+
+    // ===== Scroll-end fade on the event selector =====
+    // The CSS fades the right edge of .track-tabs to say "there is more this
+    // way". Once there is not, the fade has to go -- a permanent one is the
+    // same lie in the other direction, and it would sit over the last event
+    // name forever. Also re-checked on resize, because the bar can stop being
+    // scrollable at all when the window widens.
+    function initTrackTabsFade() {
+      document.querySelectorAll('.track-tabs').forEach(bar => {
+        const sync = () => {
+          // A bar in a section that has not been opened yet measures 0/0,
+          // and 0 + 0 >= 0 - 2 is TRUE -- so an unguarded check marks every
+          // hidden bar "scrolled to the end" at init and, with no scroll or
+          // resize to correct it, the fade never appears once the section is
+          // finally shown. This is why the ResizeObserver below exists: the
+          // bar gaining layout is the event worth listening for.
+          if (!bar.clientWidth) return;
+          // 2px of slack: fractional scroll positions mean scrollLeft rarely
+          // lands exactly on the maximum, so an equality test would leave the
+          // fade up at the end of every scroll.
+          const atEnd = bar.scrollLeft + bar.clientWidth >= bar.scrollWidth - 2;
+          bar.classList.toggle('scrolled-end', atEnd);
+        };
+        bar.addEventListener('scroll', sync, { passive: true });
+        window.addEventListener('resize', sync, { passive: true });
+        if (window.ResizeObserver) new ResizeObserver(sync).observe(bar);
+        sync();
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTrackTabsFade);
+    } else {
+      initTrackTabsFade();
     }
 
 
