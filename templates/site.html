@@ -2624,7 +2624,12 @@
   details.fight-card summary::-webkit-details-marker { display: none; }
 
   .matchup-content { flex: 1; min-width: 0; }
-  .matchup-header { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+  /* 4px, not 6. At 390px -- the commonest phone width, and narrower than the
+     402 this row was tuned at -- the three things competing for this row want
+     113.3 x2 for the names, 91.8 for the widest weight label and 89.9 for
+     "CO-MAIN EVENT", against 324px of row. That is 14px over budget, so the
+     gaps and the badge padding are where it comes from rather than the names. */
+  .matchup-header { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
   .matchup-fighter { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
   .matchup-fighter.right { justify-content: flex-end; text-align: right; }
   .matchup-fighter .matchup-name-wrap { min-width: 0; }
@@ -2706,7 +2711,19 @@
      women's prefix to "W." in the template (see .weight-class-badge) drops
      the widest label to ~88px, and 98px then fits every name on one line
      with nothing wrapping anywhere. */
-  .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: clamp(88px, 28%, 98px); min-width: 0; overflow: hidden; }
+  /* 27%, so the preferred value lands ON the 88px floor at 390px instead of
+     0.65px above it -- which is the whole margin between "Anthony Hernandez"
+     on one line and on two. The consequence is that "W. Bantamweight" (91.8px)
+     wraps its 9px caption to two lines below ~410px. That is the trade the
+     component has to make and it is the right way round: the fighter names are
+     what the card is for, the division is a caption, and exactly one label in
+     the whole roster is affected. */
+  /* No horizontal padding. box-sizing is border-box globally, so any inset
+     here comes straight out of the 88px the labels have to fit in -- 2px each
+     side was enough to wrap "W. Strawweight" (85.7px) inside an 88px column.
+     The 4px flex gap on either side is the separation; this element does not
+     need its own as well. */
+  .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0; width: clamp(88px, 27%, 98px); min-width: 0; overflow: hidden; }
   .vs-text { display: block; font-size: var(--t-small); font-weight: 700; color: var(--muted); letter-spacing: 0.5px; }
   @media (max-width: 480px) {
     .matchup-fighter .fighter-avatar-wrap { display: none; }
@@ -2763,7 +2780,10 @@
     /* Every other 9px uppercase label on the page carries tracking; this one
        did not, so "MAIN EVENT" set tighter than the badges around it. */
     color: var(--accent); font-size: var(--t-micro); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
-    background: #241f10; border-radius: var(--r-lg); padding: 2px 7px; display: inline-block; margin-bottom: 3px;
+    /* 5px sides, not 7. This badge lives in the narrowest column on the page
+       and 14px of horizontal padding was enough to push "CO-MAIN EVENT" onto
+       two lines, which made that one card taller than every other row. */
+    background: #241f10; border-radius: var(--r-lg); padding: 2px 5px; display: inline-block; margin-bottom: 3px;
     white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
   }
   /* Deliberately a SIBLING of .card-position: same slot, same pill, same
