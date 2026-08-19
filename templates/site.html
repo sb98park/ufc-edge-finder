@@ -1136,17 +1136,25 @@
   }
   .sil-seg-btn {
     background: none; border: none; cursor: pointer;
-    font-size: 0.59375rem; font-weight: 600; letter-spacing: 0.3px;
+    font-size: var(--t-small); font-weight: 600; letter-spacing: 0.3px;
     /* Named properties, not `all`. Nothing visible changes today, but this
        is the only `transition: all` in the file: add a 1px border to the .on
        state and 146 buttons start relayouting on every toggle. */
     padding: 4px 13px; color: var(--muted);
+    /* A <button> does NOT inherit the page font -- the UA sheet sets it, and
+       these computed to Arial. 150 of them: the only non-system,
+       non-Space-Grotesk text anywhere on the page. */
+    font-family: inherit;
     transition: background-color 0.18s ease-out, color 0.18s ease-out, border-color 0.18s ease-out;
   }
   .sil-seg-btn.on { background: rgba(255,255,255,0.10); color: #eceff3; }
   .sil-seg-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  /* --t-tiny (10px), NOT --t-small (11px) like the other three escapes on
+     this component. This box is 78px at 320px and it holds a surname: at 11px
+     "Nurmagomedov" measures 83.7px and overflows, at 10px it is 76.1px. The
+     roster decides this one, not the scale. */
   .sil-name {
-    font-size: 0.59375rem; font-weight: 600; color: #c9ced6;
+    font-size: var(--t-tiny); font-weight: 600; color: #c9ced6;
     text-align: center; margin-top: 5px;
   }
 
@@ -1194,7 +1202,7 @@
     transform: translate(-50%, calc(-100% - 26px));
     background: rgba(18,20,24,0.96); border: 1px solid rgba(255,255,255,0.12);
     border-radius: 6px; padding: 3px 7px; white-space: nowrap;
-    font-size: 0.59375rem; font-weight: 600; color: #eceff3;
+    font-size: var(--t-small); font-weight: 600; color: #eceff3;
     font-variant-numeric: tabular-nums;
     opacity: 0; transition: opacity 0.12s ease;
   }
@@ -1205,7 +1213,12 @@
      the wrap -- so switching Lands/Absorbs cannot leave a blank figure with
      nothing explaining it. Default is hidden: no flag set (or both present)
      means there is a profile to draw. */
-  .sil-nodata { opacity: 0.5; display: none; }
+  /* Styled at all. This inherited the body's 16px and full text colour, so
+     the one time it shows -- a fighter with no strike-location data -- it
+     would have arrived as the largest text in the card. Zero are visible on
+     the current build, which is why it went unnoticed: a latent bug, not a
+     live one. */
+  .sil-nodata { opacity: 0.5; display: none; font-size: var(--t-tiny); color: var(--muted); }
   .silhouette-wrap.mode-lands[data-has-lands="0"] .sil-nodata,
   .silhouette-wrap.mode-absorbs[data-has-absorbs="0"] .sil-nodata { display: inline; }
   /* #55595f on --panel measured 2.41:1 -- against a 4.5:1 requirement, on the
@@ -1219,7 +1232,7 @@
 
   .fight-shape { text-align: center; margin-top: 9px; }
   .fight-shape-label { display: block; font-size: var(--t-small); font-weight: 700; color: #d8dbe2; letter-spacing: 0.2px; }
-  .fight-shape-detail { display: block; font-size: 0.59375rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+  .fight-shape-detail { display: block; font-size: var(--t-micro); color: var(--muted); margin-top: 2px; line-height: 1.4; }
 
   .spotlight-chip-row { justify-content: center; }
   /* Corner tint binds a chip to a fighter without repeating the legend. */
@@ -2633,7 +2646,9 @@
     color: var(--muted); display: block; line-height: 1.3; white-space: normal; overflow-wrap: break-word;
   }
   .card-position {
-    color: var(--accent); font-size: var(--t-micro); font-weight: 600; text-transform: uppercase;
+    /* Every other 9px uppercase label on the page carries tracking; this one
+       did not, so "MAIN EVENT" set tighter than the badges around it. */
+    color: var(--accent); font-size: var(--t-micro); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
     background: #241f10; border-radius: var(--r-lg); padding: 2px 7px; display: inline-block; margin-bottom: 3px;
     white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
   }
@@ -2683,7 +2698,12 @@
   .replacement-badge .inline-icon { width: 11px; height: 11px; flex: none; }
   .no-edges { color: var(--muted); font-size: var(--t-body); padding: 0 16px 14px; }
 
-  .result-text { font-size: 0.5625rem !important; font-weight: 700 !important; color: var(--green) !important; letter-spacing: 0.3px; }
+  /* The !important on font-size and font-weight was dead weight: .vs-text,
+     the only rule it could have been fighting, is declared EARLIER at equal
+     specificity, so plain declarations already win. The colour keeps its
+     !important -- that one does override an inline style set by the live
+     result JS. */
+  .result-text { font-size: var(--t-micro); font-weight: 700; color: var(--green) !important; letter-spacing: 0.3px; }
 
   /* WINNER / LOSER emphasis. The result line alone ("X def. Y" in small
      green type) made the reader parse a sentence to learn who won; the
@@ -2711,8 +2731,8 @@
     50% { box-shadow: 0 0 0 1.5px rgba(61,220,132,0.55), 0 0 22px rgba(61,220,132,0.25); }
   }
   .live-vs-badge {
-    background: linear-gradient(135deg, #7a1a1a, #4a0f0f); color: #fff; font-size: 0.5625rem !important;
-    font-weight: 700 !important; letter-spacing: 0.5px; padding: 2px 8px; border-radius: var(--r-md);
+    background: linear-gradient(135deg, #7a1a1a, #4a0f0f); color: #fff; font-size: var(--t-micro);
+    font-weight: 700; letter-spacing: 0.5px; padding: 2px 8px; border-radius: var(--r-md);
     display: inline-flex !important; align-items: center; gap: 4px;
   }
   .live-vs-badge .live-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: #ff4747; box-shadow: 0 0 6px 1px rgba(255,71,71,0.7); }
@@ -3252,6 +3272,11 @@
      cell whose content is genuinely variable-width. */
   .mkt-ev, .mkt-model, .mkt-none, .mkt-price, .mkt-edge { padding-left: 5px; padding-right: 5px; }
   .mkt-ev, .mkt-edge, .mkt-price { font-variant-numeric: tabular-nums; }
+  /* .edge-pos carries font-weight: 600 and .edge-neg carries none, so a
+     negative EV rendered LIGHTER than a positive one in the same column --
+     the column's own weight said "this number matters less" about exactly the
+     numbers a reader most needs to see. Set on the cell so both tiers match. */
+  .mkt-ev { font-weight: 600; }
   /* EV IS THE ONLY COLOURED NUMBER IN THE ROW. Edge was painted green/red
      too, which gave the demoted validation stat exactly the same visual
      weight as the number a reader acts on -- two signals shouting the same
@@ -3263,7 +3288,7 @@
   /* WHOSE PRICE. Sits under the number, so naming the source costs row
      height rather than the column width there is none of. */
   .price-src {
-    display: block; font-size: 9px; letter-spacing: 0.3px; line-height: 1.5;
+    display: block; font-size: var(--t-micro); letter-spacing: 0.3px; line-height: 1.5;
     text-transform: uppercase; font-weight: 700;
   }
   .price-src.book { color: var(--accent-cool); }
@@ -3281,8 +3306,13 @@
   /* Unit in the header rather than repeated down the column. Not the same as
      .unit-hint, which is dotted to advertise that the Model header is
      tappable -- this one is a label and must not imply a control. */
+  /* The opacity was the whole problem. --muted on this surface is 6.56:1;
+     0.65 opacity dragged it to 3.54:1, under the 4.5:1 floor -- the exact bug
+     already fixed once elsewhere in this file by deleting an opacity rather
+     than by changing a colour. 8px was also the smallest type on the page and
+     off the scale entirely. */
   .unit-tag {
-    font-size: 8px; font-weight: 600; letter-spacing: 0.2px; opacity: 0.65;
+    font-size: var(--t-micro); font-weight: 600; letter-spacing: 0.2px;
     margin-left: 2px; text-transform: lowercase;
   }
   @media (max-width: 480px) {
@@ -3771,6 +3801,18 @@
                 width 0.55s linear(0, 0.0331, 0.1153, 0.2256, 0.3479, 0.4706, 0.5861, 0.6895, 0.7783, 0.8519, 0.9106, 0.9556, 0.9887, 1.0117, 1.0264, 1.0347, 1.0381, 1.038, 1.0356, 1.0318, 1.0272, 1.0225, 1.0179, 1.0137, 1);
     pointer-events: none; z-index: 0;
   }
+  /* THE PRESS MAGNIFICATION WAS A NO-OP. pointerdown sets scale(1.12), but on
+     a tap neither .dragging nor .springing is set, so the only live
+     transition on transform is the 0.55s spring curve above -- a 100ms tap
+     reached about 1.042 of the intended 1.12 and then snapped back, because
+     release() sets scale(1) before springToBtn kills the transition. The most
+     tapped control on the site had no press feedback at all, and the note on
+     .tabbar-btn exempting it from the press-state pass ("its press state is
+     the indicator's 1.12 scale") was describing something that never ran.
+     90ms matches the press tier used by every other pressable surface here.
+     Declared BEFORE .dragging and .springing so those still win when a press
+     becomes a drag -- all three are (0,2,1) and source order settles it. */
+  .mobile-tabbar.pressing .tabbar-indicator { transition: transform 90ms ease-out; }
   /* While a finger is down the indicator must track without easing, or it
      lags behind the touch and stops feeling attached to it. */
   .mobile-tabbar.dragging .tabbar-indicator { transition: none; }
@@ -4584,6 +4626,59 @@
   @media (prefers-reduced-motion: reduce) {
     #splash-arc, #splash-peak { animation: none; stroke-dashoffset: 0; }
     #splash-word { animation: none; opacity: 1; }
+  }
+  /* ===== REDUCED MOTION: the holes ==================================
+     prefers-reduced-motion is honoured in seventeen places above, and the
+     ones below were missed. Collected here, at the END of the sheet, because
+     every one of them is overriding a base rule declared earlier and source
+     order is what makes that work without !important.
+
+     What is NOT here, and why:
+       - `.ripple-effect` is suppressed in JS at the point of creation, which
+         is better than shortening it in CSS.
+       - `#splash-*` was already guarded further up, by id rather than class.
+       - `.ambient-embers` is display:none under this preference, so the
+         infinite `.ember` animations inside it never run.
+       - `.scroll-digit .track.animating` is NOT set to `animation: none`.
+         Its cleanup is an `animationend` listener that removes the spent
+         digit and the class; kill the animation and the event never fires,
+         the old digit is never removed and the countdown breaks permanently.
+         Duration goes to 1ms instead -- imperceptible, and the event still
+         fires. That is the trap in blanket-disabling animations. */
+  @media (prefers-reduced-motion: reduce) {
+    /* The highest-leverage line in this block: every in-page navigation on
+       the site is an anchor scroll, and the root was animating all of them. */
+    html { scroll-behavior: auto; }
+
+    /* The two selection pills. springToBtn early-returns for this preference
+       BEFORE it adds .springing, so the class that suppresses the CSS
+       transition was never applied and the reduced-motion user got the full
+       0.55s overshooting glide the early return exists to avoid. */
+    .seg-indicator, .tabbar-indicator { transition: none; }
+
+    /* 168 radar polygons scaling up from zero over 1.4s, and the sweep that
+       draws the line charts. Both arrive at their value instead. */
+    .radar-polygon { transition: none; transform: scale(1); }
+    .chart-reveal-mask { transition: none; transform: scaleX(0); }
+    .chart-draw-endpoint, .chart-endpoint-late { transition: none; }
+    /* Same specificity as the rule that starts it (0,3,0) -- a bare
+       `.chart-endpoint-halo` would lose. The inline animation-delay each
+       chart sets is irrelevant once the name is gone. */
+    .chart-block.revealed .chart-endpoint-halo { animation: none; }
+
+    /* Finite pulses and pops. Every one of these keyframe sets returns to
+       its start state at 100%, so removing the animation leaves the resting
+       appearance exactly as designed -- checked individually, not assumed. */
+    .countdown-sep,
+    .live-header-macro,
+    .new-badge,
+    .new-item-glow,
+    .empty-state-icon,
+    .fighter-avatar.winner-glow,
+    .perfect-prop-badge.celebrate,
+    .lock-badge.celebrate { animation: none; }
+
+    .scroll-digit .track.animating { animation-duration: 1ms; }
   }
 </style>
 <script>
@@ -9007,6 +9102,8 @@
         startX = e.clientX;
         vel.clear(); vel.add(startX, performance.now());
         hovered = btnAt(startX);
+        // .pressing FIRST -- it is what makes the next line visible at all.
+        bar.classList.add('pressing');
         setScale(1.12);          // press magnification, iOS-style
       });
 
@@ -9035,6 +9132,11 @@
         if (!dragging) return;
         dragging = false;
         setScale(1);
+        // Dropped immediately before springToBtn, which adds .springing and
+        // starts writing the transform every frame -- a CSS transition still
+        // live on the same property would ease toward each of those frames
+        // and smear the spring.
+        bar.classList.remove('pressing');
 
         // MOMENTUM. Land where the flick is GOING, not where the finger
         // stopped. Projecting the pill's resting position and snapping to
@@ -9095,6 +9197,7 @@
         // no velocity, so a cancel reads as "that didn't happen".
         dragging = false; moved = false;
         setScale(1);
+        bar.classList.remove('pressing');
         const back = committed || btns.find(b => b.classList.contains('active'));
         if (back) setActive(back);
         hovered = back || null;
