@@ -3178,7 +3178,7 @@
     .market-group table th:nth-child(1), .market-group table td:nth-child(1) {
       width: 34%; white-space: normal; overflow-wrap: break-word;
     }
-        /* 18%, not 16%: the pinned "MODEL %" header needs 61px and 16% gave
+    /* 18%, not 16%: the pinned "MODEL %" header needs 61px and 16% gave
        it 54, so it clipped silently against the container's hidden
        overflow -- the failure mode that comes with removing a scroller. */
     .market-group table th:nth-child(2), .market-group table td:nth-child(2) { width: 18%; }
@@ -3202,21 +3202,43 @@
       overflow-x: hidden;
       -webkit-overflow-scrolling: auto;
     }
-    .market-group table td, .market-group table th {
+    /* ONLY THE MARKET LABEL WRAPS. That rule was blanket `td, th` to kill the
+       horizontal scroll, and it let every short cell break too: "EDGE pts"
+       split across lines as "EDGE pt" / "s", the Model header dropped its "%"
+       onto a second row, and an EV of "+13.9%" broke between the number and
+       its sign. Wrapping is only ever wanted on the one cell whose content is
+       genuinely variable-length. */
+    .market-group table td:first-child, .market-group table th:first-child {
       white-space: normal; overflow-wrap: break-word;
     }
-    /* The edge cell opts back OUT of wrapping, and needs td in the selector
-       to do it: `.mkt-edge` alone is (0,1,0) against the (0,1,2) rule above
-       and silently lost, which is why the fragile-price asterisk kept
-       breaking onto its own line after the first attempt. Measured clip-free
-       from 320px up. */
+    /* Everything else stays on one line, and every header sits on the SAME
+       baseline -- the ragged header row was the two cells carrying a unit
+       label growing taller than the four that do not. */
+    .market-group table th { white-space: nowrap; vertical-align: bottom; }
+    .market-group table td { white-space: nowrap; }
+    /* Stated explicitly for the fragile-price asterisk, which must never
+       drift onto its own line and read as a stray bullet. Subsumed by the
+       rule above, kept where the reason lives. */
     .market-group table td.mkt-edge { white-space: nowrap; }
-    /* The Model header is NOT pinned to one line, deliberately. Pinning it
-       made it clip instead of wrap the moment the column was narrower than
-       its text -- silently, because the container's overflow is now hidden.
-       Percentages scale with the viewport and "MODEL %" does not, so on a
-       320px screen there is no width that fits it. Wrapping to two lines is
-       the honest degradation; at 18% it stays on one line from ~360px up. */
+  }
+
+  /* A 320px SCREEN CANNOT HOLD FIVE COLUMNS AT FULL SIZE, and holding the
+     headers on one line is what exposed it -- nowrap turns a wrap into a
+     silent clip, since the container's overflow is hidden. Rather than let
+     "MODEL" lose its last letter, the smallest phones drop the supplementary
+     unit labels, tighten the numeric padding and take a point off the header
+     type. Measured to zero clipped cells at 320; above 360 nothing here
+     applies and the units are back. */
+  @media (max-width: 360px) {
+    .market-group table th .unit-hint,
+    .market-group table th .unit-tag { display: none; }
+    .market-group table th { font-size: 10px; padding-left: 3px; padding-right: 3px; }
+    .market-group .mkt-ev, .market-group .mkt-edge, .market-group .mkt-model,
+    .market-group .mkt-price, .market-group .mkt-none {
+      padding-left: 3px; padding-right: 3px;
+    }
+    .market-group table th:nth-child(1), .market-group table td:nth-child(1) { width: 33%; }
+    .market-group table th:nth-child(4), .market-group table td:nth-child(4) { width: 16%; }
   }
   .model-only-table td { color: var(--muted); font-style: italic; }
   @media (max-width: 480px) {
