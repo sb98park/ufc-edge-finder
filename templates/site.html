@@ -2477,8 +2477,21 @@
   @media (hover: hover) {
     details.fight-card:hover {  }
   }
-  details.fight-card summary {
-    padding: 14px 12px; cursor: pointer; list-style: none;
+  /* CHILD combinator, not descendant. As `details.fight-card summary` this
+     was specificity (0,1,2) and silently beat two authored rules at (0,1,0)
+     nested inside it: .waterfall-summary computed 14px 12px against its
+     declared 9px 12px, and .market-group-summary computed 14px 12px against
+     its declared 8px 10px. That is why the "Why the model likes..." row stood
+     42px tall next to a structurally identical 33px chart-toggle row.
+     16px, not 12px: .fight-body is `0 16px 16px`, so summary content sat at
+     x=29 and body content at x=33 -- and because the summary is position:
+     sticky while open, the pinned bar and the content scrolling under it were
+     on screen together with disagreeing left edges. Same argument the file
+     already makes for the 2px stagger elsewhere; .future-event-summary
+     already uses 14px 16px against an identical body. Vertical padding
+     untouched. */
+  details.fight-card > summary {
+    padding: 14px 16px; cursor: pointer; list-style: none;
     display: flex; justify-content: space-between; align-items: center; gap: 6px;
   }
   details.fight-card summary::-webkit-details-marker { display: none; }
@@ -2489,8 +2502,11 @@
   .matchup-fighter.right { justify-content: flex-end; text-align: right; }
   .matchup-fighter .matchup-name-wrap { min-width: 0; }
   .matchup-name { font-size: var(--t-body); font-weight: 600; line-height: 1.25; display: block; }
-  .matchup-divider-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-  .matchup-divider-row .divider-line { flex: 1; height: 1px; background: var(--border); }
+  /* The 223x1px rule that used to fill 65% of this row is gone -- it was
+     decoration doing a spacer's job, and the 8px margin above already
+     separates this row from the names. flex-end replaces the spacer so the
+     pick and the chevron stay right. */
+  .matchup-divider-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
   /* THE SUMMARY PICK. Sits on the divider row between the line and the
      chevron, so it reads as part of the "there is more here" affordance
      rather than as another badge competing with the fighter names.
@@ -2501,11 +2517,14 @@
     font-size: var(--t-small); font-weight: 600; white-space: nowrap;
     flex-shrink: 0;
   }
-  /* order: -1 puts the pick before the divider line, so the flex line takes
-     the remaining space and the group sits hard left under fighter A. The
-     chevron stays right in both cases -- it points at the disclosure, not at
-     a fighter, and moving it would make the affordance itself inconsistent. */
-  .summary-pick.corner-a { order: -1; }
+  /* `.summary-pick.corner-a { order: -1 }` was deleted here. It moved the
+     pick to the far left whenever the model favoured fighter A, which is 48
+     of 84 picks -- a coin flip, not a main-event quirk. Measured left edges
+     down one card: 29, 279, 282, 285, 277, 293. The comment above promises a
+     column of percentages that can be compared at a glance, and at 402px wide
+     there is no column when half the rows jump 250px. The side encoding was
+     redundant anyway: the picked fighter is named in words 5px to the left of
+     the number. */
   .summary-pick-name { color: var(--text-soft); }
   .summary-pick-pct { color: var(--text); font-variant-numeric: tabular-nums; font-family: var(--font-display); }
   /* The tier as colour, not a word. A word here would compete with the
@@ -2550,7 +2569,17 @@
      heights spread across 30/40/45/50/62px. The clamp pins at 124px above
      ~400px, so the 375px rendering barely moves while the narrow end gets
      its width back. */
-  .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: clamp(96px, 38%, 124px); min-width: 0; overflow: hidden; }
+  /* The vs column was taking 124px and leaving each name box 104px, so
+     "Anthony Hernandez" (113px) and "Gregory Rodrigues" (109px) both wrapped
+     -- 2 of only 3 wrapped names in 12, and both on the main event, the one
+     card that most needs to look right.
+     The column is sized by the WEIGHT CLASS, not by the "VS" glyph: at 20
+     characters "Women's Bantamweight" needed 110px, and 113x2 + 110 + gap
+     overruns the 336px of content a 16px inset leaves. Abbreviating the
+     women's prefix to "W." in the template (see .weight-class-badge) drops
+     the widest label to ~88px, and 98px then fits every name on one line
+     with nothing wrapping anywhere. */
+  .matchup-vs { text-align: center; flex-shrink: 0; flex-grow: 0; padding: 0 4px; width: clamp(88px, 28%, 98px); min-width: 0; overflow: hidden; }
   .vs-text { display: block; font-size: var(--t-small); font-weight: 700; color: var(--muted); letter-spacing: 0.5px; }
   @media (max-width: 480px) {
     .matchup-fighter .fighter-avatar-wrap { display: none; }
@@ -3301,7 +3330,18 @@
     /* Everything else stays on one line, and every header sits on the SAME
        baseline -- the ragged header row was the two cells carrying a unit
        label growing taller than the four that do not. */
-    .market-group table th { white-space: nowrap; vertical-align: bottom; }
+    /* 9px, and the header stops clipping. At the inherited 11px -- identical
+       to the td beneath it -- MODEL % measured clientWidth 60 against
+       scrollWidth 61 on all 18 headers on the page, inside a wrapper whose
+       overflow-x is hidden: the "%" was being shaved everywhere, silently,
+       with no scrollbar to admit it. Widening the column was tried twice
+       (`:nth-child(2)` went 16% -> 18% for exactly this reason) and 18% still
+       only buys 60px. Taking the type down instead settles it with room to
+       spare AND is the right hierarchy: the header is a label, the numbers
+       are the content, and at equal weight the label was competing with them.
+       Scoped to .market-group -- the bare `th` selector governs 1,260 cells
+       across the page. */
+    .market-group table th { white-space: nowrap; vertical-align: bottom; font-size: var(--t-micro); }
     .market-group table td { white-space: nowrap; }
     /* Stated explicitly for the fragile-price asterisk, which must never
        drift onto its own line and read as a stray bullet. Subsumed by the
@@ -3319,7 +3359,10 @@
   @media (max-width: 360px) {
     .market-group table th .unit-hint,
     .market-group table th .unit-tag { display: none; }
-    .market-group table th { font-size: 10px; padding-left: 3px; padding-right: 3px; }
+    /* Header font-size no longer set here: the base rule is now 9px, so a
+       10px override at 320px was LARGER than the size it was meant to shrink
+       from. Padding still tightens. */
+    .market-group table th { padding-left: 3px; padding-right: 3px; }
     .market-group .mkt-ev, .market-group .mkt-edge, .market-group .mkt-model,
     .market-group .mkt-price, .market-group .mkt-none {
       padding-left: 3px; padding-right: 3px;
@@ -5933,7 +5976,22 @@
           {% else %}
           <span class="vs-text" data-vs-slot>VS</span>
           {% endif %}
-          <div class="weight-class-badge{{ ' womens' if fight.is_womens_division else '' }}">{{ "Women's " if fight.is_womens_division and not fight.weight_class.startswith("Women's") else "" }}{{ fight.weight_class }}</div>
+          {# THIS LABEL SIZES THE WHOLE CENTRE COLUMN, and the column is what
+             was left over for the fighter names. At full length "Women's
+             Bantamweight" measured 110px and squeezed every name into a 104px
+             box, which is why the main event was the one card whose names
+             wrapped. Abbreviating the two labels that overrun a 94px column
+             -- the women's prefix and "Light Heavyweight", measured at 101px,
+             the only non-women's label that does -- puts all twelve names on
+             one line AND keeps every badge on one line, so the rows stop
+             staggering by 11px depending on the division.
+             Both forms are abbreviations a reader of this sport already uses,
+             and the full name always rides along in the title, so the short
+             form is never the only place it appears. #}
+          {% set _wc_womens = fight.is_womens_division or fight.weight_class.startswith("Women's ") %}
+          {% set _wc_full = fight.weight_class[8:] if fight.weight_class.startswith("Women's ") else fight.weight_class %}
+          {% set _wc_short = "Light Heavy" if _wc_full == "Light Heavyweight" else _wc_full %}
+          <div class="weight-class-badge{{ ' womens' if fight.is_womens_division else '' }}" title="{{ "Women's " if _wc_womens }}{{ _wc_full }}">{{ "W. " if _wc_womens }}{{ _wc_short }}</div>
         </div>
         <div class="matchup-fighter right{% if fight.winner %}{{ ' won' if fight.winner == fight.fighter_b else ' lost' }}{% endif %}">
           <div class="matchup-name-wrap">
@@ -5976,19 +6034,17 @@
          rationale. The pick is the hook, not the giveaway: "Hernandez 78%"
          creates a question, and a row with no claim creates none. #}
       <div class="matchup-divider-row">
-        <div class="divider-line"></div>
         {% if fight.preview and fight.preview.favorite %}
         {% set _tier = (fight.preview.confidence_label or '')|lower|replace(' confidence','') %}
-        {# CORNER-ALIGNED. The pick sits on the side of the fighter it names,
-           so the tie between "Dyer 77%" and the Shanelle Dyer above it is
-           SPATIAL rather than something the reader has to make by re-reading
-           the name across the full width of the card. On a real build five of
-           seven visible picks were landing on the opposite side from their
-           own fighter.
-           The side then carries information for free: scanning the column
-           shows which corner the model favours across the card without
-           reading a single name. #}
-        <span class="summary-pick {{ _tier }} {{ 'corner-a' if fight.preview.favorite == fight.fighter_a else 'corner-b' }}">
+        {# ONE COLUMN, always right, beside the chevron. This used to be
+           corner-aligned -- the pick jumped to the far left whenever the
+           model favoured fighter A -- on the theory that the side carried
+           information for free. It cost more than it paid: 48 of 84 picks
+           carry corner A, so the effect was a coin flip that broke the one
+           thing this row is for, reading fourteen percentages down the card
+           in a single glance. The name is right there in words, so the side
+           was saying something the row already said. #}
+        <span class="summary-pick {{ _tier }}">
           <span class="summary-pick-dot" aria-hidden="true"></span>
           <span class="summary-pick-name">{{ fight.preview.favorite.split(' ')[-1] }}</span>
           <span class="summary-pick-pct">{{ (fight.preview.favorite_prob * 100) | round | int }}%</span>
