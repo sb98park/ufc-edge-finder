@@ -2001,11 +2001,38 @@
      anything that made it look like a recommendation would undo the point of
      moving it down here. */
   .disagreement-block { margin-top: 18px; }
+  /* CENTRED, NOT BASELINED. .market-group-summary aligns on the first
+     baseline, which is right when the title is one line and wrong the moment
+     it wraps: the count and chevron stay pinned to line one while the title
+     runs on beneath them, and the box grows downward only. Every other
+     market group has a short title and never hit it. */
+  .disagreement-block .market-group-summary { align-items: center; }
+  /* THE WARNING CONTINUES THE SUMMARY, it is not a second box under it.
+     An open .market-group squares its summary's bottom corners so content
+     can butt against it; the warning was then drawing its own full border and
+     full radius on top of that, so the two edges met as a seam with a
+     doubled 1px rule and mismatched corners. Sharing one outline -- rounded
+     at the top from the summary, rounded at the bottom here, no rule across
+     the join -- makes the pair read as the single disclosure it is. */
+  .disagreement-block[open] .market-group-summary {
+    border-bottom-color: transparent;
+    /* The sides pick up the warning's tint so the open state is ONE outline
+       rather than a grey box sitting on a red one -- the join was visible at
+       the edges where the two colours met. Only when open: collapsed, this is
+       a quiet grey row, and it should stay that way, because the whole reason
+       the list lives down here is that it is not being recommended. */
+    border-left-color: rgba(255, 92, 92, 0.18);
+    border-right-color: rgba(255, 92, 92, 0.18);
+    border-top-color: rgba(255, 92, 92, 0.18);
+    background: rgba(255, 92, 92, 0.05);
+  }
   .disagreement-warning {
     font-size: var(--t-micro); color: var(--muted); line-height: 1.5;
-    padding: 10px 12px; margin: 0 0 6px;
+    padding: 10px 12px; margin: 0 0 10px;
     background: rgba(255, 92, 92, 0.05);
-    border: 1px solid rgba(255, 92, 92, 0.18); border-radius: var(--r-md);
+    border: 1px solid rgba(255, 92, 92, 0.18);
+    border-top: none;
+    border-radius: 0 0 var(--r-md) var(--r-md);
   }
   .disagreement-warning b { color: var(--red); font-weight: 700; }
   .disagreement-nums { text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
@@ -6302,8 +6329,8 @@
   {% if disagreement_props %}
   <details class="market-group disagreement-block">
     <summary class="market-group-summary">
-      <span class="mg-name">Where the model disagrees with the market</span>
-      <span class="mg-meta">{{ disagreement_props | length }} · won 39% of the time</span>
+      <span class="mg-name">Where the model disagrees</span>
+      <span class="mg-meta">{{ disagreement_props | length }} · won 39%</span>
       <span class="chevron">▶</span>
     </summary>
     <div class="disagreement-warning">
