@@ -23,6 +23,7 @@ from src.elo import EloRatingSystem
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props, record_edge_health
 from src.odds_utils import measure_overrounds, set_measured_overrounds
+from src.prop_ledger import record_prop_prices
 from src.card_matcher import (
     load_fight_cards, group_edges_by_card, top_standout_props, top_disagreement_props, top_favorite_picks,
     assign_canonical_fight_ids, group_unmatched_by_fight,
@@ -342,6 +343,17 @@ def main():
         print(f"[vig] measured overrounds {_measured}")
 
         edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings, history_df)
+        # RECORD THE DERIVABLE-MARKET QUOTES, so the one open question left
+        # -- whether a two-way Double Chance / goes-the-distance market is
+        # loose enough to beat -- becomes answerable in a few months instead
+        # of never. See src/prop_ledger.
+        try:
+            _ev = cards_df["event_name"].iloc[0] if not cards_df.empty else None
+            _ed = str(cards_df["event_date"].iloc[0]) if not cards_df.empty else None
+            record_prop_prices(upcoming_df.to_dict("records"), _ev, _ed)
+        except Exception as _e:
+            print(f"[prop_ledger] skipped ({_e})")
+
         record_edge_health(edges_df)
 
         if not edges_df.empty:
