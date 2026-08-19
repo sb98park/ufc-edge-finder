@@ -76,6 +76,7 @@ import collections
 import os
 import re
 import sys
+import unicodedata
 
 import pandas as pd
 
@@ -87,8 +88,45 @@ HISTORY = "data/fight_history.csv"
 OUT = "data/pit_stats.csv"
 
 
+# Letters NFKD will NOT decompose, because the stroke is part of the glyph
+# rather than a combining mark. Without this map they survive normalisation and
+# are then DELETED by the ascii backstop -- "Klaudia Syguła" becomes
+# "klaudia sygua", which matches nothing and silently loses the fighter.
+_STROKE_FOLD = str.maketrans({
+    "\u0142": "l", "\u0141": "L",   # ł Ł
+    "\u00f8": "o", "\u00d8": "O",   # ø Ø
+    "\u0111": "d", "\u0110": "D",   # đ Đ
+    "\u0127": "h", "\u0126": "H",   # ħ Ħ
+    "\u0167": "t", "\u0166": "T",   # ŧ Ŧ
+    "\u00df": "ss",                  # ß
+    "\u00e6": "ae", "\u00c6": "AE", # æ Æ
+    "\u0153": "oe", "\u0152": "OE", # œ Œ
+    "\u0131": "i",                   # ı
+})
+
+
 def _fold(n) -> str:
-    return str(n).strip().lower()
+    """
+    Fold a fighter name to a comparison key.
+
+    ACCENT-STRIPPING IS LOAD-BEARING, NOT COSMETIC. This was `strip().lower()`
+    and nothing else, while the two sides of the join disagree on diacritics:
+    fighters.csv carries "Joel Álvarez" and ufc_fight_stats.csv carries
+    "Joel Alvarez", because ufcstats publishes ASCII. So every accented fighter
+    on the roster matched ZERO timelines and fell through to the scrape
+    fallback, where control_time_pct is populated on 0% of fighters. Measured
+    before this change: 13 of 323 roster fighters were accented and 0 of 13
+    received control time or slpm/sapm. The loss was silent and it fell
+    entirely on non-Anglophone names, so it biased the roster by nationality.
+
+    Order matters. The stroke map runs BEFORE NFKD, because the ascii backstop
+    at the end deletes anything still non-ASCII -- and deleting a letter is
+    worse than failing to match, since it can collide two different fighters.
+    """
+    s = str(n).strip().translate(_STROKE_FOLD)
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return s.encode("ascii", "ignore").decode().lower()
 
 
 def _landed_att(cell) -> tuple[float, float]:
