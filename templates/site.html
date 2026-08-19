@@ -2134,8 +2134,19 @@
   .disagreement-nums { text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .dn-model { font-size: var(--t-micro); color: var(--accent2); font-weight: 600; }
   .dn-market { font-size: var(--t-micro); color: var(--accent-cool); }
-  .edge-divergence { margin: 14px 0 18px; }
+  /* 8px, not 18px: the stated-scale row below the track adds ~12px, and
+     the bar does not need to grow overall to gain a readable axis. */
+  .edge-divergence { margin: 14px 0 8px; }
   .edge-divergence-track { position: relative; height: 3px; background: var(--border); border-radius: var(--r-sm); margin: 40px 6px 40px; }
+  /* In normal flow rather than absolutely positioned at the rail's ends --
+     the model label hangs 14px under the track and two lines deep, and an
+     absolute tick would collide with it the first time a dot landed near an
+     end. */
+  .edge-divergence-scale {
+    display: flex; justify-content: space-between; margin: 0 6px;
+    font-size: var(--t-micro); color: var(--muted);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.2px;
+  }
   /* Coloured by DIRECTION -- green when the model reads above the book, red
      when below. The two-tone gradient it replaces was decorative; this
      segment's job is to say which way the disagreement runs, and its width
@@ -6026,10 +6037,33 @@
        reveal by scaling a wrapper, because 440 of them animating `width`
        meant 440 elements re-laid-out every frame. There are five of these,
        so width is fine here.) #}
+    {#- THE TRACK RUNS 50-100%, NOT 0-100%. Measured across all five cards,
+        model dots landed at 60.2 / 64.4 / 68.6 / 70.4 / 75.4 and market dots
+        at 72.5 / 76.5 / 86.5 / 86.5 / 87.5 -- nothing on any card rendered
+        left of 60%, so 60% of the rail was permanently empty and every gap
+        was drawn at half the length it could have been. The worst case was
+        card 5: a 2.1pp divergence drew 7px of separation between two 11px
+        dots, so they physically overlapped and the card's entire point
+        rendered as one blob.
+        ONE SHARED window, not one per card. A per-card window would draw
+        card 5's 2.1pp gap at the same length as card 1's 11.1pp and destroy
+        the cross-card comparison this section exists for; a shared window
+        preserves rank order exactly while roughly doubling every gap. The
+        window is STATED under the bar rather than implied -- a rescaled axis
+        that does not say so is just a lie about magnitude.
+        Both dots are the probability of the SAME outcome and this macro is
+        only ever called from the agreement-ranked list, so both sit above
+        50% by construction. The clamp is belt-and-braces: a value outside
+        the window pins to the rail's end while its LABEL still prints the
+        true figure, so the number is never wrong even if the position
+        saturates. -#}
+    {%- set win_lo = 50 -%}
     {%- set book_pct = (book_prob*100)|round(1) -%}
     {%- set model_pct = (model_prob*100)|round(1) -%}
-    {%- set left_pct = [book_pct, model_pct]|min -%}
-    {%- set gap_width = (model_pct - book_pct)|abs -%}
+    {%- set book_pos = [[(book_pct - win_lo) / (100 - win_lo) * 100, 0]|max, 100]|min|round(2) -%}
+    {%- set model_pos = [[(model_pct - win_lo) / (100 - win_lo) * 100, 0]|max, 100]|min|round(2) -%}
+    {%- set left_pct = [book_pos, model_pos]|min -%}
+    {%- set gap_width = (model_pos - book_pos)|abs -%}
     {#- token/odds_at_build carry the SAME live-recompute inputs the Edges
         table's edge cell uses. The price above this bar carries a
         data-live-token and is rewritten every 90s, while these dots and the
@@ -6046,13 +6080,17 @@
          data-odds-at-build="{{ odds_at_build }}"{% endif %}>
       <div class="edge-divergence-track">
         <div class="edge-divergence-fill {{ 'model-high' if model_pct > book_pct else 'model-low' }}" data-target-width="{{ gap_width }}%" style="left: {{ left_pct }}%; width: 0%;"></div>
-        <div class="edge-divergence-dot book" style="left: {{ book_pct }}%;">
+        <div class="edge-divergence-dot book" style="left: {{ book_pos }}%;">
           <span class="edge-divergence-label book">Market<br>{{ book_pct }}%</span>
         </div>
-        <div class="edge-divergence-dot model" style="left: {{ model_pct }}%;">
+        <div class="edge-divergence-dot model" style="left: {{ model_pos }}%;">
           <span class="edge-divergence-label model">Model<br>{{ model_pct }}%</span>
         </div>
       </div>
+      {#- The window, stated. aria-hidden because both dots already carry
+          their real percentages in text -- this row is a reading aid for the
+          POSITIONS, and a screen reader gets the numbers themselves. -#}
+      <div class="edge-divergence-scale" aria-hidden="true"><span>{{ win_lo }}%</span><span>100%</span></div>
       {# No gap readout. The number was stated four times over: both dots
          carry their percentages, the coloured span shows the magnitude, and
          the card header already gives the edge -- which is the version
@@ -7973,17 +8011,25 @@
         const fairLive = impliedLive * (fairBuild / impliedBuild);
         const bookPct = Math.max(0, Math.min(100, Math.round(fairLive * 1000) / 10));
         const modelPct = Math.max(0, Math.min(100, Math.round(model * 1000) / 10));
+        // MUST match the macro's window (see edge_divergence in the template).
+        // If these two ever disagree, the first 90s price refresh silently
+        // rescales the bar and the stated axis underneath it becomes false --
+        // the same class of drift that once had the server render "Market"
+        // and this function rewrite it to "Book".
+        const WIN_LO = 50;
+        const pos = v => Math.max(0, Math.min(100, (v - WIN_LO) / (100 - WIN_LO) * 100));
+        const bookPos = pos(bookPct), modelPos = pos(modelPct);
         const dot = block.querySelector('.edge-divergence-dot.book');
         const label = block.querySelector('.edge-divergence-label.book');
         const fill = block.querySelector('.edge-divergence-fill');
-        if (dot) dot.style.left = bookPct + '%';
+        if (dot) dot.style.left = bookPos + '%';
         // 'Market', matching the server-rendered label. These two drifted
         // apart the moment the macro was relabelled: the page rendered
         // "Market" and the first 90s refresh silently rewrote it to "Book".
         if (label) label.innerHTML = 'Market<br>' + bookPct.toFixed(1) + '%';
         if (fill) {
-          const gap = Math.abs(modelPct - bookPct);
-          fill.style.left = Math.min(bookPct, modelPct) + '%';
+          const gap = Math.abs(modelPos - bookPos);
+          fill.style.left = Math.min(bookPos, modelPos) + '%';
           fill.dataset.targetWidth = gap + '%';
           // Only write the width if the reveal has already run; otherwise the
           // scroll-reveal still owns it and would animate from the value we
