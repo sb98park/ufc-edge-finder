@@ -7901,8 +7901,30 @@
         }
         // Single writer for the pill's X, so the spring and the snapped
         // placements can't disagree about where it currently is.
-        let lastX = 0;
-        function setX(x) { lastX = x; ind.style.transform = 'translateX(' + x + 'px)'; }
+        //
+        // AND THE ONE PLACE THE TRACK'S EDGES ARE ENFORCED. The release
+        // spring is deliberately underdamped -- 0.72 on a flick -- so it
+        // overshoots its target and settles back, which is what gives the
+        // commit its weight. Between segments that overshoot is invisible
+        // and desirable. On the FIRST or LAST segment there is no track left
+        // to overshoot into, and the raw spring value was being written
+        // straight to translateX with nothing bounding it, so an abrupt
+        // flick threw the pill clean out of its container. Measured against
+        // this integrator at the flick constants, releasing on the last
+        // segment escapes the track by 10px at 500px/s, 29px at 1500, and
+        // 117px at 6000.
+        //
+        // Clamped here rather than with overflow:hidden on the track: the
+        // bar is a sticky, backdrop-filtered surface and giving it a clip
+        // would change how it composites. This also keeps lastX honest, so
+        // the next gesture starts from where the pill actually is rather
+        // than from somewhere off-screen.
+        let lastX = 0, maxX = Infinity;
+        function setWidth(w) { ind.style.width = w + 'px'; maxX = bar.clientWidth - w - PAD; }
+        function setX(x) {
+          lastX = Math.max(PAD, Math.min(x, maxX));
+          ind.style.transform = 'translateX(' + lastX + 'px)';
+        }
         const vel = createVelocityTracker();
         const spring = createSpring(setX);
         function endSpring() { spring.cancel(); bar.classList.remove('springing'); }
@@ -7918,13 +7940,13 @@
           // failure as the bottom tab bar's moveTo.
           const gTarget = geom(i);
           if (!frac && spring.animating && Math.abs(spring.target - gTarget.x) < 0.5) {
-            ind.style.width = gTarget.w + 'px';
+            setWidth(gTarget.w);
             return;
           }
           endSpring();
           const g = geom(i);
           const off = (frac || 0) * g.w;
-          ind.style.width = g.w + 'px';
+          setWidth(g.w);
           setX(g.x + off);
         }
 
@@ -7934,7 +7956,7 @@
         // against this integrator rather than taken from theory.
         function springToSeg(i, velocity) {
           const g = geom(i);
-          ind.style.width = g.w + 'px';
+          setWidth(g.w);
           if (prefersReducedMotion()) { setX(g.x); return; }
           bar.classList.add('springing');
           const flick = Math.abs(velocity) > 40;
@@ -7990,8 +8012,9 @@
           let x = clientX - r.left - bar.clientLeft - wSeg / 2;
           // Clamp to the same padding the snapped positions use, so a drag to
           // either end stops flush rather than against the border.
-          x = Math.max(PAD, Math.min(x, bar.clientWidth - wSeg - PAD));
-          ind.style.width = wSeg + 'px';
+          setWidth(wSeg);
+          // setX clamps to the same bounds, so a drag to either end stops
+          // flush against the padding rather than against the border.
           setX(x);
         }
 
