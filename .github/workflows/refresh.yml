@@ -177,6 +177,32 @@ jobs:
         # No network: reads a file the previous run already wrote.
         run: python scripts/merge_results_into_history.py --apply || true
 
+      - name: Grade recorded prop quotes against results
+        if: steps.cadence.outputs.build == 'yes'
+        # THE ONE OPEN QUESTION, and it needed switching on rather than
+        # answering. Moneyline alpha is dead (21 hypotheses, 16 years, nothing
+        # survived) and the six-cell method market is genuinely miscalibrated
+        # by ~4 points but carries a 21.8% overround, so the edge cannot pay
+        # the toll. What is left is whether a TWO-WAY goes-the-distance or
+        # round-totals quote is loose enough to be worth taking.
+        #
+        # No historical price for that market exists anywhere we can legally
+        # and freely reach: the archive is six-cell grids only, Polymarket
+        # drops price history the moment a market settles (the CLOB endpoint
+        # 400s on a resolved token; every price field collapses to the
+        # settlement value), and Kalshi has no settled trades at all. So the
+        # test set cannot be bought or backfilled -- it has to be accumulated
+        # forward, one card at a time.
+        #
+        # src/prop_ledger has been recording those quotes since it landed --
+        # 326 of them. NOTHING was ever grading them, because this script ran
+        # in no workflow. It was a stopwatch nobody had started. Runs AFTER
+        # the results merge, so the fights it needs are already on disk.
+        #
+        # No network. Reports a thin sample and says so until a few hundred
+        # settle, which is the honest state for roughly the next year.
+        run: python3 scripts/grade_prop_prices.py || true
+
       - name: Backfill history gaps from ESPN
         # 2, down from 4. Not because 4 was too long for this script, but
         # because the job cap has to cover this step plus the other one plus
