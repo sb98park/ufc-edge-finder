@@ -4576,6 +4576,20 @@
        what was reported. On a dark UI the separation has to come from a LIGHT
        edge, not a dark shadow. */
     border-bottom: 1px solid var(--hairline-strong);
+    /* KEEP THE CARD'S CORNERS WHILE PINNED. At rest the summary needs no
+       radius of its own -- it sits at the top of a card with `overflow: clip`,
+       and the card's own 12px corners do the rounding for it. The moment it
+       pins it slides DOWN the card (measured: 410px in, on a scrolled main
+       card), so the corners it was borrowing are now far above it and it
+       renders as a square slab against the page. Reported as "the rounded
+       border turns into a sharp rectangle".
+       MINUS 1PX because the summary fills the card's PADDING box, inside a
+       1px border: an inner corner concentric with a 12px outer corner has
+       radius 12 - 1. Using the full 12 here would leave the two curves
+       visibly out of step at rest, which is a worse artefact than the one
+       being fixed. Top only -- the bottom edge is a header boundary that
+       content slides under, and it is meant to be a straight line. */
+    border-radius: calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px) 0 0;
   }
   /* Trim the vertical cost while pinned: the avatars and chip rows are
      orientation aids, not reading material, so they tighten rather than
@@ -6665,7 +6679,7 @@
            reading a single name. #}
         <span class="summary-pick {{ _tier }} {{ 'corner-a' if fight.preview.favorite == fight.fighter_a else 'corner-b' }}">
           <span class="summary-pick-dot" aria-hidden="true"></span>
-          <span class="summary-pick-name">{{ fight.preview.favorite.split(' ')[-1] }}</span>
+          <span class="summary-pick-name">{{ fight.preview.favorite | surname }}</span>
           <span class="summary-pick-pct">{{ (fight.preview.favorite_prob * 100) | round | int }}%</span>
         </span>
         {% endif %}
@@ -6719,12 +6733,12 @@
       <div class="scout-badges">
         {% if fight.fighter_a_key %}
         <button type="button" class="scout-pill corner-a" data-fighter-key="{{ fight.fighter_a_key }}"
-                aria-label="Fight history for {{ fight.fighter_a }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_a.split(' ')[-1] }}</span></button>
+                aria-label="Fight history for {{ fight.fighter_a }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_a | surname }}</span></button>
         {% else %}<span class="scout-gap" aria-hidden="true"></span>{% endif %}
         <span class="scout-lbl">Scout</span>
         {% if fight.fighter_b_key %}
         <button type="button" class="scout-pill corner-b" data-fighter-key="{{ fight.fighter_b_key }}"
-                aria-label="Fight history for {{ fight.fighter_b }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_b.split(' ')[-1] }}</span></button>
+                aria-label="Fight history for {{ fight.fighter_b }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_b | surname }}</span></button>
         {% else %}<span class="scout-gap" aria-hidden="true"></span>{% endif %}
         {% if _has_badges %}
         <div class="factor-badges">
@@ -6742,12 +6756,12 @@
         <div class="result-stats-title">{{ icon_barchart() }} Fight Overview</div>
         <div class="donut-row">
           <div class="donut-col">
-            <div class="donut-name">{{ fight.fighter_a.split(' ')[-1] }}</div>
+            <div class="donut-name">{{ fight.fighter_a | surname }}</div>
             {{ donut_svg(fight.result_stats.a.sig_landed, fight.result_stats.a.sig_att, '#ff5c5c') | safe }}
             <div class="donut-caption">Sig. Strikes</div>
           </div>
           <div class="donut-col">
-            <div class="donut-name">{{ fight.fighter_b.split(' ')[-1] }}</div>
+            <div class="donut-name">{{ fight.fighter_b | surname }}</div>
             {{ donut_svg(fight.result_stats.b.sig_landed, fight.result_stats.b.sig_att, '#6db3f2') | safe }}
             <div class="donut-caption">Sig. Strikes</div>
           </div>
@@ -9255,11 +9269,23 @@
           '</div>';
       }
 
-      // Surnames. "Reinier de Ridder" -> "Ridder", matching how the summary
-      // pick on the fight card already shortens a name.
+      // Surnames. The same rule the Jinja `surname` filter applies to every
+      // other name on the card -- see src/display_names.py. Word lists come
+      // from Python so the two implementations cannot drift apart.
+      const NAME_BITS = {{ name_particles_json | safe }};
+      const NAME_PARTICLES = new Set(NAME_BITS.p), NAME_SUFFIXES = new Set(NAME_BITS.s);
+      const normTok = t => t.replace(/^[.,]+|[.,]+$/g, '').toLowerCase();
       function surname(full) {
-        const parts = String(full || '').trim().split(/\s+/);
-        return parts.length ? parts[parts.length - 1] : '';
+        const words = String(full || '').trim().split(/\s+/).filter(Boolean);
+        if (!words.length) return '';
+        // Peel generational suffixes, absorb particles leftwards, reattach.
+        const tail = [];
+        while (words.length > 1 && NAME_SUFFIXES.has(normTok(words[words.length - 1]))) {
+          tail.unshift(words.pop());
+        }
+        let i = words.length - 1;
+        while (i > 1 && NAME_PARTICLES.has(normTok(words[i - 1]))) i--;
+        return words.slice(i).concat(tail).join(' ');
       }
 
       function fightBody(b, subject) {

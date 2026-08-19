@@ -21,6 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.elo import EloRatingSystem
 from src.fighter_history import build_fighter_history, fold_name as fh_fold, summarise as fh_summarise
+from src.display_names import surname as display_surname, PARTICLES as NAME_PARTICLES, SUFFIXES as NAME_SUFFIXES
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props, record_edge_health
 from src.odds_utils import measure_overrounds, set_measured_overrounds
@@ -1178,6 +1179,14 @@ def main():
     # strings built earlier in this function can use the same mapping the
     # templates do; this just exposes it to Jinja under its filter name.
     env.filters["method_display"] = _method_display
+    # One rule for shortening a name, shared by the five places on the card
+    # that print one. See src/display_names.py for why it runs backwards.
+    env.filters["surname"] = display_surname
+    # The drawer builds opponent names in the browser, so the JS needs the
+    # same word lists. Shipped as data rather than retyped in JavaScript --
+    # the algorithm is four lines, but a list that drifts is a silent bug.
+    env.globals["name_particles_json"] = json.dumps(
+        {"p": sorted(NAME_PARTICLES), "s": sorted(NAME_SUFFIXES)})
     env.globals["donut_svg"] = build_donut_svg
     env.globals["damage_svg"] = build_damage_silhouette_svg
 
