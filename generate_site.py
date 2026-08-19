@@ -743,10 +743,24 @@ def main():
     # events (July-August) -- would need adjusting for events during EST months.
     countdown_target_iso = None
     countdown_label = None
+    countdown_series = None
+    countdown_matchup = None
     next_event = events[0] if events else _soonest(future_events)
     if next_event:
         countdown_target_iso = f"{next_event['event_date']}T{next_event.get('event_start_time_et', '19:00')}:00-04:00"
         countdown_label = next_event["event_name"]
+        # The banner sets the series as a gold eyebrow ABOVE the matchup
+        # rather than running both into one line, so the matchup -- the only
+        # part a reader is actually scanning for -- gets the full width and
+        # the largest type. "UFC Fight Night: Hernandez vs. Rodrigues" splits
+        # into "UFC FIGHT NIGHT" / "Hernandez vs. Rodrigues"; numbered cards
+        # split into "UFC 333" / "Volkanovski vs. Lopes". An event with no
+        # colon (rare, but it happens on newly-announced cards where ESPN has
+        # only the series name) keeps the whole string as the matchup and
+        # renders no eyebrow -- better than an eyebrow with nothing under it.
+        countdown_matchup = countdown_label
+        if ": " in countdown_label:
+            countdown_series, countdown_matchup = countdown_label.split(": ", 1)
 
     # Attempt to auto-fetch any results not yet in fight_results.csv,
     # before matching results to fights below. Best-effort and silent on
@@ -1088,39 +1102,28 @@ def main():
     # that exists yet for a distant future card, so those three stay None
     # rather than fabricate a number for something not actually computed.
     countdown_location = next_event.get("event_location") if next_event else None
-    # Short form for the simplified countdown-banner display: venue + city
-    # only, dropping the trailing state/country segment. event_location is
-    # already built as "Venue, City, State/Country" (see card_discovery.py) --
-    # taking the first two comma-separated parts is a safe way to get this
-    # without needing a second, separately-plumbed field.
-    countdown_location_short = (
-        " · ".join(countdown_location.split(", ")[:2]) if countdown_location else None
-    )
-    countdown_weight_class = None
-    if next_event:
-        main_event_fight = next(
-            (f for f in next_event.get("fights", []) if f.get("card_position") == "Main Event"), None
-        )
-        countdown_weight_class = main_event_fight.get("weight_class") if main_event_fight else None
-
-    countdown_main_card_time = None
-    countdown_edge_count = None
+    # City alone, for the banner's meta line ("Sacramento · Aug 22 · 8:00 PM").
+    # The venue is dropped there because the line has to share a 221px rail
+    # with the date and the start time, and "Golden 1 Center" is the least
+    # useful of the three to somebody deciding whether to watch.
+    # location_parts is built as [venue, city, state-or-country] with empties
+    # dropped (see card_discovery.py), so index 1 is the city whenever all
+    # three are present. With only two parts the pair is almost always
+    # [city, state] -- ESPN supplies `country` when `state` is missing, so
+    # losing BOTH is far likelier than losing the venue name -- and index 0
+    # is the city there.
+    countdown_city = None
+    countdown_venue = None
+    if countdown_location:
+        _loc_parts = [p.strip() for p in countdown_location.split(", ") if p.strip()]
+        if _loc_parts:
+            countdown_city = _loc_parts[1] if len(_loc_parts) >= 3 else _loc_parts[0]
+            # Venue is desktop-only (CSS hides it below the breakpoint). It is
+            # only trustworthy when all three parts are present -- with two,
+            # index 0 is being read as the city above, and it cannot be both.
+            countdown_venue = _loc_parts[0] if len(_loc_parts) >= 3 else None
     countdown_confidence_counts = None
     if events and next_event is events[0]:
-        main_card_starts = [
-            f["estimated_start_iso"] for f in fight_schedule
-            if f.get("card_position") == "Main Card" and f.get("estimated_start_iso")
-        ]
-        if main_card_starts:
-            earliest = min(main_card_starts)
-            # estimated_start_iso carries the -04:00 ET offset already
-            # baked in (see schedule.py) -- parse just the wall-clock time
-            # portion rather than re-deriving timezone math here.
-            hh, mm = int(earliest[11:13]), int(earliest[14:16])
-            period = "AM" if hh < 12 else "PM"
-            hh12 = hh % 12 or 12
-            countdown_main_card_time = f"{hh12}:{mm:02d} {period} ET"
-        countdown_edge_count = len(standout_props)
         confidence_tally = {"High Confidence": 0, "Medium Confidence": 0, "Low Confidence": 0}
         for fight in next_event.get("fights", []):
             if fight.get("cancelled"):
@@ -1285,11 +1288,10 @@ def main():
         results_coverage=results_coverage,
         analytics_source_event=analytics_source_event,
         countdown_label=countdown_label,
-        countdown_location=countdown_location,
-        countdown_location_short=countdown_location_short,
-        countdown_weight_class=countdown_weight_class,
-        countdown_main_card_time=countdown_main_card_time,
-        countdown_edge_count=countdown_edge_count,
+        countdown_series=countdown_series,
+        countdown_matchup=countdown_matchup,
+        countdown_city=countdown_city,
+        countdown_venue=countdown_venue,
         countdown_confidence_counts=countdown_confidence_counts,
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,

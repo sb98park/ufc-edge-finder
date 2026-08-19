@@ -389,12 +389,89 @@
   }
   .meta-row { font-size: var(--t-small); color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
   .meta-sep { color: var(--border); margin: 0 2px; }
+  /* Two rails, hairline between them: what is happening on the left, what
+     the model thinks of it on the right. The card used to be centre-aligned
+     with two flanking blocks that were display:none below the tablet
+     breakpoint, so the phone got a bare countdown and the desktop got the
+     context -- backwards, given where the reading happens. */
   .countdown-card {
     background: linear-gradient(135deg, #1a1508, #1c1c1e 70%);
-    border-radius: var(--r-lg); padding: 12px 16px; margin-bottom: 14px; text-align: center;
+    border-radius: var(--r-lg); padding: 12px 16px; margin-bottom: 14px;
     position: relative; border: 1px solid transparent;
     background-clip: padding-box;
+    display: flex; align-items: center; gap: 12px; text-align: left;
   }
+  /* min-width:0 is load-bearing: without it the flex item refuses to shrink
+     below its longest unbreakable word and a long fighter name pushes the
+     right rail off the card instead of ellipsing. */
+  .cd-left { flex: 1 1 auto; min-width: 0; }
+  .cd-right {
+    flex: 0 0 auto; align-self: stretch;
+    display: flex; flex-direction: column; justify-content: center; gap: 7px;
+    padding-left: 12px; border-left: 1px solid rgba(212,175,55,0.18);
+  }
+  .cd-series {
+    font-size: 9.5px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 1.2px; line-height: 1;
+    margin-bottom: 5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* ===== Compact countdown (outside 24h) ===== */
+  .countdown-compact { padding: 0; }
+  /* One nowrap line that truncates. Wrapping would push the card past the
+     90px the rest of the layout is built around, and the tail of this line
+     (the start time) is the least important part of it -- so an ellipsis
+     here loses less than a second line costs. */
+  .cd-meta {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    letter-spacing: 0.1px; margin-top: 5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  .cd-absolute { color: var(--text-soft, #c8ccd4); }
+  /* Two facts the phone rail has no room for. The meta line is capped by the
+     left rail's width there; on desktop the same line has ~790px, so these
+     come back rather than being dropped from the product entirely. */
+  .cd-wide-only { display: none; }
+  /* 375px phones (SE, 12/13 mini) give the left rail 195px instead of 210,
+     and the schedule's two longest city names spill it: "Salt Lake City ·
+     Sat, Dec 12 · 10:00 PM" measures 201px there and "Rio de Janeiro ..."
+     205px. Both clear 195px at 10px. A step down on the least important line
+     in the banner beats an ellipsis eating the start time, and UFC 332 in
+     Salt Lake City is a card actually on the schedule, not a hypothetical. */
+  @media (max-width: 389px) {
+    .cd-meta { font-size: 10px; }
+  }
+  /* Below 360px the left rail is down to 140px and even 10px overflows -- the
+     longest city plus date plus time wants 187px. Wrap instead of ellipsing:
+     on a screen this narrow the banner can afford a second 12px line more
+     easily than it can afford losing the start time, and vertical space is
+     the one thing a 320px viewport is not short of. Matches the 360px
+     breakpoint already used elsewhere in this file. */
+  @media (max-width: 360px) {
+    .cd-meta { white-space: normal; }
+  }
+  .cd-conf { display: flex; gap: 9px; }
+  .cd-conf-col { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+  .cd-conf-col b {
+    font-size: 13px; font-weight: 700; font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+  }
+  .cd-conf-col i {
+    font-size: 9.5px; font-weight: 600; font-style: normal; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px;
+  }
+  .cd-conf-col.high b { color: var(--green); }
+  .cd-conf-col.med b { color: var(--accent2); }
+  /* Muted, not red. Red is the site's loss colour everywhere else, and a low
+     confidence pick has not lost anything -- it is a pick the model is less
+     sure of. Colouring it red said the opposite. */
+  .cd-conf-col.low b { color: var(--muted); }
+  .cd-record {
+    font-size: 10px; font-weight: 700; color: var(--green);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+    text-align: center; letter-spacing: 0.1px;
+  }
+  .cd-record.neg { color: var(--red); }
   .countdown-card::before {
     content: ""; position: absolute; inset: 0; border-radius: var(--r-lg); padding: 1px;
     background: linear-gradient(135deg, var(--accent), #3a2f14 60%, var(--accent2));
@@ -402,10 +479,14 @@
     -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
   }
   .countdown-label {
-    font-size: 1rem; color: var(--text); font-weight: 700;
-    letter-spacing: -0.2px; line-height: 1.25; margin-bottom: 6px;
+    font-size: 16px; color: var(--text); font-weight: 700;
+    letter-spacing: -0.2px; line-height: 20px; margin: 0;
   }
-  .countdown-boxes { display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .countdown-label.cd-long { font-size: 14px; line-height: 18px; }
+  /* flex-start, not center: the boxes now sit in the left rail under the
+     matchup, and centring them inside it left them floating away from the
+     text they belong to. */
+  .countdown-boxes { display: flex; align-items: center; justify-content: flex-start; gap: 6px; margin-top: 6px; }
   .countdown-box {
     background: var(--sunken); border: 1px solid #2a2410; border-radius: var(--r-md);
     padding: 7px 11px; min-width: 44px;
@@ -431,12 +512,6 @@
     animation: sepPulse 2.6s ease-in-out 4;
   }
   @keyframes sepPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-  /* Hidden by default (mobile) -- these flanking info blocks only exist
-     to fill the empty side margins that appear on wide desktop screens
-     once the countdown card is no longer squeezed into a narrow column.
-     Revealed and laid out in the desktop media query below. */
-  .countdown-info { display: none; }
-  .countdown-info-line { font-size: var(--t-body); color: var(--muted); line-height: 1.7; white-space: nowrap; }
   /* Skeleton-pattern "updating" shimmer for live-price elements during
      the initial client-side price fetch -- values stay fully readable
      (they're real baked data, not placeholders), the shimmer just
@@ -452,26 +527,6 @@
   @media (prefers-reduced-motion: reduce) {
     .price-updating { animation: none; background: none; }
   }
-  /* Confidence hero badge -- a single, clearly-labeled stat instead of a
-     bare "5 High · 4 Med · 3 Low" line with no context for what the
-     numbers mean. Colors reused directly from the existing pick-badge
-     confidence styling elsewhere on the site (search .model-pick-badge)
-     rather than invented fresh, so "High/Medium/Low" reads consistently
-     everywhere it appears. */
-  .confidence-hero-badge {
-    display: inline-block; border: 1px solid var(--border); border-radius: var(--r-lg);
-    padding: 8px 14px; background: var(--panel2);
-  }
-  .confidence-hero-label {
-    font-size: var(--t-micro); color: var(--muted); font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.4px; margin-bottom: 4px; white-space: nowrap;
-  }
-  .confidence-hero-stats { display: flex; gap: 10px; white-space: nowrap; }
-  .confidence-hero-stat { font-size: var(--t-lead); font-weight: 700; font-family: var(--font-display); }
-  .confidence-hero-stat em { font-size: var(--t-micro); font-weight: 600; font-style: normal; text-transform: uppercase; margin-left: 2px; opacity: 0.85; }
-  .confidence-hero-stat.high { color: var(--green); }
-  .confidence-hero-stat.medium { color: var(--accent2); }
-  .confidence-hero-stat.low { color: var(--red); }
 
   /* THE CARD STARTING. This is the rarest and highest-emotion state change
      on the site -- it happens once per event -- and it was a jump cut: the
@@ -3365,17 +3420,21 @@
     .back-btn { display: none; }
 
     /* Countdown card stays exactly where it's always been (full-width,
-       top of page) and the timer itself doesn't move or resize -- this
-       just fills the empty space that used to sit on either side of it
-       with real context about the card it's counting down to (location,
-       broadcast time, weight class) and a quick model snapshot (edge
-       count, confidence split). Each line only renders if the
-       corresponding data actually exists (see generate_site.py) rather
-       than showing a placeholder or guessed value. */
-    .countdown-card { display: flex; align-items: center; justify-content: space-between; text-align: left; gap: 20px; }
-    .countdown-info { display: block; flex: 1; min-width: 0; }
-    .countdown-info-right { text-align: right; }
-    .countdown-center { flex-shrink: 0; text-align: center; }
+       top of page). */
+    /* Same two rails as the phone, just given room: the extra width goes to
+       the matchup and the meta line rather than to a third block of
+       information that only desktop readers ever saw. */
+    .countdown-card { gap: 20px; padding: 14px 18px; }
+    .cd-right { padding-left: 18px; gap: 8px; }
+    .countdown-label { font-size: 19px; line-height: 24px; }
+    .countdown-label.cd-long { font-size: 17px; line-height: 22px; }
+    .cd-meta { font-size: 12px; }
+    .cd-series { font-size: 10px; }
+    /* The venue is the first thing dropped when the line has to fit a phone
+       rail and the last thing added back when it doesn't. Desktop has room
+       for all four facts, so it gets all four rather than leaving the width
+       empty. */
+    .cd-wide-only { display: inline; }
 
     /* Real reported bug: several sections' content started noticeably
        lower than others when switching rail items - This Weekend,
@@ -4233,22 +4292,6 @@
      rather than needing separate positioning maths. */
   .scrub-line { stroke: rgba(255,255,255,0.35); stroke-width: 1; pointer-events: none; }
   .scrub-dot { pointer-events: none; }
-  /* ===== Compact countdown (outside 24h) ===== */
-  .countdown-compact { padding: 2px 0 4px; }
-  .cd-venue {
-    font-size: var(--t-tiny); font-weight: 600; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.09em;
-    margin-bottom: 5px;
-    /* Truncate rather than wrap. A long venue wrapping to two lines would
-       make the compact block taller than the countdown it replaced, which
-       defeats the point of it. */
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    max-width: 100%;
-  }
-  .cd-absolute {
-    font-size: var(--t-lead); color: var(--text-soft, #c8ccd4); margin-top: 4px;
-    letter-spacing: 0.1px; font-weight: 600;
-  }
 
   /* ===== Focus states =====
      There were NONE anywhere in the stylesheet -- keyboard users had no way
@@ -4850,26 +4893,38 @@
   </div>
 
   <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}" data-espn-live-key="{{ espn_live_fight_key_json | e }}">
-    <div class="countdown-info countdown-info-left">
-      {% if countdown_location_short %}<div class="countdown-info-line">{{ countdown_location_short }}</div>{% endif %}
-      {% if countdown_main_card_time %}<div class="countdown-info-line">Main Card · {{ countdown_main_card_time }}</div>{% endif %}
-    </div>
-    <div class="countdown-center">
-    <div class="countdown-label" id="countdown-label">{{ countdown_label }}</div>
+    <div class="cd-left">
+    {# Series as a gold eyebrow, matchup as the headline. Split server-side
+       (see generate_site.py) so a card with no colon in its name renders the
+       whole name as the matchup and no eyebrow, rather than an empty rule
+       line. The eyebrow is gold on EVERY card, numbered or not -- making it
+       gold only for UFC 333 and grey for Fight Nights would read as a
+       ranking of the events, which is not something this site is claiming. #}
+    {% if countdown_series %}<div class="cd-series">{{ countdown_series }}</div>{% endif %}
+    {# Steps down a size past 24 characters. Measured against the longest
+       names the sport actually produces -- "Nurmagomedov vs. Song" clears
+       it, "Dvalishvili vs. Nurmagomedov" does not -- and the step is applied
+       from Jinja rather than JS so there is no frame where the long name is
+       laid out at 16px and then reflows. #}
+    <div class="countdown-label{{ ' cd-long' if countdown_matchup and countdown_matchup|length > 24 }}" id="countdown-label">{{ countdown_matchup or countdown_label }}</div>
     {# COMPACT form, shown outside 24 hours. The container shrinks to fit
        what it holds rather than keeping a grid-sized box and putting large
        text in it. Relative phrase on top because that IS the answer to "how
        long?"; the absolute date below is the confirmation. #}
     <div class="countdown-compact" id="countdown-compact" hidden>
-      {# Context, headline, detail -- an editorial rhythm rather than three
-         stacked facts. Venue sits ON TOP because it's the least important of
-         the three and the eye should land on the timing first. It also closes
-         a gap: desktop showed the venue and mobile showed nothing, same
-         product with different information for no reason but width. #}
-      {% if countdown_location_short %}
-      <div class="cd-venue">{{ countdown_location_short }}</div>
-      {% endif %}
-      <div class="cd-absolute" id="cd-absolute"></div>
+      {# One line, three facts, in the order somebody asks them: where, when,
+         what time. This replaced a stacked venue-over-date block -- the stack
+         cost a whole line of vertical space to say something the same line
+         says, and the banner needs that space for the eyebrow. #}
+      {# The bare time is the EVENT start -- the same instant #cd-absolute
+         counts down to -- so the banner never prints one time while counting
+         to another. The main card time is a second, later fact and is
+         labelled as such; unlabelled it would read as a contradiction. It is
+         filled in by JS rather than rendered here because the server value is
+         Eastern and the time beside it is the READER's local clock -- shown
+         together, "2:00 PM · Main Card 8:00 PM ET" reads as a six-hour gap on
+         the west coast when the real gap is three. #}
+      <div class="cd-meta">{% if countdown_venue %}<span class="cd-wide-only">{{ countdown_venue }} · </span>{% endif %}{% if countdown_city %}{{ countdown_city }} · {% endif %}<span class="cd-absolute" id="cd-absolute"></span><span class="cd-wide-only" id="cd-maincard"></span></div>
     </div>
     <div class="countdown-boxes" id="countdown-boxes">
       <div class="countdown-box">
@@ -4897,18 +4952,34 @@
       <div class="live-header-micro" id="live-header-micro">—</div>
     </div>
     </div>
-    <div class="countdown-info countdown-info-right">
+    {# Right rail, behind a hairline: what the model says about THIS card, and
+       what it has been worth so far. Both were previously desktop-only
+       (.countdown-info was display:none under the tablet breakpoint), which
+       meant the phone -- where nearly all the reading happens -- got a banner
+       that only counted down. #}
+    {# Whole rail, hairline included, only when there is something to put in
+       it. An empty .cd-right would still paint its border-left, leaving a
+       vertical rule down the card with nothing to the right of it. #}
+    {% if countdown_confidence_counts or (track_record and track_record.total) %}
+    <div class="cd-right">
       {% if countdown_confidence_counts %}
-      <div class="confidence-hero-badge">
-        <div class="confidence-hero-label">Pick Confidence, This Card</div>
-        <div class="confidence-hero-stats">
-          <span class="confidence-hero-stat high">{{ countdown_confidence_counts['High Confidence'] }} <em>High</em></span>
-          <span class="confidence-hero-stat medium">{{ countdown_confidence_counts['Medium Confidence'] }} <em>Med</em></span>
-          <span class="confidence-hero-stat low">{{ countdown_confidence_counts['Low Confidence'] }} <em>Low</em></span>
-        </div>
+      <div class="cd-conf" role="group" aria-label="Pick confidence on this card">
+        <span class="cd-conf-col high"><b>{{ countdown_confidence_counts['High Confidence'] }}</b><i>High</i></span>
+        <span class="cd-conf-col med"><b>{{ countdown_confidence_counts['Medium Confidence'] }}</b><i>Med</i></span>
+        <span class="cd-conf-col low"><b>{{ countdown_confidence_counts['Low Confidence'] }}</b><i>Low</i></span>
+      </div>
+      {% endif %}
+      {# Prints whatever the number is, green or red. A record line that
+         quietly disappears on a losing month is worse than no record line at
+         all -- it makes every visible one unfalsifiable. #}
+      {% if track_record and track_record.total %}
+      <div class="cd-record{{ ' neg' if track_record.units_stats and track_record.units_stats.total_units < 0 }}"
+           title="{{ track_record.correct }}/{{ track_record.total }} picks correct{% if track_record.units_stats %}, {{ '%+.2f'|format(track_record.units_stats.total_units) }} units at 1u flat{% endif %}">
+        {{ track_record.accuracy_pct }}%{% if track_record.units_stats %} · {{ '%+.2f'|format(track_record.units_stats.total_units) }}U{% endif %}
       </div>
       {% endif %}
     </div>
+    {% endif %}
   </div>
   {% endif %}
   </div>
@@ -9678,6 +9749,24 @@
 
       let schedule = [];
       try { schedule = JSON.parse(card.dataset.schedule || '[]'); } catch (e) { schedule = []; }
+
+      // Main card start, in the reader's own timezone, from the same schedule
+      // the countdown uses. Runs once -- it is a fixed time, not a tick.
+      // `schedule` has confirmed fights stripped server-side, so once the card
+      // is under way there may be no Main Card rows left; the span then stays
+      // empty, which is correct (the meta line it lives in is only shown
+      // outside 24 hours anyway).
+      (function fillMainCardTime() {
+        const el = document.getElementById('cd-maincard');
+        if (!el) return;
+        const starts = schedule
+          .filter(f => f.card_position === 'Main Card' && f.estimated_start_iso)
+          .map(f => new Date(f.estimated_start_iso).getTime())
+          .filter(t => !isNaN(t));
+        if (!starts.length) return;
+        const t = new Date(Math.min.apply(null, starts));
+        el.textContent = ' \u00b7 Main Card ' + t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      })();
       let justConcluded = null;
       try { justConcluded = JSON.parse(card.dataset.justConcluded || 'null'); } catch (e) { justConcluded = null; }
       const daysSinceEvent = parseInt(card.dataset.daysSinceEvent || '0', 10);
@@ -9756,7 +9845,14 @@
         // date carry it fine on their own.
         if (calDays <= 0) return `Today \u00b7 ${time}`;
         if (calDays === 1) return `Tomorrow \u00b7 ${time}`;
-        const date = t.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        // SHORT weekday. This line now shares a 210px rail with the city and
+        // the start time, and "Saturday, " is 30px of that -- measured at
+        // 215px for Sacramento against a 210px box, i.e. it clipped on the
+        // actual phone. "Sat" keeps the only thing the weekday is carrying
+        // (the odd Friday or Sunday card) and fits the longest city the
+        // schedule produces: "Salt Lake City · Sat, Dec 12 · 10:00 PM" is
+        // 201px.
+        const date = t.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         return `${date} \u00b7 ${time}`;
       }
 
