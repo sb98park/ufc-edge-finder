@@ -1571,12 +1571,15 @@
   }
   /* REVEAL motion, not a state transition -- so it sits outside the
      0.2/0.35/0.55 vocabulary deliberately. The design pass snapped this from
-     ~0.85s to 0.55s while the ring sweep beside it stayed at 1.15s (above the
-     cutoff), so the column landed less than half way through its own ring
-     filling. That mismatch is what read as rushed: two parts of one object
-     moving at unrelated speeds.
-     0.9s now leads the 1.15s ring slightly -- the container settles, then the
-     value finishes drawing into it.
+     ~0.85s to 0.55s while the ring sweep beside it stayed above the cutoff,
+     so the column landed less than half way through its own ring filling.
+     That mismatch is what read as rushed: two parts of one object moving at
+     unrelated speeds.
+     0.9s now leads the ring slightly -- the container settles, then the value
+     finishes drawing into it. (This comment said "1.15s" in two places; the
+     ring has been 1.6s since donutFill was retimed fifteen lines above, and
+     two comments contradicting each other that close together is a real
+     defect in a file where the comments ARE the design system.)
      Staggered 90ms apart so the three tiers arrive in sequence rather than
      as one block, which also gives the eye time to read each figure. */
   .confidence-donut-row .donut-col {
@@ -1606,7 +1609,11 @@
   .damage-legend-txt { display: block; color: var(--muted); margin-top: 1px; }
   .damage-badge-text { font-size: var(--t-lead); font-weight: 700; fill: #fff; text-anchor: middle; }
 
-  #hub-view, #detail-view { transition: opacity 0.2s ease, transform 0.2s ease; opacity: 1; transform: translateX(0); }
+  /* ease-out, not ease. `ease` is the only ease-IN curve on the page, and it
+     was sitting on the most repeated motion in the app -- every section
+     navigation. An ease-in start makes a view that is already committed feel
+     like it hesitates before moving. */
+  #hub-view, #detail-view { transition: opacity 0.2s ease-out, transform 0.2s ease-out; opacity: 1; transform: translateX(0); }
 
   /* ===== Interactive back swipe =====
      Drag from the left edge to return to More, tracking the finger, with the
@@ -4416,10 +4423,16 @@
      that card is open. */
 
   /* ===== 4. Staggered row entry =====
-     The waterfall already staggers its factor rows; extending the same
-     30ms cascade to Standout Props and Track Record makes a section arrive
-     as one authored motion rather than everything landing at once.
-     Capped at 10 steps so a long list never feels slow to finish. */
+     Extending the waterfall's cascade to Standout Props and Track Record
+     makes a section arrive as one authored motion rather than everything
+     landing at once. Capped at 10 steps so a long list never feels slow to
+     finish.
+     NOT "the same" cascade as the waterfall, which this comment used to
+     claim: the waterfall staggers at 140ms and this is 30ms, so the parity
+     was never true. 30ms is a cascade you read as one motion; 140ms is a
+     sequence you read as separate arrivals, which suits seven factor rows
+     and does not suit a list of twenty. Both are deliberate, and the
+     difference is the point. */
   .reveal-target.revealed { transition-delay: calc(var(--stagger, 0) * 30ms); }
   @media (prefers-reduced-motion: reduce) {
     .reveal-target.revealed { transition-delay: 0ms !important; }
@@ -6459,13 +6472,18 @@
             </div>
           </div>
           <div class="waterfall-row start">
-            <span class="wf-label">Even fight<span class="wf-why">before anything is known about either man</span></span>
+            <span class="wf-label">Even fight<span class="wf-why" title="before anything is known about either man">before anything is known about either man</span></span>
             <span class="wf-bar-cell"></span>
             <span class="wf-nums"><span class="wf-run">50.0%</span></span>
           </div>
           {% for r in wf.rows %}
           <div class="waterfall-row {{ r.kind }}" style="--wf-delay: {{ (loop.index0 * 0.14 + 0.25)|round(2) }}s">
-            <span class="wf-label">{{ r.label }}<span class="wf-why">{{ r.why }}</span></span>
+            {#- title carries the full gloss. The visible line is capped to one
+                row (see .wf-why) so the bars keep their proportions, but a
+                truncated explanation should still be READABLE somewhere
+                rather than simply lost -- 530 of these render on a full
+                page. -#}
+            <span class="wf-label">{{ r.label }}<span class="wf-why" title="{{ r.why }}">{{ r.why }}</span></span>
             <span class="wf-bar-cell">
               <span class="wf-bar {{ 'pos' if r.delta_pp >= 0 else 'neg' }}"
                     style="width: {{ (r.delta_pp|abs / wf.scale * 100)|round(1) }}%"></span>
@@ -7558,8 +7576,13 @@
 
     // Clears the splash. Three rules, and the third is the important one.
     //
-    //  - waits for the animation to READ (1.15s covers the draw plus the
-    //    wordmark), so it never flashes past on a warm cache
+    //  - waits for the animation to READ, so it never flashes past on a warm
+    //    cache. 1200ms is the arithmetic, not a feel: #splash-word is
+    //    `0.5s ease-out 0.7s forwards`, so the wordmark is not fully opaque
+    //    until 1200. This was 1150 and cut the last 50ms of its own fade --
+    //    the same off-by-a-tail as the toast's 300ms timer against a 320ms
+    //    animation. If either splash keyframe is retimed, this changes with
+    //    it.
     //  - waits for the page to be usable, so it doesn't hand over to a
     //    half-painted screen
     //  - REMOVES ITSELF REGARDLESS after 3s
@@ -7573,7 +7596,7 @@
       const el = document.getElementById('splash');
       if (!el) return;
       const clear = () => el.classList.add('done');
-      const MIN = 1150;
+      const MIN = 1200;
       const started = performance.now();
       const whenReady = () => {
         const wait = Math.max(0, MIN - (performance.now() - started));
@@ -9796,10 +9819,14 @@
       scope.querySelectorAll('.seg-pane').forEach(p => p.classList.toggle('active', p.id === targetId));
       const pane = document.getElementById(targetId);
       if (!pane) return;
+      // Capped at 10 steps, matching the stylesheet's --stagger cap. Uncapped,
+      // a 28-row pane took 1.68s to finish arriving and the last rows read as
+      // a hang rather than a cascade.
       pane.querySelectorAll('.reveal-target:not(.revealed)').forEach((el, i) => {
-        el.style.transitionDelay = (i * 60) + 'ms';
+        const step = Math.min(i, 10) * 60;
+        el.style.transitionDelay = step + 'ms';
         el.classList.add('revealed');
-        setTimeout(() => { el.style.transitionDelay = ''; }, 900 + i * 60);
+        setTimeout(() => { el.style.transitionDelay = ''; }, 900 + step);
       });
     }
 
@@ -11155,7 +11182,15 @@
         const banner = document.getElementById('whats-new-banner');
         if (!banner || banner.style.display === 'none') return;
         banner.classList.add('toast-out');
-        setTimeout(() => { banner.style.display = 'none'; }, 300);
+        // animationend, not a 300ms timer. The CSS animation is 0.32s, so the
+        // timer hid the banner 20ms early and every dismissal ended with a
+        // visible pop instead of a fade. The timeout stays as a fallback for
+        // the reduced-motion path, where the rule sets `animation: none` and
+        // no animationend will ever fire.
+        let done = false;
+        const finish = () => { if (done) return; done = true; banner.style.display = 'none'; };
+        banner.addEventListener('animationend', finish, { once: true });
+        setTimeout(finish, 400);
       };
 
       // ===== SWIPE TO DISMISS =====
@@ -11178,8 +11213,11 @@
         const confirm = banner.querySelector('[data-toast-confirm]');
         if (!card || !confirm) return;
 
-        const reduced = window.matchMedia &&
-          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // Live, not cached. This was read once at page load, so a user who
+        // turned the preference on mid-session kept the full swipe animation
+        // until they reloaded -- and prefersReducedMotion() exists exactly to
+        // avoid that, as the note at its definition says.
+        const reduced = prefersReducedMotion;
         const tracker = createVelocityTracker(100);
         let startX = 0, dx = 0, dragging = false, decided = false, width = 0;
 
@@ -11266,13 +11304,13 @@
             const dir = (Math.abs(v) > FLICK_VELOCITY) ? (v > 0 ? 1 : -1)
                                                        : (dx > 0 ? 1 : -1);
             const target = dir * (width + 40);
-            if (reduced) { paint(target); window.__dismissToast(); return; }
+            if (reduced()) { paint(target); window.__dismissToast(); return; }
             spring.start(dx, target, v, 0.32, 1.0, () => window.__dismissToast());
           } else {
             // Snap back with a little overshoot -- the card is returning to a
             // rest position it wants to be at, and a critically damped return
             // reads as sullen where a slight bounce reads as elastic.
-            if (reduced) { paint(0); return; }
+            if (reduced()) { paint(0); return; }
             spring.start(dx, 0, v, 0.34, 0.72);
           }
         }
@@ -11444,10 +11482,19 @@
         return;
       }
 
+      // NO INLINE transitionDelay. This used to write one, which beat the
+      // stylesheet rule for .reveal-target.revealed -- so --stagger and its
+      // documented 10-step cap never applied to any of the 96 reveal targets.
+      // Worse, `entries.forEach((entry, i))` binds i BEFORE the isIntersecting
+      // guard, so i counted every entry in the batch including the ones that
+      // were not intersecting. How many that is depends on how many targets
+      // cross the threshold in one observer callback, which depends on scroll
+      // velocity: the same card got 0ms on a slow scroll and 400ms on a fast
+      // one. Deleting the write restores assignStagger's per-section, capped
+      // index, which is deterministic and is what the CSS was written for.
       const cardObserver = new IntersectionObserver((entries, obs) => {
-        entries.forEach((entry, i) => {
+        entries.forEach(entry => {
           if (!entry.isIntersecting) return;
-          entry.target.style.transitionDelay = `${Math.min(i * 0.06, 0.4)}s`;
           entry.target.classList.add('revealed');
           obs.unobserve(entry.target);
         });
