@@ -4507,7 +4507,15 @@
        content rather than a raised edge of it. --e3 is the rung for a surface
        that floats above the scroll. */
     box-shadow: var(--e3);
-    border-bottom: 1px solid var(--border);
+    /* --hairline-strong, not --border. A CAST SHADOW CANNOT SEPARATE TWO DARK
+       SURFACES: --e3's outer component is `0 8px 24px rgba(0,0,0,0.40)`, and
+       black-on-#1c1c1e over a black page is very nearly invisible. So the only
+       thing marking the boundary was a 46,46,48 hairline, and content passing
+       behind the pinned header looked SLICED rather than layered -- a row of
+       attribute chips cut in half reads as a rendering fault, which is exactly
+       what was reported. On a dark UI the separation has to come from a LIGHT
+       edge, not a dark shadow. */
+    border-bottom: 1px solid var(--hairline-strong);
   }
   /* Trim the vertical cost while pinned: the avatars and chip rows are
      orientation aids, not reading material, so they tighten rather than
@@ -4757,6 +4765,28 @@
   :root { --chrome-top: calc(env(safe-area-inset-top, 0px) + 9px); }
   .seg-tabs { top: var(--chrome-top); }
   details.fight-card[open] > summary { top: calc(var(--chrome-top) + var(--seg-tabs-h, 44px)); }
+
+  /* A SHORT FADE UNDER THE PINNED HEADER. The border above says where the
+     boundary is; this says what is happening at it. Content scrolling behind
+     a sticky header is always cut off mid-element -- that is what sticky
+     does -- but a hard cut through a row of pills reads as breakage, while
+     the same content dissolving into the card's own colour reads as passing
+     underneath.
+     Sits BELOW the summary via a negative bottom, so it costs no layout and
+     nothing shifts when it appears. --panel is the fight card's own
+     background, so the gradient fades content into the surface it is
+     actually sliding under rather than into an arbitrary colour.
+     Only while OPEN, because only an open summary is sticky. */
+  details.fight-card[open] > summary::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -14px; height: 14px;
+    background: linear-gradient(to bottom, var(--panel), rgba(28, 28, 30, 0));
+    pointer-events: none;
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    /* The fade is a translucency effect; with the preference on, the hairline
+       carries the boundary by itself. */
+    details.fight-card[open] > summary::after { display: none; }
+  }
 
   /* Every section fills the viewport EXACTLY, no more and no less.
      Short ones (Locks, More) didn't scroll at all, so mobile browsers kept
