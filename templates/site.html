@@ -4976,11 +4976,40 @@
   .fdr-det b { font-size: var(--t-micro); color: var(--text-soft); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
   .fdrawer-foot { font-size: var(--t-micro); color: var(--muted); padding: 11px 16px 0; line-height: 1.55; }
   .fdrawer-empty { padding: 22px 16px; text-align: center; color: var(--muted); font-size: var(--t-small); line-height: 1.6; }
-  /* The name itself becomes a control. Dotted underline rather than a link
-     colour: it must not compete with the pick or read as a bet. */
-  .matchup-name.fdr-link {
-    cursor: pointer; text-decoration: underline; text-decoration-style: dotted;
-    text-underline-offset: 3px; text-decoration-color: rgba(255,255,255,0.28);
+  /* ===== SCOUT ROW =====
+     Two explicit controls inside the open card. This replaced a dotted
+     underline on the fighter names in the collapsed row, which put two
+     meanings on one region -- tap the name and you could not tell whether the
+     card would expand or a panel would open. Here nothing competes. */
+  .scout-row { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; }
+  .scout-lbl {
+    font-size: var(--t-micro); color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; font-weight: 600; flex: none;
+  }
+  .scout-pill {
+    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 5px;
+    background: var(--sunken); border: 1px solid var(--hairline);
+    /* 44px, matching .seg-tab and .market-group-summary. This was 36 -- under
+       the floor the file already sets for every other pressable, and the note
+       there is right: thumbs are imprecise, and a control worth adding is
+       worth hitting. */
+    border-radius: var(--r-pill); padding: 8px; min-height: 44px;
+    font-family: inherit; font-size: var(--t-small); font-weight: 600;
+    cursor: pointer; transition: background 0.15s ease-out, border-color 0.15s ease-out;
+  }
+  .scout-pill span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scout-pill svg { width: 12px; height: 12px; flex: none; opacity: 0.75; }
+  /* Corner colours, matching the matchup directly above -- A is red, B is
+     blue. Note the drawer itself paints whoever's history is open in red
+     regardless of corner, because a fighter is corner A in some of their
+     bouts and corner B in others, so subject-is-red is the only stable rule
+     in there. The drawer's legend names both, which is what keeps that
+     readable rather than contradictory. */
+  .scout-pill.corner-a { color: var(--corner-red); }
+  .scout-pill.corner-b { color: var(--corner-blue); }
+  .scout-pill:active { background: rgba(255,255,255,0.06); }
+  @media (hover: hover) {
+    .scout-pill:hover { border-color: var(--hairline-strong); background: rgba(255,255,255,0.04); }
   }
   @media (prefers-reduced-motion: reduce) {
     .fdrawer { transition: none; }
@@ -6427,15 +6456,7 @@
         <div class="matchup-fighter{% if fight.winner %}{{ ' won' if fight.winner == fight.fighter_a else ' lost' }}{% endif %}">
           {{ fighter_avatar(fight.fighter_a, is_winner=(fight.winner == fight.fighter_a)) }}
           <div class="matchup-name-wrap">
-            {#- The name is the handle for the scouting drawer. role/tabindex
-                   rather than a <button>: this sits inside a <summary>, and a
-                   nested button is invalid HTML that Safari resolves by
-                   dropping the summary's own activation. The JS stops the
-                   click so the card does not toggle underneath. -#}
-            <span class="matchup-name{{ ' fdr-link' if fight.fighter_a_key }}"
-                  {% if fight.fighter_a_key %}data-fighter-key="{{ fight.fighter_a_key }}"
-                  role="button" tabindex="0"
-                  aria-label="Scouting report for {{ fight.fighter_a }}"{% endif %}>{{ fight.fighter_a }}</span>
+            <span class="matchup-name">{{ fight.fighter_a }}</span>
             {% if fight.winner == fight.fighter_a %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5 L7 12 L15 19 Z" fill="var(--green)"/></svg></div>{% endif %}
           </div>
         </div>
@@ -6486,15 +6507,7 @@
         <div class="matchup-fighter right{% if fight.winner %}{{ ' won' if fight.winner == fight.fighter_b else ' lost' }}{% endif %}">
           <div class="matchup-name-wrap">
             {% if fight.winner == fight.fighter_b %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5 L7 12 L15 19 Z" fill="var(--green)"/></svg></div>{% endif %}
-            {#- The name is the handle for the scouting drawer. role/tabindex
-                   rather than a <button>: this sits inside a <summary>, and a
-                   nested button is invalid HTML that Safari resolves by
-                   dropping the summary's own activation. The JS stops the
-                   click so the card does not toggle underneath. -#}
-            <span class="matchup-name{{ ' fdr-link' if fight.fighter_b_key }}"
-                  {% if fight.fighter_b_key %}data-fighter-key="{{ fight.fighter_b_key }}"
-                  role="button" tabindex="0"
-                  aria-label="Scouting report for {{ fight.fighter_b }}"{% endif %}>{{ fight.fighter_b }}</span>
+            <span class="matchup-name">{{ fight.fighter_b }}</span>
           </div>
           {{ fighter_avatar(fight.fighter_b, is_winner=(fight.winner == fight.fighter_b)) }}
         </div>
@@ -6567,6 +6580,37 @@
         <span class="pick-confidence">{{ fight.preview.confidence_label }}</span>
         {% if fight.is_lock_of_week %}<span class="lock-badge celebratable">{{ icon_lock() }} Lock of the Week</span>{% endif %}
       </div>
+      {% endif %}
+      {# ===== SCOUTING =====
+         The way into a fighter's full round-by-round history. It lives HERE,
+         inside the open card, and deliberately not on the collapsed row.
+
+         The names up there used to carry a dotted underline and open this on
+         tap, and it read as unnatural for a reason worth writing down: the
+         matchup row's whole job is to expand the card, so one region had two
+         meanings and no way to predict which you would get. Every fix that
+         kept the control on that row was ruled out by measurement rather than
+         taste -- the name box is 113.3px and "Anthony Hernandez" is 113.3px,
+         so slack is 0.0px and an avatar, an inline icon, a trailing chevron,
+         or even a 1px border around the name all re-break the wrapping.
+
+         Down here nothing competes for the tap, and it is the moment a reader
+         is already asking "why this pick?". Corner colours, matching the
+         matchup above. #}
+      {% if fight.fighter_a_key or fight.fighter_b_key %}
+      <div class="scout-row">
+        <span class="scout-lbl">Scout</span>
+        {% if fight.fighter_a_key %}
+        <button type="button" class="scout-pill corner-a" data-fighter-key="{{ fight.fighter_a_key }}"
+                aria-label="Fight history for {{ fight.fighter_a }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_a.split(' ')[-1] }}</span></button>
+        {% endif %}
+        {% if fight.fighter_b_key %}
+        <button type="button" class="scout-pill corner-b" data-fighter-key="{{ fight.fighter_b_key }}"
+                aria-label="Fight history for {{ fight.fighter_b }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_b.split(' ')[-1] }}</span></button>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if fight.preview %}
       {# The factor badges, moved in from the summary. They are the REASONING
          -- which attributes favour whom -- so they belong with the pick they
          explain rather than in front of it. #}
@@ -9323,19 +9367,19 @@
       // toggled underneath. Capturing runs us first; stopPropagation then
       // keeps the event away from the summary, and preventDefault stops the
       // disclosure's own default toggle.
+      // Matches ANY element carrying a fighter key, so the entry point can move
+      // without touching this. Capture phase is kept from when the control
+      // lived inside a <summary> whose handler chain calls stopPropagation();
+      // it costs nothing now and means a future entry point anywhere on the
+      // page works without rediscovering that.
+      // A real <button> handles Enter and Space itself, so there is no
+      // separate key handler to drift out of sync with this one.
       document.addEventListener('click', (e) => {
-        const link = e.target.closest && e.target.closest('.fdr-link[data-fighter-key]');
+        const link = e.target.closest && e.target.closest('[data-fighter-key]');
         if (!link) return;
         e.preventDefault();
         e.stopPropagation();
-        open(link.dataset.fighterKey, link.textContent.trim());
-      }, true);
-      document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        const link = e.target.closest && e.target.closest('.fdr-link[data-fighter-key]');
-        if (!link) return;
-        e.preventDefault(); e.stopPropagation();
-        open(link.dataset.fighterKey, link.textContent.trim());
+        open(link.dataset.fighterKey, (link.textContent || '').trim());
       }, true);
     }
     // This block sits ~3,400 lines ABOVE the drawer markup, so at parse time
