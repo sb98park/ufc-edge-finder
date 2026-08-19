@@ -201,6 +201,51 @@ def build_market_label(fighter: str, market: str) -> str:
     return f"{fighter} — {market}"
 
 
+def bet_and_fight_labels(row: dict) -> tuple[str, str]:
+    """
+    (what the bet IS, the context line to print under it).
+
+    build_market_label is built for a TABLE, where the market has its own
+    column, so for a moneyline it returns the bare fighter name. Printed on
+    its own that is ambiguous in exactly the way clear_market_label's docstring
+    warns about: a row reading "Jeisla Chaves vs Carli Judice" over "Moneyline
+    - +525" names the matchup and the price but never says which side the
+    price is on. The reader has to guess that the first name is the pick.
+
+    So the bet is stated as a sentence and the matchup demoted to context:
+
+        Jeisla Chaves to win            vs Carli Judice - +525
+        Jeisla Chaves by KO/TKO         vs Carli Judice - +260
+        Total Rounds Over 1.5           Anthony Wint vs Terrance Chatman - +292
+
+    The context line COMPLEMENTS the bet rather than repeating it. Naming a
+    fighter-specific bet already spends the pick's name, so the line beneath
+    only has to supply the opponent; printing the whole matchup there put the
+    same name twice in two lines. Fight-level markets name no one, so they
+    get the full matchup and nothing is duplicated.
+    """
+    fighter = str(row.get("fighter") or "").strip()
+    market = str(row.get("market") or "").strip()
+    opponent = row.get("opponent")
+    opponent = str(opponent).strip() if opponent not in (None, "") and opponent == opponent else ""
+
+    # " vs " in the fighter field IS the fight-level marker -- edge_finder
+    # writes the matchup there for markets that belong to the bout rather
+    # than to a corner.
+    if " vs " in fighter or not opponent:
+        return build_market_label(fighter, market), fighter
+
+    fight = f"vs {opponent}"
+    if market == "Moneyline":
+        return f"{fighter} to win", fight
+    if market.startswith("Method:"):
+        detail = market.split(":", 1)[1].strip()
+        detail = {"sub": "Submission", "ko/tko": "KO/TKO",
+                  "dec": "Decision"}.get(detail.lower(), detail)
+        return f"{fighter} by {detail}", fight
+    return build_market_label(fighter, market), fight
+
+
 def assign_canonical_fight_ids(upcoming_df: pd.DataFrame, cards_df: pd.DataFrame) -> pd.DataFrame:
     """
     Different odds sources assign their own internal fight IDs -- Polymarket
@@ -1136,6 +1181,7 @@ def _decorate_props(records: list[dict], fighters_df: pd.DataFrame | None) -> li
             r["model_fair_odds"] = "N/A"
         if fighters_df is not None:
             r["rationale"] = explain_edge(r, fighters_df)
+        r["bet_label"], r["fight_label"] = bet_and_fight_labels(r)
     return records
 
 

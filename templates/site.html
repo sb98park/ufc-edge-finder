@@ -6342,9 +6342,15 @@
     </div>
     {% for p in disagreement_props %}
     <div class="line-card" data-key="{{ p.fighter }}|{{ p.market }}">
+      {#- THE BET FIRST, the fight as context. This read "Jeisla Chaves vs
+          Carli Judice" over "Moneyline - +525", which names the matchup and
+          the price but never says WHICH SIDE the price is on -- the reader
+          had to guess that the first name was the pick. Exactly the ambiguity
+          clear_market_label was written for, reappearing because the fighter
+          has no column of its own here. -#}
       <div>
-        <div class="line-matchup">{{ p.fighter }}{% if p.opponent is real_value %} vs {{ p.opponent }}{% endif %}</div>
-        <div class="line-market">{{ p.market | clear_market(p.fighter) }} · {{ p.odds_american | american }}{% if p.best_book and not p.source_is_vig_free %} at {{ p.best_book }}{% endif %}</div>
+        <div class="line-matchup">{{ p.bet_label or p.fighter }}</div>
+        <div class="line-market">{% if p.fight_label and p.fight_label != p.bet_label %}{{ p.fight_label }} · {% endif %}{{ p.odds_american | american }}{% if p.best_book and not p.source_is_vig_free %} at {{ p.best_book }}{% endif %}</div>
       </div>
       <div class="disagreement-nums">
         <div class="dn-model">model {{ (p.model_prob*100)|round|int }}%</div>
