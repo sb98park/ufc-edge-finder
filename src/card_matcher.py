@@ -14,7 +14,12 @@ from src.model_preview import build_fight_preview, build_full_market_projection
 from src.matchup_model import normalize_division
 from src.method_model import finish_share_before
 from src.fight_format import is_five_round as _is_five_round, scheduled_rounds as _scheduled_rounds
-from src.odds_utils import implied_prob_to_american, format_american_odds
+from src.odds_utils import implied_prob_to_american, format_american_odds, kelly_fraction
+# _two_numbers is edge_finder's single definition of the edge/EV/vig triple.
+# Reconciliation has to recompute them from a corrected model_prob, and
+# re-deriving the formula here is how the two would drift apart.
+# edge_finder does not import card_matcher, so this is not circular.
+from src.edge_finder import _two_numbers
 
 
 # A consistent accent color per division, purely for faster visual scanning
@@ -474,10 +479,23 @@ def _reconcile_round_props(rows: list[dict], fight: dict,
                                              normalize_division(fight.get("weight_class")))
         new = dict(r)
         new["model_prob"] = round(under if side == "Under" else 1.0 - under, 4)
-        # The edge moves with it -- a stale edge beside a corrected
-        # probability is worse than either alone.
+        # EVERYTHING DERIVED FROM model_prob MOVES WITH IT. The comment below
+        # was right and the code only honoured half of it: edge_pct was
+        # recomputed while ev_pct, blended_prob, vig_cost_pct and
+        # suggested_stake_pct kept the values computed BEFORE reconciliation.
+        # Measured on the rendered page, 80 of 184 priced rows printed an EV
+        # inconsistent with their own model/edge/price, the worst by 9.1
+        # points -- and EV is the number this site now leads with and calls
+        # "the only one that decides anything".
+        #
+        # A stale edge beside a corrected probability is worse than either
+        # alone; a stale EV is worse still, because nothing on the row
+        # reveals it.
         if new.get("has_line") and new.get("book_fair_prob") is not None:
-            new["edge_pct"] = round((new["model_prob"] - float(new["book_fair_prob"])) * 100, 2)
+            fair = float(new["book_fair_prob"])
+            new.update(_two_numbers(new["model_prob"], fair, float(new["odds_american"])))
+            new["suggested_stake_pct"] = round(
+                kelly_fraction(new["blended_prob"], float(new["odds_american"])) * 100, 2)
         out.append(new)
     if not matched and rows:
         print(f"[rounds] no round rows matched for "
@@ -917,6 +935,35 @@ def group_edges_by_card(
                             break
                 elif gid == "rounds":
                     rows = _reconcile_round_props(rows, fight, _decision_shown)
+                    # AND PUSH THE CORRECTION BACK ONTO fight["edges"].
+                    #
+                    # Reconciliation rewrites the DISPLAY rows, but
+                    # generate_site builds tracked_edges from fight["edges"] --
+                    # a separate list it never touched -- and the standout,
+                    # disagreement and favorite cards are all built from that.
+                    # So the same market printed two different probabilities on
+                    # one page: Anthony Wint's Total Rounds Over 1.5 read 66% on
+                    # its disagreement card and 63.4% in the table two sections
+                    # below it, from the same clob token.
+                    #
+                    # The reconciled value is the correct one by construction --
+                    # it is the one made coherent with the fight's own method
+                    # distribution -- so the edge rows adopt it rather than the
+                    # cards being taught to read somewhere else.
+                    _by_key = {}
+                    for _r in rows:
+                        _k = _r.get("clob_token_id") or (_r.get("market"), _r.get("selection"))
+                        if _k:
+                            _by_key[_k] = _r
+                    for _e in fight.get("edges") or []:
+                        _k = _e.get("clob_token_id") or (_e.get("market"), _e.get("selection"))
+                        _fixed = _by_key.get(_k)
+                        if not _fixed:
+                            continue
+                        for _f in ("model_prob", "edge_pct", "ev_pct", "blended_prob",
+                                   "vig_cost_pct", "suggested_stake_pct"):
+                            if _f in _fixed:
+                                _e[_f] = _fixed[_f]
                 if not rows:
                     continue
                 groups.append({
