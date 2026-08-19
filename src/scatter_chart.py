@@ -31,11 +31,11 @@ def build_scatter_svg(props: list[dict], width: int = 300, height: int = 180) ->
     for p in (0.25, 0.5, 0.75):
         x = x_at(p)
         grid_svg += f'<line x1="{x:.1f}" y1="{pad_top}" x2="{x:.1f}" y2="{pad_top+plot_h}" stroke="#1c2028" stroke-width="1"/>'
-        grid_svg += f'<text x="{x:.1f}" y="{height-8}" font-size="8" fill="#5a5f6a" text-anchor="middle">{round(p*100)}%</text>'
+        grid_svg += f'<text x="{x:.1f}" y="{height-8}" font-size="8" fill="#9ba1ad" text-anchor="middle">{round(p*100)}%</text>'
     for frac in (0.5, 1.0):
         y = y_at(y_max * frac)
         grid_svg += f'<line x1="{pad_left}" y1="{y:.1f}" x2="{pad_left+plot_w}" y2="{y:.1f}" stroke="#1c2028" stroke-width="1"/>'
-        grid_svg += f'<text x="{pad_left-5}" y="{y+3:.1f}" font-size="8" fill="#5a5f6a" text-anchor="end">{round(y_max*frac)}%</text>'
+        grid_svg += f'<text x="{pad_left-5}" y="{y+3:.1f}" font-size="8" fill="#9ba1ad" text-anchor="end">{round(y_max*frac)}%</text>'
 
     # Quadrant highlight: top-right (high prob, high edge) is the sweet spot
     quad_x = x_at(0.5)
@@ -55,8 +55,8 @@ def build_scatter_svg(props: list[dict], width: int = 300, height: int = 180) ->
         )
 
     axis_labels = (
-        f'<text x="{pad_left+plot_w/2:.1f}" y="{height-1}" font-size="8" fill="#5a5f6a" text-anchor="middle">Model Confidence</text>'
-        f'<text x="8" y="{pad_top+plot_h/2:.1f}" font-size="8" fill="#5a5f6a" text-anchor="middle" '
+        f'<text x="{pad_left+plot_w/2:.1f}" y="{height-1}" font-size="8" fill="#9ba1ad" text-anchor="middle">Model Confidence</text>'
+        f'<text x="8" y="{pad_top+plot_h/2:.1f}" font-size="8" fill="#9ba1ad" text-anchor="middle" '
         f'transform="rotate(-90 8 {pad_top+plot_h/2:.1f})">Edge Size</text>'
     )
 

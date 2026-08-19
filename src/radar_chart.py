@@ -233,7 +233,12 @@ def build_radar_chart_svg(
         # rendering fault. Half-known axes keep the normal colour -- the
         # break in one polygon already carries that.
         both_missing = metrics_a[i] is None and metrics_b[i] is None
-        fill = "#4a4d54" if both_missing else "#8a8f9a"
+        # #6b7079, not #4a4d54. The dimming is deliberate -- it marks an axis
+        # neither fighter has data for -- but 2.01:1 against the panel is not
+        # dimmed, it is unreadable, and the label still has to be read to know
+        # WHICH axis is missing. 3.42:1 keeps the step down from the normal
+        # #8a8f9a (5.25:1) while clearing the 3:1 floor.
+        fill = "#6b7079" if both_missing else "#8a8f9a"
         text = f"{label} \u2014" if both_missing else label
         labels_svg += f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="8.5" fill="{fill}" text-anchor="{anchor}" dominant-baseline="middle">{text}</text>'
 

@@ -42,9 +42,9 @@ def build_calibration_svg(points: list[dict], width: int = 300) -> str:
         x = x_at(pct / 100)
         grid_svg += f'<line x1="{x:.1f}" y1="{pad_top+label_h}" x2="{x:.1f}" y2="{height-6}" stroke="#1c2028" stroke-width="1"/>'
     grid_svg += (
-        f'<text x="{plot_left}" y="{pad_top+10}" font-size="8" fill="#5a5f6a" text-anchor="start">0%</text>'
-        f'<text x="{x_at(0.5):.1f}" y="{pad_top+10}" font-size="8" fill="#5a5f6a" text-anchor="middle">50%</text>'
-        f'<text x="{plot_right}" y="{pad_top+10}" font-size="8" fill="#5a5f6a" text-anchor="end">100%</text>'
+        f'<text x="{plot_left}" y="{pad_top+10}" font-size="8" fill="#9ba1ad" text-anchor="start">0%</text>'
+        f'<text x="{x_at(0.5):.1f}" y="{pad_top+10}" font-size="8" fill="#9ba1ad" text-anchor="middle">50%</text>'
+        f'<text x="{plot_right}" y="{pad_top+10}" font-size="8" fill="#9ba1ad" text-anchor="end">100%</text>'
     )
 
     rows_svg = ""
@@ -72,7 +72,7 @@ def build_calibration_svg(points: list[dict], width: int = 300) -> str:
         bucket_label = f'~{round(p["predicted"]*100)}%'
 
         rows_svg += f'<text x="{pad_left-8}" y="{row_mid+3:.1f}" font-size="9.5" font-weight="700" fill="#e8e8ec" text-anchor="end">{bucket_label}</text>'
-        rows_svg += f'<text x="{pad_left-8}" y="{row_mid+15:.1f}" font-size="7.5" fill="#5a5f6a" text-anchor="end">n={p["n"]}</text>'
+        rows_svg += f'<text x="{pad_left-8}" y="{row_mid+15:.1f}" font-size="7.5" fill="#9ba1ad" text-anchor="end">n={p["n"]}</text>'
 
         # Predicted bar (gold, matching this site's "model" color language)
         rows_svg += (

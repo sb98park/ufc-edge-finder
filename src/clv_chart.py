@@ -48,9 +48,9 @@ def build_clv_dumbbell_svg(clv_eligible: list[dict], width: int = 300) -> str:
         x = x_at(pct / 100)
         grid_svg += f'<line x1="{x:.1f}" y1="{pad_top+label_h}" x2="{x:.1f}" y2="{height-6}" stroke="#1c2028" stroke-width="1"/>'
     grid_svg += (
-        f'<text x="{plot_left}" y="{pad_top+11}" font-size="8" fill="#5a5f6a" text-anchor="start">0%</text>'
-        f'<text x="{x_at(0.5):.1f}" y="{pad_top+11}" font-size="8" fill="#5a5f6a" text-anchor="middle">50%</text>'
-        f'<text x="{plot_right}" y="{pad_top+11}" font-size="8" fill="#5a5f6a" text-anchor="end">100%</text>'
+        f'<text x="{plot_left}" y="{pad_top+11}" font-size="8" fill="#9ba1ad" text-anchor="start">0%</text>'
+        f'<text x="{x_at(0.5):.1f}" y="{pad_top+11}" font-size="8" fill="#9ba1ad" text-anchor="middle">50%</text>'
+        f'<text x="{plot_right}" y="{pad_top+11}" font-size="8" fill="#9ba1ad" text-anchor="end">100%</text>'
     )
 
     rows_svg = ""

@@ -79,11 +79,11 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
             f'stroke="{line_color}" stroke-width="1"{dasharray_attr}/>'
         )
         sign = "+" if v > 0 else ""
-        grid_svg += f'<text x="{pad_left-6}" y="{y+3:.1f}" font-size="8" fill="#5a5f6a" text-anchor="end">{sign}{v:g}U</text>'
+        grid_svg += f'<text x="{pad_left-6}" y="{y+3:.1f}" font-size="8" fill="#9ba1ad" text-anchor="end">{sign}{v:g}U</text>'
 
     x_labels_svg = (
-        f'<text x="{x_at(0):.1f}" y="{height-4}" font-size="8" fill="#5a5f6a" text-anchor="start">Start</text>'
-        f'<text x="{x_at(len(running_total)-1):.1f}" y="{height-4}" font-size="8" fill="#5a5f6a" text-anchor="end">Now</text>'
+        f'<text x="{x_at(0):.1f}" y="{height-4}" font-size="8" fill="#9ba1ad" text-anchor="start">Start</text>'
+        f'<text x="{x_at(len(running_total)-1):.1f}" y="{height-4}" font-size="8" fill="#9ba1ad" text-anchor="end">Now</text>'
     )
 
     points = [(x_at(i), y_at(v)) for i, v in enumerate(running_total)]
