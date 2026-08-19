@@ -132,6 +132,7 @@ def build_fighter_history(names, stats_path=STATS, results_path=RESULTS) -> dict
     Returns {folded: [bout, ...]} newest first, where a bout is:
 
         o    opponent display name
+        e    event name, for the expanded header ("UFC 319 · 5 rounds")
         w    1 won, 0 lost, None neither (draw, no contest, unrecorded)
         m    method ("KO/TKO", "Submission", "Decision - Unanimous", ...)
         er   round the fight ended in
@@ -213,6 +214,7 @@ def build_fighter_history(names, stats_path=STATS, results_path=RESULTS) -> dict
 
             history[folded].append({
                 "o": opponent,
+                "e": event,
                 "w": won,
                 "m": (res.get("METHOD") or "").strip(),
                 "er": (res.get("ROUND") or "").strip(),

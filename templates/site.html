@@ -4874,10 +4874,25 @@
     .fdrawer { left: 50%; right: auto; width: 460px; transform: translate(-50%, 100%); }
     .fdrawer.open { transform: translate(-50%, 0); }
   }
-  .fdrawer-grab {
-    width: 34px; height: 4px; border-radius: var(--r-pill); flex: none;
-    background: rgba(255,255,255,0.22); margin: 8px auto 0;
+  /* The handle is a REAL target, not a decoration. It looked draggable and
+     was not, which is worse than not drawing one -- a reader reaches for it,
+     nothing happens, and the sheet feels broken. The visible pill is 34x4 but
+     the grab area is the whole strip: a 4px target is unhittable with a thumb. */
+  .fdrawer-handle {
+    flex: none; padding: 8px 0 6px; cursor: grab; touch-action: none;
   }
+  .fdrawer-handle:active { cursor: grabbing; }
+  .fdrawer-grab {
+    width: 34px; height: 4px; border-radius: var(--r-pill);
+    background: rgba(255,255,255,0.22); margin: 0 auto;
+    transition: background 0.15s ease-out, width 0.15s ease-out;
+  }
+  .fdrawer.dragging .fdrawer-grab { background: rgba(255,255,255,0.42); width: 44px; }
+  /* While a finger owns the sheet, JS writes transform every frame -- a CSS
+     transition on the same property would ease toward each written value and
+     smear the 1:1 tracking into lag. Same rule the tab bar's pill follows. */
+  .fdrawer.dragging { transition: none; }
+  .fdrawer.dragging .fdrawer-list { overflow-y: hidden; }
   .fdrawer-head { padding: 12px 16px 11px; border-bottom: 1px solid var(--hairline); flex: none; }
   .fdrawer-name { font-family: var(--font-display); font-size: var(--t-h3); font-weight: 700; letter-spacing: -0.2px; }
   .fdrawer-meta { font-size: var(--t-small); color: var(--muted); margin-top: 3px; }
@@ -4915,12 +4930,36 @@
   .fdr-mini i { flex: 1; border-radius: 1px; background: var(--accent2); min-height: 2px; }
   .fdr-chev { color: var(--muted); font-size: 9px; flex: none; transition: transform 0.18s ease-out; }
   .fdr-fight.open .fdr-chev { transform: rotate(90deg); }
-  .fdr-body { padding: 2px 16px 13px; background: var(--sunken); }
+  .fdr-body { padding: 10px 16px 13px; background: var(--sunken); }
+  /* Both fighters named, in their bar's colour, with the event between them.
+     The bar is meaningless without knowing which end is whose, and the row
+     header above only names the opponent. */
+  .fdr-vs { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+  .fdr-vs-a, .fdr-vs-b { font-size: var(--t-body); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 0; min-width: 0; }
+  .fdr-vs-a { color: var(--corner-red); }
+  .fdr-vs-b { color: var(--corner-blue); text-align: right; }
+  .fdr-vs-mid { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; white-space: nowrap; flex: none; }
+  /* The event gets its OWN line. Sharing the names' row worked in the mockup
+     because that fight was "UFC 319"; a Fight Night title is
+     "UFC Fight Night: Hernandez vs. Pereira" and it crushed both names to
+     four characters and an ellipsis. */
+  .fdr-ev { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+  .fdr-key { display: flex; align-items: center; gap: 12px; margin-top: 11px; padding-top: 9px; border-top: 1px solid var(--hairline); }
+  .fdr-key span { font-size: var(--t-micro); color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .fdr-key i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .fdr-key .fdr-key-note { margin-left: auto; }
   .fdr-rr { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .fdr-rr-l { font-size: var(--t-micro); color: var(--muted); font-weight: 700; width: 15px; flex: none; font-family: var(--font-display); }
   .fdr-rr-bar { flex: 1; height: 14px; border-radius: var(--r-sm); background: #141416; display: flex; overflow: hidden; position: relative; }
-  .fdr-rr-me { background: linear-gradient(90deg, rgba(212,175,55,0.5), var(--accent)); height: 100%; }
-  .fdr-rr-op { background: rgba(255,255,255,0.10); height: 100%; }
+  /* TWO-SIDED. This was a gold fill against rgba(255,255,255,0.10), so the
+     opponent's half was very nearly invisible and the bar read as a progress
+     meter rather than a split. Each fighter now gets a corner colour and the
+     bar is legible as a division of one round between two people.
+     The colours are a LOCAL convention -- red is whoever's drawer is open,
+     blue is the opponent, regardless of which corner either was actually in.
+     The legend under the bars names both, which is what makes that safe. */
+  .fdr-rr-me { background: linear-gradient(90deg, rgba(229,57,53,0.55), var(--corner-red)); height: 100%; }
+  .fdr-rr-op { background: linear-gradient(270deg, rgba(59,130,246,0.55), var(--corner-blue)); height: 100%; }
   .fdr-rr-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.2); }
   .fdr-rr-p { font-size: var(--t-micro); color: var(--text-soft); width: 28px; text-align: right; flex: none; font-variant-numeric: tabular-nums; font-weight: 600; }
   .fdr-det { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--hairline); }
@@ -9045,16 +9084,39 @@
           '</div>';
       }
 
-      function fightBody(b) {
+      // Surnames. "Reinier de Ridder" -> "Ridder", matching how the summary
+      // pick on the fight card already shortens a name.
+      function surname(full) {
+        const parts = String(full || '').trim().split(/\s+/);
+        return parts.length ? parts[parts.length - 1] : '';
+      }
+
+      function fightBody(b, subject) {
+        const me = surname(subject), them = surname(b.o);
+        const rounds = (b.rs || []).length;
+        const head =
+          (b.e ? '<div class="fdr-ev">' + esc(b.e) + '</div>' : '') +
+          '<div class="fdr-vs">' +
+            '<span class="fdr-vs-a">' + esc(me) + '</span>' +
+            '<span class="fdr-vs-mid">' +
+              (rounds ? rounds + ' round' + (rounds === 1 ? '' : 's') : '') + '</span>' +
+            '<span class="fdr-vs-b">' + esc(them) + '</span>' +
+          '</div>';
         const rr = (b.rs || []).map((sh, i) =>
           '<div class="fdr-rr"><span class="fdr-rr-l">R' + (i + 1) + '</span>' +
           '<div class="fdr-rr-bar"><div class="fdr-rr-me" style="width:' + sh + '%"></div>' +
           '<div class="fdr-rr-op" style="width:' + (100 - sh) + '%"></div>' +
           '<div class="fdr-rr-mid"></div></div>' +
           '<span class="fdr-rr-p">' + sh + '%</span></div>').join('');
+        const key =
+          '<div class="fdr-key">' +
+            '<span><i style="background:var(--corner-red)"></i>' + esc(me) + '</span>' +
+            '<span><i style="background:var(--corner-blue)"></i>' + esc(them) + '</span>' +
+            '<span class="fdr-key-note">strikes + control</span>' +
+          '</div>';
         const ctrl = (b.ct && b.ct[0] >= 0)
           ? '<span>Control time</span><b>' + mmss(b.ct[0]) + ' — ' + mmss(b.ct[1]) + '</b>' : '';
-        return '<div class="fdr-body">' + rr +
+        return '<div class="fdr-body">' + head + rr + key +
           '<div class="fdr-det">' +
             '<span>Significant strikes</span><b>' + b.sg[0] + ' — ' + b.sg[1] + '</b>' +
             ctrl +
@@ -9091,6 +9153,12 @@
             'criteria this data does not carry.</div>';
         }
         elList.scrollTop = 0;
+        // Clear anything a previous gesture left inline. An abandoned drag --
+        // closed by Escape or the scrim while the sheet sat at translateY(60px)
+        // -- leaves that inline style behind, and inline beats the .open class,
+        // so the next open would arrive already pushed down the screen.
+        drawer.style.transform = ''; scrim.style.opacity = '';
+        drawer.classList.remove('dragging');
         drawer.hidden = false; scrim.hidden = false;
         // FORCED REFLOW, not requestAnimationFrame. The element must be laid
         // out at translateY(100%) before the class flips or the transition has
@@ -9102,12 +9170,14 @@
         drawer.classList.add('open'); scrim.classList.add('open');
         document.body.style.overflow = 'hidden';
         drawer.__bouts = bouts;
+        drawer.__subject = (rec && rec.n) || displayName || '';
         const first = drawer.querySelector('.fdr-head') || document.getElementById('fdrawer-close');
         if (first) first.focus({ preventScroll: true });
       }
 
       function close() {
-        drawer.classList.remove('open'); scrim.classList.remove('open');
+        drawer.classList.remove('open', 'dragging'); scrim.classList.remove('open');
+        drawer.style.transform = ''; scrim.style.opacity = '';
         document.body.style.overflow = '';
         const done = () => { drawer.hidden = true; scrim.hidden = true; };
         if (prefersReducedMotion()) done();
@@ -9137,10 +9207,85 @@
         if (wasOpen) return;
         const bout = (drawer.__bouts || [])[+row.dataset.i];
         if (!bout) return;
-        row.insertAdjacentHTML('beforeend', fightBody(bout));
+        row.insertAdjacentHTML('beforeend', fightBody(bout, drawer.__subject));
         row.classList.add('open');
         head.setAttribute('aria-expanded', 'true');
       });
+
+      // ===== DRAG THE SHEET DOWN TO DISMISS =====
+      // The handle already looked draggable, so a reader reaches for it. It
+      // follows the finger 1:1 -- no easing, no smoothing, transform written
+      // straight from the pointer delta, which is the same rule the toast
+      // swipe and the tab-bar pill follow and the one thing that would make
+      // this feel cheap if broken.
+      (function initSheetDrag() {
+        const handle = document.getElementById('fdrawer-handle');
+        if (!handle) return;
+        const tracker = createVelocityTracker(100);
+        let startY = 0, dy = 0, dragging = false, height = 0;
+
+        // Committing on DISTANCE ALONE ignores a fast flick that never got
+        // far; committing on velocity alone dismisses a slow deliberate pull
+        // that clearly meant it. Either is enough.
+        const CLOSE_FRACTION = 0.28;
+        const FLICK_VELOCITY = 550;   // px/s
+
+        const paint = (y) => {
+          drawer.style.transform = 'translateY(' + Math.max(0, y) + 'px)';
+          // The scrim fades with the gesture so the page behind comes back as
+          // the sheet leaves, rather than snapping at the end.
+          const t = height ? Math.max(0, 1 - Math.max(0, y) / height) : 1;
+          scrim.style.opacity = t.toFixed(3);
+        };
+        const spring = createSpring(paint);
+
+        handle.addEventListener('pointerdown', (e) => {
+          if (e.pointerType === 'mouse' && e.button !== 0) return;
+          spring.cancel();
+          height = drawer.getBoundingClientRect().height || 1;
+          startY = e.clientY; dy = 0; dragging = true;
+          tracker.clear(); tracker.add(e.clientY, e.timeStamp);
+          drawer.classList.add('dragging');
+          try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+        });
+
+        handle.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          dy = e.clientY - startY;
+          tracker.add(e.clientY, e.timeStamp);
+          // DOWNWARD ONLY, and paint() clamps at 0. An upward pull deliberately
+          // does nothing: the sheet is anchored to the bottom of the screen, so
+          // lifting it would open a strip of page underneath with nothing in it.
+          // (This briefly rubber-banded upward at dy/3, which the clamp in
+          // paint() then discarded -- two rules for one decision, one of them
+          // dead.)
+          paint(dy);
+        });
+
+        function release() {
+          if (!dragging) return;
+          dragging = false;
+          drawer.classList.remove('dragging');
+          const v = tracker.get();
+          const far = dy > height * CLOSE_FRACTION;
+          const flicked = v > FLICK_VELOCITY;
+          const from = Math.max(0, dy);
+          if (far || flicked) {
+            // Carry the gesture's velocity into the exit so a throw keeps its
+            // speed instead of restarting from zero.
+            spring.start(from, height, v, 0.34, 1.0, () => {
+              drawer.style.transform = ''; scrim.style.opacity = '';
+              close();
+            });
+          } else {
+            spring.start(from, 0, v, 0.42, 0.82, () => {
+              drawer.style.transform = ''; scrim.style.opacity = '';
+            });
+          }
+        }
+        handle.addEventListener('pointerup', release);
+        handle.addEventListener('pointercancel', release);
+      })();
 
       scrim.addEventListener('click', close);
       document.getElementById('fdrawer-close').addEventListener('click', close);
@@ -12355,7 +12500,7 @@
   <div class="fdrawer-scrim" id="fdrawer-scrim" hidden></div>
   <div class="fdrawer" id="fdrawer" role="dialog" aria-modal="true"
        aria-labelledby="fdrawer-name" hidden>
-    <div class="fdrawer-grab" aria-hidden="true"></div>
+    <div class="fdrawer-handle" id="fdrawer-handle" aria-hidden="true"><div class="fdrawer-grab"></div></div>
     <button class="fdrawer-close" id="fdrawer-close" aria-label="Close">&times;</button>
     <div class="fdrawer-head">
       <div class="fdrawer-name" id="fdrawer-name"></div>
