@@ -728,7 +728,23 @@
   .toast-confirm {
     position: absolute; top: 0; bottom: 0; left: 0; width: 0;
     display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, rgba(61,220,132,0.22), rgba(61,220,132,0.10));
+    /* AN OPAQUE BASE UNDER THE TINT. This was a 0.22-to-0.10 green gradient
+       over nothing -- the element's own background-color computed to
+       rgba(0,0,0,0) -- so mid-swipe the page showed straight through the
+       revealed surface and the fight card behind it was legible through the
+       tick. The card is sliding off a solid tray, not opening a hole.
+
+       The base goes HERE and not on .whats-new-banner, which would be the
+       tidier-looking place for it: the banner is this element's parent AND
+       the card's, and .toast-card is glass with a backdrop-filter. An opaque
+       parent gives that filter a flat colour to blur instead of the page
+       behind, which is the entire glass effect.
+
+       Green is lifted 0.22 -> 0.30 because the same alpha reads weaker over a
+       dark base than it did over whatever happened to be behind it. */
+    background:
+      linear-gradient(135deg, rgba(61,220,132,0.30), rgba(61,220,132,0.16)),
+      var(--panel);
     border-radius: var(--r-pill);
     pointer-events: none;
   }
