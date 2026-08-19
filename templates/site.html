@@ -820,8 +820,14 @@
     padding: 12px 16px; margin-bottom: 16px;
   }
   .track-record-title { font-size: var(--t-body); font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  /* ONE horizontal inset down the whole Record column. Measured top to
+     bottom it ran 16, 16, 14, 14, 12 -- five blocks in a single scroll, each
+     starting its text a couple of pixels in from the one above, which is
+     exactly the "stagger that reads as restlessness with no identifiable
+     cause" this file already argues against elsewhere. Vertical padding is
+     untouched; only the left/right edges are being lined up. */
   .event-summary-card {
-    margin: 10px 0 16px; padding: 14px 12px; border-radius: var(--r-lg);
+    margin: 10px 0 16px; padding: 12px 16px; border-radius: var(--r-lg);
     background: linear-gradient(160deg, rgba(212,175,55,0.08), var(--panel2) 60%);
     border: 1px solid var(--border);
   }
@@ -859,7 +865,7 @@
   .event-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .event-summary-stat { text-align: center; }
   .underdog-block {
-    margin: 0 0 16px; padding: 12px 14px; border-radius: var(--r-lg);
+    margin: 0 0 16px; padding: 12px 16px; border-radius: var(--r-lg);
     background: linear-gradient(135deg, rgba(255,255,255,0.05), var(--panel2) 70%);
     border: 1px solid rgba(255,255,255,0.05);
   }
@@ -885,7 +891,7 @@
      instead of underdog orange. Interior scrolls (capped height) so the
      card stays a fixed size as the list grows week over week. */
   .lock-history-block {
-    margin: 0 0 16px; padding: 12px 14px; border-radius: var(--r-lg);
+    margin: 0 0 16px; padding: 12px 16px; border-radius: var(--r-lg);
     background: linear-gradient(135deg, rgba(255,255,255,0.05), var(--panel2) 70%);
     border: 1px solid rgba(255,255,255,0.05);
   }
@@ -1971,7 +1977,12 @@
   }
   .model-limitations-notice strong { color: var(--text); }
 
-  .standout-title { font-size: var(--t-sub); color: #ffffff; margin-bottom: 10px; font-weight: 600; }
+  /* --t-h3, this file's section rung (see .event-name). At --t-sub/600 this
+     computed 15px/600 -- identical to .standout-main directly beneath it, and
+     separated from it only by #ffffff against #eef0f2, a 1.7% luminance step.
+     A heading that is the same size and nearly the same colour as its own
+     content is not a heading. */
+  .standout-title { font-size: var(--t-h3); color: #ffffff; margin-bottom: 10px; font-weight: 700; letter-spacing: -0.2px; }
   .standout-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 26px; }
   .standout-card {
     background: var(--panel2);
@@ -1989,7 +2000,10 @@
     .standout-card:hover { transform: translateY(-2px); box-shadow: var(--e3); }
   }
   .standout-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-  .standout-main { font-size: var(--t-sub); font-weight: 600; }
+  /* The matchup and the pick -- what the card is ABOUT. It was 15px/600, the
+     same as the section title above it and half the size of an EV number the
+     card's own subtitle describes as not a reason to act. */
+  .standout-main { font-size: var(--t-h2); font-weight: 700; }
   .standout-vs { font-size: var(--t-body); font-weight: 400; color: var(--muted); }
   .dog-badge {
     display: inline-block; font-size: var(--t-micro); font-weight: 600; border-radius: var(--r-lg);
@@ -2052,11 +2066,25 @@
      says "there is a bet here", and against a reference price there isn't
      one yet. The number keeps its colour; the card stops advertising. */
   .ev-headline.pos.unbettable { border-color: var(--border); }
+  /* SCOPED to .neg.unbettable, not applied unconditionally. Right now every
+     card renders this combination -- "fair price, no book quote" -- and a
+     24px/800 figure is the largest element on a card whose own caption says
+     that is what a likely winner costs, not a reason to take it. But the
+     comment above is not wrong in general: the week a book actually quotes a
+     +EV market, this IS the only figure that decides anything, and it gets
+     its 24px back automatically. Same conditional the .pos.unbettable border
+     rule directly above uses, for the same reason. Baking one week's empty
+     odds feed into the type scale is what the unconditional version does. */
+  .ev-headline.neg.unbettable .ev-value { font-size: var(--t-h3); }
   /* The bridge: model, fair, and the vig that separates the edge above from
      the EV beside it. Three numbers on one line, because their RELATIONSHIP
      is the point -- read apart they are just trivia. */
   .ev-bridge {
-    font-size: var(--t-micro); color: var(--muted); margin: 0 4px 2px;
+    /* 0, not 4px. Everything else in this card -- .standout-main,
+       .rationale, .ev-headline -- sits at x=33; these two sat at x=37, and
+       one of them is the row whose whole point is a RELATIONSHIP between
+       three numbers. */
+    font-size: var(--t-micro); color: var(--muted); margin: 0 0 2px;
     display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline;
   }
   .ev-bridge b { font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -2096,7 +2124,7 @@
   }
   .disagreement-warning {
     font-size: var(--t-micro); color: var(--muted); line-height: 1.5;
-    padding: 10px 12px; margin: 0 0 10px;
+    padding: 10px 16px; margin: 0 0 10px;
     background: rgba(255, 92, 92, 0.05);
     border: 1px solid rgba(255, 92, 92, 0.18);
     border-top: none;
@@ -2106,7 +2134,7 @@
   .disagreement-nums { text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .dn-model { font-size: var(--t-micro); color: var(--accent2); font-weight: 600; }
   .dn-market { font-size: var(--t-micro); color: var(--accent-cool); }
-  .edge-divergence { margin: 14px 4px 18px; }
+  .edge-divergence { margin: 14px 0 18px; }
   .edge-divergence-track { position: relative; height: 3px; background: var(--border); border-radius: var(--r-sm); margin: 40px 6px 40px; }
   /* Coloured by DIRECTION -- green when the model reads above the book, red
      when below. The two-tone gradient it replaces was decorative; this
@@ -2157,7 +2185,7 @@
   .movement-tag.drifting { background: #2a1414; color: var(--red); }
   .movement-tag.notable { border: 1px solid currentColor; }
 
-  .parlay-section-title { font-size: var(--t-sub); margin: 28px 0 10px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .parlay-section-title { font-size: var(--t-h3); margin: 28px 0 10px; font-weight: 700; letter-spacing: -0.2px; display: flex; align-items: center; gap: 6px; }
   /* The 28px top margin exists to separate the SECOND and later parlay
      headings (Bankroll, Lotto) from the cards above them. At the
      very top of a section there is nothing above to separate from, so it is
@@ -3414,7 +3442,7 @@
 
   .line-card {
     background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg);
-    padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 12px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
   }
   .line-matchup { font-size: var(--t-lead); font-weight: 600; }
   .line-market { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
@@ -4317,7 +4345,11 @@
   .market-group { margin: 0 0 8px; }
   .market-group-summary {
     display: flex; align-items: baseline; gap: 8px; cursor: pointer;
-    padding: 8px 10px; border-radius: var(--r-md); list-style: none;
+    /* 16px horizontal. Down the Edges column the content edges ran x=27
+       (.market-group-summary), 29 (.disagreement-warning), 31 (.line-card),
+       all sitting under .standout-card at 33 -- a literal four-step
+       staircase. Verticals untouched. */
+    padding: 8px 16px; border-radius: var(--r-md); list-style: none;
     background: rgba(255,255,255,0.03); border: 1px solid var(--border);
   }
   .market-group-summary::-webkit-details-marker { display: none; }
