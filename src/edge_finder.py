@@ -16,7 +16,9 @@ from src.fight_format import is_five_round as _is_five_round, scheduled_rounds a
 
 from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob, devig_single_sided, american_to_decimal
 from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
-from .matchup_model import predict_matchup, compute_divisional_method_priors, blend_method_probability, _get, normalize_division
+from .matchup_model import (predict_matchup, compute_divisional_method_priors,
+                            blend_method_probability, divisional_prior_for, _get,
+                            normalize_division)
 
 
 def _fold_name(t):
@@ -247,7 +249,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
         KO/TKO, once for SUB) and sum the results, rather than duplicating
         the blend logic inline.
         """
-        total_wins = max(int(f["wins"]), 1)
+        total_wins = max(int(_get(f, "wins", 0)), 1)
         rate_map = {
             "KO/TKO": _get(f, "ko_wins", 0) / total_wins,
             "SUB": _get(f, "sub_wins", 0) / total_wins,
@@ -350,7 +352,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
                 model_p = _blended_method_prob(f, opp_stats, "KO/TKO") + _blended_method_prob(f, opp_stats, "SUB")
             model_p = min(0.97, model_p)  # same sanity ceiling style used elsewhere in this module
         else:
-            total_wins = max(int(f["wins"]), 1)
+            total_wins = max(int(_get(f, "wins", 0)), 1)
             rate_map = {
                 "KO/TKO": _get(f, "ko_wins", 0) / total_wins,
                 "SUB": _get(f, "sub_wins", 0) / total_wins,
@@ -502,7 +504,17 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
         fighters_in_fight = group["fighter_a"].iloc[0], group["fighter_b"].iloc[0]
         finish_rates = []
         first_round_rates = []
+        # THE DIVISION COMES FROM THE BOUT, NOT THE ROSTER ROW. This read
+        # weight_class off fighters.csv, and NOT ONE of the 27 booked fighters
+        # carries one there -- so `division` was None on every call and the
+        # division-conditioned finish curve, which exists precisely to split
+        # the round shares by weight, has never once run in production. The
+        # props row carries the booked weight class for the fight actually
+        # being priced, which is also the more correct source: it is the
+        # weight THIS bout is at, not the last one the fighter was listed at.
         _division = None
+        if "weight_class" in group.columns:
+            _division = normalize_division(group["weight_class"].iloc[0])
         for name in fighters_in_fight:
             stats = _find_fighter(fighters_df, name)
             if stats.empty:
@@ -515,7 +527,7 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
             # 114 of 310 roster entries.
             if _division is None:
                 _division = normalize_division(f.get("weight_class"))
-            total_wins = max(int(f["wins"]), 1)
+            total_wins = max(int(_get(f, "wins", 0)), 1)
             finish_rates.append((_get(f, "ko_wins", 0) + _get(f, "sub_wins", 0)) / total_wins)
             if "first_round_finish_pct" in f and pd.notna(f["first_round_finish_pct"]):
                 first_round_rates.append(float(f["first_round_finish_pct"]))
@@ -1014,7 +1026,7 @@ def _score_derived_lines(derived_df, fighters_df, elo_ratings):
         if f.empty:
             continue
         row = f.iloc[0]
-        wins = max(int(row["wins"]), 1)
+        wins = max(int(_get(row, "wins", 0)), 1)
         col = {"KO/TKO": "ko_wins", "SUB": "sub_wins"}.get(method)
         if not col:
             continue

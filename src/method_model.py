@@ -480,7 +480,13 @@ def finish_share_before(line: float, scheduled_rounds: int = 3, division=None) -
         shares = _ROUND_FINISH_SHARE.get(rounds, _ROUND_FINISH_SHARE[3])
     full = int(line)                      # complete rounds below the line
     total = sum(shares[:full])
-    if full < len(shares):
-        # The .5 puts the line mid-round, so half that round's finishes count.
+    # HALF A ROUND ONLY WHEN THE LINE IS ACTUALLY MID-ROUND. This was added
+    # unconditionally, so f(1.0) and f(1.5) returned the same number and an
+    # INTEGER line was priced as the Over beneath it. recommendations.py is
+    # the one caller that passes an integer -- "does the fight reach round N"
+    # -- so every published round-start leg understated by half a round's
+    # finishes: 7-10 points on the current card, which is a threshold price
+    # 40-90 American points too long.
+    if line - full >= 0.5 and full < len(shares):
         total += shares[full] * 0.5
     return min(total, 1.0)
