@@ -2636,27 +2636,39 @@
   .matchup-name { font-size: var(--t-body); font-weight: 600; line-height: 1.25; display: block; }
   /* The 223x1px rule that used to fill 65% of this row is gone -- it was
      decoration doing a spacer's job, and the 8px margin above already
-     separates this row from the names. flex-end replaces the spacer so the
-     pick and the chevron stay right. */
+     separates this row from the names.
+     flex-end is the DEFAULT, which covers corner B (pick and chevron together
+     at the right) and a card with no pick at all (chevron alone at the
+     right). Corner A overrides it with an auto margin below. */
   .matchup-divider-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
-  /* THE SUMMARY PICK. Sits on the divider row between the line and the
-     chevron, so it reads as part of the "there is more here" affordance
-     rather than as another badge competing with the fighter names.
-     Tabular numerals so a column of fourteen percentages aligns down the
-     card -- the whole point is that they can be compared at a glance. */
+  /* THE SUMMARY PICK. Sits on the disclosure row beside the chevron, so it
+     reads as part of the "there is more here" affordance rather than as
+     another badge competing with the fighter names.
+     Tabular numerals so the digits keep a fixed width -- NOT so a column
+     aligns down the card. It does not: the pick sits on its own fighter's
+     side (see .corner-a below), which is a deliberate trade of a scannable
+     column for a spatial tie between the number and the name it refers to.
+     An earlier version of this comment promised the column, which made the
+     two rules read as contradicting each other. */
   .summary-pick {
     display: inline-flex; align-items: center; gap: 5px;
     font-size: var(--t-small); font-weight: 600; white-space: nowrap;
     flex-shrink: 0;
   }
-  /* `.summary-pick.corner-a { order: -1 }` was deleted here. It moved the
-     pick to the far left whenever the model favoured fighter A, which is 48
-     of 84 picks -- a coin flip, not a main-event quirk. Measured left edges
-     down one card: 29, 279, 282, 285, 277, 293. The comment above promises a
-     column of percentages that can be compared at a glance, and at 402px wide
-     there is no column when half the rows jump 250px. The side encoding was
-     redundant anyway: the picked fighter is named in words 5px to the left of
-     the number. */
+  /* CORNER A: the pick moves to the left, under the fighter it names.
+     `margin-right: auto` absorbs the row's free space after the pick, which
+     pushes the chevron to the right edge and leaves the pick at the left.
+     This replaces the old `order: -1`, which only worked because a
+     `flex: 1` divider line sat between the two as a spacer -- that element is
+     gone, and the auto margin does the job without needing one. No `order`
+     is required either: the pick already precedes the chevron in the DOM.
+     The side is doing real work, not decoration. It ties "Dyer 77%" to the
+     Shanelle Dyer above it spatially instead of making the reader re-find the
+     name across the card; scanning the column shows which corner the model
+     favours without reading a single name; and on a decided card the pick
+     lands under the LOSER, directly opposite the green check on the winner,
+     which reads as an admission rather than a number on the wrong side. */
+  .summary-pick.corner-a { margin-right: auto; }
   .summary-pick-name { color: var(--text-soft); }
   .summary-pick-pct { color: var(--text); font-variant-numeric: tabular-nums; font-family: var(--font-display); }
   /* The tier as colour, not a word. A word here would compete with the
@@ -6349,15 +6361,16 @@
       <div class="matchup-divider-row">
         {% if fight.preview and fight.preview.favorite %}
         {% set _tier = (fight.preview.confidence_label or '')|lower|replace(' confidence','') %}
-        {# ONE COLUMN, always right, beside the chevron. This used to be
-           corner-aligned -- the pick jumped to the far left whenever the
-           model favoured fighter A -- on the theory that the side carried
-           information for free. It cost more than it paid: 48 of 84 picks
-           carry corner A, so the effect was a coin flip that broke the one
-           thing this row is for, reading fourteen percentages down the card
-           in a single glance. The name is right there in words, so the side
-           was saying something the row already said. #}
-        <span class="summary-pick {{ _tier }}">
+        {# CORNER-ALIGNED. The pick sits on the side of the fighter it names,
+           so the tie between "Dyer 77%" and the Shanelle Dyer above it is
+           SPATIAL rather than something the reader has to make by re-reading
+           the name across the full width of the card. On a real build five of
+           seven visible picks were landing on the opposite side from their
+           own fighter.
+           The side then carries information for free: scanning the column
+           shows which corner the model favours across the card without
+           reading a single name. #}
+        <span class="summary-pick {{ _tier }} {{ 'corner-a' if fight.preview.favorite == fight.fighter_a else 'corner-b' }}">
           <span class="summary-pick-dot" aria-hidden="true"></span>
           <span class="summary-pick-name">{{ fight.preview.favorite.split(' ')[-1] }}</span>
           <span class="summary-pick-pct">{{ (fight.preview.favorite_prob * 100) | round | int }}%</span>
