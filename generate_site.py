@@ -20,6 +20,7 @@ from src.rationale import set_card_cohort
 from jinja2 import Environment, FileSystemLoader
 
 from src.elo import EloRatingSystem
+from src.fighter_history import build_fighter_history, fold_name as fh_fold, summarise as fh_summarise
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props, record_edge_health
 from src.odds_utils import measure_overrounds, set_measured_overrounds
@@ -1267,6 +1268,59 @@ def main():
         for _f in _ev.get("fights", []):
             _f["movements_id"] = _movements_id(_f)
 
+    # ===== Scouting drawer: per-fighter bout history =====
+    # Built from the per-ROUND stats file, which until now nothing on the page
+    # consumed. Scoped to fighters who actually appear on a card here -- the
+    # whole database is 2,724 fighters and 136 KB gzipped, which is a
+    # deferred-fragment problem rather than an inline one, and nobody needs
+    # Georges St-Pierre's 2007 rounds to read Saturday's card.
+    _booked = set()
+    for _ev in list(events) + list(future_events):
+        for _f in _ev.get("fights", []):
+            for _side in ("fighter_a", "fighter_b"):
+                if _f.get(_side):
+                    _booked.add(str(_f[_side]))
+    fighter_history = build_fighter_history(_booked)
+    _fh = fh_summarise(fighter_history)
+    print(f"[history] {_fh['fighters']} of {len(_booked)} booked fighters, "
+          f"{_fh['bouts']} bouts, {_fh['rounds']} rounds"
+          + (f", {_fh['bouts_without_control']} without control time"
+             if _fh['bouts_without_control'] else ", control time complete"))
+    fighter_history_json = json.dumps(fighter_history, separators=(",", ":"))
+
+    # Career rates for the drawer header, from the ENRICHED roster -- these are
+    # the columns that were unreachable in production until control time was
+    # reconnected (control_time_pct was populated on 0 of 323 fighters).
+    # None rather than 0 where a rate is genuinely unknown: a fighter with no
+    # matched timeline should show a dash, not a confident zero.
+    _rate_cols = ("control_time_pct", "slpm", "td_defense_pct", "strike_accuracy_pct")
+    fighter_rates = {}
+    for _row in fighters_df.to_dict("records"):
+        _nm = str(_row.get("name") or "").strip()
+        if not _nm or fh_fold(_nm) not in fighter_history:
+            continue
+        _vals = {}
+        for _c in _rate_cols:
+            _v = _row.get(_c)
+            if _v is None or (isinstance(_v, float) and _v != _v):
+                continue
+            _vals[_c] = round(float(_v), 1)
+        _wc = _row.get("weight_class")
+        _wc = "" if _wc is None or (isinstance(_wc, float) and _wc != _wc) else str(_wc).strip()
+        if _wc.lower() in ("nan", "none"):
+            _wc = ""
+        fighter_rates[fh_fold(_nm)] = {"n": _nm, "wc": _wc, "r": _vals}
+    fighter_rates_json = json.dumps(fighter_rates, separators=(",", ":"))
+
+    # The key the drawer looks a fighter up by. Emitted onto the markup so the
+    # template never has to reimplement the fold -- the last time two folds
+    # disagreed in this repo, every accented fighter silently lost their data.
+    for _ev in list(events) + list(future_events):
+        for _f in _ev.get("fights", []):
+            for _side in ("fighter_a", "fighter_b"):
+                if _f.get(_side):
+                    _f[f"{_side}_key"] = fh_fold(_f[_side])
+
     html = template.render(
         events=events,
         future_events=future_events,
@@ -1293,6 +1347,8 @@ def main():
         countdown_city=countdown_city,
         countdown_venue=countdown_venue,
         countdown_confidence_counts=countdown_confidence_counts,
+        fighter_history_json=fighter_history_json,
+        fighter_rates_json=fighter_rates_json,
         whats_new_snapshot=whats_new_snapshot,
         track_record=track_record,
         calibration_svg=calibration_svg,

@@ -4830,6 +4830,99 @@
     #splash-arc, #splash-peak { animation: none; stroke-dashoffset: 0; }
     #splash-word { animation: none; opacity: 1; }
   }
+  /* ===== SCOUTING DRAWER =====================================
+     Tap a fighter's name and their whole UFC history opens over the card.
+     A SHEET rather than another disclosure inside the fight card: the card is
+     already the densest surface on the site, and scouting a fighter is a
+     different job from reading a matchup. This way the card costs nothing.
+
+     The collapsed list is designed to be useful WITHOUT tapping -- every row
+     carries a sparkline of that fight's round shares, so a career trajectory
+     reads in one scan and the accordion is only for the receipt. */
+  .fdrawer-scrim {
+    position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.55);
+    opacity: 0; pointer-events: none; transition: opacity 0.22s ease-out;
+  }
+  .fdrawer-scrim.open { opacity: 1; pointer-events: auto; }
+  .fdrawer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 301;
+    max-height: 84vh; display: flex; flex-direction: column;
+    background: var(--panel); border-top: 1px solid var(--hairline-strong);
+    border-radius: 16px 16px 0 0; box-shadow: var(--e3);
+    transform: translateY(100%); transition: transform 0.28s cubic-bezier(0.22,1,0.36,1);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .fdrawer.open { transform: translateY(0); }
+  @media (min-width: 1024px) {
+    /* On desktop a full-width sheet is a wall. Centre it and cap the width. */
+    .fdrawer { left: 50%; right: auto; width: 460px; transform: translate(-50%, 100%); }
+    .fdrawer.open { transform: translate(-50%, 0); }
+  }
+  .fdrawer-grab {
+    width: 34px; height: 4px; border-radius: var(--r-pill); flex: none;
+    background: rgba(255,255,255,0.22); margin: 8px auto 0;
+  }
+  .fdrawer-head { padding: 12px 16px 11px; border-bottom: 1px solid var(--hairline); flex: none; }
+  .fdrawer-name { font-family: var(--font-display); font-size: var(--t-h3); font-weight: 700; letter-spacing: -0.2px; }
+  .fdrawer-meta { font-size: var(--t-small); color: var(--muted); margin-top: 3px; }
+  .fdrawer-meta b { color: var(--text-soft); font-weight: 600; }
+  .fdrawer-close {
+    position: absolute; top: 12px; right: 10px; background: none; border: none;
+    color: var(--muted); font-size: var(--t-h3); line-height: 1; padding: 6px 10px;
+    cursor: pointer; font-family: inherit;
+  }
+  /* Rate strip -- the career numbers that were unreachable in production
+     until control time was reconnected to the roster. */
+  .fdrawer-rates { display: flex; margin-top: 11px; background: var(--sunken); border-radius: var(--r-md); overflow: hidden; }
+  .fdr-rate { flex: 1; padding: 7px 6px; text-align: center; border-right: 1px solid var(--hairline-soft); }
+  .fdr-rate:last-child { border-right: 0; }
+  .fdr-rate .v { font-family: var(--font-display); font-size: var(--t-lead); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .fdr-rate .k { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
+  .fdrawer-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 18px; }
+  .fdrawer-sec { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; padding: 12px 16px 7px; }
+  .fdr-fight { border-bottom: 1px solid var(--hairline); }
+  .fdr-head {
+    display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+    padding: 10px 16px; background: none; border: none; cursor: pointer;
+    color: inherit; font-family: inherit; min-height: 44px;
+  }
+  .fdr-head:active { background: rgba(255,255,255,0.06); }
+  .fdr-wl { width: 17px; height: 17px; border-radius: var(--r-sm); flex: none; font-size: var(--t-micro); font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); }
+  .fdr-wl.w { background: rgba(61,220,132,0.16); color: var(--green); }
+  .fdr-wl.l { background: rgba(255,92,92,0.14); color: var(--red); }
+  .fdr-wl.n { background: rgba(255,255,255,0.06); color: var(--muted); }
+  .fdr-main { flex: 1; min-width: 0; }
+  .fdr-opp { display: block; font-size: var(--t-body); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fdr-sub { display: block; font-size: var(--t-micro); color: var(--muted); margin-top: 2px; }
+  /* The sparkline. Bar HEIGHT is share, so a career reads as a silhouette. */
+  .fdr-mini { display: flex; gap: 1.5px; width: 56px; flex: none; align-items: flex-end; height: 19px; }
+  .fdr-mini i { flex: 1; border-radius: 1px; background: var(--accent2); min-height: 2px; }
+  .fdr-chev { color: var(--muted); font-size: 9px; flex: none; transition: transform 0.18s ease-out; }
+  .fdr-fight.open .fdr-chev { transform: rotate(90deg); }
+  .fdr-body { padding: 2px 16px 13px; background: var(--sunken); }
+  .fdr-rr { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .fdr-rr-l { font-size: var(--t-micro); color: var(--muted); font-weight: 700; width: 15px; flex: none; font-family: var(--font-display); }
+  .fdr-rr-bar { flex: 1; height: 14px; border-radius: var(--r-sm); background: #141416; display: flex; overflow: hidden; position: relative; }
+  .fdr-rr-me { background: linear-gradient(90deg, rgba(212,175,55,0.5), var(--accent)); height: 100%; }
+  .fdr-rr-op { background: rgba(255,255,255,0.10); height: 100%; }
+  .fdr-rr-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.2); }
+  .fdr-rr-p { font-size: var(--t-micro); color: var(--text-soft); width: 28px; text-align: right; flex: none; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .fdr-det { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--hairline); }
+  .fdr-det span { font-size: var(--t-micro); color: var(--muted); padding: 1px 0; }
+  .fdr-det b { font-size: var(--t-micro); color: var(--text-soft); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  .fdrawer-foot { font-size: var(--t-micro); color: var(--muted); padding: 11px 16px 0; line-height: 1.55; }
+  .fdrawer-empty { padding: 22px 16px; text-align: center; color: var(--muted); font-size: var(--t-small); line-height: 1.6; }
+  /* The name itself becomes a control. Dotted underline rather than a link
+     colour: it must not compete with the pick or read as a bet. */
+  .matchup-name.fdr-link {
+    cursor: pointer; text-decoration: underline; text-decoration-style: dotted;
+    text-underline-offset: 3px; text-decoration-color: rgba(255,255,255,0.28);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fdrawer { transition: none; }
+    .fdrawer-scrim { transition: none; }
+  }
+
   /* ===== REDUCED MOTION: the holes ==================================
      prefers-reduced-motion is honoured in seventeen places above, and the
      ones below were missed. Collected here, at the END of the sheet, because
@@ -6270,7 +6363,15 @@
         <div class="matchup-fighter{% if fight.winner %}{{ ' won' if fight.winner == fight.fighter_a else ' lost' }}{% endif %}">
           {{ fighter_avatar(fight.fighter_a, is_winner=(fight.winner == fight.fighter_a)) }}
           <div class="matchup-name-wrap">
-            <span class="matchup-name">{{ fight.fighter_a }}</span>
+            {#- The name is the handle for the scouting drawer. role/tabindex
+                   rather than a <button>: this sits inside a <summary>, and a
+                   nested button is invalid HTML that Safari resolves by
+                   dropping the summary's own activation. The JS stops the
+                   click so the card does not toggle underneath. -#}
+            <span class="matchup-name{{ ' fdr-link' if fight.fighter_a_key }}"
+                  {% if fight.fighter_a_key %}data-fighter-key="{{ fight.fighter_a_key }}"
+                  role="button" tabindex="0"
+                  aria-label="Scouting report for {{ fight.fighter_a }}"{% endif %}>{{ fight.fighter_a }}</span>
             {% if fight.winner == fight.fighter_a %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5 L7 12 L15 19 Z" fill="var(--green)"/></svg></div>{% endif %}
           </div>
         </div>
@@ -6321,7 +6422,15 @@
         <div class="matchup-fighter right{% if fight.winner %}{{ ' won' if fight.winner == fight.fighter_b else ' lost' }}{% endif %}">
           <div class="matchup-name-wrap">
             {% if fight.winner == fight.fighter_b %}<div class="winner-check-inline"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5 L7 12 L15 19 Z" fill="var(--green)"/></svg></div>{% endif %}
-            <span class="matchup-name">{{ fight.fighter_b }}</span>
+            {#- The name is the handle for the scouting drawer. role/tabindex
+                   rather than a <button>: this sits inside a <summary>, and a
+                   nested button is invalid HTML that Safari resolves by
+                   dropping the summary's own activation. The JS stops the
+                   click so the card does not toggle underneath. -#}
+            <span class="matchup-name{{ ' fdr-link' if fight.fighter_b_key }}"
+                  {% if fight.fighter_b_key %}data-fighter-key="{{ fight.fighter_b_key }}"
+                  role="button" tabindex="0"
+                  aria-label="Scouting report for {{ fight.fighter_b }}"{% endif %}>{{ fight.fighter_b }}</span>
           </div>
           {{ fighter_avatar(fight.fighter_b, is_winner=(fight.winner == fight.fighter_b)) }}
         </div>
@@ -8838,6 +8947,223 @@
       document.addEventListener('DOMContentLoaded', initTabBarCollapse);
     } else {
       initTabBarCollapse();
+    }
+
+    // ===== SCOUTING DRAWER =====================================
+    // Opens a fighter's whole UFC history over the card. The data ships once
+    // as JSON and the list is built on tap -- rendering 155 histories into
+    // the markup would be 177 KB of HTML for a panel showing one at a time.
+    function initFighterDrawer() {
+      function parseBlob(id) {
+        const el = document.getElementById(id);
+        if (!el) return {};
+        try { return JSON.parse(el.textContent || '{}'); } catch (e) { return {}; }
+      }
+      const HIST = parseBlob('fighter-history-data');
+      const RATES = parseBlob('fighter-rates-data');
+      const drawer = document.getElementById('fdrawer');
+      const scrim = document.getElementById('fdrawer-scrim');
+      if (!drawer || !scrim) return;
+
+      const elName = document.getElementById('fdrawer-name');
+      const elMeta = document.getElementById('fdrawer-meta');
+      const elRates = document.getElementById('fdrawer-rates');
+      const elList = document.getElementById('fdrawer-list');
+      let lastFocus = null;
+
+      const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+        c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+      function mmss(sec) {
+        if (sec == null || sec < 0) return '--';
+        const m = Math.floor(sec / 60), s2 = sec % 60;
+        return m + ':' + String(s2).padStart(2, '0');
+      }
+      function shortDate(iso) {
+        if (!iso) return '';
+        const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const p = iso.split('-');
+        return p.length === 3 ? M[+p[1] - 1] + ' ' + p[0] : iso;
+      }
+      // "Decision - Unanimous" is longer than the row can hold and the
+      // qualifier is the least useful half of it.
+      function shortMethod(m) {
+        if (!m) return '';
+        if (/^decision/i.test(m)) return 'Decision';
+        return m.replace(/\s*-\s*Doctor's Stoppage/i, ' (doctor)');
+      }
+
+      function rateStrip(rec) {
+        const r = (rec && rec.r) || {};
+        const cells = [
+          ['Control', r.control_time_pct, '%'],
+          ['SLpM', r.slpm, ''],
+          ['TD def', r.td_defense_pct, '%'],
+          ['Str acc', r.strike_accuracy_pct, '%'],
+        ];
+        // An unknown rate renders as a dash. Printing 0 for "we have no
+        // timeline for this fighter" would be a confident lie about a
+        // debutant, which is the one reader most likely to be looking.
+        return cells.map(([k, v, unit]) =>
+          '<div class="fdr-rate"><div class="v">' +
+          (v == null ? '<span style="color:var(--muted)">--</span>' : esc(v) + unit) +
+          '</div><div class="k">' + k + '</div></div>').join('');
+      }
+
+      function fightRow(b, i) {
+        const wl = b.w === 1 ? 'w' : (b.w === 0 ? 'l' : 'n');
+        const wlTxt = b.w === 1 ? 'W' : (b.w === 0 ? 'L' : '-');
+        const sub = [shortMethod(b.m), b.er ? 'R' + b.er : '', shortDate(b.d)]
+          .filter(Boolean).join(' · ');
+        const spark = (b.rs || []).map(sh =>
+          '<i style="height:' + Math.max(6, sh) + '%"></i>').join('');
+        return '' +
+          '<div class="fdr-fight" data-i="' + i + '">' +
+            '<button class="fdr-head" type="button" aria-expanded="false">' +
+              '<span class="fdr-wl ' + wl + '" aria-hidden="true">' + wlTxt + '</span>' +
+              '<span class="fdr-main"><span class="fdr-opp">' + esc(b.o) + '</span>' +
+              '<span class="fdr-sub">' + esc(sub) + '</span></span>' +
+              '<span class="fdr-mini" aria-hidden="true">' + spark + '</span>' +
+              '<span class="fdr-chev" aria-hidden="true">▶</span>' +
+            '</button>' +
+          '</div>';
+      }
+
+      function fightBody(b) {
+        const rr = (b.rs || []).map((sh, i) =>
+          '<div class="fdr-rr"><span class="fdr-rr-l">R' + (i + 1) + '</span>' +
+          '<div class="fdr-rr-bar"><div class="fdr-rr-me" style="width:' + sh + '%"></div>' +
+          '<div class="fdr-rr-op" style="width:' + (100 - sh) + '%"></div>' +
+          '<div class="fdr-rr-mid"></div></div>' +
+          '<span class="fdr-rr-p">' + sh + '%</span></div>').join('');
+        const ctrl = (b.ct && b.ct[0] >= 0)
+          ? '<span>Control time</span><b>' + mmss(b.ct[0]) + ' — ' + mmss(b.ct[1]) + '</b>' : '';
+        return '<div class="fdr-body">' + rr +
+          '<div class="fdr-det">' +
+            '<span>Significant strikes</span><b>' + b.sg[0] + ' — ' + b.sg[1] + '</b>' +
+            ctrl +
+            '<span>Takedowns</span><b>' + b.td[0] + ' — ' + b.td[1] + '</b>' +
+          '</div></div>';
+      }
+
+      function open(key, displayName) {
+        const bouts = HIST[key] || [];
+        const rec = RATES[key];
+        lastFocus = document.activeElement;
+        elName.textContent = (rec && rec.n) || displayName || '';
+        const w = bouts.filter(b => b.w === 1).length;
+        const l = bouts.filter(b => b.w === 0).length;
+        const bits = [];
+        // pandas writes a missing weight class as the float nan, which becomes
+        // the STRING "nan" once it is JSON-encoded -- truthy, and it rendered
+        // as "nan · 9-3 in the UFC".
+        const wc = rec && rec.wc;
+        if (wc && wc !== 'nan' && wc !== 'None') bits.push(esc(wc));
+        if (bouts.length) bits.push('<b>' + w + '–' + l + '</b> in the UFC');
+        elMeta.innerHTML = bits.join(' · ');
+        elRates.innerHTML = rateStrip(rec);
+
+        if (!bouts.length) {
+          elList.innerHTML = '<div class="fdrawer-empty">No UFC rounds on record yet.<br>' +
+            'This is a promotional debut, or the bout data has not been published.</div>';
+        } else {
+          elList.innerHTML =
+            '<div class="fdrawer-sec">' + bouts.length + ' UFC fights · tap for the round detail</div>' +
+            bouts.map(fightRow).join('') +
+            '<div class="fdrawer-foot">Bar height is share of measurable output — ' +
+            'significant strikes landed and control time. Not a scorecard; judges score ' +
+            'criteria this data does not carry.</div>';
+        }
+        elList.scrollTop = 0;
+        drawer.hidden = false; scrim.hidden = false;
+        // FORCED REFLOW, not requestAnimationFrame. The element must be laid
+        // out at translateY(100%) before the class flips or the transition has
+        // nothing to run from -- but rAF is throttled in a backgrounded or
+        // hidden tab, and there the callback never fires, .open never lands
+        // and the drawer sits off-screen looking broken. Reading offsetHeight
+        // flushes layout synchronously and cannot be throttled.
+        void drawer.offsetHeight;
+        drawer.classList.add('open'); scrim.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        drawer.__bouts = bouts;
+        const first = drawer.querySelector('.fdr-head') || document.getElementById('fdrawer-close');
+        if (first) first.focus({ preventScroll: true });
+      }
+
+      function close() {
+        drawer.classList.remove('open'); scrim.classList.remove('open');
+        document.body.style.overflow = '';
+        const done = () => { drawer.hidden = true; scrim.hidden = true; };
+        if (prefersReducedMotion()) done();
+        else {
+          let fired = false;
+          drawer.addEventListener('transitionend', function h() {
+            drawer.removeEventListener('transitionend', h); fired = true; done();
+          }, { once: true });
+          // The listener is the primary path; this only covers a transition
+          // that never fires (element hidden mid-close, for instance).
+          setTimeout(() => { if (!fired) done(); }, 400);
+        }
+        if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+      }
+
+      // Accordion. One open at a time, so the list keeps its shape.
+      elList.addEventListener('click', (e) => {
+        const head = e.target.closest('.fdr-head');
+        if (!head) return;
+        const row = head.parentElement;
+        const wasOpen = row.classList.contains('open');
+        elList.querySelectorAll('.fdr-fight.open').forEach(r => {
+          r.classList.remove('open');
+          const b = r.querySelector('.fdr-body'); if (b) b.remove();
+          const h = r.querySelector('.fdr-head'); if (h) h.setAttribute('aria-expanded', 'false');
+        });
+        if (wasOpen) return;
+        const bout = (drawer.__bouts || [])[+row.dataset.i];
+        if (!bout) return;
+        row.insertAdjacentHTML('beforeend', fightBody(bout));
+        row.classList.add('open');
+        head.setAttribute('aria-expanded', 'true');
+      });
+
+      scrim.addEventListener('click', close);
+      document.getElementById('fdrawer-close').addEventListener('click', close);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !drawer.hidden) close();
+      });
+
+      // CAPTURE PHASE, and this is not a style choice. These names sit inside
+      // a <summary> on a card that already has handlers on it, and something
+      // in that chain calls stopPropagation() -- measured: a click on the name
+      // reached document in capture and never arrived in bubble, so a
+      // bubble-phase listener here silently did nothing while the card
+      // toggled underneath. Capturing runs us first; stopPropagation then
+      // keeps the event away from the summary, and preventDefault stops the
+      // disclosure's own default toggle.
+      document.addEventListener('click', (e) => {
+        const link = e.target.closest && e.target.closest('.fdr-link[data-fighter-key]');
+        if (!link) return;
+        e.preventDefault();
+        e.stopPropagation();
+        open(link.dataset.fighterKey, link.textContent.trim());
+      }, true);
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const link = e.target.closest && e.target.closest('.fdr-link[data-fighter-key]');
+        if (!link) return;
+        e.preventDefault(); e.stopPropagation();
+        open(link.dataset.fighterKey, link.textContent.trim());
+      }, true);
+    }
+    // This block sits ~3,400 lines ABOVE the drawer markup, so at parse time
+    // every getElementById here returns null and the init silently no-ops --
+    // which is exactly what happened: the listener never attached, the name
+    // click fell through to the <summary>, and the card toggled instead.
+    // Same rule as initTabBarCollapse above.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initFighterDrawer);
+    } else {
+      initFighterDrawer();
     }
 
     // ===== Scroll-end fade on the event selector =====
@@ -12003,6 +12329,26 @@
 
   <!-- Mobile-only bottom navigation. Desktop keeps the left rail, so this is
        hidden at the 1024px breakpoint rather than existing in both places. -->
+  {# ===== SCOUTING DRAWER =====
+     One sheet, reused for every fighter, populated by JS from
+     #fighter-history-data. Rendering 155 fighters' histories into the markup
+     would be 177 KB of HTML for a panel that shows one fighter at a time;
+     this ships the data once (38 KB gzipped) and builds a list on tap. #}
+  <script type="application/json" id="fighter-history-data">{{ fighter_history_json | safe }}</script>
+  <script type="application/json" id="fighter-rates-data">{{ fighter_rates_json | safe }}</script>
+  <div class="fdrawer-scrim" id="fdrawer-scrim" hidden></div>
+  <div class="fdrawer" id="fdrawer" role="dialog" aria-modal="true"
+       aria-labelledby="fdrawer-name" hidden>
+    <div class="fdrawer-grab" aria-hidden="true"></div>
+    <button class="fdrawer-close" id="fdrawer-close" aria-label="Close">&times;</button>
+    <div class="fdrawer-head">
+      <div class="fdrawer-name" id="fdrawer-name"></div>
+      <div class="fdrawer-meta" id="fdrawer-meta"></div>
+      <div class="fdrawer-rates" id="fdrawer-rates"></div>
+    </div>
+    <div class="fdrawer-list" id="fdrawer-list"></div>
+  </div>
+
   <nav class="mobile-tabbar" id="mobile-tabbar" aria-label="Main"><span class="tabbar-indicator" id="tabbar-indicator" aria-hidden="true"></span>
     <button class="tabbar-btn" data-tab="thisweekend">{{ icon_calendar() }}<span>Card</span></button>
     {#- "Reads", not "Edges". Every card in this section renders
