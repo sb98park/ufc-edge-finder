@@ -830,16 +830,16 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
 
     # (key in matchup, display label, plain-language explanation)
     FACTORS = [
-        ("wrestling_adjustment", "Wrestling", "takedowns landed per 15 minutes, head to head"),
-        ("striking_adjustment", "Striking", "significant-strike accuracy and defense"),
+        ("wrestling_adjustment", "Wrestling", "takedowns landed per 15 minutes"),
+        ("striking_adjustment", "Striking", "strike accuracy and defense"),
         ("durability_adjustment", "Durability", "how often each has been finished"),
-        ("recent_form_adjustment", "Recent form", "last three fights, recent ones counting more"),
+        ("recent_form_adjustment", "Recent form", "last three fights, weighted recent"),
         ("submission_threat_adjustment", "Sub threat", "share of wins by submission"),
         ("stance_adjustment", "Stance", "orthodox vs southpaw matchup"),
         ("height_adjustment", "Height", "height difference"),
         ("layoff_adjustment", "Layoff", "time since last fight"),
-        ("quick_return_adjustment", "Quick turnaround", "unusually short rest since the last fight"),
-        ("age_cliff_adjustment", "Age", "age vs the division's typical decline point"),
+        ("quick_return_adjustment", "Quick turnaround", "unusually short rest before this fight"),
+        ("age_cliff_adjustment", "Age", "age vs the division's decline point"),
         ("missed_weight_adjustment", "Missed weight", "history of missing weight"),
         ("weight_class_change_adjustment", "Division change", "moving up or down in weight"),
         ("short_notice_adjustment", "Short notice", "took the fight on short notice"),
@@ -861,7 +861,7 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
     collected.sort(key=lambda r: abs(r["points"]), reverse=True)
     if abs(folded) >= 0.05:
         collected.append({"key": None, "label": "Other factors",
-                          "why": "everything else, each too small to list on its own",
+                          "why": "everything else, too small to list",
                           "points": folded})
 
     # Walk the journey, recording the running probability after each step.
@@ -886,7 +886,7 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
             "favors": favorite if pts > 0 else underdog,
         })
 
-    step("Rating gap", "career record and quality of opposition", base_gap, kind="base")
+    step("Rating gap", "career record and opposition quality", base_gap, kind="base")
     for c in collected:
         step(c["label"], c["why"], c["points"], key=c["key"])
     if matchup.get("adjustment_capped"):

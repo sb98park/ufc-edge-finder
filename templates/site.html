@@ -3089,12 +3089,23 @@
   .waterfall-row.base { border-bottom: 1px dashed var(--border); padding-bottom: 8px; margin-bottom: 3px; }
   .waterfall-row.cap .wf-label { font-style: italic; }
   .wf-label { flex: 1 1 auto; min-width: 0; font-size: var(--t-small); font-weight: 600; color: var(--text); }
-  /* ONE LINE. At 151px against an 81px bar, this footnote was wider than the
-     quantity it footnotes and wrapped to two lines on every row, which is
-     most of why an open card ran so long. Truncating costs the tail of an
-     explanation; keeping it cost the component its proportions. */
+  /* WRAPS TO A SECOND LINE, IT DOES NOT ELLIPSE. This was one hard line with
+     text-overflow: ellipsis, because at 151px against an 81px bar the
+     footnote was wider than the quantity it footnotes and wrapped on every
+     row, which is most of why an open card ran long. The full gloss lived in
+     a `title` -- but title is a hover tooltip, and this component is read on
+     a phone, where a truncated explanation is simply gone.
+     The real fix was upstream: the seven longest strings in
+     matchup_model.FACTORS were rewritten to fit 152px with at least 8px to
+     spare, so on the current card nothing wraps at all and the height cost is
+     zero. The clamp stays as a floor, not a ceiling -- the adjustment-cap row
+     carries a full sentence that cannot be shortened to one line, and a
+     future factor will be written by someone who never read this comment.
+     Two lines then truncate, so a long string degrades to "most of it" rather
+     than to a silent ellipsis nobody on mobile can open. */
   .wf-why { display: block; font-size: var(--t-micro); font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 1px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+            overflow: hidden; overflow-wrap: anywhere; }
   /* 38%, up from 26%. The bars are the figure in a figure/ground pair where
      the ground had more room than the figure -- half again the length to
      differ in, on the only element here that encodes a magnitude. */
@@ -6994,7 +7005,7 @@
             </div>
           </div>
           <div class="waterfall-row start">
-            <span class="wf-label">Even fight<span class="wf-why" title="before anything is known about either man">before anything is known about either man</span></span>
+            <span class="wf-label">Even fight<span class="wf-why" title="before anything is known about either man">before anything is known</span></span>
             <span class="wf-bar-cell"></span>
             <span class="wf-nums"><span class="wf-run">50.0%</span></span>
           </div>
