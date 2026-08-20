@@ -527,9 +527,17 @@ def check_method_coherence(c):
         for label, prob in rows:
             label = re.sub(r"<[^>]+>", "", label).strip()
             # Per-fighter method rows only. Fight-level rows ("Fight ends
-            # by ...") and moneylines have no dash-separated method, and
-            # counting them would double the total legitimately.
-            if not re.match(r"^.*?\s*[\u2014\u2013-]\s*(KO/TKO|Submission|Decision)$", label):
+            # by ...") and moneylines must not count -- they would double the
+            # total legitimately.
+            #
+            # TWO SHAPES, because the row label lost its fighter prefix when
+            # Fighter props started grouping under a per-fighter heading: the
+            # name moved to the heading and the row became a bare "KO/TKO".
+            # The old dash form is still accepted so this keeps working on
+            # either markup. "Fight ends by KO/TKO" matches neither, because
+            # the optional prefix requires a dash -- which is what keeps the
+            # fight-level rows out.
+            if not re.match(r"^(?:.*?\s*[\u2014\u2013-]\s*)?(KO/TKO|Submission|Decision)$", label):
                 continue
             total += float(prob)
             n += 1
@@ -546,8 +554,15 @@ def check_method_coherence(c):
                  f"{name}: {n} method rows already sum to {total:.1f}%")
 
     if not checked:
-        return warn("method-coherence",
-                    f"{len(blocks)} fight cards found but none had per-fighter method rows")
+        # FAIL, not warn. This check enforces that the six per-fighter method
+        # rows sum to 100% for the pair, and it went quiet -- reporting a
+        # warning nobody reads -- the moment a markup change stopped its
+        # pattern matching. A coherence check that silently verifies nothing
+        # is worse than one that breaks loudly, because the invariant it
+        # guards is exactly the kind that rots without anyone noticing.
+        return fail("method-coherence",
+                    f"{len(blocks)} fight cards found but none had per-fighter method rows -- "
+                    "the pattern no longer matches the markup")
     print(f"       [method-coherence] checked {checked} fight(s), {seen_methods} method rows")
 
 
