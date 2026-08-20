@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-20T22:02:18+00:00",
+  "at": "2026-08-20T22:22:42+00:00",
   "edges_two_way": {
     "best_book": {
       "DraftKings": 19,
@@ -28,16 +28,16 @@
   "overround": {
     "in_force": {
       "prop": 1.2,
-      "two_way": 1.0588
+      "two_way": 1.0584
     },
     "measured": {
-      "two_way": 1.0588
+      "two_way": 1.0584
     }
   },
   "rows_by_source": {
     "DraftKings": 28,
     "FanDuel": 24,
-    "Polymarket": 294
+    "Polymarket": 295
   },
   "rundown_dates_requested": [
     "2026-08-22"
