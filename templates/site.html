@@ -5122,6 +5122,13 @@
   .scout-lbl {
     font-size: var(--t-micro); color: var(--muted); text-transform: uppercase;
     letter-spacing: 0.5px; font-weight: 600; flex: none;
+    /* CENTRED, because the column is now a fixed 76px rather than sized to
+       this word. While it was an `auto` column the span fitted its own text
+       exactly and the alignment inside it could not show; once the meter rows
+       fixed the column to fit "Missed Weight", "Scout" kept its default
+       start-alignment and sat 21px left of every attribute label beneath it.
+       The .sm-lab rows below centre, so this has to as well. */
+    text-align: center;
   }
   .scout-pill {
     flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 5px;
