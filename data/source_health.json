@@ -1,43 +1,43 @@
 {
-  "at": "2026-08-20T13:18:23+00:00",
+  "at": "2026-08-20T13:43:10+00:00",
   "edges_two_way": {
     "best_book": {
-      "DraftKings": 20,
-      "FanDuel": 10,
+      "DraftKings": 17,
+      "FanDuel": 13,
       "Polymarket": 120
     },
     "books_quoting": {
-      "1.0": 128,
-      "2.0": 22
+      "1.0": 126,
+      "2.0": 24
     },
     "n": 150
   },
   "moneyline": {
     "best_book": {
-      "DraftKings": 11,
-      "FanDuel": 3,
+      "DraftKings": 9,
+      "FanDuel": 5,
       "Polymarket": 42
     },
     "n": 56,
     "source": {
-      "DraftKings": 11,
-      "FanDuel": 3,
+      "DraftKings": 9,
+      "FanDuel": 5,
       "Polymarket": 42
     }
   },
   "overround": {
     "in_force": {
       "prop": 1.2,
-      "two_way": 1.0594
+      "two_way": 1.0595
     },
     "measured": {
-      "two_way": 1.0594
+      "two_way": 1.0595
     }
   },
   "rows_by_source": {
-    "DraftKings": 28,
-    "FanDuel": 24,
-    "Polymarket": 274
+    "DraftKings": 26,
+    "FanDuel": 28,
+    "Polymarket": 279
   },
   "rundown_dates_requested": [
     "2026-08-22"
@@ -45,14 +45,14 @@
   "rundown_key_set": true,
   "tracked_moneyline": {
     "best_book": {
-      "DraftKings": 11,
-      "FanDuel": 3,
+      "DraftKings": 9,
+      "FanDuel": 5,
       "Polymarket": 12
     },
     "n": 26,
     "source": {
-      "DraftKings": 11,
-      "FanDuel": 3,
+      "DraftKings": 9,
+      "FanDuel": 5,
       "Polymarket": 12
     }
   }
