@@ -857,10 +857,10 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
         if abs(pts) < DISPLAY_THRESHOLD:
             folded += pts
             continue
-        collected.append({"label": label, "why": why, "points": pts})
+        collected.append({"key": key, "label": label, "why": why, "points": pts})
     collected.sort(key=lambda r: abs(r["points"]), reverse=True)
     if abs(folded) >= 0.05:
-        collected.append({"label": "Other factors",
+        collected.append({"key": None, "label": "Other factors",
                           "why": "everything else, each too small to list on its own",
                           "points": folded})
 
@@ -869,12 +869,17 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
     running_gap = 0.0
     running_prob = prob_at(running_gap)  # 50%
 
-    def step(label, why, pts, kind="factor"):
+    def step(label, why, pts, kind="factor", key=None):
         nonlocal running_gap, running_prob
         before = running_prob
         running_gap += pts
         running_prob = prob_at(running_gap)
         rows.append({
+            # The matchup key this row came from. Carried so the scout meters
+            # can join their magnitude to THIS row rather than recomputing it:
+            # two independent derivations of the same number would eventually
+            # disagree, and they sit ten pixels apart on the card.
+            "key": key,
             "label": label, "why": why, "kind": kind,
             "points": round(pts, 1),
             "delta_pp": round((running_prob - before) * 100, 1),
@@ -884,7 +889,7 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
 
     step("Rating gap", "career record and quality of opposition", base_gap, kind="base")
     for c in collected:
-        step(c["label"], c["why"], c["points"])
+        step(c["label"], c["why"], c["points"], key=c["key"])
     if matchup.get("adjustment_capped"):
         step("Adjustment cap",
              f"total adjustment held to {ADJUSTMENT_TOTAL_CAP:.0f} rating points, so no pile-up "
@@ -926,45 +931,58 @@ def build_factor_badges(matchup: dict) -> dict:
     """
     badges_a, badges_b = [], []
 
-    def add_advantage(value: float, label: str):
-        if value > BADGE_THRESHOLD:
-            badges_a.append({"label": label, "direction": "+"})
-        elif value < -BADGE_THRESHOLD:
-            badges_b.append({"label": label, "direction": "+"})
+    # TWO KINDS OF BADGE, AND THEY ARE NOT OPPOSITE SIGNS OF ONE SCALE.
+    # An "edge" is COMPARATIVE: "Wrestling" on fighter A means A out-wrestles
+    # B, a statement about the pair, and it has a magnitude -- the two were
+    # measured against each other and one won by some amount.
+    # A "flag" is PERSONAL: "Quick Return" on fighter A means A took this
+    # fight on short rest, true of him alone with no opponent in it.
+    # The UI depends on the distinction: an edge draws a rail whose length is
+    # the magnitude, a flag draws no rail at all, because a rail would be
+    # claiming a contest that never happened. `key` is the matchup field the
+    # badge came from, so a consumer can join the magnitude from the
+    # waterfall rather than deriving it a second time.
 
-    add_advantage(matchup.get("wrestling_adjustment", 0), "Wrestling")
-    add_advantage(matchup.get("striking_adjustment", 0), "Striking")
-    add_advantage(matchup.get("durability_adjustment", 0), "Durability")
-    add_advantage(matchup.get("stance_adjustment", 0), "Stance")
-    add_advantage(matchup.get("submission_threat_adjustment", 0), "Sub Threat")
-    add_advantage(matchup.get("height_adjustment", 0), "Height")
+    def add_advantage(key: str, label: str):
+        value = matchup.get(key, 0) or 0
+        if value > BADGE_THRESHOLD:
+            badges_a.append({"label": label, "direction": "+", "kind": "edge", "key": key})
+        elif value < -BADGE_THRESHOLD:
+            badges_b.append({"label": label, "direction": "+", "kind": "edge", "key": key})
+
+    add_advantage("wrestling_adjustment", "Wrestling")
+    add_advantage("striking_adjustment", "Striking")
+    add_advantage("durability_adjustment", "Durability")
+    add_advantage("stance_adjustment", "Stance")
+    add_advantage("submission_threat_adjustment", "Sub Threat")
+    add_advantage("height_adjustment", "Height")
 
     if matchup.get("short_notice_flag_a"):
-        badges_a.append({"label": "Short Notice", "direction": "-"})
+        badges_a.append({"label": "Short Notice", "direction": "-", "kind": "flag"})
     if matchup.get("short_notice_flag_b"):
-        badges_b.append({"label": "Short Notice", "direction": "-"})
+        badges_b.append({"label": "Short Notice", "direction": "-", "kind": "flag"})
 
     layoff_adj = matchup.get("layoff_adjustment", 0)
     if layoff_adj < -BADGE_THRESHOLD:
-        badges_a.append({"label": "Layoff", "direction": "-"})
+        badges_a.append({"label": "Layoff", "direction": "-", "kind": "flag"})
     elif layoff_adj > BADGE_THRESHOLD:
-        badges_b.append({"label": "Layoff", "direction": "-"})
+        badges_b.append({"label": "Layoff", "direction": "-", "kind": "flag"})
 
     if matchup.get("quick_return_flag_a"):
-        badges_a.append({"label": "Quick Return", "direction": "-"})
+        badges_a.append({"label": "Quick Return", "direction": "-", "kind": "flag"})
     if matchup.get("quick_return_flag_b"):
-        badges_b.append({"label": "Quick Return", "direction": "-"})
+        badges_b.append({"label": "Quick Return", "direction": "-", "kind": "flag"})
 
     if matchup.get("age_cliff_flag_a"):
-        badges_a.append({"label": "Age Cliff", "direction": "-"})
+        badges_a.append({"label": "Age Cliff", "direction": "-", "kind": "flag"})
     if matchup.get("age_cliff_flag_b"):
-        badges_b.append({"label": "Age Cliff", "direction": "-"})
+        badges_b.append({"label": "Age Cliff", "direction": "-", "kind": "flag"})
 
     missed_weight_adj = matchup.get("missed_weight_adjustment", 0)
     if missed_weight_adj < -BADGE_THRESHOLD / 3:  # smaller threshold - even one instance should show
-        badges_a.append({"label": "Missed Weight", "direction": "-"})
+        badges_a.append({"label": "Missed Weight", "direction": "-", "kind": "flag"})
     elif missed_weight_adj > BADGE_THRESHOLD / 3:
-        badges_b.append({"label": "Missed Weight", "direction": "-"})
+        badges_b.append({"label": "Missed Weight", "direction": "-", "kind": "flag"})
 
     if matchup.get("weight_class_change_flag_a"):
         direction = matchup.get("weight_class_change_direction_a")

@@ -2760,30 +2760,6 @@
   .finished-row .summary-pick-name,
   .finished-row .summary-pick-pct { color: var(--muted); }
 
-  .matchup-badges-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 10px; }
-  .matchup-badges-row .factor-badges { flex: 1; min-width: 0; margin-top: 0; }
-  .factor-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
-  .factor-badges.right { justify-content: flex-end; }
-  .factor-badge {
-    font-size: var(--t-micro); font-weight: 600; border-radius: var(--r-md); padding: 1.5px 5px;
-    white-space: normal; letter-spacing: 0.2px; max-width: 100%; box-sizing: border-box;
-  }
-  /* NEUTRAL, WITH DIRECTION. These were green and red -- the same palette
-     this site uses for correct and incorrect on the Track Record -- so
-     "+ Wrestling" and "- Quick Return" read as verdicts rather than as
-     attributes, most confusingly on a decided card sitting beside a real
-     green check. The +/- glyph already carries the direction; the colour was
-     saying something it does not know.
-     Direction now shows as weight and a hairline edge on the positive side,
-     both on the same neutral surface. */
-  .factor-badge.pos {
-    background: rgba(255,255,255,0.05); color: var(--text-soft);
-    border: 1px solid var(--hairline);
-  }
-  .factor-badge.neg {
-    background: rgba(255,255,255,0.03); color: var(--muted);
-    border: 1px solid transparent;
-  }
   /* clamp, not a fixed 124px. At 320px that column took 47% of the row and
      123 of 134 fighter names wrapped to two lines, seven to three, with row
      heights spread across 30/40/45/50/62px. The clamp pins at 124px above
@@ -5090,19 +5066,59 @@
      the name it belongs to. Grid rather than nested flex because the two
      columns must line up EXACTLY -- the badges only carry meaning through
      which side they are on. */
+  /* ONE GRID FOR THE BUTTONS AND THE METERS. Each meter row is three grid
+     items -- fighter A's rail, the attribute name, fighter B's rail -- so
+     they flow into the same three columns the buttons sit in and the two
+     sides cannot drift apart. The previous version stacked a separate flex
+     group under each button, which measured as aligned but READ as crooked:
+     the button's label is centred inside a 151px pill while its badges were
+     flushed to the outer edge, and two different alignments in one column is
+     what looked broken. Nothing here needs nudging; the columns are shared.
+     THE MIDDLE COLUMN IS 76px, sized to the widest label build_factor_badges
+     can emit ("Missed Weight", 74px) and NOT to the widest one on any given
+     card ("Quick Return", 69px). Sizing to what happens to be on screen ships
+     a wrap the first time an unusual card comes along. */
   .scout-badges {
-    display: grid; grid-template-columns: 1fr auto 1fr;
-    gap: 6px 7px; align-items: center; margin: 0 0 10px;
+    display: grid; grid-template-columns: 1fr 76px 1fr;
+    column-gap: 7px; row-gap: 3px; align-items: center; margin: 0 0 10px;
   }
-  .scout-badges > .scout-pill:first-of-type, .scout-badges > .scout-gap:first-of-type { grid-column: 1; grid-row: 1; }
-  .scout-badges > .scout-lbl { grid-column: 2; grid-row: 1; }
-  .scout-badges > .scout-pill.corner-b, .scout-badges > .scout-gap + .scout-lbl + .scout-gap { grid-column: 3; grid-row: 1; }
-  /* align-self: start on row 2. The grid centres its items, and with one
-     fighter carrying four badges and the other one, centring started the two
-     groups at different heights -- 564 against 583 -- so a pair that should
-     read as two columns of the same table read as two loose clusters. */
-  .scout-badges > .factor-badges { grid-column: 1; grid-row: 2; margin-top: 0; align-self: start; }
-  .scout-badges > .factor-badges.right { grid-column: 3; grid-row: 2; align-self: start; }
+  .sm-gap { margin-top: 7px; }
+  .sm-lab {
+    font-size: 8px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--muted); text-align: center; line-height: 1.25;
+  }
+  .sm-rail { position: relative; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.06); }
+  .sm-fill { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+  .sm-rail.a .sm-fill { right: 0; background: var(--corner-red); }
+  .sm-rail.b .sm-fill { left: 0; background: var(--corner-blue); }
+  /* The endpoint reads as the measurement -- a rail alone is a line, a rail
+     with a lit end is a needle that landed somewhere. */
+  .sm-fill::after {
+    content: ""; position: absolute; top: 50%; width: 5px; height: 5px; border-radius: 50%;
+    transform: translateY(-50%);
+  }
+  .sm-rail.a .sm-fill::after { left: -1px; background: var(--corner-red); box-shadow: 0 0 6px rgba(229,57,53,0.85); }
+  .sm-rail.b .sm-fill::after { right: -1px; background: var(--corner-blue); box-shadow: 0 0 6px rgba(59,130,246,0.85); }
+  /* The number floats ABOVE the rail rather than inside it. Inside, a factor
+     worth a point or two makes a fill too short to hold its own label. */
+  .sm-fill b {
+    position: absolute; top: -11px; font-size: 8px; font-weight: 700;
+    font-variant-numeric: tabular-nums; color: var(--muted);
+  }
+  .sm-rail.a .sm-fill b { left: -1px; }
+  .sm-rail.b .sm-fill b { right: -1px; }
+  /* Rails need clearance above them for that floated number. */
+  .scout-badges > .sm-rail { margin-top: 9px; }
+  .scout-badges > .sm-rail.sm-gap { margin-top: 15px; }
+  .sm-flag {
+    display: flex; align-items: center; gap: 4px; font-size: 8px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-soft);
+  }
+  .sm-flag.right { justify-content: flex-end; }
+  /* Amber, not red. --red already means "the pick was wrong" on the Track
+     Record, and this sits inches from a corner-red fighter name. */
+  .sm-flag.neg { color: #c08a52; }
+  .sm-flag s { text-decoration: none; font-size: 7px; }
   .scout-lbl {
     font-size: var(--t-micro); color: var(--muted); text-transform: uppercase;
     letter-spacing: 0.5px; font-weight: 600; flex: none;
@@ -6741,12 +6757,40 @@
                 aria-label="Fight history for {{ fight.fighter_b }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_b | surname }}</span></button>
         {% else %}<span class="scout-gap" aria-hidden="true"></span>{% endif %}
         {% if _has_badges %}
-        <div class="factor-badges">
-          {% if fight.preview.comparison.a.badges %}{% for b in fight.preview.comparison.a.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
-        </div>
-        <div class="factor-badges right">
-          {% if fight.preview.comparison.b.badges %}{% for b in fight.preview.comparison.b.badges %}<span class="factor-badge {{ 'pos' if b.direction == '+' else 'neg' }}">{{ b.direction }} {{ b.label }}</span>{% endfor %}{% endif %}
-        </div>
+        {# EDGES DRAW A RAIL, FLAGS DO NOT. An edge is comparative -- these two
+           were measured against each other and one won by a known number of
+           percentage points, so it gets a rail whose length is that number.
+           A flag is personal ("took this fight on short rest"): no opponent is
+           in it, and a rail would be claiming a contest that never happened.
+           Rows sit in the SAME grid as the buttons above, which is what keeps
+           the two columns aligned without anything having to be nudged.
+           Ordering and side ownership are decided in build_scout_rows -- see
+           the note there on why the side cannot be inferred from the label. #}
+        {% for r in fight.preview.scout_rows %}
+        {% set g = ' sm-gap' if loop.first else '' %}
+        {% if r.kind == 'edge' %}
+          {% if r.side == 'a' %}
+          <span class="sm-rail a{{ g }}"><span class="sm-fill" style="width: {{ r.pct }}%"><b>{{ '%.1f' | format(r.pp) }}</b></span></span>
+          <span class="sm-lab{{ g }}">{{ r.label }}</span>
+          <span class="sm-rail b{{ g }}"></span>
+          {% else %}
+          <span class="sm-rail a{{ g }}"></span>
+          <span class="sm-lab{{ g }}">{{ r.label }}</span>
+          <span class="sm-rail b{{ g }}"><span class="sm-fill" style="width: {{ r.pct }}%"><b>{{ '%.1f' | format(r.pp) }}</b></span></span>
+          {% endif %}
+        {% else %}
+          {% set _neg = r.direction == '-' %}
+          {% if r.side == 'a' %}
+          <span class="sm-flag{{ ' neg' if _neg }}{{ g }}"><s aria-hidden="true">{{ '&#9660;' if _neg else '&#9650;' }}</s>{{ 'Risk' if _neg else 'Edge' }}</span>
+          <span class="sm-lab{{ g }}">{{ r.label }}</span>
+          <span class="{{ g }}"></span>
+          {% else %}
+          <span class="{{ g }}"></span>
+          <span class="sm-lab{{ g }}">{{ r.label }}</span>
+          <span class="sm-flag right{{ ' neg' if _neg }}{{ g }}"><s aria-hidden="true">{{ '&#9660;' if _neg else '&#9650;' }}</s>{{ 'Risk' if _neg else 'Edge' }}</span>
+          {% endif %}
+        {% endif %}
+        {% endfor %}
         {% endif %}
       </div>
       {% endif %}
