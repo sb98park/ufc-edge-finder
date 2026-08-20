@@ -108,7 +108,7 @@ VOLUME_DIFFERENTIAL_SCALE = 40.0  # rating points per 1.0 SLpM-SApM differential
 # against 46%). Both lost.
 #
 # 90 minutes is six full three-round fights. Deliberately a smooth ramp
-# rather than a cliff: radar_chart draws nothing below MIN_ESPN_FIGHTS = 3,
+# rather than a cliff: fighter_profile draws nothing below MIN_UFC_BOUTS = 3,
 # which is right for a chart that must either show a number or not, but a
 # hard threshold in a continuous model just relocates the discontinuity.
 #
@@ -128,7 +128,7 @@ VOLUME_DIFFERENTIAL_SCALE = 40.0  # rating points per 1.0 SLpM-SApM differential
 #
 # Fight COUNT is reconstructable exactly -- it is just the timeline entries
 # before a date -- so the validation can test what production runs. It is
-# also what radar_chart already gates on (MIN_ESPN_FIGHTS = 3), which keeps
+# also what fighter_profile already gates on (MIN_UFC_BOUTS = 3), which keeps
 # one notion of "enough data" across the codebase rather than two.
 # OFF (0.0) -- IMPLEMENTED, MEASURED, NOT JUSTIFIED YET.
 #

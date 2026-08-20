@@ -52,32 +52,31 @@ the honest cost of using measurements instead of inferences.
 
 import math
 
-AXIS_LABELS = ["Knockdown Rate", "Submission Threat", "Striking Pace",
-               "Damage Resistance", "Submission Resistance", "Distance Rate"]
+# WHAT IS LEFT HERE, AND WHY. This module used to compute and draw a six-axis
+# radar from fighters.csv. That chart is gone: the Tale of the Tape now plots
+# five categories from src/fighter_profile.py, built on pit_stats, and two of
+# the old axes ("Knockdown Rate", "Damage Resistance") were being drawn a
+# second time by the scout rails from the same underlying measures.
+#
+# Removed with it: AXIS_LABELS, compute_radar_metrics and the helpers only it
+# used -- _percentile, _pct, _num, _resistance_score, _distance_rate, SHRINK_K,
+# PRIOR_FINISH_LOSS_RATE, MIN_ESPN_FIGHTS. build_percentile_index survives
+# because build_spotlight_chips still ranks against it.
 
-# Columns that get percentile-ranked, and whether higher is better.
 PERCENTILE_AXES = {
     "knockdowns_per_fight": True,
     "sig_strikes_att_per_fight": True,
     "sig_strikes_absorbed_per_fight": False,     # inverted: less damage taken is better
 }
 
-SHRINK_K = 3.0
-PRIOR_FINISH_LOSS_RATE = 0.5
-
-# A fighter with almost no tracked fights would rank on noise. Below this the
-# measured axes stay None rather than plotting a percentile built from one bout.
-MIN_ESPN_FIGHTS = 3
-
-
 def build_percentile_index(fighters_df) -> dict:
     """
     {column: sorted list of values} for percentile ranking.
 
     Built once per site build from the whole roster and passed into
-    compute_radar_metrics. Computing it per fighter would be both slow and
-    wrong -- the ranking has to be against a fixed population, not against
-    whoever happens to be on the card.
+    build_spotlight_chips, its only remaining caller. Computing it per
+    fighter would be both slow and wrong -- the ranking has to be against a
+    fixed population, not against whoever happens to be on the card.
     """
     index = {}
     for col in PERCENTILE_AXES:
@@ -94,96 +93,6 @@ def build_percentile_index(fighters_df) -> dict:
         if len(vals) >= 20:                 # too few to rank against meaningfully
             index[col] = sorted(vals)
     return index
-
-
-def _percentile(value, sorted_vals, higher_is_better: bool):
-    if value is None or not sorted_vals:
-        return None
-    lo, hi = 0, len(sorted_vals)
-    while lo < hi:                          # bisect_left, stdlib-free
-        mid = (lo + hi) // 2
-        if sorted_vals[mid] < value:
-            lo = mid + 1
-        else:
-            hi = mid
-    pct = lo / len(sorted_vals) * 100.0
-    return round(pct if higher_is_better else 100.0 - pct, 1)
-
-
-def _pct(numerator, denominator) -> float | None:
-    if denominator in (None, "") or float(denominator) <= 0:
-        return None
-    return round(float(numerator) / float(denominator) * 100, 1)
-
-
-def _num(row: dict, key: str):
-    """Value, or None. Deliberately does NOT default to 0."""
-    v = row.get(key)
-    if v is None or v == "":
-        return None
-    try:
-        f = float(v)
-    except (TypeError, ValueError):
-        return None
-    return None if f != f else f
-
-
-def _resistance_score(row: dict, loss_key: str) -> float | None:
-    """How rarely they're finished this way, shrunk toward the prior by sample."""
-    losses = _num(row, "losses")
-    finished = _num(row, loss_key)
-    if losses is None or finished is None:
-        return None
-    if losses <= 0:
-        # Undefeated is untested, not proven. The prior is the honest answer.
-        return round((1 - PRIOR_FINISH_LOSS_RATE) * 100, 1)
-    rate = (finished + SHRINK_K * PRIOR_FINISH_LOSS_RATE) / (losses + SHRINK_K)
-    return round((1 - rate) * 100, 1)
-
-
-def _distance_rate(row: dict) -> float | None:
-    dw, dl = _num(row, "dec_wins"), _num(row, "dec_losses")
-    w, l = _num(row, "wins"), _num(row, "losses")
-    if dw is None or dl is None or w is None or l is None:
-        return None
-    return _pct(dw + dl, w + l)
-
-
-def compute_radar_metrics(row: dict, pct_index: dict | None = None) -> list[float | None]:
-    """
-    Six axes, each 0-100 or None. Callers MUST handle None rather than coerce.
-
-    Without pct_index the three measured axes return None -- ranking needs a
-    population, and inventing one from a single fighter would be worse than
-    admitting the axis can't be drawn.
-    """
-    pct_index = pct_index or {}
-    wins = _num(row, "wins")
-    espn_fights = _num(row, "espn_fights")
-    enough = espn_fights is not None and espn_fights >= MIN_ESPN_FIGHTS
-
-    def measured(col):
-        if not enough:
-            return None
-        return _percentile(_num(row, col), pct_index.get(col), PERCENTILE_AXES[col])
-
-    sub_wins = _num(row, "sub_wins")
-    return [
-        measured("knockdowns_per_fight"),
-        _pct(sub_wins, wins) if sub_wins is not None else None,
-        measured("sig_strikes_att_per_fight"),
-        measured("sig_strikes_absorbed_per_fight"),
-        _resistance_score(row, "sub_losses"),
-        _distance_rate(row),
-    ]
-
-
-# build_radar_chart_svg lived here and drew the six raw axes. It has no
-# consumers left: the Tale of the Tape now plots the five categories from
-# fighter_profile, because two of the old axes ("Knockdown Rate", "Damage
-# Resistance") were being drawn a second time by the scout rails from the same
-# underlying numbers. compute_radar_metrics above is kept -- it still backs
-# scripts/audit_radar_coverage.py.
 
 
 # ============================================================================
