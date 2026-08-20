@@ -3388,6 +3388,50 @@
      The rule worth keeping: overshoot is for objects, never for quantities. */
   .radar-polygon { transform: scale(0); transition: transform 1.4s cubic-bezier(0.22,1,0.36,1); }
   .radar-chart.revealed .radar-polygon { transform: scale(1); }
+  /* CATEGORY ROWS under the radar. A tug-of-war from the centre, the higher
+     score taking its corner colour, and tapping a row opens its attributes so
+     a reader can check the average against its parts -- which matters,
+     because a category score is a plain mean and not a measurement. */
+  .cat-block { margin: 4px 0 10px; }
+  .cat-row { border-top: 1px solid var(--hairline); }
+  .cat-row:first-child { border-top: 0; }
+  .cat-btn {
+    display: grid; grid-template-columns: 26px 1fr 72px 1fr 26px;
+    align-items: center; gap: 5px; width: 100%; min-height: 40px;
+    background: none; border: 0; color: inherit; font-family: inherit;
+    padding: 7px 0; cursor: pointer; text-align: center;
+  }
+  .cat-btn:active { background: rgba(255,255,255,0.05); }
+  .cat-v { font-size: var(--t-body); font-weight: 700; font-variant-numeric: tabular-nums; color: #83868d; }
+  .cat-v.l { text-align: right; } .cat-v.r { text-align: left; }
+  .cat-v.win.l { color: var(--corner-red); } .cat-v.win.r { color: var(--corner-blue); }
+  .cat-n { font-size: var(--t-micro); font-weight: 700; letter-spacing: 0.06em;
+           text-transform: uppercase; color: var(--muted); }
+  .cat-n i { display: block; font-style: normal; font-size: 7px; color: #5f636b; margin-top: 1px;
+             transition: transform 0.18s ease; }
+  .cat-bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.05); position: relative; overflow: hidden; }
+  .cat-bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .cat-bar.l i { right: 0; background: rgba(229,57,53,0.8); }
+  .cat-bar.r i { left: 0; background: rgba(59,130,246,0.8); }
+  .cat-sub { display: none; padding: 0 0 8px; }
+  .cat-row.open .cat-sub { display: block; }
+  .cat-row.open .cat-n i { transform: rotate(180deg); }
+  .cat-mrow { display: grid; grid-template-columns: 24px 1fr 78px 1fr 24px;
+              align-items: center; gap: 5px; margin-bottom: 3px; }
+  .cat-mv { font-size: var(--t-tiny); font-weight: 700; font-variant-numeric: tabular-nums; color: #7c7f86; }
+  .cat-mv.l { text-align: right; } .cat-mv.r { text-align: left; }
+  .cat-mv.win.l { color: #f0918e; } .cat-mv.win.r { color: #93bcff; }
+  .cat-mn { font-size: 7.5px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase;
+            color: #6c7079; text-align: center; }
+  .cat-mbar { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.05); position: relative; overflow: hidden; }
+  .cat-mbar i { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+  .cat-mbar.l i { right: 0; background: rgba(229,57,53,0.6); }
+  .cat-mbar.r i { left: 0; background: rgba(59,130,246,0.6); }
+  .cat-hint, .cat-thin {
+    font-size: 8.5px; color: #5f636b; text-align: center; letter-spacing: 0.04em;
+    text-transform: uppercase; margin-top: 8px;
+  }
+  .radar-chart { display: block; margin: 0 auto; max-width: 100%; height: auto; }
   .radar-legend { display: flex; gap: 16px; margin-top: 4px; }
   .chart-draw-line { /* renders normally now - visibility controlled by chart-reveal-mask instead */ }
   /* The clip rect starts at zero width and opens to full, revealing the line
@@ -6461,26 +6505,60 @@
   {% endif %}
   {% endmacro %}
 
-  {% macro tale_of_the_tape(comparison, radar_svg) %}
+  {% macro tale_of_the_tape(comparison, profile) %}
   {% if comparison %}
   <div class="market-group-label">{{ icon_ruler() }} Tale of the Tape</div>
-  {% if radar_svg %}
+  {# THE AXES ARE CATEGORIES NOW, not raw measures. The old chart plotted
+     "Knockdown Rate" and "Damage Resistance", both of which the scout rails
+     under the fighter buttons already draw ("Knockdowns", "Chin") from the
+     same underlying numbers -- one measure, two panels, two sources. Five
+     categories give the chart its own job: the rails say how a fighter ranks,
+     the shape says what kind of fighter he is.
+     THE FIVE TAPE BARS THAT USED TO SIT HERE ARE GONE. Age and Reach were
+     already printed in Fighter Comparison directly below; Strike Acc. and TD
+     Defense are inside these categories with context they never had as raw
+     numbers; TD Accuracy joins them. #}
+  {% if profile and profile.radar_svg %}
   <div class="radar-block">
-    {{ radar_svg | safe }}
+    {{ profile.radar_svg | safe }}
     <div class="radar-legend">
       <span class="radar-legend-item"><span class="radar-dot a"></span>{{ comparison.a.name }}</span>
       <span class="radar-legend-item"><span class="radar-dot b"></span>{{ comparison.b.name }}</span>
     </div>
-
+  </div>
+  <div class="cat-block">
+    {% for c in profile.cats %}
+    {% if c.a is not none or c.b is not none %}
+    <div class="cat-row">
+      <button type="button" class="cat-btn" aria-expanded="false">
+        <span class="cat-v l{{ ' win' if c.a is not none and c.b is not none and c.a > c.b }}">{{ c.a if c.a is not none else '&mdash;' }}</span>
+        <span class="cat-bar l">{% if c.a is not none %}<i style="width: {{ c.a }}%"></i>{% endif %}</span>
+        <span class="cat-n">{{ c.label }}<i aria-hidden="true">&#9660;</i></span>
+        <span class="cat-bar r">{% if c.b is not none %}<i style="width: {{ c.b }}%"></i>{% endif %}</span>
+        <span class="cat-v r{{ ' win' if c.a is not none and c.b is not none and c.b > c.a }}">{{ c.b if c.b is not none else '&mdash;' }}</span>
+      </button>
+      <div class="cat-sub">
+        {% for m in c.members %}
+        {% if m.a is not none or m.b is not none %}
+        <div class="cat-mrow">
+          <span class="cat-mv l{{ ' win' if m.a is not none and m.b is not none and m.a > m.b }}">{{ m.a if m.a is not none else '&mdash;' }}</span>
+          <span class="cat-mbar l">{% if m.a is not none %}<i style="width: {{ m.a }}%"></i>{% endif %}</span>
+          <span class="cat-mn">{{ m.label }}</span>
+          <span class="cat-mbar r">{% if m.b is not none %}<i style="width: {{ m.b }}%"></i>{% endif %}</span>
+          <span class="cat-mv r{{ ' win' if m.a is not none and m.b is not none and m.b > m.a }}">{{ m.b if m.b is not none else '&mdash;' }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    <div class="cat-hint">Tap a category for the breakdown &#183; percentile against every UFC fighter with 3+ bouts</div>
   </div>
   {% endif %}
-  <div class="tape-block">
-    {{ tape_bar("Age", comparison.a.age, comparison.b.age, "") }}
-    {{ tape_bar("Reach", comparison.a.reach_in, comparison.b.reach_in, "\"") }}
-    {{ tape_bar("Strike Acc.", comparison.a.strike_accuracy_pct, comparison.b.strike_accuracy_pct, "%") }}
-    {{ tape_bar("TD Defense", comparison.a.td_defense_pct, comparison.b.td_defense_pct, "%") }}
-    {{ tape_bar("TD Accuracy", comparison.a.td_accuracy_pct, comparison.b.td_accuracy_pct, "%") }}
-  </div>
+  {% if profile and profile.thin %}
+  <div class="cat-thin">{% for t in profile.thin %}{{ t.name }} ({{ t.bouts }} fight{{ '' if t.bouts == 1 else 's' }}){% if not loop.last %} and {% endif %}{% endfor %} &mdash; no UFC profile yet</div>
+  {% endif %}
   {% endif %}
   {% endmacro %}
 
@@ -6945,7 +7023,7 @@
         </div>
       </details>
       {% endif %}
-      {{ tale_of_the_tape(fight.preview.comparison, fight.preview.radar_svg) }}
+      {{ tale_of_the_tape(fight.preview.comparison, fight.profile) }}
       {{ striking_profile_panel(fight.preview.striking_profile, fight.fighter_a, fight.fighter_b, fight.preview.spotlight_chips) }}
       {{ fighter_compare_table(fight.preview.comparison) }}
       {% endif %}
@@ -9642,6 +9720,19 @@
     //
     // A sentinel rather than a scroll listener: no work per frame, and no
     // offset to recompute when anything above it changes height.
+    // Tap a category to open its attributes. Delegated in the CAPTURE phase
+    // like the scout pills: the fight card's own handler chain calls
+    // stopPropagation, so a bubble-phase listener here would never fire.
+    // A category score is a plain mean of its members, so being able to open
+    // it and check the average against its parts is the point, not a bonus.
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest && e.target.closest('.cat-btn');
+      if (!btn) return;
+      const row = btn.parentElement;
+      const open = row.classList.toggle('open');
+      btn.setAttribute('aria-expanded', String(open));
+    }, true);
+
     function initSegTabsStuck() {
       if (!('IntersectionObserver' in window)) return;
       document.querySelectorAll('.seg-tabs-sentinel').forEach(sentinel => {

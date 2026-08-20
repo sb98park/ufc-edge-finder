@@ -34,7 +34,10 @@ def _wc(row):
     except Exception:
         pass
     return str(v).strip() or None
-from src.radar_chart import compute_radar_metrics, build_radar_chart_svg, build_percentile_index
+# build_percentile_index still feeds build_spotlight_chips. The radar it was
+# originally written for now draws category scores from fighter_profile
+# instead -- see build_category_radar_svg.
+from src.radar_chart import build_percentile_index
 from src.striking_profile import (build_zone_index, zone_profile, position_profile,
                                   fight_shape)
 
@@ -745,9 +748,6 @@ def build_fight_preview(
     if not (striking_profile["a_lands"] or striking_profile["b_lands"]):
         striking_profile = None
 
-    radar_metrics_a = compute_radar_metrics(row_a.to_dict(), pct_index)
-    radar_metrics_b = compute_radar_metrics(row_b.to_dict(), pct_index)
-    radar_svg = build_radar_chart_svg(radar_metrics_a, radar_metrics_b, fighter_a, fighter_b)
     factor_badges = build_factor_badges(matchup)
     comparison["a"]["badges"] = factor_badges["a"]
     comparison["b"]["badges"] = factor_badges["b"]
@@ -783,7 +783,6 @@ def build_fight_preview(
         "style_b": matchup["style_b"],
         "narrative": narrative,
         "comparison": comparison,
-        "radar_svg": radar_svg,
         "striking_profile": striking_profile,
         "spotlight_chips": build_spotlight_chips(row_a.to_dict(), row_b.to_dict(),
                                                  fighter_a, fighter_b, pct_index),

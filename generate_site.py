@@ -21,6 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.elo import EloRatingSystem
 from src.fighter_history import build_fighter_history, fold_name as fh_fold, summarise as fh_summarise
+from src.radar_chart import build_category_radar_svg
 from src.fighter_profile import (build_profiles, summarise as fp_summarise,
                                  RAIL_LABELS, CATEGORIES as PROFILE_CATEGORIES,
                                  ATTRIBUTES as PROFILE_ATTRIBUTES, DRAWER_RANKS, tier as profile_tier)
@@ -1346,6 +1347,7 @@ def main():
                     if not _p["pct"] and _f.get(_side)
                 ],
             }
+            _f["profile"]["radar_svg"] = build_category_radar_svg(_f["profile"]["cats"])
 
     # Career rates for the drawer header, from the ENRICHED roster -- these are
     # the columns that were unreachable in production until control time was

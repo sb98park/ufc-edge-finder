@@ -178,96 +178,99 @@ def compute_radar_metrics(row: dict, pct_index: dict | None = None) -> list[floa
     ]
 
 
-def build_radar_chart_svg(
-    metrics_a: list[float], metrics_b: list[float], name_a: str, name_b: str,
-    size: int = 280,
-) -> str:
-    """Renders a 5-axis radar chart overlaying both fighters' metrics as translucent polygons."""
-    n = len(AXIS_LABELS)
-    cx = cy = size / 2
-    max_r = size * 0.24
-    label_r = size * 0.32
+# build_radar_chart_svg lived here and drew the six raw axes. It has no
+# consumers left: the Tale of the Tape now plots the five categories from
+# fighter_profile, because two of the old axes ("Knockdown Rate", "Damage
+# Resistance") were being drawn a second time by the scout rails from the same
+# underlying numbers. compute_radar_metrics above is kept -- it still backs
+# scripts/audit_radar_coverage.py.
+
+
+# ============================================================================
+# CATEGORY RADAR
+# ----------------------------------------------------------------------------
+# Replaces the six raw axes above with the five categories from
+# fighter_profile. WHY: "Knockdown Rate" was one of the old axes, and the scout
+# row under the fighter buttons now draws "Knockdowns" from the same underlying
+# measure -- the card was plotting one thing twice, in two panels, from two
+# sources. "Damage Resistance" overlapped "Chin" the same way.
+#
+# Categories also give the chart a job the rails cannot do: the rails answer
+# "how does this fighter rank", the radar answers "what SHAPE is he", and the
+# five-sided figure carries that at a glance in a way nine bars never will.
+# ============================================================================
+
+CATEGORY_PAD = 40  # viewBox breathing room; the side labels overrun otherwise
+
+
+def build_category_radar_svg(rows, size: int = 250) -> str:
+    """
+    Pentagon radar from [{label, a, b}, ...] of 0-100 category scores.
+
+    Returns "" when neither fighter has a score -- the caller renders its own
+    explanation rather than an empty five-sided outline, which would read as
+    two fighters who are zero at everything.
+    """
+    rows = [r for r in (rows or []) if r.get("a") is not None or r.get("b") is not None]
+    if not rows:
+        return ""
+
+    n = len(rows)
+    cx = cy = size / 2.0
+    radius = size * 0.30
 
     def angle(i):
         return -math.pi / 2 + i * (2 * math.pi / n)
 
-    def point(value, i):
-        r = max_r * max(0.0, min(100.0, value)) / 100.0
-        a = angle(i)
-        return cx + r * math.cos(a), cy + r * math.sin(a)
+    def point(v, i):
+        r = radius * max(0.0, min(100.0, v)) / 100.0
+        return cx + r * math.cos(angle(i)), cy + r * math.sin(angle(i))
 
-    def polygon_points(metrics):
-        # None vertices are SKIPPED, not plotted at zero. The polygon closes
-        # across the gap, which reads as "this axis isn't measured for this
-        # fighter" rather than "this fighter scores zero here". Plotting the
-        # origin instead is precisely the bug this rewrite removes: it made
-        # absence indistinguishable from the worst possible score.
-        pts = [point(v, i) for i, v in enumerate(metrics) if v is not None]
+    def polygon(key):
+        # Same rule as the six-axis chart: a missing value is skipped, not
+        # plotted at the origin, so absence never masquerades as a zero.
+        pts = [point(r[key], i) for i, r in enumerate(rows) if r.get(key) is not None]
         return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
 
-    # Gridlines at 25/50/75/100%
-    grid_svg = ""
-    for pct in (25, 50, 75, 100):
-        pts = [point(pct, i) for i in range(n)]
-        pts_str = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-        grid_svg += f'<polygon points="{pts_str}" fill="none" stroke="#2e2e30" stroke-width="1"/>'
-
-    # Spoke lines from center to each axis
-    spokes_svg = ""
+    out = []
+    for ring in (25, 50, 75, 100):
+        pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in (point(ring, i) for i in range(n)))
+        out.append(f'<polygon points="{pts}" fill="none" stroke="#2e2e30" stroke-width="1"/>')
     for i in range(n):
         x, y = point(100, i)
-        spokes_svg += f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#2e2e30" stroke-width="1"/>'
-
-    # Axis labels, positioned just outside the outer gridline
-    labels_svg = ""
-    for i, label in enumerate(AXIS_LABELS):
+        out.append(f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#2e2e30" stroke-width="1"/>')
+    for i, r in enumerate(rows):
         a = angle(i)
-        lx, ly = cx + label_r * math.cos(a), cy + label_r * math.sin(a)
+        lx, ly = cx + (radius + 16) * math.cos(a), cy + (radius + 16) * math.sin(a)
         anchor = "middle"
         if math.cos(a) > 0.3:
             anchor = "start"
         elif math.cos(a) < -0.3:
             anchor = "end"
-        # An axis neither fighter has data for is dimmed and marked, so the
-        # gap in the polygons above is explained rather than looking like a
-        # rendering fault. Half-known axes keep the normal colour -- the
-        # break in one polygon already carries that.
-        both_missing = metrics_a[i] is None and metrics_b[i] is None
-        # #6b7079, not #4a4d54. The dimming is deliberate -- it marks an axis
-        # neither fighter has data for -- but 2.01:1 against the panel is not
-        # dimmed, it is unreadable, and the label still has to be read to know
-        # WHICH axis is missing. 3.42:1 keeps the step down from the normal
-        # #8a8f9a (5.25:1) while clearing the 3:1 floor.
-        fill = "#6b7079" if both_missing else "#8a8f9a"
-        text = f"{label} \u2014" if both_missing else label
-        labels_svg += f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="8.5" fill="{fill}" text-anchor="{anchor}" dominant-baseline="middle">{text}</text>'
+        out.append(
+            f'<text x="{lx:.1f}" y="{ly + 3:.1f}" text-anchor="{anchor}" font-size="8" '
+            f'font-weight="700" letter-spacing="0.5" fill="#8a8f9a">'
+            f'{r["label"].upper()}</text>')
+    # B under A so the red corner reads on top, matching every other paired
+    # element on the card.
+    for key, stroke, fill in (("b", "#3b82f6", "rgba(59,130,246,0.22)"),
+                              ("a", "#e53935", "rgba(229,57,53,0.22)")):
+        pts = polygon(key)
+        if pts:
+            out.append(f'<polygon points="{pts}" fill="{fill}" stroke="{stroke}" '
+                       f'stroke-width="1.6" stroke-linejoin="round"/>')
 
-    poly_a = polygon_points(metrics_a)
-    poly_b = polygon_points(metrics_b)
-
-    # CORNER COLOURS, matching the waterfall and the movement charts.
-    # Fighter A (listed first) is the red corner, B the blue.
-    #
-    # Gold/grey was worse than it looked: grey is the least separable colour
-    # on a charcoal panel, so fighter B effectively had no identity, and gold
-    # meant "model" everywhere else on the site.
-    #
-    # Overlap is fine here because the fills are 0.18/0.22 with solid 2px
-    # strokes -- at that opacity two strongly separated hues read as a mixed
-    # region rather than mud, and the strokes keep both outlines legible
-    # wherever they cross. If the fills were near-opaque this swap would have
-    # made overlap worse whatever colours were chosen.
-    color_a, color_b = "#e53935", "#3b82f6"
-
-    return (
-        f'<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" class="radar-chart" role="img" '
-        f'style="overflow: visible;" '
-        f'aria-label="Style matchup radar comparing {name_a} and {name_b}">'
-        + grid_svg + spokes_svg +
-        f'<polygon points="{poly_b}" fill="{color_b}" fill-opacity="0.18" stroke="{color_b}" stroke-width="2" '
-        f'class="radar-polygon" style="transform-origin: {cx}px {cy}px;"/>'
-        f'<polygon points="{poly_a}" fill="{color_a}" fill-opacity="0.22" stroke="{color_a}" stroke-width="2" '
-        f'class="radar-polygon" style="transform-origin: {cx}px {cy}px; transition-delay: 0.12s;"/>'
-        + labels_svg +
-        '</svg>'
-    )
+    # A TIGHT viewBox, computed rather than assumed. A square box around a
+    # pentagon leaves roughly 50px of empty canvas under the two bottom
+    # vertices, which pushed the legend and the category rows down the card
+    # for nothing. The label ring is radius + 16, and the font's ascender and
+    # descender need ~8px either side of the text baseline.
+    label_r = radius + 16
+    sins = [math.sin(angle(i)) for i in range(n)]
+    top = cy + label_r * min(sins) - 8
+    bottom = cy + label_r * max(sins) + 8
+    w = size + 2 * CATEGORY_PAD
+    h = bottom - top
+    return (f'<svg class="radar-chart" viewBox="{-CATEGORY_PAD} {top:.1f} {w} {h:.1f}" '
+            f'width="{w}" height="{h:.1f}" role="img" '
+            f'aria-label="Category comparison">{"".join(out)}</svg>')
