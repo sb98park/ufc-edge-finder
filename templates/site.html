@@ -5074,12 +5074,15 @@
      the button's label is centred inside a 151px pill while its badges were
      flushed to the outer edge, and two different alignments in one column is
      what looked broken. Nothing here needs nudging; the columns are shared.
-     THE MIDDLE COLUMN IS 76px, sized to the widest label build_factor_badges
-     can emit ("Missed Weight", 74px) and NOT to the widest one on any given
-     card ("Quick Return", 69px). Sizing to what happens to be on screen ships
-     a wrap the first time an unusual card comes along. */
+     THE MIDDLE COLUMN IS 68px, sized to the widest of the six attribute
+     labels ("Knockdowns", measured at 64px) plus four for slack. It was 76,
+     sized for "Missed Weight" -- a matchup-factor label that no longer exists
+     now the row carries fighter attributes instead. Sizing to the real
+     longest label rather than to whatever happens to be on this week's card
+     is the point; the set is fixed in fighter_profile.ATTRIBUTES, so widen
+     this if a longer one is ever added. */
   .scout-badges {
-    display: grid; grid-template-columns: 1fr 76px 1fr;
+    display: grid; grid-template-columns: 1fr 68px 1fr;
     column-gap: 7px; row-gap: 3px; align-items: center; margin: 0 0 10px;
   }
   .sm-gap { margin-top: 7px; }

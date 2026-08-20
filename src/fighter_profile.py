@@ -96,7 +96,14 @@ def _per15(c, key):
 
 ATTRIBUTES = [
     ("Strike acc",  lambda c: _rate_strike_acc(c),                                      True),
-    ("KO power",    lambda c: _per15(c, "kd_for"),                                      True),
+    # "Knockdowns", NOT "KO power". ufcstats logs a knockdown only when a
+    # fighter is dropped by a discrete strike, so a TKO from accumulated
+    # ground-and-pound records none. Anthony Hernandez has two UFC KO/TKO wins
+    # and zero knockdowns, and the earlier "KO power" label put him at the 2nd
+    # percentile for a thing he has demonstrably done twice. This also matches
+    # what the radar chart already calls the same idea ("Knockdown Rate" in
+    # AXIS_LABELS) -- the card was naming one concept two ways.
+    ("Knockdowns",   lambda c: _per15(c, "kd_for"),                                     True),
     ("TD volume",   lambda c: _per15(c, "td_att"),                                      True),
     ("TD defence",  lambda c: (100.0 * c["td_stuffed"] / c["td_faced"]) if c["td_faced"] > 0 else None, True),
     ("Control",     lambda c: (100.0 * c["ctrl_seconds"] / c["fight_seconds"]) if c["fight_seconds"] > 0 else None, True),
