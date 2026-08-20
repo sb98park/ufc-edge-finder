@@ -4587,6 +4587,18 @@
      room and let it wrap rather than forcing a horizontal scroll. */
   td.mkt-label { white-space: normal; min-width: 130px; line-height: 1.35; }
   /* Market groups */
+  /* The fighter heading inside Fighter props. Corner-tinted, because red and
+     blue already mean "which fighter" everywhere else on this card, and the
+     heading is the only place the name now appears -- the rows beneath it drop
+     it to save the width that was making the 34% Market column wrap. */
+  tr.mkt-subhead td {
+    padding: 7px 5px 3px; font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    border-top: 1px solid var(--hairline);
+  }
+  tr.mkt-subhead.a td { color: var(--corner-red); }
+  tr.mkt-subhead.b td { color: var(--corner-blue); }
+  tr.mkt-inblock td:first-child { padding-left: 12px; }
   .market-group { margin: 0 0 8px; }
   .market-group-summary {
     display: flex; align-items: baseline; gap: 8px; cursor: pointer;
@@ -4989,6 +5001,16 @@
   .fdr-rate:last-child { border-right: 0; }
   .fdr-rate .v { font-family: var(--font-display); font-size: var(--t-lead); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
   .fdr-rate .k { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
+  /* Gold for the top two tiers, amber for the bottom two, grey for the middle
+     -- the same three-way rule the scout rails use, so the card teaches it
+     once. Not --green/--red: those already mean "the pick was right/wrong". */
+  .fdr-tier {
+    font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .fdr-tier.hi { color: var(--accent2); }
+  .fdr-tier.mid { color: #6c7079; }
+  .fdr-tier.lo { color: #c08a52; }
   .fdrawer-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 18px; }
   .fdrawer-sec { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; padding: 12px 16px 7px; }
   .fdr-fight { border-bottom: 1px solid var(--hairline); }
@@ -6983,8 +7005,17 @@
                   title="Tap to switch between model probability and the model's fair price"
                   role="button" tabindex="0">Model<span class="unit-hint">%</span></th><th title="The price this EV is computed at: the best of the books that quoted it, or the vig-free fair line where none did.">Price</th><th title="Expected value at this price, using the model shrunk toward the market. Edge asks whether the model disagrees; EV asks whether the bet returns money.">EV</th><th title="How far the model's probability sits from the market's fair line, in percentage points.">Edge<span class="unit-tag">pts</span></th></tr>
           {% for row in g.rows %}
-          <tr class="{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}">
-            <td class="mkt-label">{{ row.label or row.market }}{% if row.market == 'Moneyline' and row.has_line %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
+          {# A HEADING ROW, NOT A NEW TABLE. Fighter props holds a 2x3 -- two
+             fighters by three methods -- which sorting by probability hid
+             completely. Grouping them under the fighter's name restores it
+             while leaving the five columns, their fixed widths and the
+             priced-before-unpriced order exactly as Fight props and Round
+             props below use them. See group_fighter_props. #}
+          {% if row.subhead %}
+          <tr class="mkt-subhead {{ row.subhead_side }}"><td colspan="5">{{ row.subhead }}</td></tr>
+          {% endif %}
+          <tr class="{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}{{ ' mkt-inblock' if row.route_label }}">
+            <td class="mkt-label">{{ row.route_label or row.label or row.market }}{% if row.market == 'Moneyline' and row.has_line %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
             {# BOTH representations ship in the markup. Swapping textContent
                from a data attribute is instant and cannot fail; recomputing
                client-side would duplicate the odds maths in a second place
@@ -9280,19 +9311,32 @@
 
       function rateStrip(rec) {
         const r = (rec && rec.r) || {};
+        const t = (rec && rec.t) || {};
         const cells = [
-          ['Control', r.control_time_pct, '%'],
-          ['SLpM', r.slpm, ''],
-          ['TD def', r.td_defense_pct, '%'],
-          ['Str acc', r.strike_accuracy_pct, '%'],
+          ['Control', 'control_time_pct', '%'],
+          ['SLpM', 'slpm', ''],
+          ['TD def', 'td_defense_pct', '%'],
+          ['Str acc', 'strike_accuracy_pct', '%'],
         ];
+        // A TIER WORD UNDER EACH FIGURE. "68.2% takedown defence" says nothing
+        // about whether that is good, and the four numbers looked identical
+        // whether one was a career-defining strength or thoroughly ordinary --
+        // Hernandez is Elite for control and Average for takedown defence.
+        // Words rather than percentiles on purpose: "64th" asks the reader to
+        // know what a percentile is and to remember which end is good.
+        const CLS = {Elite: 'hi', Strong: 'hi', Average: 'mid', Weak: 'lo', Poor: 'lo'};
         // An unknown rate renders as a dash. Printing 0 for "we have no
         // timeline for this fighter" would be a confident lie about a
         // debutant, which is the one reader most likely to be looking.
-        return cells.map(([k, v, unit]) =>
-          '<div class="fdr-rate"><div class="v">' +
-          (v == null ? '<span style="color:var(--muted)">--</span>' : esc(v) + unit) +
-          '</div><div class="k">' + k + '</div></div>').join('');
+        return cells.map(function (cell) {
+          const label = cell[0], col = cell[1], unit = cell[2];
+          const v = r[col], word = t[col];
+          return '<div class="fdr-rate"><div class="v">' +
+            (v == null ? '<span style="color:var(--muted)">--</span>' : esc(v) + unit) +
+            '</div><div class="k">' + label + '</div>' +
+            (word ? '<div class="fdr-tier ' + (CLS[word] || 'mid') + '">' + word + '</div>' : '') +
+            '</div>';
+        }).join('');
       }
 
       function fightRow(b, i) {

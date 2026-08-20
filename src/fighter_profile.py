@@ -81,12 +81,21 @@ def _num(v) -> float:
         return 0.0
 
 
-# label -> (function of summed counts -> rate or None, higher_is_better)
-# Six attributes, chosen so that three of them -- takedown volume, takedown
-# defence and control -- appear on no other panel of the fight card. The radar
-# chart already carries striking pace, knockdown rate and damage absorbed.
+# THE ATTRIBUTE SET, and the two views onto it.
+#
+# Nine measures, each a rate per 15 minutes or a percentage, every one of them
+# computed from the same pit_stats rows the drawer already displays -- verified
+# identical to the roster's own columns on 131 fighters, mean difference 0.0pp,
+# so a value and its rank can never disagree.
+#
+# Two consumers select from this list rather than each defining their own:
+#   RAIL_LABELS  the six the scout row draws under the fighter buttons
+#   CATEGORIES   the five groups the Tale of the Tape radar plots
+# Keeping one list means a measure cannot be defined twice with two slightly
+# different formulas, which is how "Knockdown Rate" and "Knockdowns" ended up
+# on the same card meaning the same thing.
 def _rate_strike_acc(c):
-    return 100.0 * c["sig_str_landed"] / c["sig_str_att"] if c["sig_str_att"] > 0 else None
+    return 100.0 * c["sig_str_landed"] / c["sig_str_att"] if c["sig_str_att"] else None
 
 
 def _per15(c, key):
@@ -94,22 +103,42 @@ def _per15(c, key):
     return 15.0 * c[key] / mins if mins > 0 else None
 
 
+def _per_min(c, key):
+    mins = c["fight_seconds"] / 60.0
+    return c[key] / mins if mins > 0 else None
+
+
+# (label, rate function, higher_is_better, category)
 ATTRIBUTES = [
-    ("Strike acc",  lambda c: _rate_strike_acc(c),                                      True),
-    # "Knockdowns", NOT "KO power". ufcstats logs a knockdown only when a
-    # fighter is dropped by a discrete strike, so a TKO from accumulated
-    # ground-and-pound records none. Anthony Hernandez has two UFC KO/TKO wins
-    # and zero knockdowns, and the earlier "KO power" label put him at the 2nd
-    # percentile for a thing he has demonstrably done twice. This also matches
-    # what the radar chart already calls the same idea ("Knockdown Rate" in
-    # AXIS_LABELS) -- the card was naming one concept two ways.
-    ("Knockdowns",   lambda c: _per15(c, "kd_for"),                                     True),
-    ("TD volume",   lambda c: _per15(c, "td_att"),                                      True),
-    ("TD defence",  lambda c: (100.0 * c["td_stuffed"] / c["td_faced"]) if c["td_faced"] > 0 else None, True),
-    ("Control",     lambda c: (100.0 * c["ctrl_seconds"] / c["fight_seconds"]) if c["fight_seconds"] > 0 else None, True),
-    # Fewer knockdowns absorbed is better, so this one inverts on ranking.
-    ("Chin",        lambda c: _per15(c, "kd_against"),                                  False),
+    ("Strike acc",   _rate_strike_acc,                          True,  "Striking"),
+    ("Strikes/min",  lambda c: _per_min(c, "sig_str_landed"),   True,  "Striking"),
+    ("Knockdowns",   lambda c: _per15(c, "kd_for"),             True,  "Power"),
+    ("TD volume",    lambda c: _per15(c, "td_att"),             True,  "Wrestling"),
+    ("TD defence",   lambda c: (100.0 * c["td_stuffed"] / c["td_faced"]) if c["td_faced"] else None, True, "Wrestling"),
+    ("Control",      lambda c: (100.0 * c["ctrl_seconds"] / c["fight_seconds"]) if c["fight_seconds"] else None, True, "Grappling"),
+    ("Sub attempts", lambda c: _per15(c, "sub_att"),            True,  "Grappling"),
+    # Both durability measures invert: fewer knockdowns absorbed and fewer
+    # strikes taken are better, so the percentile flips on ranking.
+    ("Chin",         lambda c: _per15(c, "kd_against"),         False, "Durability"),
+    ("Damage taken", lambda c: _per_min(c, "sig_str_absorbed"), False, "Durability"),
 ]
+
+# Five, not four, so the radar is a pentagon rather than a diamond -- and so
+# Power stands on its own, which is the single most separating measure on the
+# card (Hernandez 2nd percentile against Rodrigues' 96th).
+CATEGORIES = ["Striking", "Power", "Wrestling", "Grappling", "Durability"]
+
+# The six the scout row draws. Deliberately not all nine: the row sits under
+# the fighter buttons and has room for six rails before the card gets tall.
+RAIL_LABELS = ["Strike acc", "Knockdowns", "TD volume", "TD defence", "Control", "Chin"]
+
+# The drawer's four header tiles, mapped to the attribute that ranks each one.
+DRAWER_RANKS = {
+    "control_time_pct": "Control",
+    "slpm": "Strikes/min",
+    "td_defense_pct": "TD defence",
+    "strike_accuracy_pct": "Strike acc",
+}
 
 
 def _aggregate(path: str = PIT) -> dict:
@@ -162,14 +191,14 @@ def build_profiles(names, path: str = PIT) -> dict:
 
     # Population totals give the prior each fighter is shrunk toward.
     totals = {c: sum(r[c] for r in agg.values()) for c in _COUNTS}
-    pop_rates = {label: (fn(totals) or 0.0) for label, fn, _ in ATTRIBUTES}
+    pop_rates = {label: (fn(totals) or 0.0) for label, fn, _hb, _cat in ATTRIBUTES}
 
     # Rank against every fighter who clears the floor, not just the booked
     # ones -- a percentile against 14 people on this card would mean nothing,
     # and would move every week as the card changed.
     eligible = [k for k, r in agg.items() if r["bouts"] >= MIN_UFC_BOUTS]
     index: dict[str, list] = {}
-    for label, fn, _ in ATTRIBUTES:
+    for label, fn, _hb, _cat in ATTRIBUTES:
         vals = [v for v in (_shrunk(agg[k], pop_rates[label], fn) for k in eligible) if v is not None]
         index[label] = sorted(vals)
 
@@ -182,14 +211,24 @@ def build_profiles(names, path: str = PIT) -> dict:
             out[folded] = {"bouts": bouts, "pct": None}
             continue
         pct = {}
-        for label, fn, higher_better in ATTRIBUTES:
+        for label, fn, higher_better, _cat in ATTRIBUTES:
             v = _shrunk(rec, pop_rates[label], fn)
             col = index[label]
             if v is None or not col:
                 continue
             p = 100.0 * bisect_left(col, v) / len(col)
             pct[label] = int(round(p if higher_better else 100.0 - p))
-        out[folded] = {"bouts": bouts, "pct": pct or None}
+        # A category score is the plain mean of its members' percentiles. It is
+        # a SUMMARY, not a measurement -- there is no reason striking accuracy
+        # and volume should weigh equally except that inventing weights would
+        # be worse. This is why the UI lets a reader open a category and check
+        # the average against its parts.
+        cats = {}
+        for cat in CATEGORIES:
+            vals = [pct[l] for l, _f, _h, c in ATTRIBUTES if c == cat and l in pct]
+            if vals:
+                cats[cat] = int(round(sum(vals) / len(vals)))
+        out[folded] = {"bouts": bouts, "pct": pct or None, "cats": cats or None}
     return out
 
 
@@ -197,3 +236,20 @@ def summarise(profiles: dict) -> dict:
     got = sum(1 for v in profiles.values() if v["pct"])
     return {"profiled": got, "total": len(profiles),
             "no_bouts": sum(1 for v in profiles.values() if v["bouts"] == 0)}
+
+
+# Plain language instead of a percentile. "99th" is analyst wording; a reader
+# who does not work with percentiles has to remember both what one is and that
+# higher is better. The five tiers say it outright. Boundaries are a judgement
+# and are stated here rather than buried at a call site.
+TIERS = ((90, "Elite"), (70, "Strong"), (31, "Average"), (11, "Weak"), (0, "Poor"))
+
+
+def tier(pct) -> str | None:
+    """'Elite' / 'Strong' / 'Average' / 'Weak' / 'Poor' for a 0-100 rank."""
+    if pct is None:
+        return None
+    for floor, name in TIERS:
+        if pct >= floor:
+            return name
+    return TIERS[-1][1]

@@ -964,6 +964,9 @@ def group_edges_by_card(
                                    "vig_cost_pct", "suggested_stake_pct"):
                             if _f in _fixed:
                                 _e[_f] = _fixed[_f]
+                elif gid == "fighter":
+                    rows = group_fighter_props(
+                        rows, fight.get("fighter_a", ""), fight.get("fighter_b", ""))
                 if not rows:
                     continue
                 groups.append({
@@ -994,6 +997,83 @@ def group_edges_by_card(
 
 
 LOW_SAMPLE_THRESHOLD = 6  # career fights below this = flagged as limited data
+
+
+
+def group_fighter_props(rows: list, fighter_a: str, fighter_b: str) -> list:
+    """
+    Reorder the Fighter props rows so each fighter's routes sit together under
+    a heading, instead of the two men interleaving by probability.
+
+    WHY. The group answers "who wins, and how", and it holds a 2x3: two
+    fighters by three methods. Sorted by probability that structure vanishes --
+    on the current main event Rodrigues' KO (21.8) landed above Hernandez's
+    (21.0), so reading "how does Hernandez win" meant picking three rows out of
+    eight. The numbers were always there; only the arrangement hid them.
+
+    WHAT IS DELIBERATELY NOT CHANGED. The five-column contract, the fixed
+    34/18/17/15/16 widths and the priced-before-unpriced ordering are shared
+    with Fight props and Round props directly below. Breaking any of them in
+    one group would break the rhythm of all three, so this touches row ORDER
+    and nothing else. Within a block the original sort survives intact.
+
+    Moneyline stays on top and ungrouped: it is the headline, it is not a
+    method, and it is the one row a reader looks for first.
+    """
+    from src.display_names import surname
+
+    def is_moneyline(r):
+        return str(r.get("market") or "").strip().lower() == "moneyline"
+
+    def owner(r):
+        f = str(r.get("fighter") or "").strip()
+        if f == fighter_a:
+            return "a"
+        if f == fighter_b:
+            return "b"
+        return None
+
+    def route(r):
+        """The row label with the fighter's name taken off the front."""
+        label = str(r.get("label") or r.get("market") or "").strip()
+        f = str(r.get("fighter") or "").strip()
+        if f and label.startswith(f):
+            rest = label[len(f):].lstrip()
+            for sep in ("\u2014", "-", ":"):
+                if rest.startswith(sep):
+                    rest = rest[len(sep):].lstrip()
+            if rest:
+                return rest
+        for prefix in ("Method: ", "Fight Outcome: ", "Round Betting: "):
+            if str(r.get("market") or "").startswith(prefix):
+                return str(r["market"])[len(prefix):]
+        return label
+
+    # Priced before unpriced, then by probability -- the order this group
+    # already used, preserved inside each block rather than across the whole.
+    def rank(r):
+        return (0 if r.get("has_line") else 1, -(r.get("model_prob") or 0.0))
+
+    money = sorted([r for r in rows if is_moneyline(r)], key=rank)
+    rest = [r for r in rows if not is_moneyline(r)]
+    orphans = [r for r in rest if owner(r) is None]
+
+    out = list(money)
+    for side, name in (("a", fighter_a), ("b", fighter_b)):
+        block = sorted([r for r in rest if owner(r) == side], key=rank)
+        if not block:
+            continue
+        for i, r in enumerate(block):
+            r = dict(r)
+            r["route_label"] = route(r)
+            if i == 0:
+                r["subhead"] = f"{surname(name)} wins by"
+                r["subhead_side"] = side
+            out.append(r)
+    # Anything whose fighter did not match either corner keeps its full label
+    # and goes last, rather than being silently dropped.
+    out.extend(sorted(orphans, key=rank))
+    return out
 
 
 def _sample_size_flag(fighter_field: str, fighters_df: pd.DataFrame | None) -> dict | None:

@@ -21,7 +21,9 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.elo import EloRatingSystem
 from src.fighter_history import build_fighter_history, fold_name as fh_fold, summarise as fh_summarise
-from src.fighter_profile import build_profiles, summarise as fp_summarise, ATTRIBUTES as PROFILE_ATTRIBUTES
+from src.fighter_profile import (build_profiles, summarise as fp_summarise,
+                                 RAIL_LABELS, CATEGORIES as PROFILE_CATEGORIES,
+                                 ATTRIBUTES as PROFILE_ATTRIBUTES, DRAWER_RANKS, tier as profile_tier)
 from src.display_names import surname as display_surname, PARTICLES as NAME_PARTICLES, SUFFIXES as NAME_SUFFIXES
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props, record_edge_health
@@ -1305,7 +1307,9 @@ def main():
     _fp = fp_summarise(_profiles)
     print(f"[profile] {_fp['profiled']} of {_fp['total']} booked fighters have a "
           f"{3}+ bout profile, {_fp['no_bouts']} have never fought in the UFC")
-    _plabels = [lab for lab, _fn, _hb in PROFILE_ATTRIBUTES]
+    # Six rails, not all nine -- see RAIL_LABELS. The radar below the card
+    # plots the other three inside their categories.
+    _plabels = list(RAIL_LABELS)
     for _ev in list(events) + list(future_events):
         for _f in _ev.get("fights", []):
             _pa = _profiles.get(fh_fold(_f.get("fighter_a", "")), {"bouts": 0, "pct": None})
@@ -1325,6 +1329,17 @@ def main():
                 # -- a fight with neither man profiled used to render the row
                 # silently, which looks like breakage rather than like a card
                 # full of debutants.
+                # Category scores for the Tale of the Tape radar, plus the
+                # attribute members so a tapped category can open its parts.
+                "cats": [{"label": c,
+                          "a": (_pa.get("cats") or {}).get(c),
+                          "b": (_pb.get("cats") or {}).get(c),
+                          "members": [{"label": l,
+                                       "a": (_pa["pct"] or {}).get(l),
+                                       "b": (_pb["pct"] or {}).get(l)}
+                                      for l, _f, _h, cc in PROFILE_ATTRIBUTES if cc == c]}
+                         for c in PROFILE_CATEGORIES]
+                        if (_pa.get("cats") or _pb.get("cats")) else [],
                 "thin": [
                     {"name": display_surname(_f.get(_side, "")), "bouts": _p["bouts"]}
                     for _side, _p in (("fighter_a", _pa), ("fighter_b", _pb))
@@ -1353,7 +1368,17 @@ def main():
         _wc = "" if _wc is None or (isinstance(_wc, float) and _wc != _wc) else str(_wc).strip()
         if _wc.lower() in ("nan", "none"):
             _wc = ""
-        fighter_rates[fh_fold(_nm)] = {"n": _nm, "wc": _wc, "r": _vals}
+        # A tier word per tile, so "52.3% control" says whether that is good.
+        # Ranked against the same pit_stats population the value itself comes
+        # from -- verified identical on 131 fighters, so the number and its
+        # label cannot contradict each other.
+        _pr = (_profiles.get(fh_fold(_nm)) or {}).get("pct") or {}
+        _tiers = {}
+        for _col, _attr in DRAWER_RANKS.items():
+            _t = profile_tier(_pr.get(_attr))
+            if _t and _col in _vals:
+                _tiers[_col] = _t
+        fighter_rates[fh_fold(_nm)] = {"n": _nm, "wc": _wc, "r": _vals, "t": _tiers}
     fighter_rates_json = json.dumps(fighter_rates, separators=(",", ":"))
 
     # The key the drawer looks a fighter up by. Emitted onto the markup so the
