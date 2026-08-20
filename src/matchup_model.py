@@ -875,10 +875,9 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
         running_gap += pts
         running_prob = prob_at(running_gap)
         rows.append({
-            # The matchup key this row came from. Carried so the scout meters
-            # can join their magnitude to THIS row rather than recomputing it:
-            # two independent derivations of the same number would eventually
-            # disagree, and they sit ten pixels apart on the card.
+            # The matchup field this row was computed from. Costs nothing to
+            # carry and makes a row self-describing to any future consumer that
+            # needs to join against it rather than string-match the label.
             "key": key,
             "label": label, "why": why, "kind": kind,
             "points": round(pts, 1),

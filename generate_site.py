@@ -21,6 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.elo import EloRatingSystem
 from src.fighter_history import build_fighter_history, fold_name as fh_fold, summarise as fh_summarise
+from src.fighter_profile import build_profiles, summarise as fp_summarise, ATTRIBUTES as PROFILE_ATTRIBUTES
 from src.display_names import surname as display_surname, PARTICLES as NAME_PARTICLES, SUFFIXES as NAME_SUFFIXES
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props, record_edge_health
@@ -1296,6 +1297,40 @@ def main():
           + (f", {_fh['bouts_without_control']} without control time"
              if _fh['bouts_without_control'] else ", control time complete"))
     fighter_history_json = json.dumps(fighter_history, separators=(",", ":"))
+
+    # ===== Scout row: per-fighter attribute percentiles =====
+    # Replaces the matchup-factor badges, which repeated the waterfall printed
+    # directly below them on 91% of labels. See src/fighter_profile.
+    _profiles = build_profiles(_booked)
+    _fp = fp_summarise(_profiles)
+    print(f"[profile] {_fp['profiled']} of {_fp['total']} booked fighters have a "
+          f"{3}+ bout profile, {_fp['no_bouts']} have never fought in the UFC")
+    _plabels = [lab for lab, _fn, _hb in PROFILE_ATTRIBUTES]
+    for _ev in list(events) + list(future_events):
+        for _f in _ev.get("fights", []):
+            _pa = _profiles.get(fh_fold(_f.get("fighter_a", "")), {"bouts": 0, "pct": None})
+            _pb = _profiles.get(fh_fold(_f.get("fighter_b", "")), {"bouts": 0, "pct": None})
+            # Rows are built here rather than in the template so the two sides
+            # stay locked to one attribute order and a missing side is an
+            # explicit None instead of a silently absent key.
+            _f["profile"] = {
+                "a_bouts": _pa["bouts"], "b_bouts": _pb["bouts"],
+                "a_ok": bool(_pa["pct"]), "b_ok": bool(_pb["pct"]),
+                "rows": [{"label": lab,
+                          "a": (_pa["pct"] or {}).get(lab),
+                          "b": (_pb["pct"] or {}).get(lab)} for lab in _plabels]
+                        if (_pa["pct"] or _pb["pct"]) else [],
+                # Who is short of bouts, and by how much. Built here so the
+                # sentence reads the same whether one side is missing or both
+                # -- a fight with neither man profiled used to render the row
+                # silently, which looks like breakage rather than like a card
+                # full of debutants.
+                "thin": [
+                    {"name": display_surname(_f.get(_side, "")), "bouts": _p["bouts"]}
+                    for _side, _p in (("fighter_a", _pa), ("fighter_b", _pb))
+                    if not _p["pct"] and _f.get(_side)
+                ],
+            }
 
     # Career rates for the drawer header, from the ENRICHED roster -- these are
     # the columns that were unreachable in production until control time was

@@ -5110,15 +5110,15 @@
   /* Rails need clearance above them for that floated number. */
   .scout-badges > .sm-rail { margin-top: 9px; }
   .scout-badges > .sm-rail.sm-gap { margin-top: 15px; }
-  .sm-flag {
-    display: flex; align-items: center; gap: 4px; font-size: 8px; font-weight: 700;
-    letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-soft);
+  /* The two ends of the scale get named. Gold is the site's "model" accent
+     and amber its caution tone; neither is --green or --red, which already
+     mean "the pick was right / wrong" on the Track Record. */
+  .sm-rail.elite .sm-fill b { color: var(--accent2); }
+  .sm-rail.weak .sm-fill b { color: #c08a52; }
+  .sm-thin {
+    grid-column: 1 / -1; margin-top: 9px; font-size: 8.5px; letter-spacing: 0.04em;
+    text-transform: uppercase; color: #5f636b; text-align: center;
   }
-  .sm-flag.right { justify-content: flex-end; }
-  /* Amber, not red. --red already means "the pick was wrong" on the Track
-     Record, and this sits inches from a corner-red fighter name. */
-  .sm-flag.neg { color: #c08a52; }
-  .sm-flag s { text-decoration: none; font-size: 7px; }
   .scout-lbl {
     font-size: var(--t-micro); color: var(--muted); text-transform: uppercase;
     letter-spacing: 0.5px; font-weight: 600; flex: none;
@@ -6751,8 +6751,9 @@
          1fr / auto / 1fr -- puts each button over its own badges, with the
          label between them, echoing the VS in the matchup header above. The
          badges stop floating and get a heading that names whose they are. #}
-      {% set _has_badges = fight.preview and ((fight.preview.comparison.a.badges) or (fight.preview.comparison.b.badges)) %}
-      {% if fight.fighter_a_key or fight.fighter_b_key or _has_badges %}
+      {% set _prof = fight.profile %}
+      {% set _has_prof = _prof and _prof.rows %}
+      {% if fight.fighter_a_key or fight.fighter_b_key or _has_prof %}
       <div class="scout-badges">
         {% if fight.fighter_a_key %}
         <button type="button" class="scout-pill corner-a" data-fighter-key="{{ fight.fighter_a_key }}"
@@ -6763,41 +6764,31 @@
         <button type="button" class="scout-pill corner-b" data-fighter-key="{{ fight.fighter_b_key }}"
                 aria-label="Fight history for {{ fight.fighter_b }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>{{ fight.fighter_b | surname }}</span></button>
         {% else %}<span class="scout-gap" aria-hidden="true"></span>{% endif %}
-        {% if _has_badges %}
-        {# EDGES DRAW A RAIL, FLAGS DO NOT. An edge is comparative -- these two
-           were measured against each other and one won by a known number of
-           percentage points, so it gets a rail whose length is that number.
-           A flag is personal ("took this fight on short rest"): no opponent is
-           in it, and a rail would be claiming a contest that never happened.
-           Rows sit in the SAME grid as the buttons above, which is what keeps
-           the two columns aligned without anything having to be nudged.
-           Ordering and side ownership are decided in build_scout_rows -- see
-           the note there on why the side cannot be inferred from the label. #}
-        {% for r in fight.preview.scout_rows %}
+        {% if _has_prof %}
+        {# EACH SIDE FILLS TO ITS OWN PERCENTILE, not to a share of a contest.
+           These are absolute ranks against the whole UFC roster, so both men
+           can be 90th at the same thing and both rails can be long -- that is
+           a true statement about two good strikers, not a tug-of-war. Gold
+           marks the 85th and up, amber the 20th and below, so the extremes
+           read without anyone having to do arithmetic. #}
+        {% for r in _prof.rows %}
         {% set g = ' sm-gap' if loop.first else '' %}
-        {% if r.kind == 'edge' %}
-          {% if r.side == 'a' %}
-          <span class="sm-rail a{{ g }}"><span class="sm-fill" style="width: {{ r.pct }}%"><b>{{ '%.1f' | format(r.pp) }}</b></span></span>
-          <span class="sm-lab{{ g }}">{{ r.label }}</span>
-          <span class="sm-rail b{{ g }}"></span>
-          {% else %}
-          <span class="sm-rail a{{ g }}"></span>
-          <span class="sm-lab{{ g }}">{{ r.label }}</span>
-          <span class="sm-rail b{{ g }}"><span class="sm-fill" style="width: {{ r.pct }}%"><b>{{ '%.1f' | format(r.pp) }}</b></span></span>
-          {% endif %}
-        {% else %}
-          {% set _neg = r.direction == '-' %}
-          {% if r.side == 'a' %}
-          <span class="sm-flag{{ ' neg' if _neg }}{{ g }}"><s aria-hidden="true">{{ '&#9660;' if _neg else '&#9650;' }}</s>{{ 'Risk' if _neg else 'Edge' }}</span>
-          <span class="sm-lab{{ g }}">{{ r.label }}</span>
-          <span class="{{ g }}"></span>
-          {% else %}
-          <span class="{{ g }}"></span>
-          <span class="sm-lab{{ g }}">{{ r.label }}</span>
-          <span class="sm-flag right{{ ' neg' if _neg }}{{ g }}"><s aria-hidden="true">{{ '&#9660;' if _neg else '&#9650;' }}</s>{{ 'Risk' if _neg else 'Edge' }}</span>
-          {% endif %}
-        {% endif %}
+        {% if r.a is not none %}
+        <span class="sm-rail a{{ g }}{{ ' elite' if r.a >= 85 }}{{ ' weak' if r.a <= 20 }}"><span class="sm-fill" style="width: {{ r.a }}%"><b>{{ r.a }}</b></span></span>
+        {% else %}<span class="sm-rail a{{ g }}"></span>{% endif %}
+        <span class="sm-lab{{ g }}">{{ r.label }}</span>
+        {% if r.b is not none %}
+        <span class="sm-rail b{{ g }}{{ ' elite' if r.b >= 85 }}{{ ' weak' if r.b <= 20 }}"><span class="sm-fill" style="width: {{ r.b }}%"><b>{{ r.b }}</b></span></span>
+        {% else %}<span class="sm-rail b{{ g }}"></span>{% endif %}
         {% endfor %}
+        {% endif %}
+        {# A fighter short of bouts gets a stated reason, not a blank column --
+           and it renders whether one side is missing or both. 36 of 167 booked
+           fighters are here, and every one of them is simply early in a UFC
+           career: their pit_stats bout count matches ufc_fight_results exactly,
+           so not one is a scrape or name-match failure. #}
+        {% if _prof and _prof.thin %}
+        <div class="sm-thin">{% for t in _prof.thin %}{{ t.name }} ({{ t.bouts }} fight{{ '' if t.bouts == 1 else 's' }}){% if not loop.last %} and {% endif %}{% endfor %} &mdash; no UFC profile yet</div>
         {% endif %}
       </div>
       {% endif %}
