@@ -2958,15 +2958,40 @@
   }
   .cnav-chip[aria-current="true"] { background: var(--accent); color: #111; border-color: var(--accent); }
   .cnav-chip:active { transform: scale(0.96); }
+  /* FULL-BLEED WHEN PINNED. The nav lives inside .fight-body, which carries
+     16px of side padding, so the bar measured 309px against the 341px pinned
+     summary directly above it -- a 16px gutter down each side for content to
+     scroll through beside a bar meant to cover it. Negative margins cancel the
+     padding and equal padding puts the chips back on the content's own left
+     edge (x=33), so the BAR spans the card while the CHIPS still line up with
+     the waterfall block beneath them. */
+  body[data-nav="sticky"] .cnav,
+  body[data-nav="scrollup"] .cnav {
+    margin-left: -16px; margin-right: -16px;
+    padding-left: 16px; padding-right: 16px;
+  }
+  /* The summary casts a 14px gradient below itself so content reads as
+     passing UNDER it. With the chips pinned directly beneath, that fade lands
+     on the chip bar instead of on moving content -- a soft edge over a solid
+     one, for no reason. Off whenever a nav mode is active. */
+  body[data-nav] details.fight-card[open] > summary::after { display: none; }
   /* MODE A: pinned under the card header, always visible inside the card. */
   body[data-nav="sticky"] .cnav {
-    position: sticky; top: var(--cnav-top, 160px); z-index: 38;
+    /* THE SAME EXPRESSION THE SUMMARY PINS AT, plus the summary's own height.
+       Reconstructing it from the seg-tabs' rendered height was wrong by 8px --
+       the summary pins at --chrome-top + --seg-tabs-h, which resolved to 60,
+       while the bar measured 52. Composing from the identical calc means the
+       two cannot drift; JS supplies only --summary-h, which it can measure and
+       CSS cannot. */
+    position: sticky; z-index: 38;
+    top: var(--cnav-top, 174px);
   }
   /* MODE B: same pin, but it rides out of view on a downward scroll and
      comes back on an upward one -- the gesture that means "I am looking for
      something". Transform rather than height so nothing reflows. */
   body[data-nav="scrollup"] .cnav {
-    position: sticky; top: var(--cnav-top, 160px); z-index: 38;
+    position: sticky; z-index: 38;
+    top: var(--cnav-top, 174px);
     transition: transform 0.22s ease, opacity 0.22s ease;
   }
   body[data-nav="scrollup"] .cnav.cnav-away {
@@ -9840,14 +9865,29 @@
 
       // How far down the sticky chips sit: the seg tabs, plus THIS card's own
       // summary, which varies with whether it carries a fun-fact row.
+      // MEASURED, NOT DERIVED. Three attempts to compute where the chips
+      // should pin were each wrong by a different amount -- the seg-tabs'
+      // rendered height is not the summary's pin offset (52 vs 60), and the
+      // summary's own resolved `top` is not where it actually pins either
+      // (60 vs a measured 70). Rather than keep modelling a stack of sticky
+      // elements, read the one number that cannot be wrong: where the pinned
+      // summary's bottom edge actually is.
+      //
+      // Only updated while the summary IS pinned -- that is, once the card's
+      // own top has left the viewport. Before then the summary is in flow and
+      // its bottom says nothing about where it will settle.
       function placeNav(card) {
-        const nav = card.querySelector('.cnav');
         const summary = card.querySelector(':scope > summary');
-        if (!nav || !summary) return;
-        const segs = document.querySelector('.seg-tabs');
-        const segH = segs ? Math.round(segs.getBoundingClientRect().height) : 44;
-        const top = segH + Math.round(summary.getBoundingClientRect().height);
-        card.style.setProperty('--cnav-top', top + 'px');
+        if (!summary) return;
+        const cardTop = card.getBoundingClientRect().top;
+        const bottom = summary.getBoundingClientRect().bottom;
+        if (cardTop > 0) return;                 // not pinned yet, nothing to learn
+        const prev = parseFloat(card.style.getPropertyValue('--cnav-top')) || 0;
+        // 1px of hysteresis so sub-pixel jitter does not rewrite the property
+        // on every scroll event.
+        if (Math.abs(bottom - prev) > 1) {
+          card.style.setProperty('--cnav-top', Math.round(bottom) + 'px');
+        }
       }
 
       function build(card) {
@@ -9866,9 +9906,12 @@
             // A collapsed market group would scroll to a closed strip, so open
             // it first -- the chip promises the section, not its header.
             if (b.tagName === 'DETAILS' && !b.open) b.open = true;
+            // Where the chips actually sit right now, rather than a
+            // recomputation of it -- the bar is pinned, so its own rect IS
+            // the offset a jump has to clear.
+            const navRect = nav.getBoundingClientRect();
             const top = window.scrollY + b.getBoundingClientRect().top
-                        - (parseInt(card.style.getPropertyValue('--cnav-top')) || 160)
-                        - nav.getBoundingClientRect().height - 6;
+                        - navRect.bottom - 8;
             smoothTo(Math.max(0, top));
           });
           nav.appendChild(chip);
@@ -9903,6 +9946,18 @@
         if (e.target.matches && e.target.matches('details.fight-card')) refresh();
       }, true);
       window.addEventListener('resize', refresh);
+      // The pinned bottom can only be measured while pinned, so placement has
+      // to follow the scroll. Cheap: one getBoundingClientRect per open card
+      // per frame-ish, gated by a flag, and it writes only on a real change.
+      let placing = false;
+      window.addEventListener('scroll', function () {
+        if (placing) return;
+        placing = true;
+        setTimeout(function () {
+          document.querySelectorAll('details.fight-card[open]').forEach(placeNav);
+          placing = false;
+        }, 60);
+      }, { passive: true });
       refresh();
 
       if (mode === 'scrollup') {
