@@ -2935,6 +2935,46 @@
   }
   .live-vs-badge .live-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: #ff4747; box-shadow: 0 0 6px 1px rgba(255,71,71,0.7); }
 
+  /* ===== SECTION NAV (prototype) =====================================
+     Two behaviours, chosen by ?nav=. Both are off by default: without the
+     flag .cnav keeps its `hidden` attribute and none of this applies.
+
+     WHY IT IS STICKY AT A MEASURED OFFSET. The pinned summary above it is
+     not a fixed height -- it carries the matchup, the pick and sometimes a
+     fun-fact chip row -- so the chips cannot be pinned at a constant. JS
+     measures the summary per card and writes --cnav-top on the card. */
+  .cnav[hidden] { display: none; }
+  .cnav {
+    display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
+    padding: 6px 0; margin: 0 0 2px;
+    background: var(--panel); border-bottom: 1px solid var(--hairline);
+  }
+  .cnav::-webkit-scrollbar { display: none; }
+  .cnav-chip {
+    flex: none; font-size: var(--t-micro); font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 6px 10px; border-radius: var(--r-pill);
+    background: var(--sunken); border: 1px solid var(--hairline); color: var(--text-soft);
+    white-space: nowrap; cursor: pointer; font-family: inherit; min-height: 30px;
+  }
+  .cnav-chip[aria-current="true"] { background: var(--accent); color: #111; border-color: var(--accent); }
+  .cnav-chip:active { transform: scale(0.96); }
+  /* MODE A: pinned under the card header, always visible inside the card. */
+  body[data-nav="sticky"] .cnav {
+    position: sticky; top: var(--cnav-top, 160px); z-index: 38;
+  }
+  /* MODE B: same pin, but it rides out of view on a downward scroll and
+     comes back on an upward one -- the gesture that means "I am looking for
+     something". Transform rather than height so nothing reflows. */
+  body[data-nav="scrollup"] .cnav {
+    position: sticky; top: var(--cnav-top, 160px); z-index: 38;
+    transition: transform 0.22s ease, opacity 0.22s ease;
+  }
+  body[data-nav="scrollup"] .cnav.cnav-away {
+    transform: translateY(-120%); opacity: 0; pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body[data-nav="scrollup"] .cnav { transition: none; }
+  }
   .fight-body { padding: 0 16px 16px; }
   /* Probability waterfall -- the model's own decomposition, in rating
      points. Collapsed by default: it should deepen a fight card for anyone
@@ -6906,6 +6946,12 @@
         {% endif %}
       </div>
       {% endif %}
+      {# SECTION NAV -- PROTOTYPE, INERT WITHOUT THE FLAG. Filled by
+         initCardNav from the [data-nav] blocks this fight actually has, so a
+         card missing a chart or a preview never advertises a section it does
+         not have. Enabled with ?nav=sticky or ?nav=scrollup; absent that the
+         element stays hidden and nothing about the card changes. #}
+      <div class="cnav" hidden></div>
       {% if fight.preview %}
       {% if fight.result_stats %}
       <div class="result-stats-block">
@@ -6969,7 +7015,7 @@
          at the top either way.
          Still a <details>, so anyone who finds it noisy can close it -- only
          the starting state changed. #}
-      <details class="waterfall-block" open>
+      <details class="waterfall-block" open data-nav="why" data-nav-label="Why">
         <summary class="waterfall-summary">
           <span class="waterfall-summary-label">Why the model likes {{ wf.favorite }}</span>
           <span class="waterfall-summary-hint">hide ▴</span>
@@ -7034,13 +7080,13 @@
         </div>
       </details>
       {% endif %}
-      {{ tale_of_the_tape(fight.preview.comparison, fight.profile) }}
+      <div data-nav="tape" data-nav-label="Tape">{{ tale_of_the_tape(fight.preview.comparison, fight.profile) }}</div>
       {{ striking_profile_panel(fight.preview.striking_profile, fight.fighter_a, fight.fighter_b, fight.preview.spotlight_chips) }}
-      {{ fighter_compare_table(fight.preview.comparison) }}
+      <div data-nav="compare" data-nav-label="Compare">{{ fighter_compare_table(fight.preview.comparison) }}</div>
       {% endif %}
 
       {% if fight.moneyline_chart %}
-      <div class="chart-block">
+      <div class="chart-block" data-nav="movement" data-nav-label="Movement">
         <div class="market-group-label">{{ icon_trendup() }} Moneyline Movement</div>
         {{ fight.moneyline_chart | safe }}
         {% if fight.moneyline_chart_has_implied %}
@@ -7048,7 +7094,7 @@
         {% endif %}
       </div>
       {% elif fight.chart_building %}
-      <div class="chart-block chart-placeholder">
+      <div class="chart-block chart-placeholder" data-nav="movement" data-nav-label="Movement">
         <div class="market-group-label">{{ icon_trendup() }} Moneyline Movement</div>
         <div class="chart-placeholder-text">Chart building — needs one more refresh to show a trend line.</div>
       </div>
@@ -7075,7 +7121,8 @@
       {% for g in fight.market_groups %}
       {# Fighter props open by default -- it holds the moneyline, which is the
          headline. The rest start closed so the card opens scannable. #}
-      <details class="market-group" {% if loop.first %}open{% endif %}>
+      <details class="market-group" {% if loop.first %}open{% endif %}
+               data-nav="mkt-{{ g.id }}" data-nav-label="{{ g.name | replace(' props','') }}">
         <summary class="market-group-summary">
           <span class="mg-name">{{ g.name }}</span>
           {# Counts on the CLOSED summary, so a group's worth is visible
@@ -9743,6 +9790,140 @@
       const open = row.classList.toggle('open');
       btn.setAttribute('aria-expanded', String(open));
     }, true);
+
+    // ===== SECTION NAV PROTOTYPE =========================================
+    // Off unless ?nav=sticky or ?nav=scrollup. Everything below no-ops
+    // otherwise, so the shipped page is byte-identical in behaviour.
+    //
+    //   sticky   -- chips pinned under the card header, always there
+    //   scrollup -- same, but they hide going down and return coming up
+    //
+    // Both fill their chips from the [data-nav] blocks the card actually
+    // contains: a fight with no chart never offers a Movement chip.
+    (function initCardNav() {
+      const mode = new URLSearchParams(location.search).get('nav');
+      if (mode !== 'sticky' && mode !== 'scrollup') return;
+      document.body.setAttribute('data-nav', mode);
+
+      // OUR OWN TWEEN, not scrollTo({behavior:'smooth'}). Measured in this
+      // build: behavior:'auto' scrolls, behavior:'smooth' silently does
+      // nothing and leaves scrollY at 0 -- a chip that looks dead. A twelve
+      // line rAF tween cannot fail that way, and it honours reduced-motion by
+      // jumping instead of easing.
+      function smoothTo(target) {
+        const reduce = window.matchMedia
+          && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const start = window.scrollY;
+        const dist = target - start;
+        if (reduce || Math.abs(dist) < 8) { window.scrollTo(0, target); return; }
+        const dur = Math.min(520, 160 + Math.abs(dist) * 0.28);
+        const t0 = performance.now();
+        let ticked = false, done = false;
+        (function step(now) {
+          if (done) return;
+          ticked = true;
+          const p = Math.min(1, (now - t0) / dur);
+          const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+          window.scrollTo(0, start + dist * e);
+          if (p < 1) requestAnimationFrame(step); else done = true;
+        })(t0);
+        // WATCHDOG. requestAnimationFrame does not run in a backgrounded tab,
+        // and neither does scrollTo's own smooth behaviour -- verified in this
+        // repo's preview harness, where document.hidden is true and rAF ticks
+        // zero times in 600ms. A chip that silently does nothing is worse than
+        // one that jumps, so if the first frame has not landed shortly after
+        // the tap, take the destination directly.
+        setTimeout(function () {
+          if (!ticked && !done) { done = true; window.scrollTo(0, target); }
+        }, 120);
+      }
+
+      // How far down the sticky chips sit: the seg tabs, plus THIS card's own
+      // summary, which varies with whether it carries a fun-fact row.
+      function placeNav(card) {
+        const nav = card.querySelector('.cnav');
+        const summary = card.querySelector(':scope > summary');
+        if (!nav || !summary) return;
+        const segs = document.querySelector('.seg-tabs');
+        const segH = segs ? Math.round(segs.getBoundingClientRect().height) : 44;
+        const top = segH + Math.round(summary.getBoundingClientRect().height);
+        card.style.setProperty('--cnav-top', top + 'px');
+      }
+
+      function build(card) {
+        const nav = card.querySelector('.cnav');
+        if (!nav || nav.dataset.built) return;
+        const blocks = [...card.querySelectorAll('[data-nav]')];
+        if (blocks.length < 2) return;          // nothing to navigate between
+        nav.dataset.built = '1';
+        nav.hidden = false;
+        blocks.forEach(function (b) {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'cnav-chip';
+          chip.textContent = b.getAttribute('data-nav-label') || b.getAttribute('data-nav');
+          chip.addEventListener('click', function () {
+            // A collapsed market group would scroll to a closed strip, so open
+            // it first -- the chip promises the section, not its header.
+            if (b.tagName === 'DETAILS' && !b.open) b.open = true;
+            const top = window.scrollY + b.getBoundingClientRect().top
+                        - (parseInt(card.style.getPropertyValue('--cnav-top')) || 160)
+                        - nav.getBoundingClientRect().height - 6;
+            smoothTo(Math.max(0, top));
+          });
+          nav.appendChild(chip);
+        });
+
+        // Scroll-spy. rootMargin pins the trigger line just under the chips,
+        // so a section counts as current when it reaches the reading area
+        // rather than when it touches the bottom of the screen.
+        if ('IntersectionObserver' in window) {
+          const chips = [...nav.querySelectorAll('.cnav-chip')];
+          const io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+              if (!e.isIntersecting) return;
+              const i = blocks.indexOf(e.target);
+              chips.forEach(function (c, ci) {
+                c.setAttribute('aria-current', String(ci === i));
+              });
+              const c = chips[i];
+              if (c) nav.scrollTo({ left: Math.max(0, c.offsetLeft - 40), behavior: 'smooth' });
+            });
+          }, { rootMargin: '-190px 0px -60% 0px', threshold: 0 });
+          blocks.forEach(function (b) { io.observe(b); });
+        }
+      }
+
+      function refresh() {
+        document.querySelectorAll('details.fight-card[open]').forEach(function (card) {
+          build(card); placeNav(card);
+        });
+      }
+      document.addEventListener('toggle', function (e) {
+        if (e.target.matches && e.target.matches('details.fight-card')) refresh();
+      }, true);
+      window.addEventListener('resize', refresh);
+      refresh();
+
+      if (mode === 'scrollup') {
+        let last = window.scrollY, ticking = false;
+        window.addEventListener('scroll', function () {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(function () {
+            const y = window.scrollY, dy = y - last;
+            // 6px of slack so a thumb resting on the glass does not flicker it.
+            if (Math.abs(dy) > 6) {
+              document.querySelectorAll('.cnav').forEach(function (n) {
+                n.classList.toggle('cnav-away', dy > 0 && y > 220);
+              });
+              last = y;
+            }
+            ticking = false;
+          });
+        }, { passive: true });
+      }
+    })();
 
     function initSegTabsStuck() {
       if (!('IntersectionObserver' in window)) return;
