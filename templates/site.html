@@ -9851,26 +9851,38 @@
         const start = window.scrollY;
         const dist = target - start;
         if (reduce || Math.abs(dist) < 8) { window.scrollTo(0, target); return; }
-        const dur = Math.min(520, 160 + Math.abs(dist) * 0.28);
+        // EASE OUT, NOT EASE IN-OUT. The in-out cubic that shipped first moved
+        // 8px in its opening 52ms and 216px by 156ms, then covered 1,272px of
+        // a 2,000px jump inside the middle 100ms. That is not a smooth curve
+        // at this distance, it is a creep followed by a lurch, and it was
+        // reported as "two motions". An ease-out leaves immediately -- half
+        // the distance inside the first fifth of the duration -- and settles.
+        // Navigation should feel like it responds to the tap, not wind up.
+        //
+        // The duration also scales further and caps higher: 520ms was too
+        // little to carry 2,000px legibly, which is what forced the curve to
+        // be violent in the middle.
+        const dur = Math.min(760, 240 + Math.abs(dist) * 0.20);
         const t0 = performance.now();
-        let ticked = false, done = false;
-        (function step(now) {
+        let framed = false, done = false;
+        function step(now) {
           if (done) return;
-          ticked = true;
+          framed = true;
           const p = Math.min(1, (now - t0) / dur);
-          const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+          const e = 1 - Math.pow(1 - p, 3);
           window.scrollTo(0, start + dist * e);
           if (p < 1) requestAnimationFrame(step); else done = true;
-        })(t0);
-        // WATCHDOG. requestAnimationFrame does not run in a backgrounded tab,
-        // and neither does scrollTo's own smooth behaviour -- verified in this
-        // repo's preview harness, where document.hidden is true and rAF ticks
-        // zero times in 600ms. A chip that silently does nothing is worse than
-        // one that jumps, so if the first frame has not landed shortly after
-        // the tap, take the destination directly.
+        }
+        requestAnimationFrame(step);
+        // WATCHDOG, and it has to be armed against a frame that never comes --
+        // requestAnimationFrame does not run in a backgrounded tab. The first
+        // version called step() synchronously before arming this, so `framed`
+        // was always true by the time the timer ran and the watchdog could
+        // never fire: it was decoration. Scheduling the first frame through
+        // rAF is what makes the check mean anything.
         setTimeout(function () {
-          if (!ticked && !done) { done = true; window.scrollTo(0, target); }
-        }, 120);
+          if (!framed && !done) { done = true; window.scrollTo(0, target); }
+        }, 140);
       }
 
       // How far down the sticky chips sit: the seg tabs, plus THIS card's own
