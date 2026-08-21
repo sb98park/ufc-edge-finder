@@ -11024,7 +11024,7 @@
         // page level -- and it is why a leftward swipe on the toast looked
         // like it "worked" despite the toast itself refusing to dismiss that
         // way.
-        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .mobile-tabbar, .units-chart-wrap, .silhouette-wrap, #edge-back, .whats-new-banner, [data-scrollable]')) {
+        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .cnav, .mobile-tabbar, .units-chart-wrap, .silhouette-wrap, #edge-back, .whats-new-banner, [data-scrollable]')) {
           tracking = false; return;
         }
         touchStartX = e.touches[0].clientX;
