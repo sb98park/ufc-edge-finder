@@ -9826,8 +9826,18 @@
     // Both fill their chips from the [data-nav] blocks the card actually
     // contains: a fight with no chart never offers a Movement chip.
     (function initCardNav() {
-      const mode = new URLSearchParams(location.search).get('nav');
-      if (mode !== 'sticky' && mode !== 'scrollup') return;
+      // ON BY DEFAULT. It was gated behind ?nav= while the two candidates
+      // were being compared, and that flag could not survive the front door:
+      // the access gate's login form is <form method="POST" action="/">, so
+      // a query string is dropped the moment anyone signs in. The flag only
+      // ever worked for a session that was already authenticated -- which is
+      // why it looked like the feature had not shipped.
+      //
+      // 'sticky' won the comparison. ?nav=scrollup still selects the
+      // hide-on-scroll variant, and ?nav=off disables the nav entirely.
+      const requested = new URLSearchParams(location.search).get('nav');
+      if (requested === 'off') return;
+      const mode = requested === 'scrollup' ? 'scrollup' : 'sticky';
       document.body.setAttribute('data-nav', mode);
 
       // OUR OWN TWEEN, not scrollTo({behavior:'smooth'}). Measured in this
