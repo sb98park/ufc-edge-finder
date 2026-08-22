@@ -384,9 +384,12 @@ def build_dual_line_chart_svg(
 
     start_label = datetime.fromtimestamp(min_ts, tz=timezone.utc).strftime("%b %-d")
     end_label = datetime.fromtimestamp(max_ts, tz=timezone.utc).strftime("%b %-d")
+    # Tagged so a scrub can fade them: the cursor's own timestamp lands on
+    # this same baseline, and these two static endpoints are exactly what it
+    # would collide with there.
     x_labels_svg = (
-        f'<text x="{left_pad}" y="{height - 4}" font-size="9" fill="#8a8f9a" text-anchor="start">{start_label}</text>'
-        f'<text x="{left_pad + plot_w}" y="{height - 4}" font-size="9" fill="#8a8f9a" text-anchor="end">{end_label}</text>'
+        f'<text class="ml-xlabel" x="{left_pad}" y="{height - 4}" font-size="9" fill="#8a8f9a" text-anchor="start">{start_label}</text>'
+        f'<text class="ml-xlabel" x="{left_pad + plot_w}" y="{height - 4}" font-size="9" fill="#8a8f9a" text-anchor="end">{end_label}</text>'
     )
 
     def render_line(points, color, price_label=None):

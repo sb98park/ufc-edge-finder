@@ -4777,11 +4777,15 @@
     text-anchor: middle; pointer-events: none;
   }
   .ml-scrub-line, .ml-scrub-dot, .ml-stamp { opacity: 0; transition: opacity 0.12s ease; }
+  /* The stamp lands on the x-axis baseline, which is where these two static
+     endpoints live. Trade them for it rather than stacking both. */
+  .ml-xlabel { transition: opacity 0.12s ease; }
+  .dual-chart.scrubbing .ml-xlabel { opacity: 0; }
   .dual-chart.scrubbing .ml-scrub-line,
   .dual-chart.scrubbing .ml-scrub-dot,
   .dual-chart.scrubbing .ml-stamp { opacity: 1; }
   @media (prefers-reduced-motion: reduce) {
-    .ml-future, .ml-scrub-line, .ml-scrub-dot, .ml-stamp { transition: none; }
+    .ml-future, .ml-scrub-line, .ml-scrub-dot, .ml-stamp, .ml-xlabel { transition: none; }
   }
   /* ===== Units chart scrubbing ===== */
   /* Same dimming contract as the moneyline charts above: what is AFTER the
@@ -8581,6 +8585,7 @@
         if (!data || !data.x || data.x.length < 2) { state.set(svg, null); return null; }
 
         const ns = 'http://www.w3.org/2000/svg';
+        const vb = svg.viewBox.baseVal;
         const top = parseFloat(svg.dataset.plotTop) || 0;
         const h = parseFloat(svg.dataset.plotH) || 0;
         const line = document.createElementNS(ns, 'line');
@@ -8591,7 +8596,12 @@
         [dotA, dotB].forEach(d => { d.setAttribute('class', 'ml-scrub-dot'); d.setAttribute('r', '4'); });
         const stamp = document.createElementNS(ns, 'text');
         stamp.setAttribute('class', 'ml-stamp');
-        stamp.setAttribute('y', Math.max(9, top - 4));
+        // ON THE X AXIS, not above the plot. At the top it was centred on the
+        // cursor and the legend is pinned to the top right, so any scrub into
+        // the right-hand third drove the timestamp straight through it. The
+        // bottom baseline is also where a time value belongs -- the x axis IS
+        // time -- and nothing else is pinned there once the endpoints fade.
+        stamp.setAttribute('y', vb.height - 4);
         svg.appendChild(line); svg.appendChild(dotA); svg.appendChild(dotB); svg.appendChild(stamp);
 
         // The legend is two labels per fighter (a % one and an odds one, one
@@ -8614,6 +8624,7 @@
         dotB.setAttribute('fill', strokeB ? strokeB.getAttribute('stroke') : '#fff');
 
         const ctx = { data, line, dotA, dotB, stamp, labels, past, future,
+                      vbWidth: vb.width || 300,
                       left: parseFloat(svg.dataset.plotLeft) || 0,
                       right: parseFloat(svg.dataset.plotRight) || 0 };
         state.set(svg, ctx);
@@ -8641,7 +8652,11 @@
         ctx.dotB.setAttribute('cx', x); ctx.dotB.setAttribute('cy', d.yb[i]);
         ctx.stamp.textContent = d.t[i];
         // Keep the stamp inside the frame at both ends.
-        ctx.stamp.setAttribute('x', Math.min(Math.max(x, ctx.left + 26), ctx.right - 26));
+        // Measured, not assumed: "SAT 6:10 AM" and "WED 12:20 AM" differ by
+        // enough to clip one and not the other at the same fixed margin.
+        let half = 32;
+        try { const w = ctx.stamp.getComputedTextLength(); if (w > 0) half = w / 2 + 2; } catch (e) {}
+        ctx.stamp.setAttribute('x', Math.min(Math.max(x, half), ctx.vbWidth - half));
         if (ctx.past) ctx.past.setAttribute('width', Math.max(0, x - ctx.left));
         if (ctx.future) {
           ctx.future.setAttribute('x', x);
