@@ -162,12 +162,15 @@ def build_category_radar_svg(rows, size: int = 250) -> str:
             f'{r["label"].upper()}</text>')
     # B under A so the red corner reads on top, matching every other paired
     # element on the card.
+    # Held back rather than appended: they go inside the .radar-polygon group
+    # below, which needs the viewBox to have been computed first.
+    data_polys = []
     for key, stroke, fill in (("b", "#3b82f6", "rgba(59,130,246,0.22)"),
                               ("a", "#e53935", "rgba(229,57,53,0.22)")):
         pts = polygon(key)
         if pts:
-            out.append(f'<polygon points="{pts}" fill="{fill}" stroke="{stroke}" '
-                       f'stroke-width="1.6" stroke-linejoin="round"/>')
+            data_polys.append(f'<polygon points="{pts}" fill="{fill}" stroke="{stroke}" '
+                              f'stroke-width="1.6" stroke-linejoin="round"/>')
 
     # A TIGHT viewBox, computed rather than assumed. A square box around a
     # pentagon leaves roughly 50px of empty canvas under the two bottom
@@ -180,6 +183,35 @@ def build_category_radar_svg(rows, size: int = 250) -> str:
     bottom = cy + label_r * max(sins) + 8
     w = size + 2 * CATEGORY_PAD
     h = bottom - top
+
+    # THE SCROLL-IN REVEAL. .radar-polygon is what the stylesheet scales from
+    # 0 to 1 once the block enters view; rebuilding this chart for the five
+    # categories dropped the class, so the polygons were simply painted at
+    # full size and the animation had nothing to act on.
+    #
+    # One group around BOTH polygons, not the class on each: the two have
+    # different bounding boxes, so per-polygon origins would grow them from
+    # two different points. A radar expands from its centre.
+    #
+    # transform-origin is written explicitly because the default (50% 50%)
+    # is the centre of the viewBox, and this viewBox is deliberately tight
+    # and vertically asymmetric -- its centre is not the centre of the
+    # pentagon.
+    #
+    # PLAIN cx/cy, with no viewBox offset applied. Under
+    # transform-box: view-box these lengths resolve in the same user
+    # coordinates the polygon points are already written in, so the centre is
+    # simply (cx, cy). Offsetting them by the viewBox min corner first --
+    # which looks right and is not -- put the growth origin 37px off, and the
+    # radar unfolded from a point outside itself. Measured: an origin of
+    # 0px 0px fixes the scale at user (0, 0), and 125px is the pentagon
+    # centre of a 250px chart.
+    if data_polys:
+        out.append(
+            f'<g class="radar-polygon" style="transform-box: view-box; '
+            f'transform-origin: {cx:.1f}px {cy:.1f}px;">'
+            + "".join(data_polys) + '</g>')
+
     return (f'<svg class="radar-chart" viewBox="{-CATEGORY_PAD} {top:.1f} {w} {h:.1f}" '
             f'width="{w}" height="{h:.1f}" role="img" '
             f'aria-label="Category comparison">{"".join(out)}</svg>')
