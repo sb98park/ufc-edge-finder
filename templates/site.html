@@ -4761,7 +4761,35 @@
      equivalent is what lands -- but it stops shouting. */
   .units-dollars strong { color: var(--text-soft); font-weight: 600; font-family: var(--font-display); }
 
+  /* ===== Moneyline chart scrubbing =====
+     Hold anywhere on a dual chart to read both prices at that moment. What is
+     AFTER the finger dims, so the chart reads as "here is what was known
+     then" rather than as a cursor sitting on a finished picture. */
+  .dual-chart { touch-action: pan-y; }
+  /* Opacity, not a darker stroke: the two series are red and blue here and
+     gold elsewhere, and a dim colour would have to be chosen per series. */
+  .ml-future { opacity: 0; transition: opacity 0.12s ease; }
+  .dual-chart.scrubbing .ml-future { opacity: 0.22; }
+  .ml-scrub-line { stroke: rgba(255,255,255,0.45); stroke-width: 1; stroke-dasharray: 3,3; pointer-events: none; }
+  .ml-scrub-dot { pointer-events: none; }
+  .ml-stamp {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.06em; fill: var(--text-soft);
+    text-anchor: middle; pointer-events: none;
+  }
+  .ml-scrub-line, .ml-scrub-dot, .ml-stamp { opacity: 0; transition: opacity 0.12s ease; }
+  .dual-chart.scrubbing .ml-scrub-line,
+  .dual-chart.scrubbing .ml-scrub-dot,
+  .dual-chart.scrubbing .ml-stamp { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .ml-future, .ml-scrub-line, .ml-scrub-dot, .ml-stamp { transition: none; }
+  }
   /* ===== Units chart scrubbing ===== */
+  /* Same dimming contract as the moneyline charts above: what is AFTER the
+     finger fades, so a held point reads as "the record as it stood then"
+     rather than as a cursor parked on a finished line. */
+  .ut-future { opacity: 0; transition: opacity 0.12s ease; }
+  .units-chart-wrap.scrubbing .ut-future { opacity: 0.22; }
+  @media (prefers-reduced-motion: reduce) { .ut-future { transition: none; } }
   .units-chart-wrap { position: relative; touch-action: pan-y; }
   .units-chart-wrap svg { display: block; }
   .scrub-readout {
@@ -8530,6 +8558,146 @@
     })();
 
 
+    // ===== Moneyline chart scrubbing =====
+    // Hold a finger anywhere on a dual chart to read BOTH prices at that
+    // moment. The legend already names the two fighters and shows their
+    // current price, so it is the natural readout -- no second panel to place,
+    // and the reader's eye is already there.
+    //
+    // Everything after the held point dims. Without that the chart still
+    // shows its endpoint, and a scrub reads as a cursor laid over a finished
+    // picture rather than as the market at that time.
+    //
+    // Delegated, in the CAPTURE phase, for the same reason the scout pills
+    // are: the fight card's handler chain calls stopPropagation, so a
+    // bubble-phase listener inside a card never fires.
+    function initMoneylineScrub() {
+      const state = new WeakMap();
+
+      function setup(svg) {
+        if (state.has(svg)) return state.get(svg);
+        let data;
+        try { data = JSON.parse(svg.dataset.scrub || 'null'); } catch (e) { data = null; }
+        if (!data || !data.x || data.x.length < 2) { state.set(svg, null); return null; }
+
+        const ns = 'http://www.w3.org/2000/svg';
+        const top = parseFloat(svg.dataset.plotTop) || 0;
+        const h = parseFloat(svg.dataset.plotH) || 0;
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('class', 'ml-scrub-line');
+        line.setAttribute('y1', top); line.setAttribute('y2', top + h);
+        const dotA = document.createElementNS(ns, 'circle');
+        const dotB = document.createElementNS(ns, 'circle');
+        [dotA, dotB].forEach(d => { d.setAttribute('class', 'ml-scrub-dot'); d.setAttribute('r', '4'); });
+        const stamp = document.createElementNS(ns, 'text');
+        stamp.setAttribute('class', 'ml-stamp');
+        stamp.setAttribute('y', Math.max(9, top - 4));
+        svg.appendChild(line); svg.appendChild(dotA); svg.appendChild(dotB); svg.appendChild(stamp);
+
+        // The legend is two labels per fighter (a % one and an odds one, one
+        // of which the unit toggle hides). Each reads "Surname value", so the
+        // prefix is kept and only the value swapped -- and the original text
+        // is stored, because release has to put the CURRENT price back.
+        // Tagged in the SVG with .ml-legend and data-series, rather than
+        // picked out by position. The first version filtered on x greater than
+        // the plot's right edge, which selected nothing: the legend sits at
+        // width-14, INSIDE that boundary, so the readout silently never
+        // updated while every other part of the scrub worked.
+        const labels = [...svg.querySelectorAll('.ml-legend')];
+        labels.forEach(el => { el.dataset.original = el.textContent; });
+
+        const past = svg.querySelector('.ml-clip-past');
+        const future = svg.querySelector('.ml-clip-future');
+        const strokeA = svg.querySelector('.ml-past polyline');
+        const strokeB = [...svg.querySelectorAll('.ml-past polyline')][1];
+        dotA.setAttribute('fill', strokeA ? strokeA.getAttribute('stroke') : '#fff');
+        dotB.setAttribute('fill', strokeB ? strokeB.getAttribute('stroke') : '#fff');
+
+        const ctx = { data, line, dotA, dotB, stamp, labels, past, future,
+                      left: parseFloat(svg.dataset.plotLeft) || 0,
+                      right: parseFloat(svg.dataset.plotRight) || 0 };
+        state.set(svg, ctx);
+        return ctx;
+      }
+
+      function nearest(ctx, svg, clientX) {
+        const r = svg.getBoundingClientRect();
+        const vb = svg.viewBox.baseVal;
+        const sx = ((clientX - r.left) / r.width) * vb.width + vb.x;
+        const xs = ctx.data.x;
+        let lo = 0, hi = xs.length - 1;
+        while (lo < hi) {                         // binary search: 240 points
+          const mid = (lo + hi) >> 1;
+          if (xs[mid] < sx) lo = mid + 1; else hi = mid;
+        }
+        if (lo > 0 && Math.abs(xs[lo - 1] - sx) < Math.abs(xs[lo] - sx)) lo--;
+        return lo;
+      }
+
+      function show(svg, ctx, i) {
+        const d = ctx.data, x = d.x[i];
+        ctx.line.setAttribute('x1', x); ctx.line.setAttribute('x2', x);
+        ctx.dotA.setAttribute('cx', x); ctx.dotA.setAttribute('cy', d.ya[i]);
+        ctx.dotB.setAttribute('cx', x); ctx.dotB.setAttribute('cy', d.yb[i]);
+        ctx.stamp.textContent = d.t[i];
+        // Keep the stamp inside the frame at both ends.
+        ctx.stamp.setAttribute('x', Math.min(Math.max(x, ctx.left + 26), ctx.right - 26));
+        if (ctx.past) ctx.past.setAttribute('width', Math.max(0, x - ctx.left));
+        if (ctx.future) {
+          ctx.future.setAttribute('x', x);
+          ctx.future.setAttribute('width', Math.max(0, ctx.right + 44 - x));
+        }
+        ctx.labels.forEach(el => {
+          const isPct = el.classList.contains('label-pct');
+          const isB = el.dataset.series === 'b';
+          const value = isPct ? ((isB ? d.pb[i] : d.pa[i]) + '%')
+                              : (isB ? d.ob[i] : d.oa[i]);
+          const original = el.dataset.original || '';
+          const prefix = original.replace(/\s*[^\s]+$/, '');
+          if (value) el.textContent = prefix + ' ' + value;
+        });
+        svg.classList.add('scrubbing');
+      }
+
+      function clear(svg) {
+        const ctx = state.get(svg);
+        if (!ctx) return;
+        svg.classList.remove('scrubbing');
+        if (ctx.past) ctx.past.setAttribute('width', (ctx.right + 44) - ctx.left);
+        if (ctx.future) ctx.future.setAttribute('width', 0);
+        ctx.labels.forEach(el => { if (el.dataset.original) el.textContent = el.dataset.original; });
+      }
+
+      let active = null;
+      document.addEventListener('pointerdown', function (e) {
+        const svg = e.target.closest && e.target.closest('.dual-chart[data-scrub]');
+        if (!svg) return;
+        const ctx = setup(svg);
+        if (!ctx) return;
+        active = svg;
+        show(svg, ctx, nearest(ctx, svg, e.clientX));
+      }, true);
+
+      document.addEventListener('pointermove', function (e) {
+        if (!active) return;
+        const ctx = state.get(active);
+        if (!ctx) return;
+        // Holding the chart is a read, not a scroll -- otherwise the page
+        // slides away under the finger the moment it drifts vertically.
+        e.preventDefault();
+        show(active, ctx, nearest(ctx, active, e.clientX));
+      }, { capture: true, passive: false });
+
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
+        document.addEventListener(evt, function () {
+          if (!active) return;
+          clear(active);
+          active = null;
+        }, true);
+      });
+    }
+    initMoneylineScrub();
+
     // ===== Units chart scrubbing =====
     // Drag (or hover on desktop) along the chart to read the cumulative
     // figure at any pick. The big number rolls with the same odometer helper
@@ -8599,6 +8767,30 @@
       svg.appendChild(line);
       svg.appendChild(dot);
 
+      // The two clip rects that split the line at the finger. Both are
+      // full-width in the markup, so if either is missing the chart still
+      // draws whole and only the dimming is lost.
+      const clipPast = svg.querySelector('.ut-clip-past');
+      const clipFuture = svg.querySelector('.ut-clip-future');
+      const plotLeft = clipPast ? parseFloat(clipPast.getAttribute('x')) : 0;
+      const plotW = clipPast ? parseFloat(clipPast.getAttribute('width')) : 0;
+      function split(x) {
+        if (!clipPast || !clipFuture) return;
+        // Clamp: a finger past either end must not give a rect a negative
+        // width, which Safari treats as an error and drops the whole clip --
+        // taking the series with it.
+        const cx = Math.max(plotLeft, Math.min(x, plotLeft + plotW));
+        clipPast.setAttribute('width', (cx - plotLeft).toFixed(1));
+        clipFuture.setAttribute('x', cx.toFixed(1));
+        clipFuture.setAttribute('width', (plotLeft + plotW - cx).toFixed(1));
+      }
+      function unsplit() {
+        if (!clipPast || !clipFuture) return;
+        clipPast.setAttribute('width', plotW.toFixed(1));
+        clipFuture.setAttribute('x', plotLeft.toFixed(1));
+        clipFuture.setAttribute('width', plotW.toFixed(1));
+      }
+
       const fmtU = v => (v >= 0 ? '+' : '') + v.toFixed(2);
       const fmtD = v => (v >= 0 ? '+' : '-') + '$' + Math.abs(v * 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
@@ -8624,6 +8816,7 @@
         const won = p && p.won;
         dot.setAttribute('fill', p ? (won ? 'var(--green)' : '#ff5c5c') : '#8b93a3');
         line.style.display = dot.style.display = '';
+        split(xs[i]);
         wrap.classList.add('scrubbing');
 
         // Cumulative value at this index comes from the points payload's
@@ -8660,6 +8853,7 @@
       function reset() {
         line.style.display = dot.style.display = 'none';
         wrap.classList.remove('scrubbing');
+        unsplit();
         if (window.__rollTo) window.__rollTo(figure, fmtU(total));
         else figure.textContent = fmtU(total);
         if (dollars) dollars.textContent = fmtD(total);
@@ -11101,7 +11295,7 @@
         // page level -- and it is why a leftward swipe on the toast looked
         // like it "worked" despite the toast itself refusing to dismiss that
         // way.
-        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .cnav, .mobile-tabbar, .units-chart-wrap, .silhouette-wrap, #edge-back, .whats-new-banner, [data-scrollable]')) {
+        if (e.target.closest('.table-scroll, .seg-tabs, .track-tabs, .cnav, .dual-chart, .mobile-tabbar, .units-chart-wrap, .silhouette-wrap, #edge-back, .whats-new-banner, [data-scrollable]')) {
           tracking = false; return;
         }
         touchStartX = e.touches[0].clientX;

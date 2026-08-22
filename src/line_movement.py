@@ -41,6 +41,16 @@ STALE_ENTRY_DAYS = 45
 # everywhere. Safe here specifically because this chart has no direction
 # colouring: it draws in greys and one accent, so corner-red can't be
 # confused with a falling line.
+# Scrub samples kept per chart. Above this a fingertip cannot address
+# individual points anyway, and the payload is shipped inline per fight.
+SCRUB_MAX_POINTS = 240
+
+
+def _html_escape(text: str) -> str:
+    """For a single-quoted SVG attribute: quotes and & only."""
+    return (text.replace('&', '&amp;').replace("'", '&#39;')
+                .replace('<', '&lt;').replace('>', '&gt;'))
+
 LINE_COLOR_A = "#e53935"
 LINE_COLOR_B = "#3b82f6"
 
@@ -477,11 +487,11 @@ def build_dual_line_chart_svg(
         odds_a = _book_odds_label(raw_a, complement_a) if complement_a is not None else None
         legend_svg += (
             (f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{_colour_a}"/>' if show_dot else '')
-            + f'<text class="label-pct" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{_colour_a}" text-anchor="end">{short_name_a} {pct_a}%</text>'
+            + f'<text class="label-pct ml-legend" data-series="a" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{_colour_a}" text-anchor="end">{short_name_a} {pct_a}%</text>'
         )
         if odds_a:
             legend_svg += (
-                f'<text class="label-odds" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{_colour_a}" text-anchor="end">{short_name_a} {odds_a}</text>'
+                f'<text class="label-odds ml-legend" data-series="a" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{_colour_a}" text-anchor="end">{short_name_a} {odds_a}</text>'
             )
         ly += 13
     if pct_b is not None:
@@ -489,11 +499,11 @@ def build_dual_line_chart_svg(
         odds_b = _book_odds_label(raw_b, complement_b) if complement_b is not None else None
         legend_svg += (
             f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{LINE_COLOR_B}"/>'
-            f'<text class="label-pct" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {pct_b}%</text>'
+            f'<text class="label-pct ml-legend" data-series="b" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {pct_b}%</text>'
         )
         if odds_b:
             legend_svg += (
-                f'<text class="label-odds" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {odds_b}</text>'
+                f'<text class="label-odds ml-legend" data-series="b" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {odds_b}</text>'
             )
 
     # Reveal mask: a rect covering the plot area that shrinks away via
@@ -518,17 +528,75 @@ def build_dual_line_chart_svg(
     # immediately and never move; the line is revealed left to right beneath a
     # clip rect whose scaleX animates -- still a transform, so it keeps the
     # hardware compositing the mask was chosen for.
+    # ===== SCRUB TIMELINE =====================================================
+    # A reader holding a finger on the chart wants both prices AT THAT MOMENT,
+    # not the endpoint. The two series are sampled independently, so neither
+    # one's timestamps can serve as the shared axis: this merges them and
+    # forward-fills each side, which is the honest reading of a step chart --
+    # a price holds until it next changes.
+    #
+    # Downsampled to SCRUB_MAX_POINTS. The CLOB history runs to ~850 points on
+    # a 300px-wide chart, so three quarters of them cannot be landed on with a
+    # fingertip, and shipping them all would trade page weight for precision
+    # nobody can express.
+    scrub_json = ""
+    if points_a and points_b:
+        merged_ts = sorted({t for t, _ in points_a} | {t for t, _ in points_b})
+        if len(merged_ts) > SCRUB_MAX_POINTS:
+            step = len(merged_ts) / SCRUB_MAX_POINTS
+            merged_ts = [merged_ts[min(len(merged_ts) - 1, int(i * step))]
+                         for i in range(SCRUB_MAX_POINTS)]
+            merged_ts = sorted(set(merged_ts))
+
+        def _fill(points):
+            """Value of this series at each merged timestamp, carried forward."""
+            ordered = sorted(points, key=lambda p: p[0])
+            out, j, last = [], 0, ordered[0][1]
+            for t in merged_ts:
+                while j < len(ordered) and ordered[j][0] <= t:
+                    last = ordered[j][1]
+                    j += 1
+                out.append(last)
+            return out
+
+        fill_a, fill_b = _fill(points_a), _fill(points_b)
+        scrub = {
+            "x": [round(x_at(t), 1) for t in merged_ts],
+            "ya": [round(y_at(v), 1) for v in fill_a],
+            "yb": [round(y_at(v), 1) for v in fill_b],
+            "t": [datetime.fromtimestamp(t, tz=timezone.utc).strftime("%a %-I:%M %p").upper()
+                  for t in merged_ts],
+            "pa": [round(v * 100) for v in fill_a],
+            "pb": [round(v * 100) for v in fill_b],
+            # Both representations, because the chart's legend has a %/odds
+            # toggle and the scrub has to answer in whichever unit is showing.
+            "oa": [_book_odds_label(va, vb) or "" for va, vb in zip(fill_a, fill_b)],
+            "ob": [_book_odds_label(vb, va) or "" for va, vb in zip(fill_a, fill_b)],
+        }
+        scrub_json = _html_escape(json.dumps(scrub, separators=(",", ":")))
+
     clip_id = f"reveal-{abs(hash((width, height, len(points_a), len(points_b), name_a, name_b))) % 10**8}"
+    past_id, future_id = f"past-{clip_id}", f"future-{clip_id}"
     clip_svg = (
         f'<defs><clipPath id="{clip_id}">'
         f'<rect x="{left_pad}" y="{top_pad - 4}" width="{plot_w + right_pad}" height="{plot_h + 8}" '
         f'class="chart-reveal-clip" style="transform-box: fill-box; transform-origin: left center;"/>'
-        f'</clipPath></defs>'
+        f'</clipPath>'
+        # Scrub clips. Defaults chosen so an untouched chart is unchanged:
+        # the past covers everything, the future covers nothing.
+        f'<clipPath id="{past_id}"><rect class="ml-clip-past" x="{left_pad}" y="{top_pad - 4}" '
+        f'width="{plot_w + right_pad}" height="{plot_h + 8}"/></clipPath>'
+        f'<clipPath id="{future_id}"><rect class="ml-clip-future" x="{left_pad}" y="{top_pad - 4}" '
+        f'width="0" height="{plot_h + 8}"/></clipPath>'
+        f'</defs>'
     )
 
     return (
         f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" class="dual-chart" role="img" '
-        f'aria-label="{name_a} vs {name_b} probability over time{" (one side implied)" if (implied_a or implied_b) else ""}">'
+        + (f'data-scrub=\'{scrub_json}\' data-plot-left="{left_pad}" '
+           f'data-plot-right="{left_pad + plot_w}" data-plot-top="{top_pad - 4}" '
+           f'data-plot-h="{plot_h + 8}" ' if scrub_json else '')
+        + f'aria-label="{name_a} vs {name_b} probability over time{" (one side implied)" if (implied_a or implied_b) else ""}">'
         # Grid and axes first and UNCLIPPED -- they are the backdrop and are
         # there from the first frame. Only the lines sit inside the clip.
         # Grid and axes render immediately. The lines, their endpoint dots and
@@ -538,7 +606,16 @@ def build_dual_line_chart_svg(
         # than timed, so no amount of earlier revealing can put them on screen
         # before the line.
         + clip_svg + grid_svg + axis_svg + x_labels_svg
-        + f'<g clip-path="url(#{clip_id})">' + line_a_svg + line_b_svg + halo_svg + '</g>'
+        # DIM COPY FIRST, LIVE COPY OVER IT. Both are clipped: the dim one to
+        # everything after the finger, the live one to everything before. With
+        # no scrub the past rect spans the plot and the future rect is empty,
+        # so this is exactly the old picture until someone touches it.
+        # Opacity rather than a darker stroke, so it works whatever colour a
+        # series happens to be.
+        + f'<g clip-path="url(#{clip_id})">'
+        + f'<g class="ml-past" clip-path="url(#{past_id})">' + line_a_svg + line_b_svg + halo_svg + '</g>'
+        + f'<g class="ml-future" clip-path="url(#{future_id})">' + line_a_svg + line_b_svg + '</g>'
+        + '</g>'
         + endpoint_price_svg
         + legend_svg +
         '</svg>'

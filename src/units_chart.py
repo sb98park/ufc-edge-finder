@@ -109,11 +109,42 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     # charts. The mask was an opaque rect painted over the whole plot area,
     # so the gridlines and axis labels animated in with the line and the
     # effect read as a box sliding away rather than a line being drawn.
+    # Two more clips on top of the reveal clip: everything BEFORE the finger
+    # and everything AFTER it. Both start covering the full plot so the chart
+    # is whole at rest; the scrub narrows them against each other. The future
+    # group is transparent until .scrubbing, so at rest the past group alone
+    # draws the chart and the duplicate is invisible.
     mask_svg = (
         f'<defs><clipPath id="units-reveal">'
         f'<rect x="{pad_left}" y="{pad_top - 6}" width="{plot_w + 12}" height="{plot_h + 12}" '
         f'class="chart-reveal-clip" style="transform-box: fill-box; transform-origin: left center;"/>'
-        f'</clipPath></defs>'
+        f'</clipPath>'
+        f'<clipPath id="units-past"><rect class="ut-clip-past" x="{pad_left}" y="{pad_top - 6}" '
+        f'width="{plot_w + 12}" height="{plot_h + 12}"/></clipPath>'
+        f'<clipPath id="units-future"><rect class="ut-clip-future" x="{pad_left}" y="{pad_top - 6}" '
+        f'width="{plot_w + 12}" height="{plot_h + 12}"/></clipPath>'
+        f'</defs>'
+    )
+
+    # Built once, drawn twice -- once per clip group. Emitting the geometry
+    # from a single string keeps the two copies from drifting.
+    _series_svg = (
+        f'<path d="{fill_path}" fill="url(#units-ts-fill)" stroke="none"/>'
+        f'<polyline points="{poly_points}" fill="none" stroke="{trend_color}" '
+        f'stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>'
+        # INSIDE the clip. The dot was outside it, hidden only by an opacity
+        # delay -- which works right up until the block was revealed earlier
+        # than the reader scrolled to it, and then the dot simply sat there
+        # waiting for the line. Inside, it is uncovered by the clip edge
+        # reaching its x position, which IS the moment the line arrives.
+        f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="{trend_color}"/>'
+        # The HALO belongs inside too. It is a ring at the same point as the
+        # dot, so leaving it outside meant a circle sat visible at the end of
+        # the line before the line arrived -- indistinguishable from the dot
+        # itself, which is why moving only the dot appeared to fix nothing.
+        f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="none" stroke="{trend_color}" '
+        f'stroke-width="1.5" class="chart-endpoint-halo" '
+        f'style="transform-box: fill-box; transform-origin: center;"/>'
     )
 
     # Expose the plotted coordinates so the client can map a finger or cursor
@@ -135,19 +166,7 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
   </defs>
   {mask_svg}
   <g clip-path="url(#units-reveal)">
-    <path d="{fill_path}" fill="url(#units-ts-fill)" stroke="none"/>
-    <polyline points="{poly_points}" fill="none" stroke="{trend_color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
-    <!-- INSIDE the clip. The dot was outside it, hidden only by an opacity
-         delay -- which works right up until the block was revealed earlier
-         than the reader scrolled to it, and then the dot simply sat there
-         waiting for the line. Inside, it is uncovered by the clip edge
-         reaching its x position, which IS the moment the line arrives.
-         No timing, no class state, nothing to get out of sync. -->
-    <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="{trend_color}"/>
-    <!-- The HALO belongs inside too. It is a ring at the same point as the
-         dot, so leaving it outside meant a circle sat visible at the end of
-         the line before the line arrived -- indistinguishable from the dot
-         itself, which is why moving only the dot appeared to fix nothing. -->
-    <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4" fill="none" stroke="{trend_color}" stroke-width="1.5" class="chart-endpoint-halo" style="transform-box: fill-box; transform-origin: center;"/>
+    <g class="ut-past" clip-path="url(#units-past)">{_series_svg}</g>
+    <g class="ut-future" clip-path="url(#units-future)">{_series_svg}</g>
   </g>
 </svg>"""
