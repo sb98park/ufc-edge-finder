@@ -8,6 +8,7 @@ disagreements. Run by GitHub Actions on a schedule; can also run locally:
 
 import datetime as dt
 import json
+import argparse
 import os
 import re
 import unicodedata
@@ -18,6 +19,8 @@ import pandas as pd
 from scripts.build_pit_stats import enrich_roster
 from src.rationale import set_card_cohort
 from jinja2 import Environment, FileSystemLoader
+
+from src import tiering
 
 from src.elo import EloRatingSystem
 from src.fighter_history import build_fighter_history, fold_name as fh_fold, summarise as fh_summarise
@@ -62,6 +65,7 @@ from src.fun_facts import compute_fun_facts
 
 DATA_DIR = "data"
 OUTPUT_PATH = "docs/index.html"
+FREE_OUTPUT_PATH = "build/free.html"
 
 
 def _format_friendly_date(date_str: str) -> str:
@@ -154,7 +158,7 @@ def _soonest(event_list):
     return min(dated, key=lambda e: str(e["event_date"]))
 
 
-def main():
+def main(tier: str = "member", output_path: str | None = None):
     cards_df = load_fight_cards(f"{DATA_DIR}/fight_cards.csv")
 
     try:
@@ -1170,6 +1174,11 @@ def main():
             espn_live_fight_key = None
 
     env = Environment(loader=FileSystemLoader("templates"))
+    # A GLOBAL, not a context variable. Jinja macros do not see the render
+    # context, and every fight card is rendered through render_fight_card --
+    # so a context-passed `tier` would read as Undefined inside exactly the
+    # markup that needs to consult it, silently taking the member branch.
+    env.globals["tier"] = tier
     env.filters["american"] = format_american_odds
     # Probability -> the price at which a bet on it breaks even, i.e. the
     # model's own fair line. Both existing helpers already exist; this just
@@ -1392,7 +1401,7 @@ def main():
                 if _f.get(_side):
                     _f[f"{_side}_key"] = fh_fold(_f[_side])
 
-    html = template.render(
+    context = dict(
         events=events,
         future_events=future_events,
         unmatched=unmatched_df.to_dict("records") if not unmatched_df.empty else [],
@@ -1436,10 +1445,26 @@ def main():
         generated_at_short=generated_at_short,
         generated_at_time_only=generated_at_time_only,
         generated_at_date=generated_at_date,
+        tier="member",
     )
 
-    os.makedirs("docs", exist_ok=True)
-    with open(OUTPUT_PATH, "w") as f:
+    # THE PAYWALL PARTITION. Redaction happens here, on the data, rather than
+    # as conditionals inside the template -- see src/tiering.py for why sixty
+    # `{% if tier %}` branches would have been the more dangerous design.
+    if tier == "free":
+        context, _redacted, _assertable = tiering.redact_context(context)
+        os.makedirs("build", exist_ok=True)
+        with open("build/redacted-manifest.json", "w") as _mf:
+            json.dump({"count": len(_redacted), "removed": _redacted,
+                       "values": _assertable}, _mf, indent=1)
+        print(f"[tier] redacted {len(_redacted)} model value(s); "
+              f"{len(_assertable)} distinctive enough to assert on")
+
+    html = template.render(**context)
+
+    out_path = output_path or OUTPUT_PATH
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    with open(out_path, "w") as f:
         f.write(html)
 
     # Secondary movement charts, one fragment per fight, fetched when the
@@ -1454,6 +1479,13 @@ def main():
     # otherwise leave its file behind forever, and the directory only ever
     # grows in a repo that already has a size problem.
     mv_dir = os.path.join("docs", "movements")
+    # Only the canonical build owns this directory. The fragments are line
+    # movements -- market data, free in both tiers -- so a free build
+    # regenerating them would clear and rewrite files the member build is
+    # serving, for no difference in content.
+    if out_path != OUTPUT_PATH:
+        print(f"Wrote {out_path} (tier={tier}); movement fragments left to the canonical build")
+        return
     if os.path.isdir(mv_dir):
         for old in os.listdir(mv_dir):
             if old.endswith(".html"):
@@ -1477,9 +1509,16 @@ def main():
             written += 1
             total += len(frag)
 
-    print(f"Wrote {OUTPUT_PATH} ({len(events)} events, {len(future_events)} future events, {len(standout_props)} agreed reads, {len(disagreement_props)} disagreements)")
+    print(f"Wrote {out_path} ({len(events)} events, {len(future_events)} future events, {len(standout_props)} agreed reads, {len(disagreement_props)} disagreements)")
     print(f"Wrote {written} movement fragment(s), {total/1e6:.2f}MB deferred out of the page")
 
 
 if __name__ == "__main__":
-    main()
+    _ap = argparse.ArgumentParser(description="Build the Octane Alpha site.")
+    _ap.add_argument("--tier", choices=("member", "free"), default="member",
+                     help="member (default) writes the full payload to docs/index.html; "
+                          "free writes a model-redacted payload to build/free.html")
+    _ap.add_argument("--out", default=None, help="override the output path")
+    _args = _ap.parse_args()
+    _out = _args.out or (FREE_OUTPUT_PATH if _args.tier == "free" else None)
+    main(tier=_args.tier, output_path=_out)

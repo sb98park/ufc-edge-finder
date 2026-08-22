@@ -7215,9 +7215,9 @@
              American, so in probability mode the reader is comparing 62.0%
              against -130 and doing the conversion in their head -- which is
              the one thing this table exists to save them. #}
-          <tr><th>Market</th><th class="mkt-model-head" data-unit-toggle
+          <tr><th>Market</th>{% if tier != 'free' %}<th class="mkt-model-head" data-unit-toggle
                   title="Tap to switch between model probability and the model's fair price"
-                  role="button" tabindex="0">Model<span class="unit-hint">%</span></th><th title="The price this EV is computed at: the best of the books that quoted it, or the vig-free fair line where none did.">Price</th><th title="Expected value at this price, using the model shrunk toward the market. Edge asks whether the model disagrees; EV asks whether the bet returns money.">EV</th><th title="How far the model's probability sits from the market's fair line, in percentage points.">Edge<span class="unit-tag">pts</span></th></tr>
+                  role="button" tabindex="0">Model<span class="unit-hint">%</span></th>{% endif %}<th title="The price this EV is computed at: the best of the books that quoted it, or the vig-free fair line where none did.">Price</th>{% if tier != 'free' %}<th title="Expected value at this price, using the model shrunk toward the market. Edge asks whether the model disagrees; EV asks whether the bet returns money.">EV</th><th title="How far the model's probability sits from the market's fair line, in percentage points.">Edge<span class="unit-tag">pts</span></th>{% endif %}</tr>
           {% for row in g.rows %}
           {# A HEADING ROW, NOT A NEW TABLE. Fighter props holds a 2x3 -- two
              fighters by three methods -- which sorting by probability hid
@@ -7226,17 +7226,23 @@
              priced-before-unpriced order exactly as Fight props and Round
              props below use them. See group_fighter_props. #}
           {% if row.subhead %}
-          <tr class="mkt-subhead {{ row.subhead_side }}"><td colspan="5">{{ row.subhead }}</td></tr>
+          <tr class="mkt-subhead {{ row.subhead_side }}"><td colspan="{{ 2 if tier == 'free' else 5 }}">{{ row.subhead }}</td></tr>
           {% endif %}
-          <tr class="{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}{{ ' mkt-inblock' if row.route_label }}">
+          {# Edge heat is a MODEL quantity, so the free build has no edge_pct to
+             compute it from -- and `|abs` on an Undefined raises rather than
+             yielding nothing, which is the one way Jinja is not forgiving
+             about a removed field. #}
+          <tr class="{% if tier != 'free' %}{{ 'edge-heat-' ~ (3 if row.edge_pct|abs >= 20 else (2 if row.edge_pct|abs >= 10 else (1 if row.edge_pct|abs >= 5 else 0))) if row.has_line else 'model-only-row' }}{% endif %}{{ ' mkt-inblock' if row.route_label }}">
             <td class="mkt-label">{{ row.route_label or row.label or row.market }}{% if row.market == 'Moneyline' and row.has_line %}<span class="dog-badge-sm {{ 'fav' if row.odds_american < 0 else 'dog' }}">{{ icon_star() if row.odds_american < 0 else icon_underdog() }}</span>{% endif %}</td>
             {# BOTH representations ship in the markup. Swapping textContent
                from a data attribute is instant and cannot fail; recomputing
                client-side would duplicate the odds maths in a second place
                and risk the two disagreeing. #}
+            {% if tier != 'free' %}
             <td class="mkt-model"
                 data-pct="{{ (row.model_prob*100)|round(1) }}%"
                 data-odds="{{ row.model_prob | fair_odds }}">{{ (row.model_prob*100)|round(1) }}%</td>
+            {% endif %}
             {% if row.has_line %}
             <td class="mkt-price">{{ odds_cell(row, show_source=true) }}</td>
             {# EV sits BESIDE edge rather than replacing it, because the pair
@@ -7249,15 +7255,18 @@
                has no way to derive from a single token. A stale EV beside a
                live edge would be worse than an honest static one, so it
                carries the build-time price and moves when the page rebuilds. #}
+            {% if tier != 'free' %}
             <td class="mkt-ev {{ 'edge-pos' if row.ev_pct is real_value and row.ev_pct > 0 else 'edge-neg' }}">
               {%- if row.ev_pct is real_value %}{{ '%+.1f'|format(row.ev_pct) }}%{% else %}—{% endif -%}
             </td>
+            {% endif %}
             {# Inputs for LIVE edge recalculation. edge = model - book_FAIR,
                and "fair" means devigged, which needs both sides of a market.
                The client only ever sees one token's price, so it can't devig
                from scratch -- instead it derives the build-time vig factor
                from (fair / implied) and applies the same correction to the
                live price. Vig doesn't move meaningfully between polls. #}
+            {% if tier != 'free' %}
             <td class="mkt-edge{{ ' edge-fragile' if row.fragile_price }}"
                 {%- if row.fragile_price %} title="Near-certain market: the book price here is thin and the edge figure is unreliable"{% endif %}
                 {%- if row.clob_token_id and row.model_prob is not none and row.book_fair_prob is not none %}
@@ -7276,8 +7285,9 @@
                     nothing on touch), and it marks exactly the rows the site
                     itself calls unreliable. -#}
                 {%- endif %}><span class="edge-value">{{ '%+.1f'|format(row.edge_pct) }}</span>{% if row.fragile_price %}<span class="edge-flag">*</span>{% endif %}</td>
+            {% endif %}
             {% else %}
-            <td class="mkt-none">—</td><td class="mkt-none">—</td><td class="mkt-none">—</td>
+            <td class="mkt-none">—</td>{% if tier != 'free' %}<td class="mkt-none">—</td><td class="mkt-none">—</td>{% endif %}
             {% endif %}
           </tr>
           {% endfor %}

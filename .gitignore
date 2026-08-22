@@ -48,3 +48,6 @@ data/.espn_cache/
 
 __pycache__/
 .DS_Store
+
+# Free-tier payload and its redaction manifest, rebuilt every run.
+build/
