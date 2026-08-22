@@ -315,7 +315,11 @@ def build_dual_line_chart_svg(
     # had to flip left and landed ON the line -- unreadable exactly where the
     # line is most interesting. Widening the gutter lets it always sit to the
     # RIGHT of the dot, on empty background.
-    left_pad, top_pad, bottom_pad = 36, 30, 22
+    left_pad, bottom_pad = 36, 22
+    # 30 existed to clear the two legend rows that used to sit inside the
+    # plot. With the legend moved out to its own rail, the only thing left in
+    # this band is the scrub timestamp, which needs about 20.
+    top_pad = 30 if not show_legend else 24
     right_pad = 44 if not show_legend else 10
     plot_w = width - left_pad - right_pad
     plot_h = height - top_pad - bottom_pad
@@ -477,37 +481,40 @@ def build_dual_line_chart_svg(
     complement_a = raw_b if raw_b is not None else (1 - raw_a if raw_a is not None else None)
     complement_b = raw_a if raw_a is not None else (1 - raw_b if raw_b is not None else None)
 
-    legend_svg = ""
-    ly = 10
+    # THE LEGEND IS AN HTML RAIL NOW, not text pinned inside the plot.
+    # In the plot it occupied the top right, which is exactly where a scrub
+    # timestamp wants to be, and the two collided. Out here it gets a row of
+    # its own under the heading, the whole top of the chart comes free, and
+    # the values are selectable text at a real font size instead of 9px SVG.
+    legend_rail_html = ""
     # A legend distinguishes SERIES. On a single-line chart there is nothing
     # to distinguish, so "Salkilld +259" floating over a Total Rounds chart
     # was labelling the wrong thing entirely -- and the chart's own title
     # already names the market.
     if not show_legend:
         pct_a = pct_b = None
+
+    def _rail_item(colour, short_name, pct, odds, series):
+        cell = (f'<span class="ml-rail-item">'
+                f'<i class="ml-rail-dot" style="background:{colour}"></i>'
+                f'<span class="ml-rail-name">{_html_escape(short_name)}</span>')
+        if pct is not None:
+            cell += (f'<b class="label-pct ml-legend" data-series="{series}">{pct}%</b>')
+        if odds:
+            cell += (f'<b class="label-odds ml-legend" data-series="{series}">{_html_escape(str(odds))}</b>')
+        return cell + '</span>'
+
+    rail_cells = ""
     if pct_a is not None:
         short_name_a = name_a.split()[-1] + (" ~" if implied_a else "")
         odds_a = _book_odds_label(raw_a, complement_a) if complement_a is not None else None
-        legend_svg += (
-            (f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{_colour_a}"/>' if show_dot else '')
-            + f'<text class="label-pct ml-legend" data-series="a" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{_colour_a}" text-anchor="end">{short_name_a} {pct_a}%</text>'
-        )
-        if odds_a:
-            legend_svg += (
-                f'<text class="label-odds ml-legend" data-series="a" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{_colour_a}" text-anchor="end">{short_name_a} {odds_a}</text>'
-            )
-        ly += 13
+        rail_cells += _rail_item(_colour_a, short_name_a, pct_a, odds_a, "a")
     if pct_b is not None:
         short_name_b = name_b.split()[-1] + (" ~" if implied_b else "")
         odds_b = _book_odds_label(raw_b, complement_b) if complement_b is not None else None
-        legend_svg += (
-            f'<circle cx="{width - 8}" cy="{ly}" r="3" fill="{LINE_COLOR_B}"/>'
-            f'<text class="label-pct ml-legend" data-series="b" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {pct_b}%</text>'
-        )
-        if odds_b:
-            legend_svg += (
-                f'<text class="label-odds ml-legend" data-series="b" x="{width - 14}" y="{ly + 3}" font-size="9" font-weight="700" fill="{LINE_COLOR_B}" text-anchor="end">{short_name_b} {odds_b}</text>'
-            )
+        rail_cells += _rail_item(LINE_COLOR_B, short_name_b, pct_b, odds_b, "b")
+    if rail_cells:
+        legend_rail_html = f'<div class="ml-rail">{rail_cells}</div>'
 
     # Reveal mask: a rect covering the plot area that shrinks away via
     # transform:scaleX (anchored to the right edge, so it uncovers left to
@@ -580,6 +587,7 @@ def build_dual_line_chart_svg(
 
     clip_id = f"reveal-{abs(hash((width, height, len(points_a), len(points_b), name_a, name_b))) % 10**8}"
     past_id, future_id = f"past-{clip_id}", f"future-{clip_id}"
+    series_id = f"series-{clip_id}"
     clip_svg = (
         f'<defs><clipPath id="{clip_id}">'
         f'<rect x="{left_pad}" y="{top_pad - 4}" width="{plot_w + right_pad}" height="{plot_h + 8}" '
@@ -594,7 +602,9 @@ def build_dual_line_chart_svg(
         f'</defs>'
     )
 
-    return (
+    # The rail rides ahead of the chart so it lands directly under the
+    # heading the template puts above this block.
+    return legend_rail_html + (
         f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" class="dual-chart" role="img" '
         + (f'data-scrub=\'{scrub_json}\' data-plot-left="{left_pad}" '
            f'data-plot-right="{left_pad + plot_w}" data-plot-top="{top_pad - 4}" '
@@ -615,12 +625,16 @@ def build_dual_line_chart_svg(
         # so this is exactly the old picture until someone touches it.
         # Opacity rather than a darker stroke, so it works whatever colour a
         # series happens to be.
+        # DEFINED ONCE, DRAWN TWICE. Emitting the two polylines into both
+        # groups doubled every chart: the series is 45KB of point data, so the
+        # dim copy alone was adding 1.7MB across the 38 charts on the page.
+        # A <use> reference costs a few dozen bytes and renders identically.
+        + f'<defs><g id="{series_id}" class="ml-series">' + line_a_svg + line_b_svg + '</g></defs>'
         + f'<g clip-path="url(#{clip_id})">'
-        + f'<g class="ml-past" clip-path="url(#{past_id})">' + line_a_svg + line_b_svg + halo_svg + '</g>'
-        + f'<g class="ml-future" clip-path="url(#{future_id})">' + line_a_svg + line_b_svg + '</g>'
+        + f'<g class="ml-past" clip-path="url(#{past_id})"><use href="#{series_id}"/>' + halo_svg + '</g>'
+        + f'<g class="ml-future" clip-path="url(#{future_id})"><use href="#{series_id}"/></g>'
         + '</g>'
-        + endpoint_price_svg
-        + legend_svg +
+        + endpoint_price_svg +
         '</svg>'
     )
 

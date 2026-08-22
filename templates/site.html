@@ -3268,9 +3268,32 @@
   /* Moneyline chart labels: American odds shown by default, raw % hidden;
      body.pct-mode flips it. Class-based (not JS-recomputed) so it works
      correctly even for charts inside not-yet-opened <details> accordions. */
-  .dual-chart .label-pct { display: none; }
-  .dual-chart .label-odds { display: inline; }
+  /* The legend rail. Was two rows of 9px text pinned inside the plot's top
+     right -- which is exactly where a scrub timestamp wants to go, so the
+     two collided. Out here it gets its own row under the heading and the
+     whole top of the chart comes free. */
+  .ml-rail {
+    display: flex; justify-content: center; align-items: center;
+    gap: 14px; flex-wrap: wrap; margin: 0 0 4px;
+  }
+  .ml-rail-item {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: var(--t-tiny); color: var(--muted); white-space: nowrap;
+  }
+  .ml-rail-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .ml-rail-name { color: var(--muted); }
+  .ml-rail b {
+    color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  /* BOTH the rail and the chart. The gridline labels inside the svg carry
+     these same two classes, so scoping the toggle to the rail alone left
+     them with no rule at all and every axis label rendered its percentage
+     and its price on top of each other. */
+  .ml-rail .label-pct, .dual-chart .label-pct { display: none; }
+  .ml-rail .label-odds, .dual-chart .label-odds { display: inline; }
+  body.pct-mode .ml-rail .label-pct,
   body.pct-mode .dual-chart .label-pct { display: inline; }
+  body.pct-mode .ml-rail .label-odds,
   body.pct-mode .dual-chart .label-odds { display: none; }
   details.chart-toggle {
     background: var(--panel2); border: 1px solid var(--border); border-radius: var(--r-lg);
@@ -4777,15 +4800,13 @@
     text-anchor: middle; pointer-events: none;
   }
   .ml-scrub-line, .ml-scrub-dot, .ml-stamp { opacity: 0; transition: opacity 0.12s ease; }
-  /* The stamp lands on the x-axis baseline, which is where these two static
-     endpoints live. Trade them for it rather than stacking both. */
-  .ml-xlabel { transition: opacity 0.12s ease; }
-  .dual-chart.scrubbing .ml-xlabel { opacity: 0; }
+  /* The stamp is back at the top of the plot, so Aug 8 / Aug 22 keep their
+     baseline to themselves and no longer need to fade for it. */
   .dual-chart.scrubbing .ml-scrub-line,
   .dual-chart.scrubbing .ml-scrub-dot,
   .dual-chart.scrubbing .ml-stamp { opacity: 1; }
   @media (prefers-reduced-motion: reduce) {
-    .ml-future, .ml-scrub-line, .ml-scrub-dot, .ml-stamp, .ml-xlabel { transition: none; }
+    .ml-future, .ml-scrub-line, .ml-scrub-dot, .ml-stamp { transition: none; }
   }
   /* ===== Units chart scrubbing ===== */
   /* Same dimming contract as the moneyline charts above: what is AFTER the
@@ -8596,30 +8617,35 @@
         [dotA, dotB].forEach(d => { d.setAttribute('class', 'ml-scrub-dot'); d.setAttribute('r', '4'); });
         const stamp = document.createElementNS(ns, 'text');
         stamp.setAttribute('class', 'ml-stamp');
-        // ON THE X AXIS, not above the plot. At the top it was centred on the
-        // cursor and the legend is pinned to the top right, so any scrub into
-        // the right-hand third drove the timestamp straight through it. The
-        // bottom baseline is also where a time value belongs -- the x axis IS
-        // time -- and nothing else is pinned there once the endpoints fade.
-        stamp.setAttribute('y', vb.height - 4);
+        // Centred above the plot and FIXED there. It sat on the x axis for a
+        // while to dodge the legend, but that put it under the reader's own
+        // thumb. With the legend moved out to its rail the top band is empty,
+        // and holding it still means it never tracks toward a frame edge or
+        // needs clamping -- the dashed cursor already shows the position.
+        stamp.setAttribute('x', (vb.width || 300) / 2);
+        stamp.setAttribute('y', 13);
         svg.appendChild(line); svg.appendChild(dotA); svg.appendChild(dotB); svg.appendChild(stamp);
 
         // The legend is two labels per fighter (a % one and an odds one, one
         // of which the unit toggle hides). Each reads "Surname value", so the
         // prefix is kept and only the value swapped -- and the original text
         // is stored, because release has to put the CURRENT price back.
-        // Tagged in the SVG with .ml-legend and data-series, rather than
-        // picked out by position. The first version filtered on x greater than
-        // the plot's right edge, which selected nothing: the legend sits at
-        // width-14, INSIDE that boundary, so the readout silently never
-        // updated while every other part of the scrub worked.
-        const labels = [...svg.querySelectorAll('.ml-legend')];
+        // On the RAIL, which is a sibling of the svg rather than inside it.
+        // Each label holds only its value now -- the fighter's name is its
+        // own element -- so a scrub overwrites the number and nothing has to
+        // parse a "Surname value" string back apart.
+        const rail = svg.parentElement
+          && svg.parentElement.querySelector('.ml-rail');
+        const labels = rail ? [...rail.querySelectorAll('.ml-legend')] : [];
         labels.forEach(el => { el.dataset.original = el.textContent; });
 
         const past = svg.querySelector('.ml-clip-past');
         const future = svg.querySelector('.ml-clip-future');
-        const strokeA = svg.querySelector('.ml-past polyline');
-        const strokeB = [...svg.querySelectorAll('.ml-past polyline')][1];
+        // The polylines live in <defs> now and are drawn through <use>, so
+        // they are no longer DOM children of .ml-past -- read the colours off
+        // the definition itself.
+        const strokes = svg.querySelectorAll('.ml-series polyline');
+        const strokeA = strokes[0], strokeB = strokes[1];
         dotA.setAttribute('fill', strokeA ? strokeA.getAttribute('stroke') : '#fff');
         dotB.setAttribute('fill', strokeB ? strokeB.getAttribute('stroke') : '#fff');
 
@@ -8651,12 +8677,6 @@
         ctx.dotA.setAttribute('cx', x); ctx.dotA.setAttribute('cy', d.ya[i]);
         ctx.dotB.setAttribute('cx', x); ctx.dotB.setAttribute('cy', d.yb[i]);
         ctx.stamp.textContent = d.t[i];
-        // Keep the stamp inside the frame at both ends.
-        // Measured, not assumed: "SAT 6:10 AM" and "WED 12:20 AM" differ by
-        // enough to clip one and not the other at the same fixed margin.
-        let half = 32;
-        try { const w = ctx.stamp.getComputedTextLength(); if (w > 0) half = w / 2 + 2; } catch (e) {}
-        ctx.stamp.setAttribute('x', Math.min(Math.max(x, half), ctx.vbWidth - half));
         if (ctx.past) ctx.past.setAttribute('width', Math.max(0, x - ctx.left));
         if (ctx.future) {
           ctx.future.setAttribute('x', x);
@@ -8667,9 +8687,7 @@
           const isB = el.dataset.series === 'b';
           const value = isPct ? ((isB ? d.pb[i] : d.pa[i]) + '%')
                               : (isB ? d.ob[i] : d.oa[i]);
-          const original = el.dataset.original || '';
-          const prefix = original.replace(/\s*[^\s]+$/, '');
-          if (value) el.textContent = prefix + ' ' + value;
+          if (value) el.textContent = value;
         });
         svg.classList.add('scrubbing');
       }
@@ -8869,8 +8887,13 @@
         line.style.display = dot.style.display = 'none';
         wrap.classList.remove('scrubbing');
         unsplit();
-        if (window.__rollTo) window.__rollTo(figure, fmtU(total));
-        else figure.textContent = fmtU(total);
+        // DIRECTLY, exactly as show() writes it. Rolling swaps the figure for
+        // a row of .scroll-digit spans, and those clip overflow -- which
+        // slices the figure's green glow into one hard-edged rectangle per
+        // digit. That is the green box that flashed on every release.
+        // The odometer is for a value that changed on its own; releasing a
+        // scrub is just putting back what was already there.
+        figure.textContent = fmtU(total);
         if (dollars) dollars.textContent = fmtD(total);
       }
 
