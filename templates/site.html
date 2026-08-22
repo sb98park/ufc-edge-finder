@@ -10058,38 +10058,89 @@
       // stop the first, or two rAF loops fight over window.scrollY and the
       // page stutters between two targets.
       let activeJump = null;
-      function smoothTo(target, onDone) {
-        const finish = function () { if (onDone) onDone(); };
+
+      // THE ROOT SETS scroll-behavior: smooth. That makes every scrollTo the
+      // animation below performs -- sixty a second -- into its OWN native
+      // smooth scroll toward a target that has already moved by the time it
+      // starts. The browser's scroller and this easing then drive the page
+      // together, mine finishing while the native one is still lagging behind
+      // and carrying on afterwards. That is the "two motions", and it is why
+      // changing the easing curve barely helped: the curve was being
+      // resampled by a second animator downstream of it.
+      //
+      // It is the highlight bug too. The native scroller is still travelling
+      // after the mute expires, so the spy sees each intervening section go
+      // by and lights its chip -- the highlight walking back through the
+      // pills before settling on the destination.
+      //
+      // Suspending it via the style property rather than passing
+      // behavior:'instant' per call, because 'auto' means "whatever CSS
+      // says" (still smooth) and 'instant' is too new to rely on alone.
+      // Depth-counted: a jump cancelled mid-flight must not restore it while
+      // its replacement is still running.
+      let smoothDepth = 0;
+      function suspendNativeSmooth() {
+        if (smoothDepth++ === 0) document.documentElement.style.scrollBehavior = 'auto';
+      }
+      function restoreNativeSmooth() {
+        if (--smoothDepth <= 0) {
+          smoothDepth = 0;
+          document.documentElement.style.scrollBehavior = '';
+        }
+      }
+      // Takes a MEASURING FUNCTION, not a number. A target computed once at
+      // tap time is stale on arrival: opening a collapsed market group grows
+      // the page, and the reveal-on-scroll machinery expands blocks as the
+      // jump passes them. Measured once, a jump to the fight props landed
+      // 208px short because content ABOVE it grew by that much mid-flight.
+      // Re-measuring every frame makes the animation converge on wherever the
+      // section actually is, and because the easing is continuous the
+      // correction is absorbed into the motion instead of arriving as a
+      // second one at the end.
+      function smoothTo(measure, onDone) {
+        if (typeof measure !== 'function') {
+          const fixed = measure;
+          measure = function () { return fixed; };
+        }
         const reduce = window.matchMedia
           && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const start = window.scrollY;
-        const dist = target - start;
+        const dist = measure() - start;
+        // Cancel the outgoing jump. Its release() runs on its next frame,
+        // which is already scheduled, so the depth count stays balanced.
         if (activeJump) activeJump.done = true;
-        if (reduce || Math.abs(dist) < 8) { window.scrollTo(0, target); finish(); return; }
-        // EASE IN-OUT QUAD. Both previous curves were cubic, and cubic's flat
-        // ends are the whole problem -- it just moved which end was flat.
-        // In-out cubic crept: 8px in its first 52ms, then 1,272px inside the
-        // middle 100ms. Out cubic front-loaded instead: 87.5% of the distance
-        // in the first half, then 250px drifting out over the last 320ms.
-        // Both were reported as "two motions" because both ARE two motions --
-        // a burst and a crawl, in one order or the other.
+        suspendNativeSmooth();
+        let released = false;
+        const release = function () {
+          if (released) return;                   // exactly once per job
+          released = true;
+          restoreNativeSmooth();
+          if (onDone) onDone();
+        };
+        if (reduce || Math.abs(dist) < 8) { window.scrollTo(0, measure()); release(); return; }
+        // EASE IN-OUT QUAD. Both earlier curves were cubic, and cubic's flat
+        // ends are the problem -- swapping in-out for out only moved which
+        // end was flat. In-out cubic crept: 8px in its first 52ms, then
+        // 1,272px inside the middle 100ms. Out cubic front-loaded instead:
+        // 87.5% of the distance in the first half, then 250px drifting out
+        // over the final 320ms.
         // Quad is the same shape with far less extreme ends: 40px in the
-        // first 42ms (fast enough to read as responding to the tap), exactly
-        // half the distance at half the time, and no tail to crawl through.
+        // first 42ms, half the distance at half the time, and no tail.
         const dur = Math.min(420, 220 + Math.abs(dist) * 0.10);
         const t0 = performance.now();
-        const job = { done: false, framed: false };
+        const job = { done: false, framed: false, release: release };
         activeJump = job;
         function step(now) {
-          if (job.done) return;
+          if (job.done) { release(); return; }
           job.framed = true;
           const p = Math.min(1, (now - t0) / dur);
           const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-          window.scrollTo(0, start + dist * e);
+          window.scrollTo(0, start + (measure() - start) * e);
           if (p < 1) { requestAnimationFrame(step); return; }
+          window.scrollTo(0, measure());          // land on the settled figure
           job.done = true;
           if (activeJump === job) activeJump = null;
-          finish();
+          release();
         }
         requestAnimationFrame(step);
         // WATCHDOG, and it has to be armed against a frame that never comes --
@@ -10102,8 +10153,8 @@
           if (!job.framed && !job.done) {
             job.done = true;
             if (activeJump === job) activeJump = null;
-            window.scrollTo(0, target);
-            finish();
+            window.scrollTo(0, measure());
+            release();
           }
         }, 140);
       }
@@ -10181,14 +10232,19 @@
             // Where the chips actually sit right now, rather than a
             // recomputation of it -- the bar is pinned, so its own rect IS
             // the offset a jump has to clear.
-            const navRect = nav.getBoundingClientRect();
-            const top = window.scrollY + b.getBoundingClientRect().top
-                        - navRect.bottom - 8;
+            // Where the chips actually sit right now, rather than a
+            // recomputation of it -- the bar is pinned, so its own rect IS
+            // the offset a jump has to clear. Re-run every frame, because
+            // both the bar and the section move while the page settles.
+            const measure = function () {
+              return Math.max(0, window.scrollY + b.getBoundingClientRect().top
+                                 - nav.getBoundingClientRect().bottom - 8);
+            };
             // Paint the destination NOW, before a single pixel scrolls, and
             // hold it there for the whole jump.
             setCurrent(nav, chip);
             spyUnlockAt = performance.now() + SPY_MUTE_MS;
-            smoothTo(Math.max(0, top), function () { spyUnlockAt = 0; });
+            smoothTo(measure, function () { spyUnlockAt = 0; });
           });
           nav.appendChild(chip);
         });
@@ -10198,12 +10254,20 @@
         // rather than when it touches the bottom of the screen.
         if ('IntersectionObserver' in window) {
           const chips = [...nav.querySelectorAll('.cnav-chip')];
+          // Track what is visible, then pick ONE winner per callback. The
+          // previous version called setCurrent for every intersecting entry
+          // in the batch, so a delivery covering several sections repainted
+          // the highlight once per entry and it flickered through them.
+          // Topmost-visible wins, which is what the reading position means.
+          const visible = new Set();
           const io = new IntersectionObserver(function (entries) {
-            if (spyMuted()) return;    // a tap is driving; it already decided
             entries.forEach(function (e) {
-              if (!e.isIntersecting) return;
-              setCurrent(nav, chips[blocks.indexOf(e.target)]);
+              if (e.isIntersecting) visible.add(e.target); else visible.delete(e.target);
             });
+            if (spyMuted()) return;    // a tap is driving; it already decided
+            for (let i = 0; i < blocks.length; i++) {
+              if (visible.has(blocks[i])) { setCurrent(nav, chips[i]); return; }
+            }
           }, { rootMargin: '-190px 0px -60% 0px', threshold: 0 });
           blocks.forEach(function (b) { io.observe(b); });
         }
