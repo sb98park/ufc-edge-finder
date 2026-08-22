@@ -10039,33 +10039,42 @@
       // nothing and leaves scrollY at 0 -- a chip that looks dead. A twelve
       // line rAF tween cannot fail that way, and it honours reduced-motion by
       // jumping instead of easing.
-      function smoothTo(target) {
+      // Any jump already running. A second chip tapped mid-flight has to
+      // stop the first, or two rAF loops fight over window.scrollY and the
+      // page stutters between two targets.
+      let activeJump = null;
+      function smoothTo(target, onDone) {
+        const finish = function () { if (onDone) onDone(); };
         const reduce = window.matchMedia
           && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const start = window.scrollY;
         const dist = target - start;
-        if (reduce || Math.abs(dist) < 8) { window.scrollTo(0, target); return; }
-        // EASE OUT, NOT EASE IN-OUT. The in-out cubic that shipped first moved
-        // 8px in its opening 52ms and 216px by 156ms, then covered 1,272px of
-        // a 2,000px jump inside the middle 100ms. That is not a smooth curve
-        // at this distance, it is a creep followed by a lurch, and it was
-        // reported as "two motions". An ease-out leaves immediately -- half
-        // the distance inside the first fifth of the duration -- and settles.
-        // Navigation should feel like it responds to the tap, not wind up.
-        //
-        // The duration also scales further and caps higher: 520ms was too
-        // little to carry 2,000px legibly, which is what forced the curve to
-        // be violent in the middle.
-        const dur = Math.min(760, 240 + Math.abs(dist) * 0.20);
+        if (activeJump) activeJump.done = true;
+        if (reduce || Math.abs(dist) < 8) { window.scrollTo(0, target); finish(); return; }
+        // EASE IN-OUT QUAD. Both previous curves were cubic, and cubic's flat
+        // ends are the whole problem -- it just moved which end was flat.
+        // In-out cubic crept: 8px in its first 52ms, then 1,272px inside the
+        // middle 100ms. Out cubic front-loaded instead: 87.5% of the distance
+        // in the first half, then 250px drifting out over the last 320ms.
+        // Both were reported as "two motions" because both ARE two motions --
+        // a burst and a crawl, in one order or the other.
+        // Quad is the same shape with far less extreme ends: 40px in the
+        // first 42ms (fast enough to read as responding to the tap), exactly
+        // half the distance at half the time, and no tail to crawl through.
+        const dur = Math.min(420, 220 + Math.abs(dist) * 0.10);
         const t0 = performance.now();
-        let framed = false, done = false;
+        const job = { done: false, framed: false };
+        activeJump = job;
         function step(now) {
-          if (done) return;
-          framed = true;
+          if (job.done) return;
+          job.framed = true;
           const p = Math.min(1, (now - t0) / dur);
-          const e = 1 - Math.pow(1 - p, 3);
+          const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
           window.scrollTo(0, start + dist * e);
-          if (p < 1) requestAnimationFrame(step); else done = true;
+          if (p < 1) { requestAnimationFrame(step); return; }
+          job.done = true;
+          if (activeJump === job) activeJump = null;
+          finish();
         }
         requestAnimationFrame(step);
         // WATCHDOG, and it has to be armed against a frame that never comes --
@@ -10075,9 +10084,31 @@
         // never fire: it was decoration. Scheduling the first frame through
         // rAF is what makes the check mean anything.
         setTimeout(function () {
-          if (!framed && !done) { done = true; window.scrollTo(0, target); }
+          if (!job.framed && !job.done) {
+            job.done = true;
+            if (activeJump === job) activeJump = null;
+            window.scrollTo(0, target);
+            finish();
+          }
         }, 140);
       }
+
+      // While a chip jump is in flight the scroll-spy must shut up. It
+      // observes every section the scroll passes THROUGH, so a four-chip jump
+      // lit each intervening chip yellow in turn and the highlight visibly
+      // walked to the destination. The tapped chip is the answer already --
+      // there is nothing for the spy to work out until the page settles.
+      //
+      // A DEADLINE, not a boolean. A flag cleared only by the animation's
+      // completion callback sticks forever if the animation never completes,
+      // and it doesn't always: requestAnimationFrame stops in a backgrounded
+      // tab, so a chip tapped just before the phone locks would leave the
+      // spy switched off for the rest of the session. A timestamp expires on
+      // its own whatever happens to the frame loop. The jump still clears it
+      // early on a clean finish so the spy resumes the moment it settles.
+      const SPY_MUTE_MS = 620;   // longest jump (420ms) plus settle
+      let spyUnlockAt = 0;
+      function spyMuted() { return performance.now() < spyUnlockAt; }
 
       // How far down the sticky chips sit: the seg tabs, plus THIS card's own
       // summary, which varies with whether it carries a fun-fact row.
@@ -10106,6 +10137,16 @@
         }
       }
 
+      // One place that owns which chip is lit, so a tap and the spy cannot
+      // disagree about it, and the bar scrolls the lit chip into view.
+      function setCurrent(nav, chip) {
+        if (!chip) return;
+        nav.querySelectorAll('.cnav-chip').forEach(function (c) {
+          c.setAttribute('aria-current', String(c === chip));
+        });
+        nav.scrollTo({ left: Math.max(0, chip.offsetLeft - 40), behavior: 'smooth' });
+      }
+
       function build(card) {
         const nav = card.querySelector('.cnav');
         if (!nav || nav.dataset.built) return;
@@ -10128,7 +10169,11 @@
             const navRect = nav.getBoundingClientRect();
             const top = window.scrollY + b.getBoundingClientRect().top
                         - navRect.bottom - 8;
-            smoothTo(Math.max(0, top));
+            // Paint the destination NOW, before a single pixel scrolls, and
+            // hold it there for the whole jump.
+            setCurrent(nav, chip);
+            spyUnlockAt = performance.now() + SPY_MUTE_MS;
+            smoothTo(Math.max(0, top), function () { spyUnlockAt = 0; });
           });
           nav.appendChild(chip);
         });
@@ -10139,14 +10184,10 @@
         if ('IntersectionObserver' in window) {
           const chips = [...nav.querySelectorAll('.cnav-chip')];
           const io = new IntersectionObserver(function (entries) {
+            if (spyMuted()) return;    // a tap is driving; it already decided
             entries.forEach(function (e) {
               if (!e.isIntersecting) return;
-              const i = blocks.indexOf(e.target);
-              chips.forEach(function (c, ci) {
-                c.setAttribute('aria-current', String(ci === i));
-              });
-              const c = chips[i];
-              if (c) nav.scrollTo({ left: Math.max(0, c.offsetLeft - 40), behavior: 'smooth' });
+              setCurrent(nav, chips[blocks.indexOf(e.target)]);
             });
           }, { rootMargin: '-190px 0px -60% 0px', threshold: 0 });
           blocks.forEach(function (b) { io.observe(b); });
