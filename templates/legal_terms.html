@@ -1,0 +1,66 @@
+{% extends "legal_base.html" %}
+{% block title %}Terms of Service{% endblock %}
+{% block heading %}Terms of Service{% endblock %}
+{% block body %}
+
+<p>These terms govern your use of Octane Alpha, at octanealpha.com. By creating an account or subscribing, you agree to them. If you do not, please do not use the service.</p>
+
+<div class="callout">
+  <p><strong>The most important thing on this page:</strong> Octane Alpha is a statistics and information product. It is not betting advice, not financial advice, and not a prediction of any outcome. We publish what a model computed. Whether to act on that is entirely your decision and entirely your risk.</p>
+  <p>Nothing here is a guarantee. Past results, including the track record we publish, do not predict future results. Betting loses money for most people who do it.</p>
+</div>
+
+<h2>1. Who we are</h2>
+<p>Octane Alpha is operated by {{ legal_entity }}, contactable at <a href="mailto:support@octanealpha.com">support@octanealpha.com</a>.</p>
+
+<h2>2. What the service is</h2>
+<p>We collect publicly available fight statistics and sportsbook prices, run a statistical model over them, and publish the output: estimated probabilities, confidence levels, and the difference between our estimate and the market's price. We publish every pick before the event and grade it afterwards, win or lose.</p>
+<p>We do not accept wagers, hold funds, place bets on your behalf, or partner with any sportsbook. We are not a gambling operator.</p>
+
+<h2>3. Eligibility</h2>
+<p>You must be at least 18, and old enough to gamble legally where you live if you intend to use this information for betting. Sports betting is illegal or restricted in many places. Complying with the law where you are is your responsibility, not ours.</p>
+
+<h2>4. Your account</h2>
+<p>Accounts are personal. Do not share your sign-in link or let others use your subscription. We may suspend accounts that are shared, resold, or used to scrape or redistribute our output.</p>
+<p>We sign you in with a one-time link sent to your email. Anyone with access to that inbox can access your account, so keep it secure.</p>
+
+<h2>5. Subscriptions and automatic renewal</h2>
+<div class="callout">
+  <p><strong>Subscriptions renew automatically until you cancel.</strong> A monthly plan bills every month, and an annual plan bills every 12 months, at the price shown when you subscribed, using the payment method on file. We tell you the exact amount and date before you enter your card, and again by email before a trial converts.</p>
+  <p>Cancel any time from your account. Cancellation stops future billing; access continues to the end of the period you already paid for.</p>
+</div>
+<p>Payments are processed by Stripe. We never see or store your card details.</p>
+<p>If we change the price of your plan, we will tell you by email before it applies, and you may cancel before it takes effect.</p>
+
+<h2>6. Free trial</h2>
+<p>New members get one free trial, timed so it covers at least one full fight card, because a trial that expires before an event has not shown you the product. A payment method is required to start it. One trial per person: creating additional accounts to obtain further trials is a breach of these terms.</p>
+<p>If you cancel before the trial ends, you are not charged.</p>
+
+<h2>7. Acceptable use</h2>
+<ul>
+  <li>Do not scrape, bulk-download, resell or redistribute our model output.</li>
+  <li>Do not republish paid content publicly, including in group chats, forums or paid communities.</li>
+  <li>Do not attempt to bypass the paywall or access another account.</li>
+</ul>
+<p>The free tier is genuinely free and we would rather you shared it. The restrictions above concern member content.</p>
+
+<h2>8. Ownership</h2>
+<p>The underlying facts &mdash; fight results, public statistics, sportsbook prices &mdash; belong to nobody. Our model, its output, the site, and the way it is presented are ours. Your subscription grants you personal access, not ownership or a licence to redistribute.</p>
+
+<h2>9. Availability</h2>
+<p>We aim to keep the service running and current, but do not guarantee uptime, and data sources can and do fail. If the service is unavailable for an extended period we will make it right; see the refund policy.</p>
+
+<h2>10. Disclaimers and liability</h2>
+<p>The service is provided as is. To the fullest extent the law allows, we disclaim all warranties, and our total liability to you is limited to the amount you paid us in the 12 months before the claim.</p>
+<p>We are not liable for betting losses. This is the point of the callout at the top of this page: acting on our output is your decision.</p>
+
+<h2>11. Ending your access</h2>
+<p>You may stop using the service and cancel at any time. We may suspend or terminate an account that breaches these terms, and where we do so without cause we will refund the unused portion.</p>
+
+<h2>12. Changes</h2>
+<p>We may update these terms. If a change materially affects your rights, we will email you before it takes effect.</p>
+
+<h2>13. Governing law</h2>
+<p>These terms are governed by the laws of {{ governing_law }}, without regard to conflict-of-laws rules.</p>
+
+{% endblock %}

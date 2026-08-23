@@ -58,3 +58,8 @@ docs/welcome.html
 
 # Local wrangler state (build cache, dev bindings).
 .wrangler/
+
+# Legal pages, rebuilt every run alongside welcome.html.
+docs/terms.html
+docs/privacy.html
+docs/refunds.html

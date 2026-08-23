@@ -1492,6 +1492,15 @@ def main(tier: str = "member", output_path: str | None = None):
         except Exception as exc:                      # never break the main build
             print(f"[landing] skipped: {exc}")
 
+    # LEGAL PAGES. Rendered every build so the "last updated" date is honest
+    # rather than a hardcoded string that quietly ages, and so the three pages
+    # cannot drift apart in styling or footer links.
+    if tier != "free":
+        try:
+            _write_legal(env, generated_at_date)
+        except Exception as exc:
+            print(f"[legal] skipped: {exc}")
+
     out_path = output_path or OUTPUT_PATH
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     with open(out_path, "w") as f:
@@ -1543,6 +1552,33 @@ def main(tier: str = "member", output_path: str | None = None):
     print(f"Wrote {written} movement fragment(s), {total/1e6:.2f}MB deferred out of the page")
 
 
+
+
+
+# TWO VALUES THAT MUST BE REAL BEFORE LAUNCH. They are placeholders on
+# purpose and deliberately conspicuous: a terms page naming the wrong legal
+# entity, or no entity at all, is worse than one that is obviously unfinished.
+LEGAL_ENTITY = "Octane Alpha"          # replace with the registered entity once formed
+GOVERNING_LAW = "the State of [STATE]"  # replace with the operator's state
+
+
+def _write_legal(env, updated):
+    """docs/terms.html, docs/privacy.html, docs/refunds.html."""
+    pages = {
+        "terms.html": "legal_terms.html",
+        "privacy.html": "legal_privacy.html",
+        "refunds.html": "legal_refunds.html",
+    }
+    os.makedirs("docs", exist_ok=True)
+    for out_name, template_name in pages.items():
+        html = env.get_template(template_name).render(
+            updated=updated,
+            legal_entity=LEGAL_ENTITY,
+            governing_law=GOVERNING_LAW,
+        )
+        with open(os.path.join("docs", out_name), "w") as f:
+            f.write(html)
+    print(f"Wrote {len(pages)} legal page(s)")
 
 
 def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short):

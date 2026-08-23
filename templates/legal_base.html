@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}{% endblock %} &middot; Octane Alpha</title>
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#0a0a0b">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --ink:#e9e9ec; --ink2:#9a9aa4; --ink3:#6f6f79;
+    --bg:#000; --sunken:#0e0e10; --line:rgba(255,255,255,.09); --gold:#d4af37;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;
+       padding:0 calc(18px + env(safe-area-inset-right)) calc(48px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));}
+  .wrap{max-width:640px;margin:0 auto}
+  a{color:var(--gold)}
+  .nav{display:flex;align-items:center;gap:9px;padding:calc(16px + env(safe-area-inset-top)) 0 16px;
+       border-bottom:1px solid var(--line);font-size:14px;font-weight:800;letter-spacing:-.01em}
+  .nav b{color:var(--gold)}
+  h1{font-size:26px;letter-spacing:-.02em;margin:30px 0 6px;line-height:1.2}
+  .updated{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+           color:var(--ink3);margin-bottom:28px}
+  h2{font-size:17px;letter-spacing:-.01em;margin:32px 0 8px}
+  p,li{color:var(--ink2)}
+  li{margin-bottom:6px}
+  strong{color:var(--ink)}
+  .callout{border-left:2px solid var(--gold);background:var(--sunken);border-radius:0 10px 10px 0;
+           padding:14px 16px;margin:20px 0}
+  .callout p{margin:0;font-size:14px}
+  .callout p + p{margin-top:10px}
+  footer{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);
+         font-size:12px;color:var(--ink3)}
+  footer a{color:var(--ink3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+    <svg width="20" height="20" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <path d="M8.35 45.94 L8.35 26.35 L22.20 12.50 L41.80 12.50 L55.65 26.35 L55.65 45.94"
+            stroke="#fff" stroke-width="3.58" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M20.48 51.51 L32.00 28.47 L43.52 51.51"
+            stroke="#d4af37" stroke-width="3.58" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <a href="/" style="color:inherit;text-decoration:none">OCTANE<b>&nbsp;ALPHA</b></a>
+  </nav>
+
+  <h1>{% block heading %}{% endblock %}</h1>
+  <div class="updated">Last updated {{ updated }}</div>
+
+  {% block body %}{% endblock %}
+
+  <footer>
+    <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot;
+    <a href="/refunds">Refunds</a> &middot; <a href="/">Home</a>
+    <br><br>
+    Questions: <a href="mailto:support@octanealpha.com">support@octanealpha.com</a>
+    <br>&copy; Octane Alpha
+  </footer>
+</div>
+</body>
+</html>
