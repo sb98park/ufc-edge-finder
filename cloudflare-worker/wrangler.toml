@@ -1,0 +1,63 @@
+# Octane Alpha edge gate.
+#
+# WHY THIS FILE EXISTS AT ALL. The three Workers in this directory were
+# deployed by pasting them into the Cloudflare dashboard. That left no record
+# of which version was actually running, and no way to tell whether the file
+# in git matched production. For a Worker that merely proxied a password
+# prompt that was survivable. For one that decides who can read paid content,
+# it is not: "is the deployed gate the same as the reviewed gate?" has to be
+# answerable, and `wrangler deploy` from a committed config is the answer.
+#
+# Deploy:      npx wrangler deploy --config cloudflare-worker/wrangler.toml
+# Secrets:     npx wrangler secret put NAME --config cloudflare-worker/wrangler.toml
+# Tail logs:   npx wrangler tail octane-gate --config cloudflare-worker/wrangler.toml
+
+name = "octane-gate"
+main = "octane-gate.js"
+compatibility_date = "2026-08-01"
+workers_dev = false
+
+# ROUTES ARE NOT DECLARED YET, AND THIS WORKER MUST NOT BE DEPLOYED UNTIL THEY
+# ARE. The running gate was bound to octanealpha.com through the dashboard, and
+# a `wrangler deploy` from a config that omits routes can drop that binding --
+# which would take the live site down rather than merely fail. Confirm the
+# existing route in the dashboard, add it here, and only then deploy:
+#
+#   [[routes]]
+#   pattern = "octanealpha.com/*"
+#   zone_name = "octanealpha.com"
+
+# The member payload. PRIVATE BY DEFAULT and reachable only through this
+# binding -- that is the entire reason paid content lives in R2 rather than
+# beside the free build on GitHub Pages, where it would be one URL guess away
+# from being free.
+[[r2_buckets]]
+binding = "MEMBER_PAYLOAD"
+bucket_name = "octane-alpha-member"
+
+# Entitlement cache. Supabase remains the source of truth; this is a mirror
+# written by the Stripe webhook so a page request never waits on a database
+# round trip. Rebuildable at any time -- losing it costs a slow first request,
+# not correctness.
+[[kv_namespaces]]
+binding = "OCTANE_ENTITLEMENTS"
+id = "08be74c429d04c03ad803f79ee2076aa"
+
+[vars]
+SUPABASE_URL = "https://kmifrsmgypghjwmzoffd.supabase.co"
+# Public by design: it carries no privileges of its own, only what the row
+# level security policies in supabase/migrations grant it.
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttaWZyc21neXBnaGp3bXpvZmZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MzU3OTEsImV4cCI6MjEwMzAxMTc5MX0.iKjw9pcpFQPfCd8H0_pt3EUJl3svd29aPMH2CWlGBco"
+STRIPE_PRICE_MONTHLY = "price_1U7R5ODSgC9GOVMwny77PHJ4"
+STRIPE_PRICE_ANNUAL  = "price_1U7R5nDSgC9GOVMwlV5lbNA5"
+
+# SECRETS ARE NOT DECLARED HERE. They are set with `wrangler secret put` and
+# live only in Cloudflare. Anything in [vars] is committed to git in plain
+# text, which is correct for the two values above and would be a disclosure
+# for these:
+#
+#   SUPABASE_JWT_SECRET        verifies Supabase tokens at the edge
+#   SUPABASE_SERVICE_ROLE_KEY  reads entitlement, bypasses RLS
+#   SESSION_SECRET             signs this Worker's own session cookie
+#   STRIPE_SECRET_KEY          creates Checkout sessions
+#   STRIPE_WEBHOOK_SECRET      verifies webhook signatures
