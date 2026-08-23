@@ -1601,6 +1601,16 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         raise ValueError("no upcoming fight to seal")
 
     html = env.get_template("landing.html").render(
+        # Both public by design. The anon key carries no privileges of its
+        # own -- everything it can do is what the RLS policies in
+        # supabase/migrations allow -- which is why it can sit in page source.
+        supabase_url="https://kmifrsmgypghjwmzoffd.supabase.co",
+        supabase_anon_key=(
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+            "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttaWZyc21neXBnaGp3bXpvZmZkIiwicm9sZSI6"
+            "ImFub24iLCJpYXQiOjE3ODc0MzU3OTEsImV4cCI6MjEwMzAxMTc5MX0."
+            "iKjw9pcpFQPfCd8H0_pt3EUJl3svd29aPMH2CWlGBco"
+        ),
         tr=track_record,
         units_timeseries_svg=units_svg,
         demo_graded=graded,

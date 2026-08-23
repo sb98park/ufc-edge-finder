@@ -311,51 +311,212 @@
 
 <script>
 (function () {
-  // PRICING IS A DISPLAY TOGGLE ONLY. Nothing here decides what is charged --
-  // the price id is chosen server-side when the Checkout session is created,
-  // so a tampered DOM cannot buy the annual plan at the monthly price.
+  var SUPABASE = {{ supabase_url | tojson }};
+  var ANON     = {{ supabase_anon_key | tojson }};
+
+  /* -----------------------------------------------------------------
+   * PRICING IS A DISPLAY TOGGLE ONLY. Nothing here decides what is
+   * charged: the client sends "month" or "year" and the Worker maps that
+   * to a price id, so a tampered DOM cannot buy annual at the monthly
+   * price. Keeping that decision server-side is why this can stay simple.
+   * ----------------------------------------------------------------- */
   var PLANS = {
-    month: { dollars: '$19', cents: '', suffix: '/mo', was: false,
-             billed: 'Billed monthly · cancel any time',
-             charge: 'Your trial covers the next card. After it ends you are charged <b>$19</b> a month. We email you 3 days before — cancel by then and you pay nothing.' },
-    year:  { dollars: '$15', cents: '.83', suffix: '/mo', was: true,
-             billed: '$190 billed once a year · two months free',
-             charge: 'Your trial covers the next card. After it ends you are charged <b>$190</b> for 12 months. We email you 3 days before — cancel by then and you pay nothing.' }
+    month: { dollars: "$19", cents: "", was: false,
+             billed: "Billed monthly \u00b7 cancel any time",
+             charge: "Your trial covers the next card. After it ends you are charged <b>$19</b> a month. We email you 3 days before \u2014 cancel by then and you pay nothing." },
+    year:  { dollars: "$15", cents: ".83", was: true,
+             billed: "$190 billed once a year \u00b7 two months free",
+             charge: "Your trial covers the next card. After it ends you are charged <b>$190</b> for 12 months. We email you 3 days before \u2014 cancel by then and you pay nothing." }
   };
+  var plan = "year";
+
+  var $ = function (sel) { return document.querySelector(sel); };
   var els = {
-    price:  document.querySelector('[data-price]'),
-    cents:  document.querySelector('[data-cents]'),
-    was:    document.querySelector('[data-year]'),
-    billed: document.querySelector('[data-billed]'),
-    charge: document.querySelector('[data-charge]')
+    price: $("[data-price]"), cents: $("[data-cents]"), was: $("[data-year]"),
+    billed: $("[data-billed]"), charge: $("[data-charge]"),
+    signin: $(".nav button[data-auth]"), cta: $(".plan.gold .cta"),
+    scrim: $("[data-scrim]"), sheet: $("[data-sheet]"),
+    email: $("[data-sheet] input"), send: $("[data-sheet] .cta"),
+    fine: $("[data-sheet] .fine"), title: $("[data-sheet] h3"),
+    sub: $("[data-sheet] p"), google: $(".oauth.g")
   };
-  document.querySelectorAll('[data-plan]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var key = btn.dataset.plan, p = PLANS[key];
-      document.querySelectorAll('[data-plan]').forEach(function (b) {
-        b.setAttribute('aria-pressed', String(b === btn));
+
+  document.querySelectorAll("[data-plan]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      plan = btn.dataset.plan;
+      var p = PLANS[plan];
+      document.querySelectorAll("[data-plan]").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === btn));
       });
-      els.price.textContent  = p.dollars;
-      els.cents.textContent  = p.cents;
-      els.was.style.display  = p.was ? '' : 'none';
+      els.price.textContent = p.dollars;
+      els.cents.textContent = p.cents;
+      els.was.style.display = p.was ? "" : "none";
       els.billed.textContent = p.billed;
-      els.charge.innerHTML   = p.charge;
+      els.charge.innerHTML = p.charge;
     });
   });
 
-  var scrim = document.querySelector('[data-scrim]');
-  var sheet = document.querySelector('[data-sheet]');
-  function open(v) {
-    [scrim, sheet].forEach(function (el) {
-      if (v) el.setAttribute('data-open', ''); else el.removeAttribute('data-open');
+  /* --- sheet ------------------------------------------------------- */
+  var lastFocus = null;
+  function openSheet(open) {
+    [els.scrim, els.sheet].forEach(function (el) {
+      if (open) el.setAttribute("data-open", ""); else el.removeAttribute("data-open");
     });
-    if (v) { var i = sheet.querySelector('input'); if (i) setTimeout(function(){ i.focus(); }, 260); }
+    if (open) { lastFocus = document.activeElement; setTimeout(function () { els.email.focus(); }, 260); }
+    else if (lastFocus) lastFocus.focus();
   }
-  document.querySelectorAll('[data-auth]').forEach(function (b) {
-    b.addEventListener('click', function () { open(true); });
+  els.scrim.addEventListener("click", function () { openSheet(false); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") openSheet(false); });
+
+  /* --- session state ------------------------------------------------ */
+  var state = { signedIn: false, member: false };
+
+  function render() {
+    els.signin.textContent = state.signedIn ? "Account" : "Sign in";
+    if (state.member) {
+      els.cta.textContent = "Manage subscription";
+    } else {
+      els.cta.textContent = state.signedIn ? "Start 7 days free" : "Start 7 days free";
+    }
+  }
+
+  async function refreshState() {
+    try {
+      var r = await fetch("/auth/whoami", { credentials: "same-origin" });
+      state = await r.json();
+    } catch (e) { state = { signedIn: false, member: false }; }
+    render();
+  }
+
+  /* --- returning from a magic link or from Google -------------------
+   * Supabase hands the tokens back in the URL FRAGMENT. Two consequences
+   * this handles: the fragment never reaches the server, so it has to be
+   * posted to /auth/session explicitly; and it must be scrubbed from the
+   * address bar immediately, because otherwise a working access token
+   * sits in browser history and in anything the user pastes.
+   * ------------------------------------------------------------------ */
+  async function consumeAuthFragment() {
+    var hash = location.hash.slice(1);
+    if (hash.indexOf("access_token") === -1) return false;
+    var token = new URLSearchParams(hash).get("access_token");
+    history.replaceState(null, "", location.pathname + location.search);
+    if (!token) return false;
+    try {
+      var r = await fetch("/auth/session", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: token })
+      });
+      if (!r.ok) return false;
+      var out = await r.json();
+      state = { signedIn: true, member: !!out.member };
+      render();
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* --- sign in ------------------------------------------------------ */
+  var cooldownUntil = 0;
+  function cooldownTick() {
+    var left = Math.ceil((cooldownUntil - Date.now()) / 1000);
+    if (left > 0) {
+      els.send.disabled = true;
+      els.send.textContent = "Resend in " + left + "s";
+      setTimeout(cooldownTick, 500);
+    } else {
+      els.send.disabled = false;
+      els.send.textContent = "Email me a sign-in link";
+    }
+  }
+
+  els.send.addEventListener("click", async function () {
+    var email = (els.email.value || "").trim();
+    if (!email || email.indexOf("@") === -1) { els.email.focus(); return; }
+    els.send.disabled = true;
+    els.send.textContent = "Sending\u2026";
+    var redirect = location.origin + "/welcome";
+    try {
+      var r = await fetch(SUPABASE + "/auth/v1/otp?redirect_to=" + encodeURIComponent(redirect), {
+        method: "POST",
+        headers: { "apikey": ANON, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email })
+      });
+      if (r.ok) {
+        els.title.textContent = "Check your email";
+        els.sub.innerHTML = "We sent a sign-in link to <b>" + email.replace(/[<>&]/g, "") + "</b>. It works once and expires in an hour.";
+        // SUPABASE ENFORCES A 60-SECOND COOLDOWN PER ADDRESS. Without a
+        // visible countdown a user whose email is slow taps Resend, gets a
+        // silent 429, and concludes the site is broken.
+        cooldownUntil = Date.now() + 60000;
+        cooldownTick();
+      } else {
+        var body = await r.json().catch(function () { return {}; });
+        els.fine.textContent = body.msg || "Could not send that link. Try again in a moment.";
+        els.send.disabled = false;
+        els.send.textContent = "Email me a sign-in link";
+      }
+    } catch (e) {
+      els.fine.textContent = "Network error. Check your connection and try again.";
+      els.send.disabled = false;
+      els.send.textContent = "Email me a sign-in link";
+    }
   });
-  scrim.addEventListener('click', function () { open(false); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') open(false); });
+
+  els.email.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") els.send.click();
+  });
+
+  els.google.addEventListener("click", function () {
+    location.href = SUPABASE + "/auth/v1/authorize?provider=google&redirect_to="
+      + encodeURIComponent(location.origin + "/welcome");
+  });
+
+  /* --- subscribe / manage ------------------------------------------- */
+  async function startCheckout() {
+    els.cta.disabled = true;
+    els.cta.textContent = "Opening\u2026";
+    try {
+      var path = state.member ? "/billing/portal" : "/billing/checkout";
+      var r = await fetch(path, {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: plan })
+      });
+      var out = await r.json().catch(function () { return {}; });
+      if (r.status === 401) { els.cta.disabled = false; render(); openSheet(true); return; }
+      if (out.url) { location.href = out.url; return; }
+      els.cta.disabled = false;
+      render();
+      alert(out.error || "Could not open checkout. Please try again.");
+    } catch (e) {
+      els.cta.disabled = false;
+      render();
+    }
+  }
+
+  document.querySelectorAll("[data-auth]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      // The nav button is always sign-in/account; the plan CTA goes
+      // straight to checkout when there is already a session, so a signed-in
+      // visitor is not asked to sign in again before paying.
+      if (b === els.cta && state.signedIn) startCheckout();
+      else openSheet(true);
+    });
+  });
+  els.cta.setAttribute("data-auth", "");
+
+  /* --- returning from Stripe ---------------------------------------- */
+  var params = new URLSearchParams(location.search);
+  if (params.get("checkout") === "success") {
+    history.replaceState(null, "", location.pathname);
+    // Entitlement was just invalidated by the webhook, so re-mint the
+    // session cookie rather than trusting the one issued before payment.
+    fetch("/auth/whoami", { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (s) { state = s; render(); });
+  }
+
+  consumeAuthFragment().then(function (handled) { if (!handled) refreshState(); });
 })();
 </script>
 </body>
