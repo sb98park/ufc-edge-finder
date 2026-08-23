@@ -96,10 +96,22 @@ export default {
     const path = url.pathname;
     const mode = env.GATE_MODE === "auth" ? "auth" : "password";
 
-    if (mode === "auth") {
-      const handled = await handleAuthMode(request, env, ctx, url, path);
-      if (handled) return handled;
-    }
+    // ACCOUNT AUTH RUNS IN BOTH MODES. Only the WALL is conditional.
+    //
+    // The obvious design -- password mode or auth mode, never both -- has a
+    // hole in it: the only way to test sign-in, entitlement and R2 delivery
+    // against the real domain would be to switch off the wall first, making
+    // the verification step and the going-public step the same step. Running
+    // auth underneath the wall means the owner can sign in, be recognised as
+    // a member and be served the R2 payload while strangers still meet the
+    // password prompt. Flipping GATE_MODE then only removes the wall, and it
+    // removes it from something already known to work.
+    const handled = await handleAuthMode(request, env, ctx, url, path, mode);
+    if (handled) return handled;
+
+    // Wall is off: the origin holds the free build, which is what everyone
+    // without a member session should get.
+    if (mode === "auth") return fetch(request);
 
     // Launch images and the manifest are fetched by iOS at APP LAUNCH,
     // before any session cookie is presented. Gated, they'd return login
@@ -392,7 +404,7 @@ const ALWAYS_PUBLIC = ["/sw.js", "/offline.html", "/welcome", "/welcome.html", "
 /**
  * Returns a Response when it owns the request, or null to fall through.
  */
-async function handleAuthMode(request, env, ctx, url, path) {
+async function handleAuthMode(request, env, ctx, url, path, mode) {
   // --- exchange a Supabase token for our own session -------------------
   if (path === "/auth/session" && request.method === "POST") {
     let body;
@@ -428,7 +440,11 @@ async function handleAuthMode(request, env, ctx, url, path) {
     return json(session ? { signedIn: true, member: session.member } : { signedIn: false });
   }
 
-  if (ALWAYS_PUBLIC.includes(path) || path.startsWith("/splash-") || path === "/manifest.json") {
+  // Only once the wall is down. While it is up, /welcome is not yet meant to
+  // be reachable by strangers -- the site has not launched -- so it stays
+  // behind the password like everything else.
+  if (mode === "auth"
+      && (ALWAYS_PUBLIC.includes(path) || path.startsWith("/splash-") || path === "/manifest.json")) {
     return fetch(request);
   }
 

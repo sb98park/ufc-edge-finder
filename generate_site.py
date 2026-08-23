@@ -1451,6 +1451,23 @@ def main(tier: str = "member", output_path: str | None = None):
     # THE PAYWALL PARTITION. Redaction happens here, on the data, rather than
     # as conditionals inside the template -- see src/tiering.py for why sixty
     # `{% if tier %}` branches would have been the more dangerous design.
+    # BOTH PAYLOADS FROM ONE DATA SNAPSHOT. Running the build twice -- once
+    # per tier -- would fetch live odds twice, minutes apart, and the two
+    # payloads could disagree about the same fight. Rendering the redacted
+    # context from the context already in memory costs a second render and no
+    # network at all, and guarantees the free build is the member build minus
+    # exactly the model layer rather than a different snapshot of the card.
+    if tier == "member":
+        free_ctx, _redacted, _assertable = tiering.redact_context(dict(context))
+        os.makedirs("build", exist_ok=True)
+        with open("build/redacted-manifest.json", "w") as _mf:
+            json.dump({"count": len(_redacted), "removed": _redacted,
+                       "values": _assertable}, _mf, indent=1)
+        with open(FREE_OUTPUT_PATH, "w") as _ff:
+            _ff.write(template.render(**free_ctx))
+        print(f"[tier] also wrote {FREE_OUTPUT_PATH} -- redacted {len(_redacted)} model "
+              f"value(s), {len(_assertable)} distinctive enough to assert on")
+
     if tier == "free":
         context, _redacted, _assertable = tiering.redact_context(context)
         os.makedirs("build", exist_ok=True)
