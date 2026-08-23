@@ -127,18 +127,29 @@
   /* --- hero --- */
   .eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--ink3);
            text-transform:uppercase;margin-top:26px}
-  .big{font-size:clamp(44px,15vw,58px);font-weight:800;letter-spacing:-.04em;line-height:1;
-       color:var(--green);margin:10px 0 6px}
-  .big span{font-size:.42em;opacity:.65;letter-spacing:-.02em}
-  .sub{font-size:13px;color:var(--ink2);margin-bottom:10px}
-  .sub b{color:var(--green)}
-  .curve{margin:4px 0 14px}
+  /* THE RECORD IS A CARD NOW, not a billboard. At 58px in full green it was
+     louder than the hero above it and belonged to the old design -- the figure
+     is the proof, not the pitch, so it sits in the same panel language as
+     everything else and lets the headline lead. */
+  .reccard{background:var(--panel);border:1px solid var(--line);border-radius:19px;
+           padding:18px;margin-top:12px;position:relative;overflow:hidden}
+  .reccard::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.16) 22%,
+               rgba(255,255,255,.16) 78%,transparent)}
+  .recline{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .big{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:-.035em;
+       line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;margin:0}
+  .big span{font-size:.44em;color:var(--ink3);letter-spacing:0;margin-left:2px}
+  .sub{font-size:12px;color:var(--ink3);margin:0;text-align:right}
+  .sub b{color:var(--green);font-weight:600}
+  .curve{margin:12px 0 0}
   .curve svg{display:block;width:100%;height:auto}
-  .rails{display:flex;gap:8px}
-  .rails div{flex:1;background:var(--sunken);border:1px solid var(--line);border-radius:10px;
-             padding:10px 6px;text-align:center}
-  .rails b{display:block;font-family:var(--mono);font-size:15px;letter-spacing:-.01em}
-  .rails span{font-size:8px;letter-spacing:.1em;color:var(--ink3);text-transform:uppercase}
+  .rails{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+         border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-top:16px}
+  .rails div{background:var(--panel);padding:12px 13px;text-align:left}
+  .rails b{display:block;font-family:var(--mono);font-size:19px;letter-spacing:-.03em;
+           font-weight:600;font-variant-numeric:tabular-nums}
+  .rails span{font-size:10.5px;letter-spacing:0;color:var(--ink3);text-transform:none}
   /* --- claim --- */
   .claim{margin:24px 0;padding:15px 16px;border-left:2px solid var(--gold);
          background:var(--sunken);border-radius:0 10px 10px 0;font-size:13.5px;color:var(--ink2)}
@@ -250,6 +261,15 @@
   .verdict{margin-top:11px;padding:8px;border-radius:9px;background:rgba(61,220,132,.1);
            border:1px solid rgba(61,220,132,.26);text-align:center;font-size:11.5px;
            color:var(--green)}
+  .mrow{display:flex;align-items:center;gap:9px;margin-top:9px;font-size:11px;color:#c8ccd6}
+  .mrow span{width:96px;flex:none;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;
+             text-transform:uppercase;color:#6d7789}
+  .mrow i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.08);display:block}
+  .mrow i b{display:block;height:100%;border-radius:2px;
+            background:linear-gradient(90deg,var(--gold),#e8722f)}
+  .mrow em{font-style:normal;font-family:var(--mono);font-size:10.5px;width:32px;text-align:right;
+           flex:none;font-variant-numeric:tabular-nums}
+  .mrow.rr em{color:var(--gold)}
   .ltbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px;
         font-variant-numeric:tabular-nums}
   .ltbl th{text-align:left;color:#6d7789;font-size:8px;letter-spacing:.12em;text-transform:uppercase;
@@ -327,6 +347,12 @@
   .cur{font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--ink3);margin-top:10px}
   .cta{width:100%;font:inherit;font-size:14.5px;font-weight:700;border:0;border-radius:11px;
        padding:13px;background:var(--gold);color:#151208;cursor:pointer;margin-top:4px}
+  /* Free is a real option, so it gets a real control -- outlined rather than
+     gold, so it reads as the alternative and not as a second primary. */
+  .cta.ghost{background:none;border:1px solid var(--line);color:var(--ink);font-weight:650;
+             margin-top:12px}
+  .plan.flat{cursor:pointer}
+  .plan.flat:hover{border-color:rgba(255,255,255,.18)}
   .trust{display:flex;justify-content:center;gap:10px;margin-top:10px;font-size:8.5px;color:var(--ink3)}
   .powered{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px;
            font-size:9.5px;color:var(--ink3)}
@@ -465,68 +491,30 @@
   {% endif %}
 
   <div class="eyebrow" id="record" style="margin-top:34px">Public track record &middot; updated {{ generated_at_short }}</div>
-  <div class="big">{{ '%+.2f'|format(tr.units_stats.total_units) }}<span>U</span></div>
-  <div class="sub">{{ tr.units_stats.eligible_count }} picks priced across {{ tr.units_stats.event_count }} cards &middot; <b>ROI {{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b></div>
-  <div class="curve">{{ units_timeseries_svg | safe }}</div>
-  <div class="rails">
-    <div><b>{{ tr.accuracy_pct }}%</b><span>Hit rate</span></div>
-    <div><b class="g" style="color:var(--green)">{{ '%+.2f'|format(tr.units_stats.by_tier['Lock of the Week'].units) }}U</b><span>Locks {{ tr.lock_record.correct }}/{{ tr.lock_record.total }}</span></div>
-    <div><b>{{ tr.total }}</b><span>Graded</span></div>
+  <div class="reccard">
+    <div class="recline">
+      <div class="big">{{ '%+.2f'|format(tr.units_stats.total_units) }}<span>U</span></div>
+      <div class="sub">{{ tr.units_stats.eligible_count }} picks &middot; {{ tr.units_stats.event_count }} cards<br><b>ROI {{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b></div>
+    </div>
+    <div class="curve">{{ units_timeseries_svg | safe }}</div>
+    <div class="rails">
+      <div><b>{{ tr.accuracy_pct }}%</b><span>Hit rate</span></div>
+      {% if tr.clv_stats %}<div><b class="up">{{ tr.clv_stats.beat_pct }}%</b><span>Beat the closing line</span></div>{% endif %}
+      <div><b class="up">{{ '%+.2f'|format(tr.units_stats.by_tier['Lock of the Week'].units) }}U</b><span>Lock of the Week {{ tr.lock_record.correct }}/{{ tr.lock_record.total }}</span></div>
+      <div><b>{{ tr.total }}</b><span>Fights graded</span></div>
+    </div>
   </div>
 
   <div class="claim">Every pick above was published <em>before</em> the bell, then graded against the closing line &mdash; win or lose. Nothing is added afterwards.</div>
 
-  {# THE PAIRED CARD. One component, two states: a fight that has happened with
-     the read revealed and its result stamped on, and the next one sealed. The
-     analytics are present in both; only the model layer differs. That IS the
-     paywall, demonstrated rather than described. #}
-  <h2>Here is what that looks like.</h2>
-  <p class="lede">The same card, before and after.</p>
+  {# THE PAIRED FREE/PAID DEMO WAS REMOVED HERE.
+     It showed a graded card beside a sealed one, which meant a first-time
+     reader met the paywall before they had any reason to want past it. The
+     job of this stretch of page is curiosity, not qualification -- what the
+     product DOES, with the price left until the end. The same demonstration
+     still exists where it belongs: on the app itself, for someone who has
+     already decided to look. #}
 
-  <div class="stamp">
-    <span class="d">{{ demo_graded.event_short }} &middot; graded</span>
-    <span class="ok">&#10003; Correct &middot; {{ '%+.2f'|format(demo_graded.units_result) }}U</span>
-  </div>
-  <div class="fc graded">
-    <div class="fc-top">
-      <span>{{ demo_graded.fighter_a }}</span><em>{{ demo_graded.division }}<br>VS</em><span class="r">{{ demo_graded.fighter_b }}</span>
-    </div>
-    <div class="pick">
-      <div class="ring">{{ (demo_graded.favorite_prob * 100) | round | int }}</div>
-      <div><b>{{ demo_graded.predicted_favorite }}</b><i>by {{ demo_graded.predicted_method }}</i></div>
-      <div class="conf">{{ demo_graded.conf_short }}</div>
-    </div>
-    <div class="rail"><i style="width:88%;background:var(--red)"></i><span>Strike acc</span><i style="width:72%;background:var(--blue)"></i></div>
-    <div class="rail"><i style="width:64%;background:var(--red)"></i><span>TD defence</span><i style="width:81%;background:var(--blue)"></i></div>
-    <div class="foot"><span>Model {{ (demo_graded.favorite_prob * 100) | round(1) }}%</span><span>Price {{ demo_graded.pick_odds_label }}</span><span class="pos">Result {{ '%+.2f'|format(demo_graded.units_result) }}U</span></div>
-  </div>
-
-  <div class="link"></div>
-
-  <div class="stamp">
-    <span class="d live">{{ demo_upcoming.when }}</span>
-    <span class="lk">&#128274; Pro</span>
-  </div>
-  <div class="fc locked">
-    <div class="fc-top">
-      <span>{{ demo_upcoming.fighter_a }}</span><em>{{ demo_upcoming.division }}<br>VS</em><span class="r">{{ demo_upcoming.fighter_b }}</span>
-    </div>
-    <div class="pick sealed">
-      <div class="ring lk">&#128274;</div>
-      <div><b>Model read sealed</b><i>Pick &middot; confidence &middot; method &middot; edge</i></div>
-    </div>
-    <div class="rail"><i style="width:91%;background:var(--red)"></i><span>Strike acc</span><i style="width:70%;background:var(--blue)"></i></div>
-    <div class="rail"><i style="width:58%;background:var(--red)"></i><span>TD defence</span><i style="width:86%;background:var(--blue)"></i></div>
-    <div class="foot"><span>Model &bull;&bull;.&bull;%</span><span>Price {{ demo_upcoming.price_label }}</span><span class="hid">Edge &bull;&bull;.&bull;</span></div>
-  </div>
-
-  <div class="cap">Same card, same numbers. <b>The tape, the rails and the market price stay free forever.</b> What members pay for is the read on top of them.</div>
-
-  {# WHAT THE SOFTWARE ACTUALLY LOOKS LIKE. The proof above argues the picks
-     are good; this argues the product is worth opening. Those are different
-     objections and the second one is answered by showing, not claiming.
-     It also sharpens the free offer: all of this, on every graded card, for
-     an email address. #}
   {# ===== THE CARD SECTION =====
      Each capability is a card: headline top-left, expand top-right, and a
      gradient canvas holding a REAL dark product fragment. The expand actually
@@ -554,7 +542,11 @@
          when the money arrived.</p>
       <div class="mini">
         <div class="r"><span>Recalculated</span><b>every 5 min</b></div>
-        <div class="r"><span>Sources</span><b>Polymarket &middot; The Rundown</b></div>
+        {# The Rundown is a licensed odds API; affiliates 19 and 23 are
+           DraftKings and FanDuel. Naming the books the reader actually bets at
+           is more useful than naming our vendor. #}
+        <div class="r"><span>Books</span><b>DraftKings &middot; FanDuel</b></div>
+        <div class="r"><span>Fair line</span><b>Polymarket</b></div>
       </div>
     </div></div>
   </div>
@@ -588,38 +580,43 @@
   </div>
   {% endif %}
 
-  {% if best_clv %}
+  {% if clv_stats %}
+  {# NO NAMED FIGHT. A specific result is the most persuasive version of this
+     card, but it makes the page's strongest claim hostage to one performance
+     that has to be re-argued every time a better or worse one lands. The
+     aggregate is the durable form of the same argument -- and it still moves
+     on its own as the ledger grows. #}
   <div class="pcard" data-card data-open>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="true">
       <div><span class="kick">Closing line value</span>
-        <h3>We were on {{ best_clv.surname }} at {{ best_clv.pick_odds }}. The market closed him at {{ best_clv.closing_odds }}.</h3></div>
+        <h3>We beat the closing line {{ clv_stats.beat_pct }}% of the time</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
     </div>
     <div class="canvas green">
       <div class="shot">
-        <div class="sh-top"><span>{{ best_clv.surname }} vs {{ best_clv.opponent.split()[-1] }}</span><span>{{ best_clv.when }}</span></div>
+        <div class="sh-top"><span>How a price moves</span><span>illustration</span></div>
         <div class="clv">
-          <div class="p"><em>Our price</em><b style="color:var(--green)">{{ best_clv.pick_odds }}</b></div>
-          <div class="arrow"><i></i>{{ best_clv.swing }} pts</div>
-          <div class="p"><em>Closing</em><b>{{ best_clv.closing_odds }}</b></div>
+          <div class="p"><em>When we publish</em><b style="color:var(--green)">Longer odds</b></div>
+          <div class="arrow"><i></i>the market<br>catches up</div>
+          <div class="p"><em>At the bell</em><b>Shorter odds</b></div>
         </div>
-        <div class="verdict">Won by {{ best_clv.method }} &middot; {{ '%+.2f'|format(best_clv.units) }}U</div>
+        <div class="verdict">{{ clv_stats.beat }} of {{ clv_stats.total }} priced positions moved our way</div>
       </div>
     </div>
     <div class="detail"><div class="detail-in">
-      <p>The market agreed with us &mdash; <b>eventually</b>. Taking a fighter at
-         {{ best_clv.pick_odds }} who closes at {{ best_clv.closing_odds }} means the number was
-         wrong when we published and right by fight night. That gap is the edge, and it is
-         measurable whether the fighter wins or loses.</p>
-      {% if clv_stats %}
+      <p><b>The closing line is the market's final answer</b>, and it is the most accurate
+         number anyone has. If the price consistently moves toward our pick between publication
+         and the bell, the model saw something before the market did.</p>
+      <p>That is measurable <b>whether the fighter wins or loses</b>, which is why it is the one
+         statistic that separates an edge from a hot streak. Anyone can go 7&ndash;3 on a
+         Saturday.</p>
       <div class="mini">
         <div class="r"><span>Beat the closing line</span><b class="up">{{ clv_stats.beat_pct }}%</b></div>
         <div class="r"><span>Priced positions measured</span><b>{{ clv_stats.total }}</b></div>
-        <div class="r"><span>This one</span><b class="up">+{{ '%.1f'|format(best_clv.clv_pct) }}%</b></div>
+        <div class="r"><span>Basis</span><b>de-vigged fair odds</b></div>
       </div>
-      {% endif %}
       <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> It needs a
         timestamped price at pick time and at close. Retro-fitting means inventing prices &mdash;
         and the closing line is public.</span></div>
@@ -661,29 +658,38 @@
     </div></div>
   </div>
 
+  {# WAS "Nothing is ever edited after the bell". True, and table stakes --
+     the reader's reaction is "obviously", which spends a card to say nothing.
+     Not editing your picks is the floor, not the product. This is a capability
+     they actually get and most services do not offer at all. #}
   <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
-      <div><span class="kick">Integrity</span>
-        <h3>Nothing is ever edited after the bell</h3></div>
+      <div><span class="kick">Method &amp; round</span>
+        <h3>Not just who wins &mdash; how, and when</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
     </div>
-    <div class="canvas green">
+    <div class="canvas">
       <div class="shot">
-        <div class="sh-top"><span>Prediction log</span><span>append only</span></div>
-        <div class="verdict">{{ tr.total }} rows &middot; 0 edited &middot; 0 removed</div>
+        <div class="sh-top"><span>Method grid</span><span>every fight</span></div>
+        <div class="mrow"><span>KO / TKO</span><i><b style="width:46%"></b></i><em>46%</em></div>
+        <div class="mrow"><span>Submission</span><i><b style="width:12%"></b></i><em>12%</em></div>
+        <div class="mrow"><span>Decision</span><i><b style="width:42%"></b></i><em>42%</em></div>
+        <div class="mrow rr"><span>Most likely round</span><i></i><em>R2</em></div>
       </div>
     </div>
     <div class="detail"><div class="detail-in">
-      <p>A pick is written to an append-only log before the fight and <b>frozen the moment a
-         result lands</b>. Losers cannot be quietly removed, and a pick cannot be improved after
-         the fact.</p>
-      <p>This is not a promise, it's how the thing is built: re-running the model on a decided
-         fight would &ldquo;predict&rdquo; the winner, because the inputs are contaminated by the
-         result. <b>The published record reads the log, never the model.</b></p>
-      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> It has to
-        have been built that way from the first card. It cannot be added later.</span></div>
+      <p>Every fight carries a full method distribution and a round, not a single side. A
+         KO/TKO read and a decision read on the same fighter are <b>completely different
+         bets</b> at completely different prices &mdash; and the props board is where the
+         mispricing usually is.</p>
+      <p>The distribution is coherent with the round curve by construction: the chance a fight
+         ends early and the chance it goes the distance are the same number seen from two
+         directions, so they cannot contradict each other.</p>
+      <div class="nobody"><span>&#9679;</span><span><b>Most services pick a side and stop.</b>
+        Method and round need an actual model of how the fight plays out, not a lean on who is
+        better.</span></div>
     </div></div>
   </div>
 
@@ -737,7 +743,11 @@
     </div>
   </div>
 
-  <div class="plan flat">
+  {# THE FREE PLAN IS A CHOICE, NOT A FOOTNOTE. It sat here as static text
+     with "no account needed" and no way to act on it -- so a reader who
+     decided Free was for them had nowhere to go from the one screen where
+     they had decided it. It is a real option in the same shape as Pro now. #}
+  <div class="plan flat" data-free-plan>
     <div class="ph">
       <div><div class="pn sm">Free</div><div class="pt">Everything already graded</div></div>
       <div class="pc"><b style="font-size:19px;color:var(--ink2)">$0</b></div>
@@ -747,7 +757,8 @@
       <li>Full tape, scout rails and matchup breakdowns</li>
       <li>The complete public track record</li>
     </ul>
-    <div class="cur">No account needed</div>
+    <button type="button" class="cta ghost" data-free-cta2>Create a free account</button>
+    <div class="cur">No card required &middot; keeps your history</div>
   </div>
 
   <div class="disc" data-charge>Your trial covers the next card. After it ends you are charged <b>$190</b> for 12 months. We email you 3 days before &mdash; cancel by then and you pay nothing.</div>
@@ -1432,6 +1443,18 @@
       render();
     }
   }
+
+  /* The whole Free panel is the target, not only its button -- someone who has
+     just decided "Free" taps the box they decided on. Signed in, it goes to
+     the app instead of asking for an account they already have. */
+  (function () {
+    var panel = $("[data-free-plan]");
+    if (!panel) return;
+    panel.addEventListener("click", function () {
+      if (state.signedIn) { location.href = "/"; return; }
+      openSheet(true, "signin");
+    });
+  })();
 
   document.querySelectorAll("[data-auth]").forEach(function (b) {
     b.addEventListener("click", function () {
