@@ -433,12 +433,22 @@ jobs:
           # that wrong breaks the whole workflow file rather than just this
           # step. It did, once.
           NEXT_EVENT=$(python3 -c "import pandas as pd,datetime; df=pd.read_csv('data/future_cards.csv'); t=datetime.date.today().isoformat(); d=sorted(x for x in df['event_date'].dropna().astype(str).unique() if x>=t); print(d[0] if d else '')" || echo "")
+          # NON-FATAL, DELIBERATELY. This is a cache write, not a publish
+          # step: without it the Worker falls back to a flat seven-day trial,
+          # which is slightly worse timing and nothing more. It sat inside
+          # `set -e` and took the whole job down -- including the Pages deploy
+          # after it -- the first time the token lacked KV permission. A
+          # degradable write must not be able to stop the site shipping.
           if [ -n "${CF_API_TOKEN:-}" ] && [ -n "$NEXT_EVENT" ]; then
-            curl -sS --fail-with-body -X PUT \
-              "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/08be74c429d04c03ad803f79ee2076aa/values/next_event_date" \
-              -H "Authorization: Bearer $CF_API_TOKEN" \
-              -F "value=$NEXT_EVENT" -F 'metadata={}' > /dev/null
-            echo "KV: next_event_date = $NEXT_EVENT"
+            if curl -sS --fail -X PUT \
+                "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/08be74c429d04c03ad803f79ee2076aa/values/next_event_date" \
+                -H "Authorization: Bearer $CF_API_TOKEN" \
+                -F "value=$NEXT_EVENT" -F 'metadata={}' > /dev/null 2>&1; then
+              echo "KV: next_event_date = $NEXT_EVENT"
+            else
+              echo "KV: write failed (token likely lacks Workers KV Storage:Edit)."
+              echo "KV: not fatal -- trials fall back to a flat 7 days until fixed."
+            fi
           fi
 
       - name: Upload the built site
