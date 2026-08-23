@@ -41,6 +41,7 @@ grant execute on function public.is_member(uuid) to authenticated;
 do $$
 declare
   leaky text;
+  broken text;
 begin
   select string_agg(p.proname, ', ')
     into leaky
@@ -55,5 +56,25 @@ begin
     raise exception 'still executable by anon/public: % -- the revoke did not take', leaky;
   end if;
 
-  raise notice 'ok: is_member and account_plan are service_role/authenticated only';
+  -- AND THE POSITIVE HALF. Checking only that the wrong role lost access
+  -- leaves the more dangerous outcome untested: a revoke that also took
+  -- execute away from the Worker would make is_member() fail, and it fails
+  -- CLOSED -- every paying member silently loses access. Assert the role that
+  -- has to keep working, kept working.
+  select string_agg(p.proname, ', ')
+    into broken
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname in ('is_member', 'account_plan')
+     and not has_function_privilege('service_role', p.oid, 'execute');
+
+  if broken is not null then
+    raise exception
+      'service_role can no longer execute: % -- the Worker resolves entitlement '
+      'through these and fails closed, so this would lock out every member',
+      broken;
+  end if;
+
+  raise notice 'ok: anon/public revoked, service_role intact';
 end $$;
