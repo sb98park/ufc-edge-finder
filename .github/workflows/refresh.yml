@@ -378,44 +378,48 @@ jobs:
         if: steps.cadence.outputs.build == 'yes'
         run: python scripts/check_free_build.py
 
-      - name: Publish the member payload to R2
-        # The member build NEVER goes to Pages. Pages is public by
-        # definition, so paid content sitting there would be one URL guess
-        # from free regardless of what the Worker does. R2 is private and
-        # reachable only through the Worker's binding.
+      - name: Publish member payload to R2, then swap free in for Pages
+        # ONE STEP, NOT TWO, AND THE SWAP IS UNCONDITIONAL.
         #
-        # Optional until the secrets exist: without them this step is skipped
-        # and the site behaves exactly as it does today, because the Worker
-        # falls back to the origin when R2 has no object.
-        if: steps.cadence.outputs.build == 'yes' && env.CF_API_TOKEN != ''
+        # These were separate steps with separate `if:` conditions, which is
+        # how a leak gets built by the code meant to prevent one: upload runs,
+        # swap does not, and docs/index.html is still the MEMBER build when
+        # Pages publishes it. Splitting an invariant across two conditions
+        # means the invariant is only as good as the two conditions agreeing.
+        #
+        # Pages therefore ALWAYS receives the free payload. R2 upload is the
+        # conditional part, and its failure mode is safe: the Worker falls
+        # back to the origin when the bucket has no object, so members see the
+        # free build rather than an error.
+        #
+        # The guard is in bash, not in `if:`. A step's own `env:` is NOT
+        # visible to that step's `if:` -- the condition is evaluated before the
+        # step environment exists, so `env.CF_API_TOKEN != ''` was always
+        # false and this step silently skipped. Silently: a skipped step and a
+        # successful one look identical in a green run.
+        if: steps.cadence.outputs.build == 'yes'
         env:
           CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          # docs/index.html is the MEMBER build at this point in the job; the
-          # free payload is the separate file written from the same snapshot.
-          curl -sS --fail-with-body -X PUT \
-            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/r2/buckets/octane-alpha-member/objects/index.html" \
-            -H "Authorization: Bearer $CF_API_TOKEN" \
-            -H "Content-Type: text/html" \
-            --data-binary @docs/index.html > /dev/null
-          echo "uploaded docs/index.html ($(wc -c < docs/index.html) bytes) to R2"
-
-      - name: Swap the free payload in for Pages
-        # ORDER IS LOAD-BEARING. The member build is already safely in R2, so
-        # docs/ can now be overwritten with the redacted payload that Pages
-        # will publish. Doing this before the R2 upload would publish the
-        # free build as the member payload -- subscribers paying for the
-        # tier they could already see.
-        if: steps.cadence.outputs.build == 'yes' && env.CF_API_TOKEN != ''
-        env:
-          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          set -euo pipefail
           test -s build/free.html
+
+          if [ -n "${CF_API_TOKEN:-}" ] && [ -n "${CF_ACCOUNT_ID:-}" ]; then
+            # docs/index.html is still the MEMBER build at this point.
+            curl -sS --fail-with-body -X PUT \
+              "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/r2/buckets/octane-alpha-member/objects/index.html" \
+              -H "Authorization: Bearer $CF_API_TOKEN" \
+              -H "Content-Type: text/html" \
+              --data-binary @docs/index.html > /dev/null
+            echo "R2: uploaded member payload, $(wc -c < docs/index.html) bytes"
+          else
+            echo "R2: CLOUDFLARE_API_TOKEN/ACCOUNT_ID absent -- skipping upload."
+            echo "R2: members will fall back to the free build until this is set."
+          fi
+
           cp build/free.html docs/index.html
-          echo "docs/index.html is now the free payload ($(wc -c < docs/index.html) bytes)"
+          echo "Pages: docs/index.html is the free payload, $(wc -c < docs/index.html) bytes"
 
       - name: Upload the built site
         if: steps.cadence.outputs.build == 'yes'
