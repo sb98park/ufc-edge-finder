@@ -1558,8 +1558,15 @@ def main(tier: str = "member", output_path: str | None = None):
 # TWO VALUES THAT MUST BE REAL BEFORE LAUNCH. They are placeholders on
 # purpose and deliberately conspicuous: a terms page naming the wrong legal
 # entity, or no entity at all, is worse than one that is obviously unfinished.
-LEGAL_ENTITY = "Octane Alpha"          # replace with the registered entity once formed
-GOVERNING_LAW = "the State of [STATE]"  # replace with the operator's state
+# THE FULL LEGAL NAME, not the everyday one. "Octane Alpha" on its own is a
+# trade name and not a party that exists, so the terms name the person who is
+# actually contracting -- which, with no LLC formed, is the operator. Customers
+# still see the brand everywhere else.
+#
+# Revisit when the LLC is formed: the entity becomes the party, and the
+# operator's name comes off this public page.
+LEGAL_ENTITY = "Sung Beom Park, doing business as Octane Alpha"
+GOVERNING_LAW = "the State of New Jersey"
 
 
 def _write_legal(env, updated):
