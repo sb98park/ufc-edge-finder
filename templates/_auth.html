@@ -76,12 +76,12 @@
   <input type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address" data-oa-email>
   <button type="button" class="oa-go" data-oa-send>Email me a sign-in link</button>
   {# See the same block in landing.html: magic links are single-use and mail
-     scanners fetch them, so the six-digit code is the path that survives. #}
+     scanners fetch them, so the numeric code is the path that survives. #}
   <div class="oa-code" data-oa-code-step hidden>
     <div class="oa-or"><span>or enter the code from the email</span></div>
     <input type="text" inputmode="numeric" autocomplete="one-time-code"
-           pattern="[0-9]*" maxlength="6" placeholder="123456"
-           aria-label="Six-digit code from the email" data-oa-code>
+           pattern="[0-9]*" maxlength="{{ otp_max_length }}" placeholder="{{ '1234567890'[:otp_length] }}"
+           aria-label="{{ otp_length }}-digit code from the email" data-oa-code>
     <button type="button" class="oa-go" data-oa-code-send>Sign in with code</button>
   </div>
   <div class="oa-fine" data-oa-fine>No password to remember. The link works once and expires in an hour.</div>
@@ -172,11 +172,11 @@
      server -- so it is posted to /auth/session explicitly, then scrubbed from
      the address bar so a live token is not left in browser history. */
   /* Trade a Supabase access token for our own session cookie. Shared by the
-     magic link and the six-digit code -- both end up here. */
+     magic link and the emailed code -- both end up here. */
   /* See landing.html: a bare false here was a silent signed-out page for any
      token our own Worker rejected. Failures must name themselves. */
   var SESSION_ERRORS = {
-    401: "Your sign-in link was valid, but we could not verify it here. Try the six-digit code from the same email. (401)",
+    401: "Your sign-in link was valid, but we could not verify it here. Try the code from the same email instead. (401)",
     503: "Sign-in is temporarily unavailable on our side \u2014 not your link. Try again in a minute. (503)"
   };
 
@@ -214,9 +214,9 @@
   }
 
   var AUTH_ERRORS = {
-    otp_expired: "That link had already been used or has expired. Mail providers sometimes open links to scan them, which uses the link up \u2014 enter the six-digit code from the same email instead.",
-    access_denied: "That sign-in link is no longer valid. Enter the six-digit code from the same email, or send a new link.",
-    server_error: "Sign-in failed on our side. Try the six-digit code from your email."
+    otp_expired: "That link had already been used or has expired. Mail providers sometimes open links to scan them, which uses the link up \u2014 enter the code from the same email instead.",
+    access_denied: "That sign-in link is no longer valid. Enter the code from the same email, or send a new link.",
+    server_error: "Sign-in failed on our side. Try the code from your email."
   };
 
   async function consumeFragment() {
@@ -249,6 +249,8 @@
   /* "email" is the documented type for a code from signInWithOtp;
      "magiclink" and "signup" are where GoTrue files the token when the
      address was, respectively, returning or brand new. */
+  var OTP_LEN = {{ otp_length }};        // what the project issues today
+  var OTP_MAX = {{ otp_max_length }};    // what Supabase allows it to become
   var CODE_TYPES = ["email", "magiclink", "signup"];
   var codeEmail = "";
   try { codeEmail = localStorage.getItem("oa_email") || ""; } catch (e) {}
@@ -268,6 +270,9 @@
       email.focus();
       return;
     }
+    /* Only the FLOOR is enforced here. The button must stay usable if the
+       project's code length ever changes under us -- refusing to submit
+       what the reader is looking at is how a form argues with reality. */
     if (code.length < 6) { codeBox.focus(); return; }
     codeSend.disabled = true; codeSend.textContent = "Signing in\u2026";
     try {
@@ -308,9 +313,9 @@
     if (e.key === "Enter") { e.preventDefault(); verifyCode(); }
   });
   codeBox.addEventListener("input", function () {
-    var digits = (codeBox.value || "").replace(/\D/g, "").slice(0, 6);
+    var digits = (codeBox.value || "").replace(/\D/g, "").slice(0, OTP_MAX);
     if (digits !== codeBox.value) codeBox.value = digits;
-    if (digits.length === 6) verifyCode();
+    if (digits.length === OTP_LEN) verifyCode();
   });
 
   var cooldownUntil = 0;
@@ -334,7 +339,7 @@
       });
       if (r.ok) {
         title.textContent = "Check your email";
-        sub.textContent = "Tap the link in the email, or enter the six-digit code it contains. Sent to " + value + ".";
+        sub.textContent = "Tap the link in the email, or enter the code it contains. Sent to " + value + ".";
         showCodeStep();
         codeBox.focus();
         // Supabase enforces a 60-second cooldown per address. Without a

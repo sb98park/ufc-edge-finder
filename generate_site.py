@@ -1183,6 +1183,15 @@ def main(tier: str = "member", output_path: str | None = None):
     # The stake ladder in force TODAY, so the units caption states the
     # real numbers instead of a hardcoded copy that goes stale the first
     # time a stake changes -- which it now has.
+    # HOW MANY DIGITS THE SIGN-IN CODE HAS. Supabase makes this a project
+    # setting (6-10), and the templates had hardcoded 6 while the project
+    # issues 8 -- so the input capped at six characters and slice(0, 6) threw
+    # the last two away, submitting a truncated code every time. One
+    # definition, shared by the landing page and the app, and the input still
+    # ACCEPTS up to 10 so a future settings change degrades to "tap the
+    # button" rather than to "cannot type your code".
+    env.globals["otp_length"] = 8
+    env.globals["otp_max_length"] = 10
     env.globals["stake_ladder"] = UNITS_BY_CONFIDENCE
     env.globals["lock_units"] = LOCK_OF_WEEK_UNITS
     env.filters["american"] = format_american_odds

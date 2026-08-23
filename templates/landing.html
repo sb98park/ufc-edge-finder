@@ -403,13 +403,13 @@
      scanners routinely FETCH every link in an incoming message to check it.
      That consumes the link before the human ever taps it, and Supabase then
      answers the real click with otp_expired -- which is exactly the failure
-     this sheet was shipped with. The six-digit code cannot be consumed by a
+     this sheet was shipped with. The numeric code cannot be consumed by a
      machine that only follows URLs, so it works when the link does not. #}
   <div class="code-step" data-code-step hidden>
     <div class="or"><span>or enter the code from the email</span></div>
     <input type="text" inputmode="numeric" autocomplete="one-time-code"
-           pattern="[0-9]*" maxlength="6" placeholder="123456"
-           aria-label="Six-digit code from the email" data-code>
+           pattern="[0-9]*" maxlength="{{ otp_max_length }}" placeholder="{{ '1234567890'[:otp_length] }}"
+           aria-label="{{ otp_length }}-digit code from the email" data-code>
     <button type="button" class="cta" data-code-submit>Sign in with code</button>
   </div>
   <div class="fine">No password to remember. The link works once and expires in an hour.</div>
@@ -564,7 +564,7 @@
      fails must always say something, and the status is included because
      "it did not work" is not a thing anyone can act on or report. */
   var SESSION_ERRORS = {
-    401: "Your sign-in link was valid, but we could not verify it here. Try the six-digit code from the same email. (401)",
+    401: "Your sign-in link was valid, but we could not verify it here. Try the code from the same email instead. (401)",
     503: "Sign-in is temporarily unavailable on our side \u2014 not your link. Try again in a minute. (503)"
   };
 
@@ -600,9 +600,9 @@
   }
 
   var AUTH_ERRORS = {
-    otp_expired: "That link had already been used or has expired. Mail providers sometimes open links to scan them, which uses the link up \u2014 enter the six-digit code from the same email instead.",
-    access_denied: "That sign-in link is no longer valid. Enter the six-digit code from the same email, or send a new link.",
-    server_error: "Sign-in failed on our side. Try the six-digit code from your email."
+    otp_expired: "That link had already been used or has expired. Mail providers sometimes open links to scan them, which uses the link up \u2014 enter the code from the same email instead.",
+    access_denied: "That sign-in link is no longer valid. Enter the code from the same email, or send a new link.",
+    server_error: "Sign-in failed on our side. Try the code from your email."
   };
 
   async function consumeAuthFragment() {
@@ -654,6 +654,8 @@
   /* "email" is the documented type for a code from signInWithOtp;
      "magiclink" and "signup" are where GoTrue files the token when the
      address was, respectively, returning or brand new. */
+  var OTP_LEN = {{ otp_length }};        // what the project issues today
+  var OTP_MAX = {{ otp_max_length }};    // what Supabase allows it to become
   var CODE_TYPES = ["email", "magiclink", "signup"];
   var codeEmail = "";
   try { codeEmail = localStorage.getItem("oa_email") || ""; } catch (e) {}
@@ -676,6 +678,9 @@
       els.email.focus();
       return;
     }
+    /* Only the FLOOR is enforced here. The button must stay usable if the
+       project's code length ever changes under us -- refusing to submit
+       what the reader is looking at is how a form argues with reality. */
     if (code.length < 6) { els.code.focus(); return; }
     els.codeSubmit.disabled = true;
     els.codeSubmit.textContent = "Signing in\u2026";
@@ -724,9 +729,9 @@
   /* Pasting the code from the email is the common case on a phone, so a
      complete six digits submits without a second tap. */
   els.code.addEventListener("input", function () {
-    var digits = (els.code.value || "").replace(/\D/g, "").slice(0, 6);
+    var digits = (els.code.value || "").replace(/\D/g, "").slice(0, OTP_MAX);
     if (digits !== els.code.value) els.code.value = digits;
-    if (digits.length === 6) verifyCode();
+    if (digits.length === OTP_LEN) verifyCode();
   });
 
   els.send.addEventListener("click", async function () {
@@ -745,7 +750,7 @@
       });
       if (r.ok) {
         els.title.textContent = "Check your email";
-        els.sub.innerHTML = "Tap the link in the email, or enter the six-digit code it contains. Sent to <b>" + email.replace(/[<>&]/g, "") + "</b>.";
+        els.sub.innerHTML = "Tap the link in the email, or enter the code it contains. Sent to <b>" + email.replace(/[<>&]/g, "") + "</b>.";
         showCodeStep();
         els.code.focus();
         // SUPABASE ENFORCES A 60-SECOND COOLDOWN PER ADDRESS. Without a
