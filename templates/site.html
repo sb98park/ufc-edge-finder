@@ -3467,6 +3467,19 @@
     .tape-bar-fill { transition: none; }
   }
 
+  .oa-upsell {
+    margin: 14px 16px 18px; padding: 16px; border-radius: 14px;
+    border: 1px solid rgba(212,175,55,.42);
+    background: linear-gradient(180deg, rgba(212,175,55,.10), rgba(212,175,55,.02) 60%, transparent);
+  }
+  .oa-upsell-head { font-size: 15px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+  .oa-upsell p { margin: 0 0 13px; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+  .oa-upsell-cta {
+    width: 100%; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+    border: 0; border-radius: 11px; padding: 12px; background: var(--accent); color: #151208;
+  }
+  .oa-upsell-fine { font-size: 10.5px; color: var(--muted); text-align: center; margin-top: 9px; }
+  .oa-upsell-fine a { color: var(--muted); }
   .radar-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
   .radar-chart { display: block; max-width: 100%; height: auto; }
   /* The axis labels are drawn OUTSIDE the viewBox (the svg carries
@@ -7638,6 +7651,22 @@
   </div>
 
   <div class="detail-section" data-section="thisweekend">
+{% if tier == 'free' %}
+    {# FREE PAYLOAD ONLY. The member build carries the picks, so this block
+       must not exist there -- guarding on tier rather than hiding with CSS
+       means it cannot leak into the wrong payload. It is additionally hidden
+       at runtime for a signed-in member, which covers the window between
+       signing in and the Worker serving the member build. #}
+    <div class="oa-upsell" data-oa-upsell>
+      <div class="oa-upsell-head">This card is sealed</div>
+      <p>The tape, the scout rails and the market price are free, permanently
+         &mdash; and so is every pick we have already graded. What members see
+         is the read on the fights that have not happened yet.</p>
+      <button type="button" class="oa-upsell-cta" data-oa-subscribe="year">Start 7 days free</button>
+      <div class="oa-upsell-fine">$190/yr, or $19/mo &middot; cancel in one tap &middot;
+        <a href="/welcome">see the track record</a></div>
+    </div>
+{% endif %}
   {% if events %}
   {% set event = events[0] %}
   {# Event name and date removed: the countdown banner directly above now
@@ -13566,5 +13595,6 @@
     <button class="tabbar-btn" data-tab="track">{{ icon_barchart() }}<span>Record</span></button>
     <button class="tabbar-btn" data-tab="__hub">{{ icon_list() }}<span>More</span></button>
   </nav>
+{% include "_auth.html" %}
 </body>
 </html>

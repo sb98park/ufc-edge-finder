@@ -1,0 +1,194 @@
+{# ---------------------------------------------------------------------------
+   Shared sign-in widget: the sheet, and the auth logic behind it.
+
+   Included by the app so a free visitor can create an account and subscribe
+   without leaving the page they are reading. The landing page carries its own
+   copy of this logic because it also drives a plan toggle; if a third surface
+   ever needs auth, that is the moment to make this the single implementation
+   and strip the duplicate out of landing.html.
+
+   Everything here is safe in BOTH tier builds. A member reaching it simply
+   sees "Account", because the entitlement it renders from comes from the
+   Worker rather than from anything baked into the payload.
+   --------------------------------------------------------------------------- #}
+<style>
+  .oa-authbar {
+    position: fixed; top: 0; right: 0; z-index: 40;
+    padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px 12px;
+  }
+  .oa-authbar button {
+    font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+    color: var(--text); background: rgba(20,20,22,.82); backdrop-filter: blur(8px);
+    border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 14px;
+  }
+  .oa-scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(3px);
+    opacity: 0; pointer-events: none; transition: opacity .18s ease; z-index: 60;
+  }
+  .oa-scrim[data-open] { opacity: 1; pointer-events: auto; }
+  .oa-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 61;
+    background: #111113; border-top: 1px solid var(--hairline);
+    border-radius: 20px 20px 0 0;
+    padding: 12px 18px calc(24px + env(safe-area-inset-bottom));
+    transform: translateY(100%); transition: transform .24s cubic-bezier(.22,1,.36,1);
+    max-width: 480px; margin: 0 auto;
+  }
+  .oa-sheet[data-open] { transform: translateY(0); }
+  .oa-grab { width: 36px; height: 4px; border-radius: 2px; background: #33333a; margin: 0 auto 14px; }
+  .oa-sheet h3 { font-size: 20px; margin: 0 0 5px; letter-spacing: -.015em; }
+  .oa-sheet p { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
+  .oa-sheet button.oa-oauth, .oa-sheet button.oa-go {
+    width: 100%; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+    border-radius: 11px; padding: 12px; margin-bottom: 9px; border: 1px solid var(--hairline);
+    background: none; color: var(--text);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .oa-sheet button.oa-oauth { background: #fff; color: #111; border-color: #fff; }
+  .oa-sheet button.oa-go { background: var(--accent); color: #151208; border: 0; }
+  .oa-sheet button:disabled { opacity: .55; cursor: default; }
+  .oa-or { display: flex; align-items: center; gap: 9px; margin: 12px 0; color: var(--muted); font-size: 11px; }
+  .oa-or::before, .oa-or::after { content: ""; flex: 1; height: 1px; background: var(--hairline); }
+  .oa-sheet input {
+    width: 100%; font: inherit; font-size: 16px; padding: 12px 13px; margin-bottom: 9px;
+    border-radius: 11px; border: 1px solid var(--hairline);
+    background: var(--sunken); color: var(--text);
+  }
+  .oa-fine { font-size: 11px; color: var(--muted); text-align: center; margin-top: 12px; line-height: 1.6; }
+  @media (prefers-reduced-motion: reduce) { .oa-sheet, .oa-scrim { transition: none; } }
+</style>
+
+<div class="oa-authbar"><button type="button" data-oa-open>Sign in</button></div>
+<div class="oa-scrim" data-oa-scrim></div>
+<div class="oa-sheet" data-oa-sheet role="dialog" aria-modal="true" aria-label="Sign in">
+  <div class="oa-grab"></div>
+  <h3 data-oa-title>Sign in</h3>
+  <p data-oa-sub>Everything already graded is free, permanently. No card unless you start a trial.</p>
+  <button type="button" class="oa-oauth" data-oa-google>
+    <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.5 5-4.4 7l6.8 5.3C42.4 36 45 30.6 45 24z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.2l-6.8-5.3c-1.9 1.3-4.4 2.2-7.7 2.2-5.9 0-10.9-3.9-12.7-9.2l-7 5.4C7.9 41 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.3 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.7-4.5l-7-5.4C3.5 17 2.7 20.4 2.7 24s.8 7 2.5 9.9l6.1-5.4z"/><path fill="#EA4335" d="M24 9.5c4.2 0 7 1.8 8.6 3.3l6.3-6.1C35 3.1 29.9 1 24 1 15.4 1 7.9 6 5.2 14.1l7 5.4C14 14.2 19 9.5 24 9.5z"/></svg>
+    Continue with Google
+  </button>
+  <div class="oa-or"><span>or</span></div>
+  <input type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address" data-oa-email>
+  <button type="button" class="oa-go" data-oa-send>Email me a sign-in link</button>
+  <div class="oa-fine" data-oa-fine>No password to remember. The link works once and expires in an hour.</div>
+</div>
+
+<script>
+(function () {
+  var SUPABASE = {{ supabase_url | tojson }};
+  var ANON     = {{ supabase_anon_key | tojson }};
+  var q = function (s) { return document.querySelector(s); };
+  var bar = q("[data-oa-open]"), scrim = q("[data-oa-scrim]"), sheet = q("[data-oa-sheet]");
+  var email = q("[data-oa-email]"), send = q("[data-oa-send]"), fine = q("[data-oa-fine]");
+  var title = q("[data-oa-title]"), sub = q("[data-oa-sub]");
+  var state = { signedIn: false, member: false };
+
+  function open(v) {
+    [scrim, sheet].forEach(function (el) {
+      if (v) el.setAttribute("data-open", ""); else el.removeAttribute("data-open");
+    });
+    if (v) setTimeout(function () { email.focus(); }, 260);
+  }
+  bar.addEventListener("click", function () { open(true); });
+  scrim.addEventListener("click", function () { open(false); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") open(false); });
+
+  function render() {
+    bar.textContent = state.member ? "Account" : (state.signedIn ? "Account" : "Sign in");
+    document.querySelectorAll("[data-oa-upsell]").forEach(function (el) {
+      el.style.display = state.member ? "none" : "";
+    });
+  }
+
+  /* Supabase returns tokens in the URL FRAGMENT, which never reaches the
+     server -- so it is posted to /auth/session explicitly, then scrubbed from
+     the address bar so a live token is not left in browser history. */
+  async function consumeFragment() {
+    var h = location.hash.slice(1);
+    if (h.indexOf("access_token") === -1) return false;
+    var token = new URLSearchParams(h).get("access_token");
+    history.replaceState(null, "", location.pathname + location.search);
+    if (!token) return false;
+    try {
+      var r = await fetch("/auth/session", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: token })
+      });
+      if (!r.ok) return false;
+      var out = await r.json();
+      state = { signedIn: true, member: !!out.member };
+      render();
+      // A member who just signed in is still looking at the free payload,
+      // because entitlement was decided before this request. Reload so the
+      // Worker serves the member build.
+      if (out.member) location.reload();
+      return true;
+    } catch (e) { return false; }
+  }
+
+  var cooldownUntil = 0;
+  function tick() {
+    var left = Math.ceil((cooldownUntil - Date.now()) / 1000);
+    if (left > 0) { send.disabled = true; send.textContent = "Resend in " + left + "s"; setTimeout(tick, 500); }
+    else { send.disabled = false; send.textContent = "Email me a sign-in link"; }
+  }
+
+  send.addEventListener("click", async function () {
+    var value = (email.value || "").trim();
+    if (!value || value.indexOf("@") === -1) { email.focus(); return; }
+    send.disabled = true; send.textContent = "Sending…";
+    try {
+      var r = await fetch(SUPABASE + "/auth/v1/otp?redirect_to=" + encodeURIComponent(location.origin + location.pathname), {
+        method: "POST",
+        headers: { "apikey": ANON, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: value })
+      });
+      if (r.ok) {
+        title.textContent = "Check your email";
+        sub.textContent = "We sent a sign-in link to " + value + ". It works once and expires in an hour.";
+        // Supabase enforces a 60-second cooldown per address. Without a
+        // visible countdown, a slow inbox looks like a broken button.
+        cooldownUntil = Date.now() + 60000; tick();
+      } else {
+        var b = await r.json().catch(function () { return {}; });
+        fine.textContent = b.msg || "Could not send that link. Try again shortly.";
+        send.disabled = false; send.textContent = "Email me a sign-in link";
+      }
+    } catch (e) {
+      fine.textContent = "Network error. Check your connection.";
+      send.disabled = false; send.textContent = "Email me a sign-in link";
+    }
+  });
+  email.addEventListener("keydown", function (e) { if (e.key === "Enter") send.click(); });
+
+  q("[data-oa-google]").addEventListener("click", function () {
+    location.href = SUPABASE + "/auth/v1/authorize?provider=google&redirect_to="
+      + encodeURIComponent(location.origin + location.pathname);
+  });
+
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-oa-subscribe]");
+    if (!t) return;
+    if (!state.signedIn) { open(true); return; }
+    t.disabled = true;
+    fetch("/billing/checkout", {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: t.dataset.oaSubscribe === "month" ? "month" : "year" })
+    }).then(function (r) { return r.json(); }).then(function (out) {
+      if (out.url) location.href = out.url;
+      else { t.disabled = false; alert(out.error || "Could not open checkout."); }
+    }).catch(function () { t.disabled = false; });
+  });
+
+  consumeFragment().then(function (done) {
+    if (done) return;
+    fetch("/auth/whoami", { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (s) { state = s; render(); })
+      .catch(function () { render(); });
+  });
+})();
+</script>
