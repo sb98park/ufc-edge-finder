@@ -1648,10 +1648,15 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
     # the movement chart is that this is what you actually get, so they are
     # pulled from a graded fight -- graded because that card is free, so the
     # preview promises nothing the free tier does not deliver.
+    # The graded filter is the point, not decoration: an ungraded fight's card
+    # is the one the free tier redacts, and showing it here would advertise a
+    # sample the free offer below does not honour.
     preview = None
     for source in (events or []), (future_events or []):
         for ev in source:
             for f in ev.get("fights", []):
+                if not tiering.is_graded(f):
+                    continue
                 prof = f.get("profile") or {}
                 if prof.get("rows") and prof.get("radar_svg") and f.get("moneyline_chart"):
                     preview = {
