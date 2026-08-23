@@ -187,6 +187,17 @@
   .sheet input{width:100%;font:inherit;font-size:15px;padding:12px 13px;border-radius:11px;
                border:1px solid var(--line);background:var(--sunken);color:var(--ink);margin-bottom:9px}
   .sheet input::placeholder{color:var(--ink3)}
+  .acct-tier{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;
+             letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);
+             border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin:0 0 14px}
+  .acct-tier b{color:var(--ink);font-weight:700}
+  .acct-tier .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--ink3)}
+  .acct-tier.member .dot{background:var(--gold);box-shadow:0 0 6px 1px rgba(212,175,55,.55)}
+  .acct-tier.free .dot{background:var(--green)}
+  .acct-out{width:100%;font:inherit;font-size:13px;padding:11px;margin-top:9px;
+            background:none;border:1px solid var(--line);border-radius:11px;
+            color:var(--ink2);cursor:pointer}
+  .acct [data-acct-who]{word-break:break-word}
   .code-step{margin-top:2px}
   .code-step input{text-align:center;font-size:22px;letter-spacing:.34em;
                    font-family:var(--mono);padding-left:.34em}
@@ -387,8 +398,21 @@
 </div>
 
 <div class="scrim" data-scrim></div>
-<div class="sheet" data-sheet role="dialog" aria-modal="true" aria-label="Sign in">
+<div class="sheet" data-sheet role="dialog" aria-modal="true" aria-label="Account">
   <div class="grab"></div>
+  {# TWO PANELS, ONE SHEET. The nav button flipped its label to "Account" the
+     moment a session existed but still opened the sign-in form, so a signed-in
+     reader tapping "Account" was asked to sign in again -- with no way to tell
+     they already had, and no way to sign out. A label that changes has to lead
+     somewhere that changed too. #}
+  <div class="acct" data-acct hidden>
+    <h3>Account</h3>
+    <p data-acct-who>Signed in.</p>
+    <div class="acct-tier" data-acct-tier></div>
+    <button type="button" class="cta" data-acct-primary></button>
+    <button type="button" class="acct-out" data-acct-signout>Sign out</button>
+  </div>
+  <div data-signin>
   <h3>Sign in</h3>
   <p>Free forever on everything already graded. No card unless you start a trial.</p>
   <button type="button" class="oauth g">
@@ -413,6 +437,7 @@
     <button type="button" class="cta" data-code-submit>Sign in with code</button>
   </div>
   <div class="fine">No password to remember. The link works once and expires in an hour.</div>
+  </div>
 </div>
 
 <script>
@@ -446,7 +471,10 @@
     fine: $("[data-sheet] .fine"), title: $("[data-sheet] h3"),
     sub: $("[data-sheet] p"), google: $(".oauth.g"),
     codeStep: $("[data-code-step]"), code: $("[data-code]"),
-    codeSubmit: $("[data-code-submit]")
+    codeSubmit: $("[data-code-submit]"),
+    signinPanel: $("[data-signin]"), acct: $("[data-acct]"),
+    acctWho: $("[data-acct-who]"), acctTier: $("[data-acct-tier]"),
+    acctPrimary: $("[data-acct-primary]"), acctSignout: $("[data-acct-signout]")
   };
 
   document.querySelectorAll("[data-plan]").forEach(function (btn) {
@@ -466,13 +494,49 @@
 
   /* --- sheet ------------------------------------------------------- */
   var lastFocus = null;
-  function openSheet(open) {
+  /* The email the session belongs to, for display only. Read out of the
+     Supabase token when we exchange it -- not verified here, because the
+     Worker already did that and this is a label, not a credential. Covers the
+     link, the code and Google alike, which localStorage alone would not. */
+  var acctEmail = "";
+  try { acctEmail = localStorage.getItem("oa_who") || ""; } catch (e) {}
+
+  function paintAccount() {
+    var member = !!state.member;
+    els.acctWho.textContent = acctEmail ? "Signed in as " + acctEmail : "You are signed in.";
+    els.acctTier.className = "acct-tier " + (member ? "member" : "free");
+    els.acctTier.innerHTML = '<i class="dot"></i>' + (member
+      ? "<b>Member</b> &middot; every fight on every card"
+      : "<b>Free</b> &middot; every card we have already graded");
+    els.acctPrimary.textContent = member ? "Manage subscription" : "Start 7 days free";
+  }
+
+  function openSheet(open, panel) {
+    /* Which panel is decided HERE rather than at each call site, so a new
+       entry point cannot accidentally show a signed-in reader the login form
+       again -- which is the bug this replaced. */
+    var showAcct = panel === "account" || (panel !== "signin" && state.signedIn);
+    if (open) {
+      els.acct.hidden = !showAcct;
+      els.signinPanel.hidden = showAcct;
+      if (showAcct) paintAccount();
+    }
     [els.scrim, els.sheet].forEach(function (el) {
       if (open) el.setAttribute("data-open", ""); else el.removeAttribute("data-open");
     });
-    if (open) { lastFocus = document.activeElement; setTimeout(function () { els.email.focus(); }, 260); }
-    else if (lastFocus) lastFocus.focus();
+    if (open && !showAcct) {
+      lastFocus = document.activeElement;
+      setTimeout(function () { els.email.focus(); }, 260);
+    } else if (open) {
+      lastFocus = document.activeElement;
+    } else if (lastFocus) { lastFocus.focus(); }
   }
+
+  els.acctPrimary.addEventListener("click", function () { startCheckout(els.acctPrimary); });
+  els.acctSignout.addEventListener("click", function () {
+    try { localStorage.removeItem("oa_who"); } catch (e) {}
+    location.href = "/auth/logout";
+  });
   els.scrim.addEventListener("click", function () { openSheet(false); });
 
   var SHEET = els.sheet, CLOSE = function () { openSheet(false); };
@@ -568,6 +632,21 @@
     503: "Sign-in is temporarily unavailable on our side \u2014 not your link. Try again in a minute. (503)"
   };
 
+  /* Display only -- the Worker verifies the token, this just reads the label
+     off it so the account panel can say who you are. Never trusted for
+     anything, and a malformed token simply leaves it blank. */
+  function rememberWho(token) {
+    try {
+      var body = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      var claims = JSON.parse(decodeURIComponent(escape(atob(
+        body + "===".slice((body.length + 3) % 4)))));
+      if (claims && claims.email) {
+        acctEmail = claims.email;
+        try { localStorage.setItem("oa_who", acctEmail); } catch (e) {}
+      }
+    } catch (e) { /* a label is not worth an exception */ }
+  }
+
   async function establishSession(token) {
     if (!token) return { ok: false, reason: "No sign-in token in that link." };
     try {
@@ -582,6 +661,7 @@
       }
       var out = await r.json();
       state = { signedIn: true, member: !!out.member };
+      rememberWho(token);
       render();
       return { ok: true };
     } catch (e) {
@@ -781,9 +861,14 @@
   });
 
   /* --- subscribe / manage ------------------------------------------- */
-  async function startCheckout() {
-    els.cta.disabled = true;
-    els.cta.textContent = "Opening\u2026";
+  /* Takes the button that was pressed: this is reachable from the plan CTA
+     and from the account panel now, and disabling the wrong one leaves the
+     pressed button live for a second tap. */
+  async function startCheckout(btn) {
+    btn = btn || els.cta;
+    var label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Opening\u2026";
     try {
       var path = state.member ? "/billing/portal" : "/billing/checkout";
       var r = await fetch(path, {
@@ -792,23 +877,32 @@
         body: JSON.stringify({ plan: plan })
       });
       var out = await r.json().catch(function () { return {}; });
-      if (r.status === 401) { els.cta.disabled = false; render(); openSheet(true); return; }
+      if (r.status === 401) {
+        // The session is gone, whatever the button said. Ask for sign-in
+        // EXPLICITLY rather than letting openSheet read a stale state.
+        btn.disabled = false; btn.textContent = label;
+        state = { signedIn: false, member: false };
+        render();
+        openSheet(true, "signin");
+        showAuthFailure("Your session expired. Sign in again to continue.");
+        return;
+      }
       if (out.url) { location.href = out.url; return; }
-      els.cta.disabled = false;
+      btn.disabled = false; btn.textContent = label;
       render();
       alert(out.error || "Could not open checkout. Please try again.");
     } catch (e) {
-      els.cta.disabled = false;
+      btn.disabled = false; btn.textContent = label;
       render();
     }
   }
 
   document.querySelectorAll("[data-auth]").forEach(function (b) {
     b.addEventListener("click", function () {
-      // The nav button is always sign-in/account; the plan CTA goes
-      // straight to checkout when there is already a session, so a signed-in
-      // visitor is not asked to sign in again before paying.
-      if (b === els.cta && state.signedIn) startCheckout();
+      // The plan CTA goes straight to checkout when there is already a
+      // session, so a signed-in visitor is not asked to sign in before
+      // paying. Everything else opens the sheet, which picks its own panel.
+      if (b === els.cta && state.signedIn) startCheckout(b);
       else openSheet(true);
     });
   });
