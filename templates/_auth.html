@@ -12,17 +12,29 @@
    Worker rather than from anything baked into the payload.
    --------------------------------------------------------------------------- #}
 <style>
+  /* IN THE HEADER ROW, NOT FLOATING OVER THE PAGE.
+     Fixed at top-right it sat on top of whatever scrolled underneath -- on the
+     card view it covered the Main Card / Preliminary tabs, which is a control
+     the reader needs. It belongs in the brand row, where it scrolls away like
+     everything else. The fixed fallback below only applies on a page that has
+     no header to adopt it. */
   .oa-authbar {
-    /* Above the scrim: the popover grows out of this button, and having the
-       button disappear under the dimming as it opens breaks that link. */
     position: fixed; top: 0; right: 0; z-index: 10002;
     padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px 12px;
   }
-  .oa-authbar button {
-    font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
-    color: var(--text); background: rgba(20,20,22,.82); backdrop-filter: blur(8px);
-    border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 14px;
+  .oa-authbar.oa-inline {
+    position: static; padding: 0; z-index: auto;
   }
+  .oa-authbar button {
+    /* Secondary control, so it is sized like one. At 12px/700 in a full pill
+       it competed with the wordmark beside it. */
+    font: inherit; font-size: 11px; font-weight: 600; letter-spacing: .01em;
+    cursor: pointer; color: var(--muted); background: var(--panel2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 5px 11px;
+    white-space: nowrap; transition: color .16s ease, border-color .16s ease;
+  }
+  .oa-authbar button:hover { color: var(--text); border-color: var(--hairline); }
+  .oa-authbar.oa-inline button { backdrop-filter: none; }
   /* ABOVE EVERYTHING. 60/61 sat under most of the app: the fighter drawer
      (300/301), the tour overlay and its tooltip (300/302), the whats-new
      banner (200) and the live-status overlay (9999) all outranked it. As a
@@ -228,6 +240,15 @@
     });
     if (v && !showAcct) setTimeout(function () { email.focus(); }, 260);
   }
+  /* Move into the app's header row if there is one. Done here rather than by
+     rendering the button inside site.html so this partial stays self-contained
+     and still works on /welcome, which has no such slot. */
+  (function () {
+    var slot = document.getElementById("account-slot");
+    var wrapEl = document.querySelector(".oa-authbar");
+    if (slot && wrapEl) { slot.appendChild(wrapEl); wrapEl.classList.add("oa-inline"); }
+  })();
+
   bar.addEventListener("click", function () { open(true); });
 
   acctPrimary.addEventListener("click", function () {
