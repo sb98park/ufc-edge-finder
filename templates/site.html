@@ -35,9 +35,9 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico?v=7">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=7">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=7">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=7">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=7">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=8">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=8">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8">
 
 <meta property="og:title" content="Octane Alpha | Quantitative UFC Analytics & Edge Detection">
 <meta property="og:description" content="Model probability vs. live sportsbook lines. Real fight predictions, tracked publicly, checked against the market -- misses included.">
@@ -5432,7 +5432,7 @@
      compensate with safe-area padding. "black" keeps the bar opaque and the
      content below it -- same colour, none of the overlap. #}
   <meta name="apple-mobile-web-app-title" content="Octane Alpha">
-  <link rel="manifest" href="/manifest.json?v=6">
+  <link rel="manifest" href="/manifest.json?v=8">
   <link rel="apple-touch-startup-image" href="/splash-1206x2622.png?v=7"
         media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
   <link rel="apple-touch-startup-image" href="/splash-1320x2868.png?v=7"
@@ -8289,7 +8289,8 @@
       setTimeout(clear, 3000);   // hard ceiling, unconditional
     })();
 
-    // Registers docs/sw.js. That file NO LONGER CACHES ANYTHING -- it exists
+    // Registers docs/sw.js. That file caches EXACTLY ONE FILE, /offline.html,
+    // and only ever serves it when a navigation has already failed. It exists
     // purely to neutralise the caching service worker that shipped before
     // it, and registering is what makes a browser fetch the replacement and
     // stop running the old one. See docs/sw.js for the full history.
