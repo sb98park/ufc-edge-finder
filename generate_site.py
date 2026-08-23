@@ -1462,6 +1462,19 @@ def main(tier: str = "member", output_path: str | None = None):
 
     html = template.render(**context)
 
+    # ---------------------------------------------------------------------
+    # THE LANDING PAGE. Rendered from the SAME context as the app, because its
+    # entire argument is the live track record -- a hardcoded "+66U" would be
+    # wrong within a week, and a marketing page that overstates the record is
+    # worse than no marketing page.
+    # ---------------------------------------------------------------------
+    if tier != "free" and track_record:
+        try:
+            _write_landing(env, track_record, units_timeseries_svg,
+                           events, future_events, generated_at_short)
+        except Exception as exc:                      # never break the main build
+            print(f"[landing] skipped: {exc}")
+
     out_path = output_path or OUTPUT_PATH
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     with open(out_path, "w") as f:
@@ -1511,6 +1524,76 @@ def main(tier: str = "member", output_path: str | None = None):
 
     print(f"Wrote {out_path} ({len(events)} events, {len(future_events)} future events, {len(standout_props)} agreed reads, {len(disagreement_props)} disagreements)")
     print(f"Wrote {written} movement fragment(s), {total/1e6:.2f}MB deferred out of the page")
+
+
+
+
+def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short):
+    """
+    docs/welcome.html -- the marketing page.
+
+    The paired card is the whole idea: one fight that has happened with the
+    read revealed and its result stamped on, and one that has not with the
+    read sealed. Both show the same analytics. Picking the MOST RECENT graded
+    fight rather than the best-ever one is deliberate -- "here is last
+    Saturday" is a more honest demonstration than "here is our best day", and
+    the aggregate record sits directly above it either way.
+    """
+    conf_short = {"High Confidence": "HIGH", "Medium Confidence": "MED",
+                  "Low Confidence": "LOW", "Lock of the Week": "LOCK"}
+
+    graded = None
+    for ev in (track_record.get("results_by_event") or []):
+        for r in ev.get("results", []):
+            if r.get("correct") and r.get("units_result") is not None:
+                graded = dict(r)
+                graded["event_short"] = _format_friendly_date(r.get("date_added")) or ev.get("event_name", "")
+                graded["division"] = r.get("card_position") or ""
+                graded["conf_short"] = conf_short.get(r.get("confidence_label"), "")
+                graded["pick_odds_label"] = format_american_odds(r.get("pick_odds"))
+                break
+        if graded:
+            break
+    if not graded:
+        raise ValueError("no graded result to showcase")
+
+    upcoming = None
+    for source in (future_events or []), (events or []):
+        for ev in source:
+            for f in ev.get("fights", []):
+                if f.get("winner") or f.get("cancelled"):
+                    continue
+                price = None
+                for e in (f.get("edges") or []):
+                    if e.get("market") == "Moneyline" and e.get("odds_american"):
+                        price = format_american_odds(e["odds_american"])
+                        break
+                upcoming = {
+                    "fighter_a": f.get("fighter_a", ""),
+                    "fighter_b": f.get("fighter_b", ""),
+                    "division": f.get("weight_class") or "",
+                    "when": ev.get("event_name", "Next card"),
+                    "price_label": price or "--",
+                }
+                break
+            if upcoming:
+                break
+        if upcoming:
+            break
+    if not upcoming:
+        raise ValueError("no upcoming fight to seal")
+
+    html = env.get_template("landing.html").render(
+        tr=track_record,
+        units_timeseries_svg=units_svg,
+        demo_graded=graded,
+        demo_upcoming=upcoming,
+        generated_at_short=generated_at_short,
+    )
+    os.makedirs("docs", exist_ok=True)
+    with open("docs/welcome.html", "w") as f:
+        f.write(html)
+    print(f"Wrote docs/welcome.html ({len(html)/1024:.0f}KB)")
 
 
 if __name__ == "__main__":

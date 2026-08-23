@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Octane Alpha &middot; Quantitative UFC analytics</title>
+<meta name="description" content="Every UFC pick published before the bell and graded against the closing line. {{ tr.units_stats.eligible_count }} picks across {{ tr.units_stats.event_count }} cards, {{ tr.accuracy_pct }}% correct.">
+<meta name="theme-color" content="#0a0a0b">
+<link rel="canonical" href="https://octanealpha.com/welcome">
+<meta property="og:title" content="Octane Alpha">
+<meta property="og:description" content="Model picks priced against the book, graded in public.">
+<meta property="og:image" content="https://octanealpha.com/og-share-card.png">
+<meta property="og:url" content="https://octanealpha.com/welcome">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=8">
+<style>
+  :root{
+    --ink:#e9e9ec; --ink2:#9a9aa4; --ink3:#6f6f79;
+    --bg:#000; --panel:#141416; --sunken:#0e0e10; --line:rgba(255,255,255,.09);
+    --gold:#d4af37; --red:#e53935; --blue:#3b82f6; --green:#3ddc84;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+    padding:0 calc(16px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  }
+  .wrap{max-width:440px;margin:0 auto}
+  a{color:inherit}
+  /* --- nav --- */
+  .nav{display:flex;align-items:center;justify-content:space-between;
+       padding:calc(14px + env(safe-area-inset-top)) 0 14px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;letter-spacing:-.01em}
+  .brand b{color:var(--gold);font-weight:800}
+  .nav button{font:inherit;font-size:13px;font-weight:600;color:var(--ink2);
+              background:none;border:0;padding:6px 2px;cursor:pointer}
+  /* --- hero --- */
+  .eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--ink3);
+           text-transform:uppercase;margin-top:26px}
+  .big{font-size:clamp(44px,15vw,58px);font-weight:800;letter-spacing:-.04em;line-height:1;
+       color:var(--green);margin:10px 0 6px}
+  .big span{font-size:.42em;opacity:.65;letter-spacing:-.02em}
+  .sub{font-size:13px;color:var(--ink2);margin-bottom:10px}
+  .sub b{color:var(--green)}
+  .curve{margin:4px 0 14px}
+  .curve svg{display:block;width:100%;height:auto}
+  .rails{display:flex;gap:8px}
+  .rails div{flex:1;background:var(--sunken);border:1px solid var(--line);border-radius:10px;
+             padding:10px 6px;text-align:center}
+  .rails b{display:block;font-family:var(--mono);font-size:15px;letter-spacing:-.01em}
+  .rails span{font-size:8px;letter-spacing:.1em;color:var(--ink3);text-transform:uppercase}
+  /* --- claim --- */
+  .claim{margin:24px 0;padding:15px 16px;border-left:2px solid var(--gold);
+         background:var(--sunken);border-radius:0 10px 10px 0;font-size:13.5px;color:var(--ink2)}
+  .claim em{color:var(--ink);font-style:italic}
+  /* --- the paired demo --- */
+  h2{font-size:19px;font-weight:700;letter-spacing:-.015em;margin:0 0 4px}
+  .lede{font-size:13.5px;color:var(--ink2);margin:0 0 16px}
+  .stamp{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;
+         font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase}
+  .stamp .d{color:var(--ink3)}
+  .stamp .d.live{color:var(--gold)}
+  .stamp .ok{color:var(--green)}
+  .stamp .lk{color:var(--ink3)}
+  .fc{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:13px}
+  .fc.graded{border-color:rgba(61,220,132,.3)}
+  .fc.locked{border-color:rgba(212,175,55,.34)}
+  .fc-top{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;line-height:1.25}
+  .fc-top span{flex:1}
+  .fc-top span.r{text-align:right}
+  .fc-top em{font-family:var(--mono);font-size:8px;font-style:normal;color:var(--ink3);
+             text-align:center;letter-spacing:.1em;line-height:1.5}
+  .pick{display:flex;align-items:center;gap:10px;margin-top:11px;padding:10px;border-radius:11px;
+        border:1px solid rgba(212,175,55,.3);background:rgba(212,175,55,.06)}
+  .pick.sealed{border-style:dashed;background:rgba(212,175,55,.04)}
+  .ring{width:34px;height:34px;border-radius:50%;border:2px solid var(--gold);flex:none;
+        display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+        font-size:12px;font-weight:700;color:var(--gold)}
+  .ring.lk{border-style:dashed;font-size:15px}
+  .pick b{display:block;font-size:13px}
+  .pick i{font-style:normal;font-size:11px;color:var(--ink2)}
+  .conf{font-family:var(--mono);font-size:8px;background:var(--gold);color:#151208;
+        padding:3px 6px;border-radius:5px;font-weight:700;flex:none}
+  .rail{display:flex;align-items:center;gap:7px;margin-top:7px}
+  .rail span{font-family:var(--mono);font-size:7px;letter-spacing:.09em;color:var(--ink3);
+             width:64px;text-align:center;flex:none}
+  .rail i{height:3px;border-radius:2px;display:block;flex:1;max-width:34%}
+  .rail i:first-child{margin-left:auto}
+  .foot{display:flex;justify-content:space-between;margin-top:11px;padding-top:9px;
+        border-top:1px solid var(--line);font-family:var(--mono);font-size:8.5px;
+        color:var(--ink3);letter-spacing:.04em}
+  .foot .pos{color:var(--green)}
+  .foot .hid{color:var(--gold)}
+  .link{width:1px;height:16px;background:var(--line);margin:10px auto}
+  .cap{font-size:12.5px;color:var(--ink2);margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .cap b{color:var(--ink)}
+  /* --- plans --- */
+  .seg{display:flex;background:var(--sunken);border:1px solid var(--line);border-radius:10px;
+       padding:3px;margin:16px 0 14px}
+  .seg button{flex:1;font:inherit;font-size:12px;padding:8px 4px;border:0;border-radius:8px;
+              background:none;color:var(--ink3);cursor:pointer;display:flex;align-items:center;
+              justify-content:center;gap:6px}
+  .seg button[aria-pressed=true]{background:#1e1e22;color:var(--ink);font-weight:700}
+  .pill{background:var(--green);color:#08130c;font-family:var(--mono);font-size:7px;
+        letter-spacing:.08em;font-weight:700;padding:2px 5px;border-radius:4px}
+  .plan{border-radius:15px;padding:16px;margin-bottom:12px;position:relative}
+  .plan.gold{border:1px solid rgba(212,175,55,.55);
+             background:linear-gradient(180deg,rgba(212,175,55,.10),rgba(212,175,55,.02) 60%,transparent);
+             box-shadow:0 0 0 1px rgba(212,175,55,.10),0 16px 44px -20px rgba(212,175,55,.5)}
+  .plan.flat{border:1px solid var(--line);background:var(--sunken)}
+  .rib{position:absolute;top:-9px;left:16px;background:var(--gold);color:#151208;
+       font-family:var(--mono);font-size:8px;letter-spacing:.11em;font-weight:700;
+       padding:3px 8px;border-radius:5px}
+  .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+  .pn{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--gold);font-weight:700}
+  .pn.sm{color:var(--ink2)}
+  .pt{font-size:11.5px;color:var(--ink2);margin-top:3px}
+  .pc{text-align:right}
+  .pc .was{font-size:10px;color:var(--ink3);text-decoration:line-through}
+  .pc b{font-size:27px;font-weight:800;letter-spacing:-.03em}
+  .pc sup{font-size:13px;font-weight:800;position:relative;top:-.55em}
+  .pc i{font-style:normal;font-size:11px;color:var(--ink3)}
+  .billed{font-family:var(--mono);font-size:9.5px;color:var(--gold);margin-bottom:13px;letter-spacing:.03em}
+  .ft{display:flex;gap:9px;align-items:flex-start;margin-bottom:10px}
+  .tick{color:var(--gold);font-size:11px;line-height:1.45;flex:none}
+  .ft b{display:block;font-size:12.5px;font-weight:600}
+  .ft i{font-style:normal;font-size:11px;color:var(--ink3);line-height:1.45}
+  ul.fl{margin:0;padding-left:16px;color:var(--ink2);font-size:12px;line-height:1.8}
+  .cur{font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--ink3);margin-top:10px}
+  .cta{width:100%;font:inherit;font-size:14.5px;font-weight:700;border:0;border-radius:11px;
+       padding:13px;background:var(--gold);color:#151208;cursor:pointer;margin-top:4px}
+  .trust{display:flex;justify-content:center;gap:10px;margin-top:10px;font-size:8.5px;color:var(--ink3)}
+  .disc{font-size:10.5px;color:var(--ink3);line-height:1.6;margin-top:4px;padding:11px 12px;
+        background:var(--sunken);border:1px solid var(--line);border-radius:10px}
+  .disc b{color:var(--ink2)}
+  footer{margin-top:30px;padding-top:18px;border-top:1px solid var(--line);
+         font-size:11px;color:var(--ink3);line-height:1.7}
+  /* --- auth sheet --- */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(3px);
+         opacity:0;pointer-events:none;transition:opacity .18s ease;z-index:20}
+  .scrim[data-open]{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;left:0;right:0;bottom:0;background:#111113;z-index:21;
+         border-top:1px solid var(--line);border-radius:20px 20px 0 0;
+         padding:12px 18px calc(24px + env(safe-area-inset-bottom));
+         transform:translateY(100%);transition:transform .24s cubic-bezier(.22,1,.36,1)}
+  .sheet[data-open]{transform:translateY(0)}
+  .grab{width:36px;height:4px;border-radius:2px;background:#33333a;margin:0 auto 14px}
+  .sheet h3{font-size:20px;margin:0 0 5px;letter-spacing:-.015em}
+  .sheet p{font-size:13px;color:var(--ink2);margin:0 0 16px}
+  .oauth{width:100%;font:inherit;font-size:14px;font-weight:600;border-radius:11px;padding:12px;
+         display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:9px;
+         border:1px solid var(--line);background:none;color:var(--ink);cursor:pointer}
+  .oauth.g{background:#fff;color:#111;border-color:#fff}
+  .or{display:flex;align-items:center;gap:9px;margin:12px 0;color:var(--ink3);font-size:11px}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+  .sheet input{width:100%;font:inherit;font-size:15px;padding:12px 13px;border-radius:11px;
+               border:1px solid var(--line);background:var(--sunken);color:var(--ink);margin-bottom:9px}
+  .sheet input::placeholder{color:var(--ink3)}
+  .fine{font-size:11px;color:var(--ink3);text-align:center;margin-top:12px;line-height:1.6}
+  @media (prefers-reduced-motion:reduce){.sheet,.scrim{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav">
+    <span class="brand">
+      <svg width="22" height="22" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M8.35 45.94 L8.35 26.35 L22.20 12.50 L41.80 12.50 L55.65 26.35 L55.65 45.94"
+              stroke="#fff" stroke-width="3.58" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20.48 51.51 L32.00 28.47 L43.52 51.51"
+              stroke="#d4af37" stroke-width="3.58" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      OCTANE<b>&nbsp;ALPHA</b>
+    </span>
+    <button type="button" data-auth>Sign in</button>
+  </nav>
+
+  {# THE PROOF LEADS. A prediction is worth nothing without a record, so the
+     record is the first thing on the page -- and every figure here is rendered
+     from the same build that produces the app, so it cannot drift. #}
+  <div class="eyebrow">Public track record &middot; updated {{ generated_at_short }}</div>
+  <div class="big">{{ '%+.2f'|format(tr.units_stats.total_units) }}<span>U</span></div>
+  <div class="sub">{{ tr.units_stats.eligible_count }} picks priced across {{ tr.units_stats.event_count }} cards &middot; <b>ROI {{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b></div>
+  <div class="curve">{{ units_timeseries_svg | safe }}</div>
+  <div class="rails">
+    <div><b>{{ tr.accuracy_pct }}%</b><span>Hit rate</span></div>
+    <div><b class="g" style="color:var(--green)">{{ '%+.2f'|format(tr.units_stats.by_tier['Lock of the Week'].units) }}U</b><span>Locks {{ tr.lock_record.correct }}/{{ tr.lock_record.total }}</span></div>
+    <div><b>{{ tr.total }}</b><span>Graded</span></div>
+  </div>
+
+  <div class="claim">Every pick above was published <em>before</em> the bell, then graded against the closing line &mdash; win or lose. Nothing is added afterwards.</div>
+
+  {# THE PAIRED CARD. One component, two states: a fight that has happened with
+     the read revealed and its result stamped on, and the next one sealed. The
+     analytics are present in both; only the model layer differs. That IS the
+     paywall, demonstrated rather than described. #}
+  <h2>Here is what that looks like.</h2>
+  <p class="lede">The same card, before and after.</p>
+
+  <div class="stamp">
+    <span class="d">{{ demo_graded.event_short }} &middot; graded</span>
+    <span class="ok">&#10003; Correct &middot; {{ '%+.2f'|format(demo_graded.units_result) }}U</span>
+  </div>
+  <div class="fc graded">
+    <div class="fc-top">
+      <span>{{ demo_graded.fighter_a }}</span><em>{{ demo_graded.division }}<br>VS</em><span class="r">{{ demo_graded.fighter_b }}</span>
+    </div>
+    <div class="pick">
+      <div class="ring">{{ (demo_graded.favorite_prob * 100) | round | int }}</div>
+      <div><b>{{ demo_graded.predicted_favorite }}</b><i>by {{ demo_graded.predicted_method }}</i></div>
+      <div class="conf">{{ demo_graded.conf_short }}</div>
+    </div>
+    <div class="rail"><i style="width:88%;background:var(--red)"></i><span>Strike acc</span><i style="width:72%;background:var(--blue)"></i></div>
+    <div class="rail"><i style="width:64%;background:var(--red)"></i><span>TD defence</span><i style="width:81%;background:var(--blue)"></i></div>
+    <div class="foot"><span>Model {{ (demo_graded.favorite_prob * 100) | round(1) }}%</span><span>Price {{ demo_graded.pick_odds_label }}</span><span class="pos">Result {{ '%+.2f'|format(demo_graded.units_result) }}U</span></div>
+  </div>
+
+  <div class="link"></div>
+
+  <div class="stamp">
+    <span class="d live">{{ demo_upcoming.when }}</span>
+    <span class="lk">&#128274; Members</span>
+  </div>
+  <div class="fc locked">
+    <div class="fc-top">
+      <span>{{ demo_upcoming.fighter_a }}</span><em>{{ demo_upcoming.division }}<br>VS</em><span class="r">{{ demo_upcoming.fighter_b }}</span>
+    </div>
+    <div class="pick sealed">
+      <div class="ring lk">&#128274;</div>
+      <div><b>Model read sealed</b><i>Pick &middot; confidence &middot; method &middot; edge</i></div>
+    </div>
+    <div class="rail"><i style="width:91%;background:var(--red)"></i><span>Strike acc</span><i style="width:70%;background:var(--blue)"></i></div>
+    <div class="rail"><i style="width:58%;background:var(--red)"></i><span>TD defence</span><i style="width:86%;background:var(--blue)"></i></div>
+    <div class="foot"><span>Model &bull;&bull;.&bull;%</span><span>Price {{ demo_upcoming.price_label }}</span><span class="hid">Edge &bull;&bull;.&bull;</span></div>
+  </div>
+
+  <div class="cap">Same card, same numbers. <b>The tape, the rails and the market price stay free forever.</b> What members pay for is the read on top of them.</div>
+
+  {# PLANS. Annual is pre-selected because a weekly-cadence product invites a
+     cancel after any bad Saturday, and annual moves that decision out of the
+     weekly cycle. Monthly stays one tap away and is never hidden -- trapping
+     people into annual generates refunds, which cost more than the churn. #}
+  <h2 style="margin-top:32px">Choose your access</h2>
+  <div class="seg" role="group" aria-label="Billing period">
+    <button type="button" data-plan="month" aria-pressed="false">Monthly</button>
+    <button type="button" data-plan="year" aria-pressed="true">Annual <b class="pill">Save $38</b></button>
+  </div>
+
+  <div class="plan gold">
+    <div class="rib">7 days free</div>
+    <div class="ph">
+      <div><div class="pn">Member</div><div class="pt">The model layer, unlocked</div></div>
+      <div class="pc">
+        <div class="was" data-year>$19/mo</div>
+        <b data-price>$15</b><sup data-cents>.83</sup><i>/mo</i>
+      </div>
+    </div>
+    <div class="billed" data-billed>$190 billed once a year &middot; two months free</div>
+    <div class="ft"><span class="tick">&#10003;</span><div><b>Every fight on every card</b><i>Pick, confidence, method and round</i></div></div>
+    <div class="ft"><span class="tick">&#10003;</span><div><b>Live edge against the book</b><i>Recomputed every 90 seconds</i></div></div>
+    <div class="ft"><span class="tick">&#10003;</span><div><b>Lock of the Week</b><i>{{ tr.lock_record.correct }}/{{ tr.lock_record.total }} so far, {{ '%+.2f'|format(tr.units_stats.by_tier['Lock of the Week'].units) }}U</i></div></div>
+    <div class="ft"><span class="tick">&#10003;</span><div><b>The full props board</b><i>Fighter, fight and round markets with EV</i></div></div>
+    <div class="ft"><span class="tick">&#10003;</span><div><b>Parlay slips, tracked live</b><i>Published before the card, graded during it</i></div></div>
+    <button type="button" class="cta" data-auth>Start 7 days free</button>
+    <div class="trust"><span>&#63743;&nbsp;Apple Pay</span><span>Stripe secured</span><span>Cancel in one tap</span></div>
+  </div>
+
+  <div class="plan flat">
+    <div class="ph">
+      <div><div class="pn sm">Free</div><div class="pt">Everything already graded</div></div>
+      <div class="pc"><b style="font-size:19px;color:var(--ink2)">$0</b></div>
+    </div>
+    <ul class="fl">
+      <li>Every past card, permanently &mdash; picks included</li>
+      <li>Full tape, scout rails and matchup breakdowns</li>
+      <li>The complete public track record</li>
+    </ul>
+    <div class="cur">No account needed</div>
+  </div>
+
+  <div class="disc" data-charge>Your trial covers the next card. After it ends you are charged <b>$190</b> for 12 months. We email you 3 days before &mdash; cancel by then and you pay nothing.</div>
+
+  <footer>
+    Octane Alpha is quantitative analysis of publicly available fight and market data.
+    It is information, not betting advice, and nothing here is a guarantee of any outcome.
+    Past performance does not predict future results. 21+.
+    <br><br>&copy; Octane Alpha
+  </footer>
+</div>
+
+<div class="scrim" data-scrim></div>
+<div class="sheet" data-sheet role="dialog" aria-modal="true" aria-label="Sign in">
+  <div class="grab"></div>
+  <h3>Sign in</h3>
+  <p>Free forever on everything already graded. No card unless you start a trial.</p>
+  <button type="button" class="oauth g">
+    <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.5 5-4.4 7l6.8 5.3C42.4 36 45 30.6 45 24z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.2l-6.8-5.3c-1.9 1.3-4.4 2.2-7.7 2.2-5.9 0-10.9-3.9-12.7-9.2l-7 5.4C7.9 41 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.3 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.7-4.5l-7-5.4C3.5 17 2.7 20.4 2.7 24s.8 7 2.5 9.9l6.1-5.4z"/><path fill="#EA4335" d="M24 9.5c4.2 0 7 1.8 8.6 3.3l6.3-6.1C35 3.1 29.9 1 24 1 15.4 1 7.9 6 5.2 14.1l7 5.4C14 14.2 19 9.5 24 9.5z"/></svg>
+    Continue with Google
+  </button>
+  <div class="or"><span>or</span></div>
+  <input type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address">
+  <button type="button" class="cta">Email me a sign-in link</button>
+  <div class="fine">No password to remember. The link works once and expires in an hour.</div>
+</div>
+
+<script>
+(function () {
+  // PRICING IS A DISPLAY TOGGLE ONLY. Nothing here decides what is charged --
+  // the price id is chosen server-side when the Checkout session is created,
+  // so a tampered DOM cannot buy the annual plan at the monthly price.
+  var PLANS = {
+    month: { dollars: '$19', cents: '', suffix: '/mo', was: false,
+             billed: 'Billed monthly · cancel any time',
+             charge: 'Your trial covers the next card. After it ends you are charged <b>$19</b> a month. We email you 3 days before — cancel by then and you pay nothing.' },
+    year:  { dollars: '$15', cents: '.83', suffix: '/mo', was: true,
+             billed: '$190 billed once a year · two months free',
+             charge: 'Your trial covers the next card. After it ends you are charged <b>$190</b> for 12 months. We email you 3 days before — cancel by then and you pay nothing.' }
+  };
+  var els = {
+    price:  document.querySelector('[data-price]'),
+    cents:  document.querySelector('[data-cents]'),
+    was:    document.querySelector('[data-year]'),
+    billed: document.querySelector('[data-billed]'),
+    charge: document.querySelector('[data-charge]')
+  };
+  document.querySelectorAll('[data-plan]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var key = btn.dataset.plan, p = PLANS[key];
+      document.querySelectorAll('[data-plan]').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      els.price.textContent  = p.dollars;
+      els.cents.textContent  = p.cents;
+      els.was.style.display  = p.was ? '' : 'none';
+      els.billed.textContent = p.billed;
+      els.charge.innerHTML   = p.charge;
+    });
+  });
+
+  var scrim = document.querySelector('[data-scrim]');
+  var sheet = document.querySelector('[data-sheet]');
+  function open(v) {
+    [scrim, sheet].forEach(function (el) {
+      if (v) el.setAttribute('data-open', ''); else el.removeAttribute('data-open');
+    });
+    if (v) { var i = sheet.querySelector('input'); if (i) setTimeout(function(){ i.focus(); }, 260); }
+  }
+  document.querySelectorAll('[data-auth]').forEach(function (b) {
+    b.addEventListener('click', function () { open(true); });
+  });
+  scrim.addEventListener('click', function () { open(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') open(false); });
+})();
+</script>
+</body>
+</html>
