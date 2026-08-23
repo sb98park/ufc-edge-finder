@@ -67,6 +67,19 @@ STRIPE_PRICE_ANNUAL  = "price_1U7daUDlM6LyKh59FUiiXvtg"
 # is still here and still works.
 GATE_MODE = "auth"
 
+# SEARCH VISIBILITY. Anything other than "on" makes the Worker answer every
+# request with X-Robots-Tag: noindex, nofollow.
+#
+# Not robots.txt Disallow: blocking the crawl stops a robot READING the page,
+# so it never sees the noindex -- and a URL found some other way can still be
+# listed, with nothing to suppress it. Allowing the crawl and answering
+# "noindex" is what actually keeps a page out of search.
+#
+# Flip to "on" when the site is ready for visitors. Expect days to weeks
+# before anything appears in results; deindexing later is far slower than
+# never being indexed.
+INDEXING = "off"
+
 # SECRETS ARE NOT DECLARED HERE. They are set with `wrangler secret put` and
 # live only in Cloudflare. Anything in [vars] is committed to git in plain
 # text, which is correct for the two values above and would be a disclosure

@@ -96,6 +96,34 @@ async function serveAuthenticatedSite(request, role, secret) {
 
 export default {
   async fetch(request, env, ctx) {
+    const response = await handleRequest(request, env, ctx);
+
+    // KEEPING THE SITE OUT OF SEARCH WHILE IT IS NOT READY FOR VISITORS.
+    //
+    // Deliberately NOT robots.txt Disallow. Blocking the crawl stops a robot
+    // READING the page, which means it never sees a noindex instruction --
+    // and a URL discovered any other way (a link, certificate transparency,
+    // someone's browser telemetry) can then be indexed as a bare listing with
+    // no way to suppress it. Allowing the crawl and answering "noindex" is the
+    // instruction that actually removes a page from search.
+    //
+    // Set INDEXING = "on" in wrangler.toml to open the site to search. That is
+    // a launch decision, not a code change.
+    if (env.INDEXING !== "on") {
+      const headers = new Headers(response.headers);
+      headers.set("X-Robots-Tag", "noindex, nofollow");
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+    return response;
+  },
+};
+
+const handler = {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
     const mode = env.GATE_MODE === "auth" ? "auth" : "password";
@@ -209,6 +237,8 @@ export default {
     });
   },
 };
+
+function handleRequest(request, env, ctx) { return handler.fetch(request, env, ctx); }
 
 // ---------- Session cookie: HMAC-signed so it can't be forged by
 // manually setting a cookie value in the browser (e.g. typing

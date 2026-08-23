@@ -1,0 +1,7 @@
+# Crawling is deliberately ALLOWED. Search visibility is controlled by the
+# X-Robots-Tag header the Worker sets on every response, because a page that
+# cannot be crawled cannot be read -- and a robot that cannot read the page
+# never learns it should not index it. Blocking here would make the noindex
+# unreachable and leave URLs listable with no way to suppress them.
+User-agent: *
+Allow: /
