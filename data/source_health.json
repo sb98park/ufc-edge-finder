@@ -1,21 +1,21 @@
 {
-  "at": "2026-08-23T00:52:54+00:00",
+  "at": "2026-08-23T01:07:10+00:00",
   "edges_two_way": {
     "best_book": {
-      "Polymarket": 114
+      "Polymarket": 104
     },
     "books_quoting": {
-      "1.0": 114
+      "1.0": 104
     },
-    "n": 114
+    "n": 104
   },
   "moneyline": {
     "best_book": {
-      "Polymarket": 72
+      "Polymarket": 70
     },
-    "n": 72,
+    "n": 70,
     "source": {
-      "Polymarket": 72
+      "Polymarket": 70
     }
   },
   "overround": {
@@ -26,7 +26,7 @@
     "measured": {}
   },
   "rows_by_source": {
-    "Polymarket": 316
+    "Polymarket": 296
   },
   "rundown_dates_requested": [
     "2026-08-29"
@@ -34,11 +34,11 @@
   "rundown_key_set": true,
   "tracked_moneyline": {
     "best_book": {
-      "Polymarket": 10
+      "Polymarket": 8
     },
-    "n": 10,
+    "n": 8,
     "source": {
-      "Polymarket": 10
+      "Polymarket": 8
     }
   }
 }
