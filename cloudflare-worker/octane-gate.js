@@ -439,6 +439,23 @@ async function handleAuthMode(request, env, ctx, url, path, mode) {
     let plan = "year";
     try { plan = (await request.json()).plan === "month" ? "month" : "year"; } catch {}
 
+    // TWO SETTINGS THAT MUST AGREE, ENFORCED RATHER THAN REMEMBERED.
+    //
+    // A public site (GATE_MODE=auth) running on test Stripe keys sends real
+    // visitors to a checkout page stamped TEST MODE that cannot take their
+    // money. Nothing else in the system couples those two values, so without
+    // this the only thing preventing it is remembering to change both -- and
+    // the failure is discovered by a customer, mid-purchase, at the exact
+    // moment they were willing to pay.
+    //
+    // Refusing here is the safe direction: it breaks the subscribe button
+    // rather than taking a payment that cannot complete, and it says exactly
+    // what is wrong instead of failing mysteriously.
+    if (env.GATE_MODE === "auth" && String(env.STRIPE_SECRET_KEY || "").startsWith("sk_test_")) {
+      console.log("REFUSING CHECKOUT: gate is public but Stripe is in test mode");
+      return json({ error: "billing is not live yet" }, 503);
+    }
+
     // THE PRICE IS CHOSEN HERE, NOT SENT BY THE CLIENT. The page's monthly/
     // annual toggle is presentation only; if the browser named the price, a
     // tampered request would buy the annual plan at the monthly price.
