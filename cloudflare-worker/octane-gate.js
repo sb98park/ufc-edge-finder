@@ -26,7 +26,11 @@
 
 import { verifySupabaseToken } from "./lib/jwt.js";
 import { mintSession, readSession, clearSession } from "./lib/session.js";
-import { isMember } from "./lib/entitlement.js";
+import { isMember, forgetEntitlement } from "./lib/entitlement.js";
+import { trialEndTimestamp, findOrCreateCustomer, createCheckoutSession,
+         createPortalSession, verifyWebhook } from "./lib/stripe.js";
+import { getProfile, setStripeCustomer, markTrialUsed,
+         findUserByCustomer, upsertSubscription } from "./lib/db.js";
 
 /*
  * TWO GATES IN ONE WORKER, chosen by env.GATE_MODE.
@@ -427,6 +431,92 @@ async function handleAuthMode(request, env, ctx, url, path, mode) {
     return new Response(JSON.stringify({ member }), { status: 200, headers });
   }
 
+  // --- start a subscription --------------------------------------------
+  if (path === "/billing/checkout" && request.method === "POST") {
+    const session = await readSession(request, env.SESSION_SECRET);
+    if (!session) return json({ error: "sign in first" }, 401);
+
+    let plan = "year";
+    try { plan = (await request.json()).plan === "month" ? "month" : "year"; } catch {}
+
+    // THE PRICE IS CHOSEN HERE, NOT SENT BY THE CLIENT. The page's monthly/
+    // annual toggle is presentation only; if the browser named the price, a
+    // tampered request would buy the annual plan at the monthly price.
+    const priceId = plan === "month" ? env.STRIPE_PRICE_MONTHLY : env.STRIPE_PRICE_ANNUAL;
+
+    try {
+      const profile = await getProfile(session.userId, env);
+      if (!profile) return json({ error: "no profile" }, 404);
+
+      const customerId = await findOrCreateCustomer({
+        email: profile.email, userId: session.userId,
+        existingId: profile.stripe_customer_id,
+      }, env);
+      if (customerId !== profile.stripe_customer_id) {
+        await setStripeCustomer(session.userId, customerId, env);
+      }
+
+      // ONE TRIAL PER ACCOUNT, ENFORCED HERE. Stripe would happily grant a
+      // fresh trial to a new customer object, and a new customer object is
+      // one new email address away -- so eligibility lives in our database.
+      const allowTrial = !profile.trial_used_at;
+      const nextEvent = await env.OCTANE_ENTITLEMENTS.get("next_event_date");
+
+      const checkout = await createCheckoutSession({
+        customerId, priceId, userId: session.userId,
+        trialEnd: trialEndTimestamp(nextEvent),
+        origin: url.origin, allowTrial,
+      }, env);
+
+      return json({ url: checkout.url, trial: allowTrial });
+    } catch (err) {
+      console.log(`checkout failed: ${err.message}`);
+      return json({ error: "could not start checkout" }, 502);
+    }
+  }
+
+  // --- manage an existing subscription ----------------------------------
+  if (path === "/billing/portal" && request.method === "POST") {
+    const session = await readSession(request, env.SESSION_SECRET);
+    if (!session) return json({ error: "sign in first" }, 401);
+    try {
+      const profile = await getProfile(session.userId, env);
+      if (!profile || !profile.stripe_customer_id) {
+        return json({ error: "no subscription" }, 404);
+      }
+      const portal = await createPortalSession({
+        customerId: profile.stripe_customer_id, origin: url.origin,
+      }, env);
+      return json({ url: portal.url });
+    } catch (err) {
+      console.log(`portal failed: ${err.message}`);
+      return json({ error: "could not open portal" }, 502);
+    }
+  }
+
+  // --- Stripe webhook ---------------------------------------------------
+  if (path === "/stripe/webhook" && request.method === "POST") {
+    // RAW TEXT, NOT JSON. The signature covers the exact bytes Stripe sent;
+    // parsing and re-serialising changes them and verification fails.
+    const raw = await request.text();
+    const event = await verifyWebhook(raw, request.headers.get("Stripe-Signature"),
+                                      env.STRIPE_WEBHOOK_SECRET);
+    // Unsigned or stale: 400, and deliberately no detail. This endpoint is
+    // public, and a descriptive error is a hint for someone probing it.
+    if (!event) return json({ error: "bad signature" }, 400);
+
+    try {
+      await applyStripeEvent(event, env);
+    } catch (err) {
+      // 500 so Stripe RETRIES. Swallowing the error would return 200 and
+      // lose the event permanently -- a subscription that silently never
+      // grants access.
+      console.log(`webhook ${event.type} failed: ${err.message}`);
+      return json({ error: "handler failed" }, 500);
+    }
+    return json({ received: true });
+  }
+
   // --- sign out ---------------------------------------------------------
   if (path === "/auth/logout") {
     const headers = new Headers({ "Location": "/", "Cache-Control": "no-store" });
@@ -487,4 +577,63 @@ function json(obj, status = 200) {
     status,
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
+}
+
+
+/**
+ * Apply one Stripe event to our own records.
+ *
+ * Only subscription state is acted on. Stripe sends dozens of event types and
+ * subscribing to all of them means writing handlers for things that do not
+ * affect entitlement -- so anything unrecognised is acknowledged and ignored
+ * rather than treated as an error Stripe should retry.
+ */
+async function applyStripeEvent(event, env) {
+  const obj = event.data && event.data.object;
+  if (!obj) return;
+
+  if (event.type === "checkout.session.completed") {
+    // The trial is only marked used once checkout actually completes -- not
+    // when the session is created -- so an abandoned checkout does not burn
+    // the user's one trial.
+    const userId = obj.client_reference_id;
+    if (userId) {
+      if (obj.customer) await setStripeCustomer(userId, obj.customer, env);
+      await markTrialUsed(userId, env);
+      await forgetEntitlement(userId, env);
+    }
+    return;
+  }
+
+  if (event.type.startsWith("customer.subscription.")) {
+    const userId = (obj.metadata && obj.metadata.supabase_user_id)
+      || await findUserByCustomer(obj.customer, env);
+    if (!userId) {
+      console.log(`no user for stripe customer ${obj.customer}`);
+      return;
+    }
+
+    const item = obj.items && obj.items.data && obj.items.data[0];
+    await upsertSubscription({
+      user_id: userId,
+      stripe_subscription_id: obj.id,
+      status: obj.status,
+      price_id: item ? item.price.id : "",
+      plan_interval: item && item.price.recurring ? item.price.recurring.interval : "month",
+      trial_end: obj.trial_end ? new Date(obj.trial_end * 1000).toISOString() : null,
+      current_period_end: obj.current_period_end
+        ? new Date(obj.current_period_end * 1000).toISOString() : null,
+      cancel_at_period_end: Boolean(obj.cancel_at_period_end),
+    }, env);
+
+    // Entitlement just changed; drop the mirror so the next request reads
+    // the truth instead of a cached answer up to 15 minutes stale.
+    await forgetEntitlement(userId, env);
+    return;
+  }
+
+  if (event.type === "invoice.payment_failed" && obj.customer) {
+    const userId = await findUserByCustomer(obj.customer, env);
+    if (userId) await forgetEntitlement(userId, env);
+  }
 }

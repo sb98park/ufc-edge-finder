@@ -421,6 +421,26 @@ jobs:
           cp build/free.html docs/index.html
           echo "Pages: docs/index.html is the free payload, $(wc -c < docs/index.html) bytes"
 
+          # WHEN THE NEXT CARD IS, published for the Worker.
+          #
+          # The trial has to end AFTER a fight card, or a subscriber can trial
+          # the product without ever seeing it do the thing they pay for. Only
+          # the build knows the schedule and the Worker cannot read a CSV, so
+          # the date goes into KV where checkout reaches it in one read.
+          #
+          # Written as a ONE-LINER on purpose: a multi-line python -c here has
+          # to be indented to stay inside this YAML block scalar, and getting
+          # that wrong breaks the whole workflow file rather than just this
+          # step. It did, once.
+          NEXT_EVENT=$(python3 -c "import pandas as pd,datetime; df=pd.read_csv('data/future_cards.csv'); t=datetime.date.today().isoformat(); d=sorted(x for x in df['event_date'].dropna().astype(str).unique() if x>=t); print(d[0] if d else '')" || echo "")
+          if [ -n "${CF_API_TOKEN:-}" ] && [ -n "$NEXT_EVENT" ]; then
+            curl -sS --fail-with-body -X PUT \
+              "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/08be74c429d04c03ad803f79ee2076aa/values/next_event_date" \
+              -H "Authorization: Bearer $CF_API_TOKEN" \
+              -F "value=$NEXT_EVENT" -F 'metadata={}' > /dev/null
+            echo "KV: next_event_date = $NEXT_EVENT"
+          fi
+
       - name: Upload the built site
         if: steps.cadence.outputs.build == 'yes'
         uses: actions/upload-pages-artifact@v3
