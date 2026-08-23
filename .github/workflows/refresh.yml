@@ -378,6 +378,16 @@ jobs:
         if: steps.cadence.outputs.build == 'yes'
         run: python scripts/check_free_build.py
 
+      - name: Check no stake change has rewritten the published record
+        # THE OTHER CHANGE THAT CANNOT BE FIXED FORWARD. Every figure on the
+        # site is priced off STAKE_SCHEDULE, so an undated stake edit silently
+        # restates the whole track record -- and would have restated it
+        # UPWARDS (+65.77U against the published +63.44U), which is the
+        # direction nobody notices and nobody should ever be able to ship.
+        # Hard gate for the same reason as the leak check above.
+        if: steps.cadence.outputs.build == 'yes'
+        run: python scripts/check_stake_schedule.py
+
       - name: Publish member payload to R2, then swap free in for Pages
         # ONE STEP, NOT TWO, AND THE SWAP IS UNCONDITIONAL.
         #

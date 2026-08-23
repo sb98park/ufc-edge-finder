@@ -51,6 +51,7 @@ from src.track_record import (
     log_predictions, compute_track_record, load_momentum_by_key,
     load_logged_predictions_by_key, _pair_key,
     LOCK_OF_WEEK_MAX, LOCK_OF_WEEK_MIN_PROB,
+    UNITS_BY_CONFIDENCE, LOCK_OF_WEEK_UNITS,
 )
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
@@ -1179,6 +1180,11 @@ def main(tier: str = "member", output_path: str | None = None):
     # so a context-passed `tier` would read as Undefined inside exactly the
     # markup that needs to consult it, silently taking the member branch.
     env.globals["tier"] = tier
+    # The stake ladder in force TODAY, so the units caption states the
+    # real numbers instead of a hardcoded copy that goes stale the first
+    # time a stake changes -- which it now has.
+    env.globals["stake_ladder"] = UNITS_BY_CONFIDENCE
+    env.globals["lock_units"] = LOCK_OF_WEEK_UNITS
     env.filters["american"] = format_american_odds
     # Probability -> the price at which a bet on it breaks even, i.e. the
     # model's own fair line. Both existing helpers already exist; this just

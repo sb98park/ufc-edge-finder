@@ -591,6 +591,27 @@ def _compute_calibration(matched: list[dict]) -> dict | None:
 
     total_n = sum(p["n"] for p in points)
     weighted_gap = sum((p["actual"] - p["predicted"]) * p["n"] for p in points) / total_n if total_n else 0
+
+    # AN AVERAGE CAN HIDE THE ONLY BIN THAT MATTERS, and for a while this one
+    # did. Measured 2026-08-23: the 55-60% band ran 19pp UNDER its stated
+    # confidence and the 75-85% band 13pp under, which between them outweighed
+    # a 65-70% band running 14pp OVER. The weighted average came out positive
+    # and the site printed "if anything, we've been modest, not overselling"
+    # directly beneath a chart whose middle point visibly dipped the other way.
+    #
+    # The chart was never wrong. The sentence under it was, and a sentence is
+    # what people read. So the worst overconfident bin is named whenever one
+    # exists, regardless of which way the average leans -- the direction the
+    # model oversells is the only direction a reader is exposed to.
+    OVERCONFIDENT_PP = 0.05          # below this a bin is just noise around the line
+    MIN_BIN_N = 10                   # a 5-pick bin swings 20pp on one result
+    worst = None
+    for p in points:
+        gap = p["actual"] - p["predicted"]
+        if p["n"] >= MIN_BIN_N and gap <= -OVERCONFIDENT_PP:
+            if worst is None or gap < (worst["actual"] - worst["predicted"]):
+                worst = p
+
     if abs(weighted_gap) < 0.05:
         summary = "Across every confidence level, our picks won almost exactly as often as we said they would — the model isn't over- or under-selling itself."
     elif weighted_gap > 0:
@@ -598,7 +619,17 @@ def _compute_calibration(matched: list[dict]) -> dict | None:
     else:
         summary = f"On average, our picks have won about {round(abs(weighted_gap)*100)} points LESS often than the confidence we stated — a real sign of overconfidence worth watching."
 
-    return {"ready": True, "total": len(eligible), "points": points, "summary": summary}
+    if worst is not None:
+        band_gap = round((worst["predicted"] - worst["actual"]) * 100)
+        summary += (f" That average hides one band: where we said about "
+                    f"{round(worst['predicted']*100)}%, those picks have won "
+                    f"{round(worst['actual']*100)}% — {band_gap} points short "
+                    f"over {worst['n']} picks. It is the one place the model "
+                    f"has oversold itself, and we would rather point at it "
+                    f"than average it away.")
+
+    return {"ready": True, "total": len(eligible), "points": points,
+            "summary": summary, "worst_bin": worst}
 
 
 def _pair_key(fighter_a: str, fighter_b: str) -> frozenset:
@@ -685,11 +716,74 @@ def _clv_result(pick_odds, closing_odds,
     return out
 
 
-UNITS_BY_CONFIDENCE = {
-    "High Confidence": 5.0,
-    "Medium Confidence": 3.0,
-    "Low Confidence": 1.0,
-}
+# THE LADDER IS DATED, AND THE DATING IS THE POINT.
+#
+# A stake change applied to already-graded picks would silently rewrite a
+# published track record: every historical number on the site would move, and
+# the curve members have been reading would no longer describe anything that
+# was ever published. That is the one thing this product cannot do. So the
+# schedule is a list of (effective_from, ladder) and a pick is graded at the
+# stake that was in force ON THE DAY IT RESOLVED -- forever.
+#
+# WHY MEDIUM MOVED 3U -> 2U on 2026-08-25.
+#
+# Measured over the first 7 cards, priced at the real market odds:
+#
+#     tier      n    win     model said   market implied   units     ROI
+#     Lock      9   100.0%      83.6%          69.5%      +46.96   +52.2%
+#     High     11    90.9%      80.3%          73.2%      +11.80   +21.5%
+#     Medium   35    57.1%      66.7%          60.8%       -7.01    -6.7%
+#     Low      33    72.7%      54.6%          56.0%      +11.69   +35.4%
+#
+# Medium was staked at THREE TIMES Low while underperforming it on every
+# measure, and it carries 37% of all units risked and 40% of all picks. The
+# 5/3/1 ladder was set a priori from the labels' names, never from evidence.
+#
+# THIS IS NOT A VERDICT ON THE MODEL. The dip is not significant: for the
+# 60-70% band, P(<= 14 wins in 27 | the model's own probabilities are right)
+# = 10.7%, and against the MARKET's implied probabilities it is 34.8%. A
+# third of the time a fair coin does this. Medium's loss is inside ordinary
+# variance and may well revert.
+#
+# Which is exactly why the response is a smaller stake and not a merge into
+# Low. Cutting to 2U removes a 3x multiple that had no basis in the first
+# place, keeps the ladder monotonic with the model's stated confidence, and
+# leaves the tier standing so the pre-registered test in
+# decisions/2026-08-23-medium-confidence-stake.md can actually run.
+# Folding Medium into Low would have averaged the second-best cohort on the
+# board into the worst and made the question permanently unanswerable.
+# Medium Confidence is evaluated ONCE, at this many graded picks -- see
+# decisions/2026-08-23-medium-confidence-stake.md for the outcome table and
+# why the number was fixed before the data arrived (35 picks at the time).
+PREREGISTERED_MEDIUM_N = 75
+
+STAKE_SCHEDULE = (
+    # Newest first. `effective_from` is compared against the date the fight
+    # RESOLVED (fight_results.date_added), so a pick published before a
+    # cutover but graded after it takes the new stake -- acceptable because
+    # cutovers are always set between cards, never mid-card.
+    ("2026-08-25", {"High Confidence": 5.0, "Medium Confidence": 2.0, "Low Confidence": 1.0}),
+    ("",           {"High Confidence": 5.0, "Medium Confidence": 3.0, "Low Confidence": 1.0}),
+)
+
+# The ladder in force today. Kept under the original name because callers and
+# the card's own copy want "what do we stake now", not the history.
+UNITS_BY_CONFIDENCE = STAKE_SCHEDULE[0][1]
+
+
+def stake_for(confidence_label: str, graded_on: str) -> float | None:
+    """
+    The stake this pick is graded at: whichever schedule entry was in force on
+    `graded_on` (an ISO date string). An unparseable or missing date falls
+    through to the oldest entry rather than the newest -- a row we cannot date
+    is far more likely to be old history than a pick made today, and guessing
+    "newest" would be the guess that rewrites the record.
+    """
+    day = (graded_on or "").strip()[:10]
+    for effective_from, ladder in STAKE_SCHEDULE:
+        if effective_from and day >= effective_from:
+            return ladder.get(confidence_label)
+    return STAKE_SCHEDULE[-1][1].get(confidence_label)
 # A Lock of the Week is a stronger conviction call than a regular High
 # Confidence pick (it's the single best pick on the card, not just one
 # of however many clear favorites) -- staked heavier to reflect that,
@@ -887,7 +981,10 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         # computed (non-None) for already-correct picks.
         method_correct = _method_matches(pred.get("likely_method"), result.get("method")) if correct else None
         is_lock = pred.get("is_lock_of_week") is True or str(pred.get("is_lock_of_week")).strip().lower() == "true"
-        resolved_unit_size = LOCK_OF_WEEK_UNITS if is_lock else UNITS_BY_CONFIDENCE.get(pred["confidence_label"])
+        # Graded at the stake in force the day the fight RESOLVED, not the
+        # stake in force today -- see STAKE_SCHEDULE.
+        resolved_unit_size = (LOCK_OF_WEEK_UNITS if is_lock
+                              else stake_for(pred["confidence_label"], result.get("date_added", "")))
         units_result = _units_result(resolved_unit_size, pred.get("pick_odds"), correct)
         matched.append({
             "event_name": result["event_name"],
@@ -1185,11 +1282,40 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             # real 10-unit weight, not also folded into the 5-unit tier.
             tier_picks = [m for m in units_eligible if m["confidence_label"] == tier and not m["is_lock_of_week"]]
             if tier_picks:
+                # A tier can now span more than one stake (STAKE_SCHEDULE),
+                # so "3U/pick" would be a lie the day after a cutover.
+                # unit_size stays the CURRENT stake -- that is what a reader
+                # wants to know about the next pick -- and unit_sizes carries
+                # every stake this tier's history was actually graded at, so
+                # the card can say so instead of quietly picking one.
+                sizes = sorted({m["unit_size"] for m in tier_picks
+                                if m["unit_size"] is not None}, reverse=True)
                 by_tier[tier] = {
                     "units": round(sum(m["units_result"] for m in tier_picks), 2),
                     "count": len(tier_picks),
                     "unit_size": UNITS_BY_CONFIDENCE[tier],
+                    "unit_sizes": sizes,
                 }
+        # THE PRE-REGISTERED TEST FIRES ITSELF.
+        # decisions/2026-08-23-medium-confidence-stake.md commits to
+        # evaluating Medium at n=75, once, without peeking in between. A rule
+        # that depends on someone remembering to check is a rule that gets
+        # remembered on the cards where it says what you wanted to hear, so
+        # the threshold is watched here instead of by a human.
+        _med = by_tier.get("Medium Confidence")
+        if _med and _med["count"] >= PREREGISTERED_MEDIUM_N:
+            _staked = sum(m["unit_size"] for m in units_eligible
+                          if m["confidence_label"] == "Medium Confidence"
+                          and not m["is_lock_of_week"] and m["unit_size"] is not None)
+            _roi = (_med["units"] / _staked * 100) if _staked else 0.0
+            print(f"[track_record] PRE-REGISTERED TEST DUE: Medium Confidence has reached "
+                  f"n={_med['count']} (threshold {PREREGISTERED_MEDIUM_N}) at "
+                  f"{_med['units']:+.2f}U, ROI {_roi:+.1f}%. Resolve it against the table in "
+                  f"decisions/2026-08-23-medium-confidence-stake.md and record the outcome "
+                  f"there -- then raise the threshold or close the test. Do not re-run and "
+                  f"re-read it card by card; that is the thing pre-registration exists to "
+                  f"prevent.")
+
         # Running total needs chronological order (oldest first) for the
         # sparkline to read left-to-right correctly -- matched is sorted
         # most-recent-first for the list display, so reverse it here.

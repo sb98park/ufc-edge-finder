@@ -6081,13 +6081,22 @@
         <div class="units-tier-row">
           <span class="units-tier-dot {{ 'lock' if tier == 'Lock of the Week' else tier|lower|replace(' confidence','') }}"></span>
           <span class="units-tier-label">{{ 'Lock of the Week' if tier == 'Lock of the Week' else tier|replace(' Confidence','') }}</span>
-          <span class="units-tier-size">{{ stats.unit_size|int }}U/pick</span>
+          {# The stake can change between cards, and when it does this row
+             reports two different things at once: what the history was
+             graded at, and what the next pick will be staked. "3->2U" says
+             both. Printing the new number alone over an old record would be
+             the same retroactive lie STAKE_SCHEDULE exists to prevent. #}
+          {%- set old_sizes = (stats.unit_sizes or [])|reject('equalto', stats.unit_size)|list -%}
+          <span class="units-tier-size">
+            {%- if old_sizes %}{{ old_sizes|max|int }}&rarr;{{ stats.unit_size|int }}U/pick
+            {%- else %}{{ stats.unit_size|int }}U/pick{% endif -%}
+          </span>
           <span class="units-tier-count">{{ stats.count }}p</span>
           <span class="units-tier-value {{ 'positive' if stats.units >= 0 else 'negative' }}">{{ '+' if stats.units >= 0 else '' }}{{ stats.units }}U</span>
         </div>
         {% endfor %}
       </div>
-      <div class="units-caption">Sized by conviction (10U lock of the week · 5U high confidence · 3U medium · 1U low), priced at the real market odds when picked — never the model's own probability. A lock counts only once, at its own weight — not also folded into High Confidence. Only counts picks with known odds on record.</div>
+      <div class="units-caption">Sized by conviction ({{ lock_units|int }}U lock of the week · {{ stake_ladder['High Confidence']|int }}U high confidence · {{ stake_ladder['Medium Confidence']|int }}U medium · {{ stake_ladder['Low Confidence']|int }}U low), priced at the real market odds when picked — never the model's own probability. A lock counts only once, at its own weight — not also folded into High Confidence. Only counts picks with known odds on record.</div>
     </div>
     {% endif %}
       <div class="track-record-kicker">Overall Record</div>
