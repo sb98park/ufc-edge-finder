@@ -26,7 +26,7 @@
 
 import { verifySupabaseToken } from "./lib/jwt.js";
 import { mintSession, readSession, clearSession } from "./lib/session.js";
-import { isMember, forgetEntitlement } from "./lib/entitlement.js";
+import { isMember, accountPlan, forgetEntitlement } from "./lib/entitlement.js";
 import { trialEndTimestamp, findOrCreateCustomer, createCheckoutSession,
          createPortalSession, verifyWebhook } from "./lib/stripe.js";
 import { getProfile, setStripeCustomer, markTrialUsed,
@@ -456,9 +456,12 @@ async function handleAuthMode(request, env, ctx, url, path, mode) {
     if (!claims) return json({ error: "invalid token" }, 401);
 
     const member = await isMember(claims.sub, env, ctx);
+    // Returned alongside so the account panel is correct on the very first
+    // paint, rather than showing a placeholder until whoami comes back.
+    const plan = await accountPlan(claims.sub, member, env, ctx);
     const headers = new Headers({ "Content-Type": "application/json", "Cache-Control": "no-store" });
     headers.append("Set-Cookie", await mintSession({ userId: claims.sub, member }, env.SESSION_SECRET));
-    return new Response(JSON.stringify({ member }), { status: 200, headers });
+    return new Response(JSON.stringify({ member, plan }), { status: 200, headers });
   }
 
   // --- start a subscription --------------------------------------------
@@ -574,7 +577,12 @@ async function handleAuthMode(request, env, ctx, url, path, mode) {
   // --- who am I (used by the page to render signed-in state) ------------
   if (path === "/auth/whoami") {
     const session = await readSession(request, env.SESSION_SECRET);
-    return json(session ? { signedIn: true, member: session.member } : { signedIn: false });
+    if (!session) return json({ signedIn: false });
+    // `member` is the gate and comes from the signed cookie. `plan` is the
+    // word the account panel prints and is looked up separately -- see
+    // accountPlan(). Never let the client gate on `plan`.
+    const plan = await accountPlan(session.userId, session.member, env, ctx);
+    return json({ signedIn: true, member: session.member, plan });
   }
 
   // Only once the wall is down. While it is up, /welcome is not yet meant to

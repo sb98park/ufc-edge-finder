@@ -194,6 +194,10 @@
   .acct-tier .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--ink3)}
   .acct-tier.member .dot{background:var(--gold);box-shadow:0 0 6px 1px rgba(212,175,55,.55)}
   .acct-tier.free .dot{background:var(--green)}
+  .acct-tier.lifetime .dot{background:var(--gold);box-shadow:0 0 7px 2px rgba(212,175,55,.7)}
+  /* Same reason as the app sheet: [hidden] is a UA rule and loses to any
+     author rule that sets display. */
+  .sheet [hidden]{display:none !important}
   .acct-out{width:100%;font:inherit;font-size:13px;padding:11px;margin-top:9px;
             background:none;border:1px solid var(--line);border-radius:11px;
             color:var(--ink2);cursor:pointer}
@@ -271,7 +275,7 @@
 
   <div class="stamp">
     <span class="d live">{{ demo_upcoming.when }}</span>
-    <span class="lk">&#128274; Members</span>
+    <span class="lk">&#128274; Pro</span>
   </div>
   <div class="fc locked">
     <div class="fc-top">
@@ -344,7 +348,7 @@
   <div class="plan gold">
     <div class="rib">7 days free</div>
     <div class="ph">
-      <div><div class="pn">Member</div><div class="pt">The model layer, unlocked</div></div>
+      <div><div class="pn">Pro</div><div class="pt">The model layer, unlocked</div></div>
       <div class="pc">
         <div class="was" data-year>$19/mo</div>
         <b data-price>$15</b><sup data-cents>.83</sup><i>/mo</i>
@@ -501,14 +505,33 @@
   var acctEmail = "";
   try { acctEmail = localStorage.getItem("oa_who") || ""; } catch (e) {}
 
+  /* HOW ACCESS IS NAMED. One table, so the panel, the plan card and the
+     upsell cannot drift into calling the same thing three names. `member`
+     stays the gate; this is only what we print. An unknown or missing plan
+     falls back on the entitlement bit rather than inventing a level. */
+  var PLANS_BY_NAME = {
+    basic:    { label: "Basic",    blurb: "every card we have already graded", cls: "free" },
+    pro:      { label: "Pro",      blurb: "every fight on every card",         cls: "member" },
+    lifetime: { label: "Lifetime", blurb: "every fight, permanently",          cls: "lifetime" }
+  };
+  function planOf(s) {
+    return PLANS_BY_NAME[s && s.plan] || (s && s.member ? PLANS_BY_NAME.pro : PLANS_BY_NAME.basic);
+  }
+
   function paintAccount() {
-    var member = !!state.member;
+    var p = planOf(state);
     els.acctWho.textContent = acctEmail ? "Signed in as " + acctEmail : "You are signed in.";
-    els.acctTier.className = "acct-tier " + (member ? "member" : "free");
-    els.acctTier.innerHTML = '<i class="dot"></i>' + (member
-      ? "<b>Member</b> &middot; every fight on every card"
-      : "<b>Free</b> &middot; every card we have already graded");
-    els.acctPrimary.textContent = member ? "Manage subscription" : "Start 7 days free";
+    els.acctTier.className = "acct-tier " + p.cls;
+    els.acctTier.innerHTML = '<i class="dot"></i><b>' + p.label + '</b> &middot; ' + p.blurb;
+    /* Lifetime has no subscription to manage and no trial to start, so it
+       gets neither button -- offering "Manage subscription" to an account
+       Stripe has never heard of just produces an error. */
+    if (p === PLANS_BY_NAME.lifetime) {
+      els.acctPrimary.hidden = true;
+    } else {
+      els.acctPrimary.hidden = false;
+      els.acctPrimary.textContent = state.member ? "Manage subscription" : "Start 7 days free";
+    }
   }
 
   function openSheet(open, panel) {
@@ -706,8 +729,20 @@
     if (hash.indexOf("access_token") === -1) return false;
     history.replaceState(null, "", location.pathname + location.search);
     var res = await establishSession(params.get("access_token"));
-    if (!res.ok) showAuthFailure(res.reason);
+    if (!res.ok) { showAuthFailure(res.reason); return true; }
+    goToApp();
     return true;      // handled either way; do not fall through to refreshState
+  }
+
+  /* ONCE YOU ARE IN, THE PITCH IS THE WRONG PAGE. /welcome exists to argue
+     that the product is worth an account; a reader who just made one has
+     already agreed, and leaving them on the sales page reads as the sign-in
+     not having worked.
+     Only ever called after a sign-in COMPLETES -- never on page load -- so a
+     signed-in reader who follows a link back here to read the track record
+     is not bounced away from the page they asked for. */
+  function goToApp() {
+    location.href = "/";
   }
 
   /* --- sign in ------------------------------------------------------ */
@@ -784,7 +819,7 @@
       }
       if (out.access_token) {
         var res = await establishSession(out.access_token);
-        if (res.ok) { openSheet(false); return; }
+        if (res.ok) { openSheet(false); goToApp(); return; }
         els.fine.className = "fine bad";
         els.fine.textContent = res.reason;
         els.codeSubmit.disabled = false;
@@ -916,7 +951,13 @@
     // session cookie rather than trusting the one issued before payment.
     fetch("/auth/whoami", { credentials: "same-origin" })
       .then(function (r) { return r.json(); })
-      .then(function (s) { state = s; render(); });
+      .then(function (s) {
+        state = s;
+        render();
+        // Someone who has just paid should land in the product, not back on
+        // the page that asked them to pay.
+        if (s && s.signedIn) goToApp();
+      });
   }
 
   consumeAuthFragment().then(function (handled) { if (!handled) refreshState(); });
