@@ -176,6 +176,27 @@
   .sheet[data-open]{transform:translateY(0)}
   .sheet{touch-action:pan-y}
   .grab{width:36px;height:4px;border-radius:2px;background:#33333a;margin:0 auto 14px}
+  /* THE ACCOUNT PANEL GROWS OUT OF ITS OWN BUTTON. See _auth.html for the
+     full reasoning; here it is purely about the panel appearing where the
+     press happened rather than at the far end of the screen. The SIGN-IN
+     panel stays a bottom sheet -- it is a tall form and belongs in thumb
+     reach. */
+  .sheet[data-mode=account]{
+    top:calc(env(safe-area-inset-top) + 48px);
+    right:calc(16px + env(safe-area-inset-right));
+    left:auto;bottom:auto;
+    width:300px;max-width:calc(100vw - 32px);
+    max-height:calc(100vh - env(safe-area-inset-top) - 72px);overflow-y:auto;
+    border:1px solid var(--line);border-radius:16px;
+    padding:16px 16px 14px;box-shadow:0 18px 44px rgba(0,0,0,.6);
+    transform-origin:top right;
+    transform:scale(.94) translateY(-8px);opacity:0;
+    transition:transform .18s cubic-bezier(.22,1,.36,1),opacity .14s ease}
+  .sheet[data-mode=account][data-open]{transform:scale(1) translateY(0);opacity:1}
+  .sheet[data-mode=account] .grab{display:none}
+  .sheet[data-mode=account] h3{font-size:17px}
+  @media (prefers-reduced-motion:reduce){
+    .sheet[data-mode=account]{transition:opacity .14s ease;transform:none}}
   .sheet h3{font-size:20px;margin:0 0 5px;letter-spacing:-.015em}
   .sheet p{font-size:13px;color:var(--ink2);margin:0 0 16px}
   .oauth{width:100%;font:inherit;font-size:14px;font-weight:600;border-radius:11px;padding:12px;
@@ -187,10 +208,10 @@
   .sheet input{width:100%;font:inherit;font-size:15px;padding:12px 13px;border-radius:11px;
                border:1px solid var(--line);background:var(--sunken);color:var(--ink);margin-bottom:9px}
   .sheet input::placeholder{color:var(--ink3)}
-  .acct-tier{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;
-             letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);
-             border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin:0 0 14px}
-  .acct-tier b{color:var(--ink);font-weight:700}
+  .acct-tier{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);
+             border:1px solid var(--line);border-radius:9px;padding:10px 11px;margin:0 0 14px}
+  .acct-tier b{color:var(--ink);font-family:var(--mono);font-size:10px;font-weight:700;
+               letter-spacing:.1em;text-transform:uppercase}
   .acct-tier .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--ink3)}
   .acct-tier.member .dot{background:var(--gold);box-shadow:0 0 6px 1px rgba(212,175,55,.55)}
   .acct-tier.free .dot{background:var(--green)}
@@ -331,7 +352,7 @@
     <b>All of the above is free.</b> A free account gets you every graded card
     &mdash; the tape, the rails, the radar, the movement, and what the model
     picked with whether it was right. No card required.
-    <button type="button" class="cta" style="margin-top:12px" data-auth>Create a free account</button>
+    <button type="button" class="cta" style="margin-top:12px" data-auth data-free-cta>Create a free account</button>
   </div>
   {% endif %}
 
@@ -470,6 +491,7 @@
     price: $("[data-price]"), cents: $("[data-cents]"), was: $("[data-year]"),
     billed: $("[data-billed]"), charge: $("[data-charge]"),
     signin: $(".nav button[data-auth]"), cta: $(".plan.gold .cta"),
+    freeCta: $("[data-free-cta]"),
     scrim: $("[data-scrim]"), sheet: $("[data-sheet]"),
     /* ADDRESSED BY NAME, NOT BY POSITION. These were
        $("[data-sheet] .cta") / h3 / p, which silently repointed at the
@@ -549,6 +571,10 @@
     if (open) {
       els.acct.hidden = !showAcct;
       els.signinPanel.hidden = showAcct;
+      // Before data-open, so the popover's transform-origin and start scale
+      // are in force when the transition begins -- otherwise the first frame
+      // animates out of the bottom-sheet geometry.
+      els.sheet.dataset.mode = showAcct ? "account" : "signin";
       if (showAcct) paintAccount();
     }
     [els.scrim, els.sheet].forEach(function (el) {
@@ -582,6 +608,8 @@
     var H = function () { return SHEET.getBoundingClientRect().height || 320; };
 
     function begin(e) {
+      // The popover has no handle and nowhere to be dragged to.
+      if (SHEET.dataset.mode === "account") return;
       // Only from the top strip. Starting a drag anywhere would fight with
       // selecting the email field or scrolling inside the sheet.
       var r = SHEET.getBoundingClientRect();
@@ -627,6 +655,13 @@
 
   function render() {
     els.signin.textContent = state.signedIn ? "Account" : "Sign in";
+    /* "Create a free account" is the wrong sentence for someone who has one,
+       and it sits mid-page -- so tapping it would open the account popover
+       up at the nav button, nowhere near the press. Signed in, it becomes
+       the thing they actually want from here. */
+    if (els.freeCta) {
+      els.freeCta.textContent = state.signedIn ? "Open the app" : "Create a free account";
+    }
     if (state.member) {
       els.cta.textContent = "Manage subscription";
     } else {
@@ -945,6 +980,7 @@
       // session, so a signed-in visitor is not asked to sign in before
       // paying. Everything else opens the sheet, which picks its own panel.
       if (b === els.cta && state.signedIn) startCheckout(b);
+      else if (b === els.freeCta && state.signedIn) location.href = "/";
       else openSheet(true);
     });
   });

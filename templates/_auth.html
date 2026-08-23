@@ -13,7 +13,9 @@
    --------------------------------------------------------------------------- #}
 <style>
   .oa-authbar {
-    position: fixed; top: 0; right: 0; z-index: 40;
+    /* Above the scrim: the popover grows out of this button, and having the
+       button disappear under the dimming as it opens breaks that link. */
+    position: fixed; top: 0; right: 0; z-index: 10002;
     padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px 12px;
   }
   .oa-authbar button {
@@ -21,13 +23,23 @@
     color: var(--text); background: rgba(20,20,22,.82); backdrop-filter: blur(8px);
     border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 14px;
   }
+  /* ABOVE EVERYTHING. 60/61 sat under most of the app: the fighter drawer
+     (300/301), the tour overlay and its tooltip (300/302), the whats-new
+     banner (200) and the live-status overlay (9999) all outranked it. As a
+     bottom sheet that never showed -- the bottom of the screen is empty --
+     but the account popover opens into the top right, straight through the
+     sticky fight card and the coach mark, with the scrim failing to dim
+     either. A sign-in dialog is the most modal thing on the page and has to
+     stack like it.
+     10000/10001 rather than another 9999: ties are broken by document
+     order, and this partial is included before some of those rules. */
   .oa-scrim {
     position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(3px);
-    opacity: 0; pointer-events: none; transition: opacity .18s ease; z-index: 60;
+    opacity: 0; pointer-events: none; transition: opacity .18s ease; z-index: 10000;
   }
   .oa-scrim[data-open] { opacity: 1; pointer-events: auto; }
   .oa-sheet {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 61;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10001;
     background: #111113; border-top: 1px solid var(--hairline);
     border-radius: 20px 20px 0 0;
     padding: 12px 18px calc(24px + env(safe-area-inset-bottom));
@@ -37,11 +49,49 @@
   .oa-sheet[data-open] { transform: translateY(0); }
   .oa-sheet { touch-action: pan-y; }
   .oa-grab { width: 36px; height: 4px; border-radius: 2px; background: #33333a; margin: 0 auto 14px; }
-  .oa-acct-tier { display: flex; align-items: center; gap: 7px; font-size: 11px;
-                  letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
-                  border: 1px solid var(--border); border-radius: 9px;
-                  padding: 9px 11px; margin: 0 0 14px; }
-  .oa-acct-tier b { color: var(--text); font-weight: 700; }
+
+  /* ACCOUNT OPENS AS A POPOVER FROM ITS OWN BUTTON, not as a bottom sheet.
+     Two reasons, and the second is why it is worth the extra CSS:
+     1. The tab bar is pinned to the bottom of this app, so a bottom sheet put
+        "Sign out" underneath it -- the one control in the panel you cannot
+        reach any other way.
+     2. The button is in the top right. A panel that appears at the opposite
+        end of the screen from the thing you pressed has to be re-found; one
+        that grows out of the button is already where you are looking.
+     The SIGN-IN panel stays a bottom sheet on purpose: it is a form, it is
+     tall, and on a phone a form belongs in thumb reach. Different content,
+     different affordance. */
+  .oa-sheet[data-mode="account"] {
+    /* Under the auth bar: its own top padding, plus the button, plus a gap.
+       Written out rather than measured in JS so it cannot go stale while the
+       panel is animating. */
+    top: calc(env(safe-area-inset-top) + 48px);
+    right: calc(12px + env(safe-area-inset-right));
+    left: auto; bottom: auto; margin: 0;
+    width: 300px; max-width: calc(100vw - 24px);
+    /* If it ever outgrows the screen it scrolls itself rather than running
+       off the bottom, which is the failure this replaced. */
+    max-height: calc(100vh - env(safe-area-inset-top) - 72px);
+    overflow-y: auto;
+    border: 1px solid var(--hairline); border-radius: 16px;
+    padding: 16px 16px 14px;
+    box-shadow: 0 18px 44px rgba(0,0,0,.6);
+    transform-origin: top right;
+    transform: scale(.94) translateY(-8px); opacity: 0;
+    transition: transform .18s cubic-bezier(.22,1,.36,1), opacity .14s ease;
+  }
+  .oa-sheet[data-mode="account"][data-open] { transform: scale(1) translateY(0); opacity: 1; }
+  /* The handle is an affordance for a gesture this mode does not have. */
+  .oa-sheet[data-mode="account"] .oa-grab { display: none; }
+  .oa-sheet[data-mode="account"] h3 { font-size: 17px; }
+  @media (prefers-reduced-motion: reduce) {
+    .oa-sheet[data-mode="account"] { transition: opacity .14s ease; transform: none; }
+  }
+  .oa-acct-tier { display: flex; align-items: center; gap: 7px; font-size: 12px;
+                  color: var(--muted); border: 1px solid var(--border);
+                  border-radius: 9px; padding: 10px 11px; margin: 0 0 14px; }
+  .oa-acct-tier b { color: var(--text); font-weight: 700; font-size: 11px;
+                    letter-spacing: .08em; text-transform: uppercase; }
   .oa-acct-tier .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--muted); }
   .oa-acct-tier.member .dot { background: var(--accent); box-shadow: 0 0 6px 1px rgba(212,175,55,.55); }
   .oa-acct-tier.free .dot { background: var(--green); }
@@ -167,6 +217,10 @@
     if (v) {
       acct.hidden = !showAcct;
       signinPanel.hidden = showAcct;
+      // Set BEFORE data-open so the popover's transform-origin and start
+      // scale are already in force when the open transition begins --
+      // otherwise the first frame animates from the bottom-sheet geometry.
+      sheet.dataset.mode = showAcct ? "account" : "signin";
       if (showAcct) paintAccount();
     }
     [scrim, sheet].forEach(function (el) {
@@ -224,6 +278,8 @@
     var H = function () { return SHEET.getBoundingClientRect().height || 320; };
 
     function begin(e) {
+      // The popover has no handle and nowhere to be dragged to.
+      if (SHEET.dataset.mode === "account") return;
       // Only from the top strip. Starting a drag anywhere would fight with
       // selecting the email field or scrolling inside the sheet.
       var r = SHEET.getBoundingClientRect();
