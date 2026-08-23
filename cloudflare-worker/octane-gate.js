@@ -24,6 +24,26 @@
  *                        already have the real password
  */
 
+import { verifySupabaseToken } from "./lib/jwt.js";
+import { mintSession, readSession, clearSession } from "./lib/session.js";
+import { isMember } from "./lib/entitlement.js";
+
+/*
+ * TWO GATES IN ONE WORKER, chosen by env.GATE_MODE.
+ *
+ *   "password"  the original shared-password wall. Still the default, so
+ *               deploying this file changes nothing about who can reach the
+ *               site.
+ *   "auth"      real accounts: Supabase identity, subscription entitlement,
+ *               and the member payload streamed from R2.
+ *
+ * The flag exists because switching the two at once would mean the first
+ * deployment of the new gate is also the moment the site becomes public. If
+ * anything about sign-in, entitlement or R2 is wrong, that is discovered by
+ * strangers rather than by us. With the flag, "auth" can be exercised end to
+ * end on the live domain while the wall is still up, and the rollback is one
+ * variable rather than a redeploy under pressure.
+ */
 const COOKIE_NAME = "octane_auth";
 const DISPLAY_COOKIE_NAME = "octane_role"; // readable by site JS for the Guest/Admin UI badge -- carries no security weight, the HttpOnly cookie above is the only thing the Worker actually trusts
 const SESSION_DAYS = 90; // "stay logged in" -- long enough that a refresh or a return visit weeks later doesn't re-prompt
@@ -71,9 +91,15 @@ async function serveAuthenticatedSite(request, role, secret) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
+    const mode = env.GATE_MODE === "auth" ? "auth" : "password";
+
+    if (mode === "auth") {
+      const handled = await handleAuthMode(request, env, ctx, url, path);
+      if (handled) return handled;
+    }
 
     // Launch images and the manifest are fetched by iOS at APP LAUNCH,
     // before any session cookie is presented. Gated, they'd return login
@@ -351,4 +377,98 @@ function renderLoginPage({ error }) {
   </div>
 </body>
 </html>`;
+}
+
+
+/* ===================================================================== *
+ *  AUTH MODE
+ * ===================================================================== */
+
+// Never gated, in either mode. The service worker and manifest are fetched
+// before any cookie exists, and /welcome is the marketing page whose entire
+// job is to be reachable by strangers.
+const ALWAYS_PUBLIC = ["/sw.js", "/offline.html", "/welcome", "/welcome.html", "/favicon.svg"];
+
+/**
+ * Returns a Response when it owns the request, or null to fall through.
+ */
+async function handleAuthMode(request, env, ctx, url, path) {
+  // --- exchange a Supabase token for our own session -------------------
+  if (path === "/auth/session" && request.method === "POST") {
+    let body;
+    try { body = await request.json(); } catch { return json({ error: "bad request" }, 400); }
+
+    let claims = null;
+    try {
+      claims = await verifySupabaseToken(body && body.access_token, env.SUPABASE_URL);
+    } catch (err) {
+      // Distinguishable from an invalid token: this is the JWKS being
+      // unreachable, which is our problem rather than the caller's.
+      console.log(`jwks failure: ${err.message}`);
+      return json({ error: "verification unavailable" }, 503);
+    }
+    if (!claims) return json({ error: "invalid token" }, 401);
+
+    const member = await isMember(claims.sub, env, ctx);
+    const headers = new Headers({ "Content-Type": "application/json", "Cache-Control": "no-store" });
+    headers.append("Set-Cookie", await mintSession({ userId: claims.sub, member }, env.SESSION_SECRET));
+    return new Response(JSON.stringify({ member }), { status: 200, headers });
+  }
+
+  // --- sign out ---------------------------------------------------------
+  if (path === "/auth/logout") {
+    const headers = new Headers({ "Location": "/", "Cache-Control": "no-store" });
+    headers.append("Set-Cookie", clearSession());
+    return new Response(null, { status: 302, headers });
+  }
+
+  // --- who am I (used by the page to render signed-in state) ------------
+  if (path === "/auth/whoami") {
+    const session = await readSession(request, env.SESSION_SECRET);
+    return json(session ? { signedIn: true, member: session.member } : { signedIn: false });
+  }
+
+  if (ALWAYS_PUBLIC.includes(path) || path.startsWith("/splash-") || path === "/manifest.json") {
+    return fetch(request);
+  }
+
+  // --- the page itself --------------------------------------------------
+  // Only the document is tiered. Every other asset -- icons, movement
+  // fragments -- is identical in both builds and served straight from the
+  // origin, so there is no reason to route it through entitlement.
+  const wantsDocument = request.method === "GET"
+    && (path === "/" || path === "/index.html")
+    && (request.headers.get("Accept") || "").includes("text/html");
+  if (!wantsDocument) return null;
+
+  const session = await readSession(request, env.SESSION_SECRET);
+  if (!session || !session.member) return null;      // free build from the origin
+
+  const object = await env.MEMBER_PAYLOAD.get("index.html");
+  if (!object) {
+    // FAIL CLOSED. A missing member payload means the build has not
+    // uploaded yet; serving the origin is correct, because the origin holds
+    // the free build. The alternative -- erroring -- would take the site
+    // down for members over a transient publishing gap.
+    console.log("member payload missing from R2");
+    return null;
+  }
+
+  return new Response(object.body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html;charset=UTF-8",
+      // Private: this response is specific to one entitled user and must
+      // never be held by a shared cache.
+      "Cache-Control": "private, no-store",
+      "X-Octane-Tier": "member",
+    },
+  });
+}
+
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
 }

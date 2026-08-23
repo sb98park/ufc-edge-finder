@@ -51,6 +51,13 @@ SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 STRIPE_PRICE_MONTHLY = "price_1U7R5ODSgC9GOVMwny77PHJ4"
 STRIPE_PRICE_ANNUAL  = "price_1U7R5nDSgC9GOVMwlV5lbNA5"
 
+# "password" keeps the original shared-password wall. "auth" switches on real
+# accounts, entitlement and the R2 member payload. Deliberately still
+# "password" here: the first deploy of the new gate must not also be the
+# moment the site becomes public, or a mistake in sign-in or entitlement gets
+# found by strangers instead of by us. Flip it once auth is verified live.
+GATE_MODE = "password"
+
 # SECRETS ARE NOT DECLARED HERE. They are set with `wrangler secret put` and
 # live only in Cloudflare. Anything in [vars] is committed to git in plain
 # text, which is correct for the two values above and would be a disclosure
