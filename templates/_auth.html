@@ -37,6 +37,9 @@
   .oa-sheet[data-open] { transform: translateY(0); }
   .oa-sheet { touch-action: pan-y; }
   .oa-grab { width: 36px; height: 4px; border-radius: 2px; background: #33333a; margin: 0 auto 14px; }
+  .oa-code input { text-align: center; font-size: 22px; letter-spacing: .34em;
+                   font-family: var(--font-mono, ui-monospace, monospace); padding-left: .34em; }
+  .oa-fine.bad { color: #ff8a8a; }
   .oa-sheet h3 { font-size: 20px; margin: 0 0 5px; letter-spacing: -.015em; }
   .oa-sheet p { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
   .oa-sheet button.oa-oauth, .oa-sheet button.oa-go {
@@ -72,6 +75,15 @@
   <div class="oa-or"><span>or</span></div>
   <input type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address" data-oa-email>
   <button type="button" class="oa-go" data-oa-send>Email me a sign-in link</button>
+  {# See the same block in landing.html: magic links are single-use and mail
+     scanners fetch them, so the six-digit code is the path that survives. #}
+  <div class="oa-code" data-oa-code-step hidden>
+    <div class="oa-or"><span>or enter the code from the email</span></div>
+    <input type="text" inputmode="numeric" autocomplete="one-time-code"
+           pattern="[0-9]*" maxlength="6" placeholder="123456"
+           aria-label="Six-digit code from the email" data-oa-code>
+    <button type="button" class="oa-go" data-oa-code-send>Sign in with code</button>
+  </div>
   <div class="oa-fine" data-oa-fine>No password to remember. The link works once and expires in an hour.</div>
 </div>
 
@@ -83,6 +95,8 @@
   var bar = q("[data-oa-open]"), scrim = q("[data-oa-scrim]"), sheet = q("[data-oa-sheet]");
   var email = q("[data-oa-email]"), send = q("[data-oa-send]"), fine = q("[data-oa-fine]");
   var title = q("[data-oa-title]"), sub = q("[data-oa-sub]");
+  var codeStep = q("[data-oa-code-step]"), codeBox = q("[data-oa-code]"),
+      codeSend = q("[data-oa-code-send]");
   var state = { signedIn: false, member: false };
 
   function open(v) {
@@ -157,11 +171,9 @@
   /* Supabase returns tokens in the URL FRAGMENT, which never reaches the
      server -- so it is posted to /auth/session explicitly, then scrubbed from
      the address bar so a live token is not left in browser history. */
-  async function consumeFragment() {
-    var h = location.hash.slice(1);
-    if (h.indexOf("access_token") === -1) return false;
-    var token = new URLSearchParams(h).get("access_token");
-    history.replaceState(null, "", location.pathname + location.search);
+  /* Trade a Supabase access token for our own session cookie. Shared by the
+     magic link and the six-digit code -- both end up here. */
+  async function establishSession(token) {
     if (!token) return false;
     try {
       var r = await fetch("/auth/session", {
@@ -181,6 +193,92 @@
     } catch (e) { return false; }
   }
 
+  var AUTH_ERRORS = {
+    otp_expired: "That link had already been used or has expired. Mail providers sometimes open links to scan them, which uses the link up \u2014 enter the six-digit code from the same email instead.",
+    access_denied: "That sign-in link is no longer valid. Enter the six-digit code from the same email, or send a new link.",
+    server_error: "Sign-in failed on our side. Try the six-digit code from your email."
+  };
+
+  async function consumeFragment() {
+    var h = location.hash.slice(1);
+    if (!h) return false;
+    var params = new URLSearchParams(h);
+
+    /* SUPABASE REPORTS FAILURE IN THE FRAGMENT TOO. Returning early on
+       anything without an access_token meant a link a scanner had already
+       consumed produced a normal signed-out page and no explanation at all. */
+    var err = params.get("error_code") || params.get("error");
+    if (err) {
+      history.replaceState(null, "", location.pathname + location.search);
+      open(true);
+      if (codeEmail && !email.value) email.value = codeEmail;
+      showCodeStep();
+      fine.className = "oa-fine bad";
+      fine.textContent = AUTH_ERRORS[err]
+        || (params.get("error_description") || "").replace(/\+/g, " ")
+        || "That sign-in link did not work. Enter the code from your email instead.";
+      return true;
+    }
+
+    if (h.indexOf("access_token") === -1) return false;
+    history.replaceState(null, "", location.pathname + location.search);
+    return await establishSession(params.get("access_token"));
+  }
+
+  /* Persisted: the error path is a FRESH page load and Supabase's error
+     redirect carries no address, so without this the code box would have
+     nothing to verify against. */
+  var codeEmail = "";
+  try { codeEmail = localStorage.getItem("oa_email") || ""; } catch (e) {}
+
+  function showCodeStep() {
+    codeStep.hidden = false;
+    fine.className = "oa-fine";
+    fine.textContent = "The code and the link do the same thing. Either one signs you in.";
+  }
+
+  async function verifyCode() {
+    var code = (codeBox.value || "").replace(/\D/g, "");
+    var value = (email.value || "").trim() || codeEmail;
+    if (!value) {
+      fine.className = "oa-fine bad";
+      fine.textContent = "Enter the email address the code was sent to.";
+      email.focus();
+      return;
+    }
+    if (code.length < 6) { codeBox.focus(); return; }
+    codeSend.disabled = true; codeSend.textContent = "Signing in\u2026";
+    try {
+      var r = await fetch(SUPABASE + "/auth/v1/verify", {
+        method: "POST",
+        headers: { "apikey": ANON, "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "email", email: value, token: code })
+      });
+      var out = await r.json().catch(function () { return {}; });
+      if (r.ok && out.access_token && await establishSession(out.access_token)) {
+        open(false);
+        return;
+      }
+      fine.className = "oa-fine bad";
+      fine.textContent = out.msg || out.error_description
+        || "That code did not work. Check it, or send a new link.";
+    } catch (e) {
+      fine.className = "oa-fine bad";
+      fine.textContent = "Network error. Check your connection.";
+    }
+    codeSend.disabled = false; codeSend.textContent = "Sign in with code";
+  }
+
+  codeSend.addEventListener("click", verifyCode);
+  codeBox.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); verifyCode(); }
+  });
+  codeBox.addEventListener("input", function () {
+    var digits = (codeBox.value || "").replace(/\D/g, "").slice(0, 6);
+    if (digits !== codeBox.value) codeBox.value = digits;
+    if (digits.length === 6) verifyCode();
+  });
+
   var cooldownUntil = 0;
   function tick() {
     var left = Math.ceil((cooldownUntil - Date.now()) / 1000);
@@ -192,6 +290,8 @@
     var value = (email.value || "").trim();
     if (!value || value.indexOf("@") === -1) { email.focus(); return; }
     send.disabled = true; send.textContent = "Sending…";
+    codeEmail = value;
+    try { localStorage.setItem("oa_email", value); } catch (e) {}
     try {
       var r = await fetch(SUPABASE + "/auth/v1/otp?redirect_to=" + encodeURIComponent(location.origin + location.pathname), {
         method: "POST",
@@ -200,7 +300,9 @@
       });
       if (r.ok) {
         title.textContent = "Check your email";
-        sub.textContent = "We sent a sign-in link to " + value + ". It works once and expires in an hour.";
+        sub.textContent = "Tap the link in the email, or enter the six-digit code it contains. Sent to " + value + ".";
+        showCodeStep();
+        codeBox.focus();
         // Supabase enforces a 60-second cooldown per address. Without a
         // visible countdown, a slow inbox looks like a broken button.
         cooldownUntil = Date.now() + 60000; tick();

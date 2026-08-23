@@ -187,6 +187,15 @@
   .sheet input{width:100%;font:inherit;font-size:15px;padding:12px 13px;border-radius:11px;
                border:1px solid var(--line);background:var(--sunken);color:var(--ink);margin-bottom:9px}
   .sheet input::placeholder{color:var(--ink3)}
+  .code-step{margin-top:2px}
+  .code-step input{text-align:center;font-size:22px;letter-spacing:.34em;
+                   font-family:var(--mono);padding-left:.34em}
+  .code-step input::placeholder{letter-spacing:.34em;font-size:22px}
+  /* The error is the whole point of the element, so it must not be the
+     quietest thing in the sheet -- the version that swallowed otp_expired
+     entirely is what sent people back to a signed-out page with no idea
+     why. */
+  .fine.bad{color:#ff8a8a}
   .fine{font-size:11px;color:var(--ink3);text-align:center;margin-top:12px;line-height:1.6}
   @media (prefers-reduced-motion:reduce){.sheet,.scrim{transition:none}}
 </style>
@@ -389,6 +398,20 @@
   <div class="or"><span>or</span></div>
   <input type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address">
   <button type="button" class="cta">Email me a sign-in link</button>
+  {# THE CODE IS NOT A FALLBACK, IT IS THE RELIABLE PATH.
+     Magic links are single-use, and mail providers and corporate security
+     scanners routinely FETCH every link in an incoming message to check it.
+     That consumes the link before the human ever taps it, and Supabase then
+     answers the real click with otp_expired -- which is exactly the failure
+     this sheet was shipped with. The six-digit code cannot be consumed by a
+     machine that only follows URLs, so it works when the link does not. #}
+  <div class="code-step" data-code-step hidden>
+    <div class="or"><span>or enter the code from the email</span></div>
+    <input type="text" inputmode="numeric" autocomplete="one-time-code"
+           pattern="[0-9]*" maxlength="6" placeholder="123456"
+           aria-label="Six-digit code from the email" data-code>
+    <button type="button" class="cta" data-code-submit>Sign in with code</button>
+  </div>
   <div class="fine">No password to remember. The link works once and expires in an hour.</div>
 </div>
 
@@ -421,7 +444,9 @@
     scrim: $("[data-scrim]"), sheet: $("[data-sheet]"),
     email: $("[data-sheet] input"), send: $("[data-sheet] .cta"),
     fine: $("[data-sheet] .fine"), title: $("[data-sheet] h3"),
-    sub: $("[data-sheet] p"), google: $(".oauth.g")
+    sub: $("[data-sheet] p"), google: $(".oauth.g"),
+    codeStep: $("[data-code-step]"), code: $("[data-code]"),
+    codeSubmit: $("[data-code-submit]")
   };
 
   document.querySelectorAll("[data-plan]").forEach(function (btn) {
@@ -530,11 +555,9 @@
    * address bar immediately, because otherwise a working access token
    * sits in browser history and in anything the user pastes.
    * ------------------------------------------------------------------ */
-  async function consumeAuthFragment() {
-    var hash = location.hash.slice(1);
-    if (hash.indexOf("access_token") === -1) return false;
-    var token = new URLSearchParams(hash).get("access_token");
-    history.replaceState(null, "", location.pathname + location.search);
+  /* Trade a Supabase access token for our own session cookie. Shared by the
+     magic link and the code, because both arrive at the same place. */
+  async function establishSession(token) {
     if (!token) return false;
     try {
       var r = await fetch("/auth/session", {
@@ -548,6 +571,39 @@
       render();
       return true;
     } catch (e) { return false; }
+  }
+
+  var AUTH_ERRORS = {
+    otp_expired: "That link had already been used or has expired. Mail providers sometimes open links to scan them, which uses the link up \u2014 enter the six-digit code from the same email instead.",
+    access_denied: "That sign-in link is no longer valid. Enter the six-digit code from the same email, or send a new link.",
+    server_error: "Sign-in failed on our side. Try the six-digit code from your email."
+  };
+
+  async function consumeAuthFragment() {
+    var hash = location.hash.slice(1);
+    if (!hash) return false;
+    var params = new URLSearchParams(hash);
+
+    /* SUPABASE REPORTS FAILURE IN THE FRAGMENT TOO, and the first version of
+       this function returned early on anything without an access_token --
+       so a link that had been consumed by a scanner produced a normal-looking
+       signed-out page and no explanation whatsoever. Read the error first. */
+    var err = params.get("error_code") || params.get("error");
+    if (err) {
+      history.replaceState(null, "", location.pathname + location.search);
+      openSheet(true);
+      if (codeEmail && !els.email.value) els.email.value = codeEmail;
+      showCodeStep();
+      els.fine.className = "fine bad";
+      els.fine.textContent = AUTH_ERRORS[err]
+        || (params.get("error_description") || "").replace(/\+/g, " ")
+        || "That sign-in link did not work. Enter the code from your email instead.";
+      return true;
+    }
+
+    if (hash.indexOf("access_token") === -1) return false;
+    history.replaceState(null, "", location.pathname + location.search);
+    return await establishSession(params.get("access_token"));
   }
 
   /* --- sign in ------------------------------------------------------ */
@@ -564,11 +620,80 @@
     }
   }
 
+  /* The address the code belongs to. Read back from the field rather than
+     kept in a variable, so a user who edits the email after sending cannot
+     verify a code against the wrong address. */
+  /* Persisted, because the failure this exists for lands the reader on a
+     FRESH page load: Supabase's error redirect carries no address, so without
+     this the code box would be asking for a code and have nothing to check it
+     against. Same browser that asked for the link, so it is there. */
+  var codeEmail = "";
+  try { codeEmail = localStorage.getItem("oa_email") || ""; } catch (e) {}
+
+  function showCodeStep() {
+    els.codeStep.hidden = false;
+    els.fine.className = "fine";
+    els.fine.textContent = "The code and the link do the same thing. Either one signs you in.";
+  }
+
+  async function verifyCode() {
+    var code = (els.code.value || "").replace(/\D/g, "");
+    var email = (els.email.value || "").trim() || codeEmail;
+    if (!email) {
+      /* Focus the field that is actually missing. Sending them back to the
+         code box they just filled in correctly is how a form makes someone
+         feel stupid. */
+      els.fine.className = "fine bad";
+      els.fine.textContent = "Enter the email address the code was sent to.";
+      els.email.focus();
+      return;
+    }
+    if (code.length < 6) { els.code.focus(); return; }
+    els.codeSubmit.disabled = true;
+    els.codeSubmit.textContent = "Signing in\u2026";
+    try {
+      /* type:"email" covers both a first-time signup and a returning
+         sign-in; Supabase issues the same six digits for either. */
+      var r = await fetch(SUPABASE + "/auth/v1/verify", {
+        method: "POST",
+        headers: { "apikey": ANON, "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "email", email: email, token: code })
+      });
+      var out = await r.json().catch(function () { return {}; });
+      if (r.ok && out.access_token && await establishSession(out.access_token)) {
+        openSheet(false);
+        return;
+      }
+      els.fine.className = "fine bad";
+      els.fine.textContent = (out.msg || out.error_description
+        || "That code did not work. Check it, or send a new link.");
+    } catch (e) {
+      els.fine.className = "fine bad";
+      els.fine.textContent = "Network error. Check your connection and try again.";
+    }
+    els.codeSubmit.disabled = false;
+    els.codeSubmit.textContent = "Sign in with code";
+  }
+
+  els.codeSubmit.addEventListener("click", verifyCode);
+  els.code.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); verifyCode(); }
+  });
+  /* Pasting the code from the email is the common case on a phone, so a
+     complete six digits submits without a second tap. */
+  els.code.addEventListener("input", function () {
+    var digits = (els.code.value || "").replace(/\D/g, "").slice(0, 6);
+    if (digits !== els.code.value) els.code.value = digits;
+    if (digits.length === 6) verifyCode();
+  });
+
   els.send.addEventListener("click", async function () {
     var email = (els.email.value || "").trim();
     if (!email || email.indexOf("@") === -1) { els.email.focus(); return; }
     els.send.disabled = true;
     els.send.textContent = "Sending\u2026";
+    codeEmail = email;
+    try { localStorage.setItem("oa_email", email); } catch (e) {}
     var redirect = location.origin + "/welcome";
     try {
       var r = await fetch(SUPABASE + "/auth/v1/otp?redirect_to=" + encodeURIComponent(redirect), {
@@ -578,7 +703,9 @@
       });
       if (r.ok) {
         els.title.textContent = "Check your email";
-        els.sub.innerHTML = "We sent a sign-in link to <b>" + email.replace(/[<>&]/g, "") + "</b>. It works once and expires in an hour.";
+        els.sub.innerHTML = "Tap the link in the email, or enter the six-digit code it contains. Sent to <b>" + email.replace(/[<>&]/g, "") + "</b>.";
+        showCodeStep();
+        els.code.focus();
         // SUPABASE ENFORCES A 60-SECOND COOLDOWN PER ADDRESS. Without a
         // visible countdown a user whose email is slow taps Resend, gets a
         // silent 429, and concludes the site is broken.
