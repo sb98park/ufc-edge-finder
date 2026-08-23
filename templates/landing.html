@@ -627,6 +627,10 @@
      FRESH page load: Supabase's error redirect carries no address, so without
      this the code box would be asking for a code and have nothing to check it
      against. Same browser that asked for the link, so it is there. */
+  /* "email" is the documented type for a code from signInWithOtp;
+     "magiclink" and "signup" are where GoTrue files the token when the
+     address was, respectively, returning or brand new. */
+  var CODE_TYPES = ["email", "magiclink", "signup"];
   var codeEmail = "";
   try { codeEmail = localStorage.getItem("oa_email") || ""; } catch (e) {}
 
@@ -652,15 +656,24 @@
     els.codeSubmit.disabled = true;
     els.codeSubmit.textContent = "Signing in\u2026";
     try {
-      /* type:"email" covers both a first-time signup and a returning
-         sign-in; Supabase issues the same six digits for either. */
-      var r = await fetch(SUPABASE + "/auth/v1/verify", {
-        method: "POST",
-        headers: { "apikey": ANON, "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "email", email: email, token: code })
-      });
-      var out = await r.json().catch(function () { return {}; });
-      if (r.ok && out.access_token && await establishSession(out.access_token)) {
+      /* GoTrue partitions one-time tokens by verification type, and which
+         type a code belongs to depends on whether the address was signing UP
+         or signing back IN -- which the client cannot know. The endpoint does
+         not validate the type before looking the token up, so a wrong guess
+         is indistinguishable from a wrong code: both come back otp_expired.
+         Rather than guess, try each type and stop at the first that works.
+         Costs one extra request only on a genuine failure. */
+      var out = {};
+      for (var i = 0; i < CODE_TYPES.length; i++) {
+        var r = await fetch(SUPABASE + "/auth/v1/verify", {
+          method: "POST",
+          headers: { "apikey": ANON, "Content-Type": "application/json" },
+          body: JSON.stringify({ type: CODE_TYPES[i], email: email, token: code })
+        });
+        out = await r.json().catch(function () { return {}; });
+        if (r.ok && out.access_token) break;
+      }
+      if (out.access_token && await establishSession(out.access_token)) {
         openSheet(false);
         return;
       }

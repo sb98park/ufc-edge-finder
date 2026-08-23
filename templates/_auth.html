@@ -228,6 +228,10 @@
   /* Persisted: the error path is a FRESH page load and Supabase's error
      redirect carries no address, so without this the code box would have
      nothing to verify against. */
+  /* "email" is the documented type for a code from signInWithOtp;
+     "magiclink" and "signup" are where GoTrue files the token when the
+     address was, respectively, returning or brand new. */
+  var CODE_TYPES = ["email", "magiclink", "signup"];
   var codeEmail = "";
   try { codeEmail = localStorage.getItem("oa_email") || ""; } catch (e) {}
 
@@ -249,13 +253,21 @@
     if (code.length < 6) { codeBox.focus(); return; }
     codeSend.disabled = true; codeSend.textContent = "Signing in\u2026";
     try {
-      var r = await fetch(SUPABASE + "/auth/v1/verify", {
-        method: "POST",
-        headers: { "apikey": ANON, "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "email", email: value, token: code })
-      });
-      var out = await r.json().catch(function () { return {}; });
-      if (r.ok && out.access_token && await establishSession(out.access_token)) {
+      /* Each type in turn -- see the same loop in landing.html. A code's type
+         depends on whether this address was signing up or signing back in,
+         the endpoint answers a wrong type with the same otp_expired it gives
+         a wrong code, so guessing is not distinguishable from failing. */
+      var out = {};
+      for (var i = 0; i < CODE_TYPES.length; i++) {
+        var r = await fetch(SUPABASE + "/auth/v1/verify", {
+          method: "POST",
+          headers: { "apikey": ANON, "Content-Type": "application/json" },
+          body: JSON.stringify({ type: CODE_TYPES[i], email: value, token: code })
+        });
+        out = await r.json().catch(function () { return {}; });
+        if (r.ok && out.access_token) break;
+      }
+      if (out.access_token && await establishSession(out.access_token)) {
         open(false);
         return;
       }
