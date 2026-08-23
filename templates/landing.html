@@ -43,6 +43,87 @@
   .brand b{color:var(--gold);font-weight:800}
   .nav button{font:inherit;font-size:13px;font-weight:600;color:var(--ink2);
               background:none;border:0;padding:6px 2px;cursor:pointer}
+  /* ===== THE STRIPE-LANGUAGE HERO =====
+     The band runs blue -> indigo -> red -> gold. That is not decoration:
+     blue and red are the two CORNERS of the octagon and gold is where they
+     cross, so the gradient is the fight. It enters top-right and leaves by the
+     right edge -- it must NOT span the hero, or the lede and the buttons end
+     up as low-contrast text on a saturated field. */
+  /* FULL BLEED AND CLIPPED. The ribbon is deliberately wider than the column
+     so it reaches the screen edge; with overflow:visible that bleed expands
+     the document instead -- 475px of page inside a 375px phone, i.e. sideways
+     scrolling on every screen. The hero escapes .wrap's padding, then clips. */
+  .hero{position:relative;isolation:isolate;overflow:hidden;
+        margin:0 calc(-16px - env(safe-area-inset-right)) 0 calc(-16px - env(safe-area-inset-left));
+        padding:26px calc(16px + env(safe-area-inset-left)) 34px
+                     calc(16px + env(safe-area-inset-right))}
+  .ribbon{position:absolute;inset:-20% -34% auto -14%;height:126%;z-index:-1;pointer-events:none;
+    clip-path:polygon(44% 0,100% 0,100% 64%,72% 100%,24% 100%);
+    background:
+      repeating-linear-gradient(102deg,rgba(255,255,255,.3) 0 1px,transparent 1px 5px),
+      repeating-linear-gradient(97deg,rgba(255,255,255,.13) 0 1px,transparent 1px 3px),
+      linear-gradient(106deg,#4b8dfb 0%,#7c5cf5 24%,#e0435f 52%,#e8722f 74%,#e8b83f 100%);
+    filter:blur(.5px) saturate(1.12);opacity:.9}
+  .ribbon::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(184deg,transparent 30%,var(--bg) 94%),
+               linear-gradient(74deg,var(--bg) 2%,transparent 32%)}
+  .hero::before{content:"";position:absolute;top:-30%;right:-24%;width:84%;height:84%;
+    background:radial-gradient(closest-side,rgba(224,67,95,.32),transparent 72%);
+    filter:blur(46px);z-index:-2;pointer-events:none}
+  .cd{font-size:12.5px;color:var(--ink2);margin:70px 0 0}
+  .cd b{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);
+        font-weight:500;letter-spacing:-.02em}
+  .hero h1{font-size:clamp(33px,9.2vw,42px);line-height:1.06;letter-spacing:-.036em;
+           font-weight:750;margin:14px 0 0;text-wrap:balance}
+  .hero h1 .grad{background:linear-gradient(97deg,#8fb4ff 2%,#ff7a86 48%,#f0c245 94%);
+                 -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .lede2{font-size:15.5px;color:var(--ink2);margin:15px 0 0;max-width:32ch}
+  .hero .ctas{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
+  .hero .ctas button{flex:1;min-width:142px;font:inherit;font-size:14.5px;font-weight:650;
+    padding:12px 18px;border-radius:999px;border:0;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px}
+  .hero .ctas .go{background:var(--gold);color:#15120a;box-shadow:0 6px 20px rgba(212,175,55,.22)}
+  .hero .ctas .gh{background:rgba(255,255,255,.06);color:var(--ink);
+                  border:1px solid rgba(255,255,255,.13)}
+
+  /* ===== THE TAPE =====
+     A hand-driven ticker, not a CSS marquee: the offset is integrated every
+     frame and a drag writes to that SAME variable, which is the only way the
+     strip can be swiped backwards to a tick that has already gone past. Full
+     bleed out of .wrap so it spans the screen. */
+  .tape{position:relative;margin:0 calc(-16px - env(safe-area-inset-left)) 0
+        calc(-16px - env(safe-area-inset-right));
+        border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+        background:linear-gradient(180deg,rgba(255,255,255,.022),transparent);
+        overflow:hidden;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+  .tape:active{cursor:grabbing}
+  .tape-track{display:flex;align-items:center;padding:11px 0;will-change:transform}
+  .tick{display:inline-flex;align-items:baseline;gap:7px;padding:0 15px;flex:none;
+        white-space:nowrap;border-right:1px solid rgba(255,255,255,.055)}
+  .tick .nm{font-size:11px;font-weight:650;letter-spacing:.055em;color:var(--ink2);
+            text-transform:uppercase}
+  .tick .pr{font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--ink);
+            font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .tick .dl{font-family:var(--mono);font-size:9.5px;font-variant-numeric:tabular-nums;
+            min-width:34px}
+  .tick .dl.up{color:var(--green)}
+  .tick .dl.dn{color:var(--red)}
+  .tick .dl.fl{color:var(--ink3)}
+  /* Opaque under the LIVE badge, not merely fading -- a partial fade lets
+     ticks read through the label. */
+  .tape::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(90deg,var(--bg) 0 62px,transparent 104px,
+               transparent calc(100% - 44px),var(--bg) 100%)}
+  .tape-live{position:absolute;left:0;top:0;bottom:0;z-index:2;display:flex;align-items:center;
+             gap:5px;padding:0 13px 0 calc(16px + env(safe-area-inset-left));
+             font-family:var(--mono);font-size:8.5px;letter-spacing:.17em;color:var(--gold);
+             pointer-events:none}
+  .tape-live i{width:5px;height:5px;border-radius:50%;background:var(--gold);
+               box-shadow:0 0 7px 1px rgba(212,175,55,.8);
+               animation:oaPulse 1.9s ease-in-out infinite}
+  @keyframes oaPulse{0%,100%{opacity:1}50%{opacity:.28}}
+  @media (prefers-reduced-motion:reduce){.tape-live i{animation:none}}
+
   /* --- hero --- */
   .eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--ink3);
            text-transform:uppercase;margin-top:26px}
@@ -252,10 +333,48 @@
     <button type="button" data-auth>Sign in</button>
   </nav>
 
-  {# THE PROOF LEADS. A prediction is worth nothing without a record, so the
-     record is the first thing on the page -- and every figure here is rendered
-     from the same build that produces the app, so it cannot drift. #}
-  <div class="eyebrow">Public track record &middot; updated {{ generated_at_short }}</div>
+  {# THE HERO STATES THE CLAIM; THE PROOF FOLLOWS IMMEDIATELY BELOW.
+     The record used to be the very first thing on the page, which meant a
+     first-time reader met a number before they knew what it was a number OF.
+     The claim now comes first and the ledger is one scroll down, still above
+     everything else. #}
+  <div class="hero">
+    <div class="ribbon" aria-hidden="true"></div>
+    {% if countdown_target_iso %}
+    <p class="cd">Next card sealed in <b data-countdown="{{ countdown_target_iso }}">&mdash;</b></p>
+    {% else %}
+    <p class="cd">Updated {{ generated_at_short }}</p>
+    {% endif %}
+    <h1>Every pick published <span class="grad">before the bell.</span></h1>
+    <p class="lede2">A quantitative model for UFC fights, graded in public against the closing
+       line. Win or lose.</p>
+    <div class="ctas">
+      <button type="button" class="go" data-auth>Start 7 days free &rsaquo;</button>
+      <button type="button" class="gh" data-scroll-record>See the record</button>
+    </div>
+  </div>
+
+  {% if tape %}
+  <div class="tape" id="oa-tape" aria-label="Live moneylines, drag to scroll back">
+    <div class="tape-live"><i></i>LIVE</div>
+    <div class="tape-track" id="oa-tape-track">
+      {# Rendered TWICE so a backwards drag past zero lands on real content
+         rather than on a gap. The JS wraps modulo one copy's width. #}
+      {% for pass_n in [0, 1] %}{% for t in tape %}
+      <div class="tick" data-t="{{ loop.index0 }}">
+        <span class="nm">{{ t.name }}</span>
+        <span class="pr">{{ '%+d'|format(t.odds) }}</span>
+        {% if t.delta is none %}<span class="dl fl">&middot;&middot;</span>
+        {% elif t.delta > 0 %}<span class="dl up">&#9650;{{ t.delta }}</span>
+        {% elif t.delta < 0 %}<span class="dl dn">&#9660;{{ -t.delta }}</span>
+        {% else %}<span class="dl fl">&middot;&middot;</span>{% endif %}
+      </div>
+      {% endfor %}{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="eyebrow" id="record" style="margin-top:34px">Public track record &middot; updated {{ generated_at_short }}</div>
   <div class="big">{{ '%+.2f'|format(tr.units_stats.total_units) }}<span>U</span></div>
   <div class="sub">{{ tr.units_stats.eligible_count }} picks priced across {{ tr.units_stats.event_count }} cards &middot; <b>ROI {{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b></div>
   <div class="curve">{{ units_timeseries_svg | safe }}</div>
@@ -524,6 +643,111 @@
       els.charge.innerHTML = p.charge;
     });
   });
+
+  /* --- the tape ------------------------------------------------------
+     Hand-driven rather than a CSS marquee, because a CSS animation cannot be
+     scrubbed and the whole point is being able to swipe back to a tick that
+     has gone past. Auto-drift and finger write the SAME offset, which is why
+     handing over between them is seamless. */
+  (function () {
+    var track = document.getElementById("oa-tape-track");
+    var tape = document.getElementById("oa-tape");
+    if (!track || !tape) return;
+
+    var W = 0;
+    function measure() {
+      var kids = track.children, half = kids.length / 2, w = 0;
+      for (var i = 0; i < half; i++) w += kids[i].getBoundingClientRect().width;
+      W = w || 1;
+    }
+    measure();
+    window.addEventListener("resize", measure);
+
+    var offset = 0, vel = 0, dragging = false, lastX = 0, lastT = 0, prevT = 0;
+    var AUTO = -0.034;                       // px per ms, leftward
+
+    function wrap(x) { return ((x % W) + W) % W - W; }
+
+    /* Painting is its own function and the DRAG calls it directly rather than
+       waiting for the next frame: zero latency under the finger, and the tape
+       still tracks if rAF is throttled. */
+    function paint() {
+      offset = wrap(offset);
+      track.style.transform = "translate3d(" + offset.toFixed(2) + "px,0,0)";
+    }
+    paint();
+
+    function frame(t) {
+      var dt = prevT ? Math.min(48, t - prevT) : 16;
+      prevT = t;
+      if (!dragging) {
+        if (Math.abs(vel) > 0.004) { offset += vel * dt; vel *= Math.pow(0.9, dt / 16); }
+        else { vel = 0; offset += AUTO * dt; }
+      }
+      paint();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    /* Horizontal intent must be established before the gesture is stolen, or
+       the strip eats vertical page scrolling -- the one thing a bar across the
+       top must never do. */
+    var startX = 0, startY = 0, decided = false;
+    tape.addEventListener("pointerdown", function (e) {
+      dragging = true; decided = false; vel = 0;
+      startX = lastX = e.clientX; startY = e.clientY; lastT = e.timeStamp;
+      tape.setPointerCapture && tape.setPointerCapture(e.pointerId);
+    });
+    tape.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      if (!decided) {
+        var dx = Math.abs(e.clientX - startX), dy = Math.abs(e.clientY - startY);
+        if (dx < 6 && dy < 6) return;
+        if (dy > dx) { dragging = false; return; }
+        decided = true;
+      }
+      if (e.cancelable) e.preventDefault();
+      var d = e.clientX - lastX, dt = e.timeStamp - lastT;
+      offset += d;
+      if (dt > 0) vel = 0.7 * vel + 0.3 * (d / dt);   // smoothed: a jittery
+      lastX = e.clientX; lastT = e.timeStamp;         // finger must not fling
+      paint();
+    }, { passive: false });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
+      tape.addEventListener(ev, function () {
+        if (!dragging) return;
+        dragging = false;
+        vel = Math.max(-2.4, Math.min(2.4, vel));
+      });
+    });
+  })();
+
+  /* --- the countdown -------------------------------------------------
+     Rendered from an ISO target rather than a pre-formatted string, which
+     would be wrong within a minute of the build. */
+  (function () {
+    var el = document.querySelector("[data-countdown]");
+    if (!el) return;
+    var target = Date.parse(el.getAttribute("data-countdown"));
+    if (isNaN(target)) return;
+    var p = function (n) { return String(n).padStart(2, "0"); };
+    function tick() {
+      var s = Math.floor((target - Date.now()) / 1000);
+      if (s <= 0) { el.textContent = "the next card is live"; return; }
+      el.textContent = Math.floor(s / 86400) + "d " + p(Math.floor(s % 86400 / 3600)) +
+                       ":" + p(Math.floor(s % 3600 / 60)) + ":" + p(s % 60);
+      setTimeout(tick, 1000);
+    }
+    tick();
+  })();
+
+  var recordBtn = $("[data-scroll-record]");
+  if (recordBtn) {
+    recordBtn.addEventListener("click", function () {
+      var t = document.getElementById("record");
+      if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   /* --- sheet ------------------------------------------------------- */
   var lastFocus = null;

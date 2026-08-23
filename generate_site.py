@@ -1503,7 +1503,8 @@ def main(tier: str = "member", output_path: str | None = None):
     if tier != "free" and track_record:
         try:
             _write_landing(env, track_record, units_timeseries_svg,
-                           events, future_events, generated_at_short)
+                           events, future_events, generated_at_short,
+                           countdown_target_iso)
         except Exception as exc:                      # never break the main build
             print(f"[landing] skipped: {exc}")
 
@@ -1603,7 +1604,8 @@ def _write_legal(env, updated):
     print(f"Wrote {len(pages)} legal page(s)")
 
 
-def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short):
+def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short,
+                   countdown_target_iso=None):
     """
     docs/welcome.html -- the marketing page.
 
@@ -1658,6 +1660,82 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
     if not upcoming:
         raise ValueError("no upcoming fight to seal")
 
+    # ---- THE TAPE ----------------------------------------------------------
+    # Real fighters at their real moneyline, with the move since the first
+    # price we ever recorded for that bout. A ticker carrying invented numbers,
+    # on a page whose entire argument is a public ledger, would be the one
+    # dishonest element on it -- so it reads the same odds snapshot every other
+    # module reads, and a fighter with no recorded price is DROPPED rather than
+    # filled in with a plausible-looking number.
+    try:
+        with open("data/odds_snapshot.json") as _f:
+            _snap = json.load(_f)
+    except (OSError, ValueError):
+        _snap = {}
+
+    # ---- THE COUNTDOWN -----------------------------------------------------
+    # main() computes countdown_target_iso for the APP's banner, where the card
+    # that just happened is still "the current card". On a landing page that
+    # reads "Next card sealed in", the same value is a countdown that has
+    # already expired -- it pointed three days into the past on the first
+    # build. So the target is validated as future, and re-derived from the
+    # soonest upcoming card when it isn't. If nothing is ahead of us the line
+    # is dropped rather than shown stale.
+    _now = dt.datetime.now(dt.timezone.utc)
+
+    def _future_or_none(iso):
+        if not iso:
+            return None
+        try:
+            when = dt.datetime.fromisoformat(iso)
+        except ValueError:
+            return None
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=dt.timezone.utc)
+        return iso if when > _now else None
+
+    countdown_target_iso = _future_or_none(countdown_target_iso)
+    if not countdown_target_iso:
+        for ev in sorted((future_events or []), key=lambda e: e.get("event_date") or "9999"):
+            candidate = (f"{ev.get('event_date')}T"
+                         f"{ev.get('event_start_time_et', '19:00')}:00-04:00")
+            countdown_target_iso = _future_or_none(candidate)
+            if countdown_target_iso:
+                break
+
+    tape = []
+    _seen = set()
+    for source in (future_events or []), (events or []):
+        for ev in source:
+            for f in ev.get("fights", []):
+                if f.get("winner") or f.get("cancelled"):
+                    continue
+                for name in (f.get("fighter_a"), f.get("fighter_b")):
+                    if not name or name in _seen:
+                        continue
+                    hist = ((_snap.get(f"{name}|Moneyline") or {}).get("history")) or []
+                    if not hist:
+                        continue
+                    try:
+                        now = float(hist[-1]["odds"])
+                        opened = float(hist[0]["odds"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    _seen.add(name)
+                    tape.append({
+                        "name": name.split()[-1],
+                        "odds": int(round(now)),
+                        # None renders as a neutral marker, not a fake zero move
+                        "delta": int(round(now - opened)) if len(hist) > 1 else None,
+                    })
+                if len(tape) >= 18:
+                    break
+            if len(tape) >= 18:
+                break
+        if len(tape) >= 18:
+            break
+
+
     # A REAL FIGHT'S REAL COMPONENTS for the preview strip. Mockups would be
     # easier and would also be a lie: the point of showing the scout rails and
     # the movement chart is that this is what you actually get, so they are
@@ -1689,6 +1767,8 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
 
     html = env.get_template("landing.html").render(
         preview=preview,
+        tape=tape,
+        countdown_target_iso=countdown_target_iso or "",
         # Both public by design. The anon key carries no privileges of its
         # own -- everything it can do is what the RLS policies in
         # supabase/migrations allow -- which is why it can sit in page source.
