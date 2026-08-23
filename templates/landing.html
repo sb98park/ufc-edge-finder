@@ -37,8 +37,12 @@
   .wrap{max-width:440px;margin:0 auto}
   a{color:inherit}
   /* --- nav --- */
+  /* NO RULE UNDER THE NAV. The hero's ribbon starts immediately below it, so
+     the hairline drew a hard line straight across the gradient -- the one
+     place on the page where a border is visibly cutting an image rather than
+     separating two blocks of text. The nav reads as a nav from its spacing. */
   .nav{display:flex;align-items:center;justify-content:space-between;
-       padding:calc(14px + env(safe-area-inset-top)) 0 14px;border-bottom:1px solid var(--line)}
+       padding:calc(14px + env(safe-area-inset-top)) 0 14px}
   .brand{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;letter-spacing:-.01em}
   .brand b{color:var(--gold);font-weight:800}
   .nav button{font:inherit;font-size:13px;font-weight:600;color:var(--ink2);
