@@ -1703,6 +1703,56 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
             if countdown_target_iso:
                 break
 
+    # ---- THE CLV STORY -----------------------------------------------------
+    # DYNAMIC, not pinned to one fight. A hardcoded "we took McMillen at +160"
+    # is true forever but ages badly; computing the best line move in the
+    # ledger each build means the page always shows its strongest real example
+    # and can never drift from the data. Only WINS are eligible -- a big line
+    # move on a loser is still a genuine CLV result, but as the single headline
+    # story on a landing page it invites exactly the argument you do not want.
+    # RANKED ON THE STORY, NOT ON THE PERCENTAGE. Sorting by raw CLV% picked a
+    # favourite that got more favoured -- true, but "-147 closed -567, won
+    # +0.68U" is an argument only a quant hears. A pick that CROSSES the line,
+    # published as an underdog and closing as a favourite, is the market
+    # completely reversing its view, which is the same claim in a form anyone
+    # can read. So crossing wins first, then size of move.
+    def _clv_rank(m):
+        clv = m.get("clv") or {}
+        try:
+            pick = float(clv.get("pick_odds"))
+            close = float(clv.get("closing_odds"))
+        except (TypeError, ValueError):
+            return (0, 0.0)
+        crossed = 1 if (pick > 0 and close < 0) else 0
+        return (crossed, float(clv.get("clv_pct") or 0))
+
+    best_clv = None
+    _best_rank = (-1, -1.0)
+    for m in (track_record.get("results") or []):
+        clv = m.get("clv") or {}
+        pct = clv.get("clv_pct")
+        if not m.get("correct") or pct is None or not clv.get("beat_clv"):
+            continue
+        rank = _clv_rank(m)
+        if rank > _best_rank:
+            _best_rank = rank
+            best_clv = {
+                "fighter": m.get("predicted_favorite", ""),
+                "surname": (m.get("predicted_favorite") or " ").split()[-1],
+                "opponent": (m.get("fighter_b") if m.get("fighter_a") == m.get("predicted_favorite")
+                             else m.get("fighter_a")) or "",
+                "pick_odds": format_american_odds(clv.get("pick_odds")),
+                "closing_odds": format_american_odds(clv.get("closing_odds")),
+                "swing": abs(int(round(float(clv.get("closing_odds", 0))
+                                       - float(clv.get("pick_odds", 0))))),
+                "clv_pct": pct,
+                "units": m.get("units_result"),
+                # "Decision - Unanimous" reads as a database field, not a sentence
+                "method": (m.get("actual_method") or "decision").split(" - ")[0].lower()
+                          .replace("ko/tko", "KO/TKO").replace("submission", "submission"),
+                "when": _format_friendly_date(m.get("date_added")) or "",
+            }
+
     tape = []
     _seen = set()
     for source in (future_events or []), (events or []):
@@ -1768,6 +1818,8 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
     html = env.get_template("landing.html").render(
         preview=preview,
         tape=tape,
+        best_clv=best_clv,
+        clv_stats=track_record.get("clv_stats"),
         countdown_target_iso=countdown_target_iso or "",
         # Both public by design. The anon key carries no privileges of its
         # own -- everything it can do is what the RLS policies in

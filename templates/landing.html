@@ -184,6 +184,96 @@
   .link{width:1px;height:16px;background:var(--line);margin:10px auto}
   .cap{font-size:12.5px;color:var(--ink2);margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
   .cap b{color:var(--ink)}
+  /* ===== PRODUCT CARDS =====
+     Headline top-left, expand top-right, gradient canvas below holding a real
+     dark product fragment. The dark shot on a bright canvas is the hook: the
+     app IS dark, so the contrast is honest and it makes the fragment read as a
+     screenshot rather than as more page. */
+  .lede2b{font-size:13.5px;color:var(--ink3);margin:-6px 0 22px;line-height:1.6}
+  .pcard{background:var(--panel);border:1px solid var(--line);border-radius:19px;
+         overflow:hidden;margin-bottom:14px;position:relative}
+  .pcard::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;z-index:1;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.16) 22%,
+               rgba(255,255,255,.16) 78%,transparent)}
+  .pchead{display:flex;justify-content:space-between;align-items:flex-start;gap:13px;
+          padding:19px 19px 15px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .pchead:focus-visible{outline:2px solid var(--gold);outline-offset:-3px;border-radius:19px}
+  .pchead h3{font-size:19.5px;line-height:1.2;letter-spacing:-.024em;font-weight:700;margin:0;
+             max-width:21ch}
+  .pchead .kick{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;
+                color:var(--gold);margin-bottom:7px;display:block}
+  .expand{width:34px;height:34px;flex:none;border-radius:9px;background:rgba(212,175,55,.15);
+          display:grid;place-items:center;
+          transition:background .18s ease,transform .28s cubic-bezier(.22,1,.36,1)}
+  .pcard[data-open] .expand{background:rgba(212,175,55,.26);transform:rotate(45deg)}
+  .canvas{position:relative;padding:24px 15px 0;min-height:190px;overflow:hidden}
+  .canvas::before{content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(101deg,rgba(255,255,255,.16) 0 1px,transparent 1px 5px),
+               linear-gradient(129deg,#e8b83f 0%,#e0435f 36%,#7c5cf5 70%,#4b8dfb 100%);
+    opacity:.82}
+  .canvas>*{position:relative}
+  .canvas.cool::before{background:
+    repeating-linear-gradient(101deg,rgba(255,255,255,.15) 0 1px,transparent 1px 5px),
+    linear-gradient(140deg,#4b8dfb 0%,#7c5cf5 46%,#e0435f 100%);opacity:.8}
+  .canvas.warm::before{background:
+    repeating-linear-gradient(101deg,rgba(255,255,255,.15) 0 1px,transparent 1px 5px),
+    linear-gradient(150deg,#e8b83f 0%,#e8722f 40%,#e0435f 80%,#a838b8 100%);opacity:.8}
+  .canvas.green::before{background:
+    repeating-linear-gradient(101deg,rgba(255,255,255,.15) 0 1px,transparent 1px 5px),
+    linear-gradient(146deg,#2fd47e 0%,#22a5a5 44%,#4b8dfb 100%);opacity:.72}
+  /* the moneyline chart is dropped straight in, so it needs the shot treatment */
+  .canvas .dual-chart,.canvas .ml-rail{background:none}
+  .canvas > .ml-rail{background:#0b0d12;border:1px solid rgba(255,255,255,.1);
+    border-radius:13px 13px 0 0;margin:0;padding:11px 12px 4px;box-shadow:0 20px 44px rgba(0,0,0,.55)}
+  .canvas > .dual-chart{background:#0b0d12;border:1px solid rgba(255,255,255,.1);border-top:0;
+    border-radius:0 0 13px 13px;padding:0 6px 8px;box-shadow:0 20px 44px rgba(0,0,0,.55);
+    width:100%;display:block}
+  .shot{background:#0b0d12;border:1px solid rgba(255,255,255,.1);border-radius:13px;
+        box-shadow:0 20px 44px rgba(0,0,0,.55);color:#e8eaf0;padding:13px;font-size:12px}
+  .shot .sh-top{display:flex;justify-content:space-between;font-family:var(--mono);font-size:8.5px;
+                letter-spacing:.13em;text-transform:uppercase;color:#6d7789;margin-bottom:10px}
+  .rail{display:flex;align-items:center;gap:7px;margin-top:9px}
+  .rail i{height:3px;border-radius:2px;display:block}
+  .rail .l{flex:1;display:flex;justify-content:flex-end}
+  .rail .r{flex:1}
+  .rail span{font-family:var(--mono);font-size:7px;letter-spacing:.1em;color:#6d7789;width:66px;
+             text-align:center;flex:none;text-transform:uppercase}
+  .clv{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
+  .clv .p{text-align:center;flex:1}
+  .clv .p em{font-style:normal;display:block;font-family:var(--mono);font-size:7.5px;
+             letter-spacing:.13em;color:#6d7789;text-transform:uppercase;margin-bottom:4px}
+  .clv .p b{font-family:var(--mono);font-size:21px;font-weight:600;letter-spacing:-.03em}
+  .clv .arrow{flex:none;color:var(--green);font-family:var(--mono);font-size:10px;
+              letter-spacing:.1em;text-align:center}
+  .clv .arrow i{display:block;height:1px;width:52px;margin:5px 0 4px;
+                background:linear-gradient(90deg,var(--red),var(--green))}
+  .verdict{margin-top:11px;padding:8px;border-radius:9px;background:rgba(61,220,132,.1);
+           border:1px solid rgba(61,220,132,.26);text-align:center;font-size:11.5px;
+           color:var(--green)}
+  .ltbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px;
+        font-variant-numeric:tabular-nums}
+  .ltbl th{text-align:left;color:#6d7789;font-size:8px;letter-spacing:.12em;text-transform:uppercase;
+           padding:0 0 7px;font-weight:500;border-bottom:1px solid rgba(255,255,255,.09)}
+  .ltbl td{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);color:#c8ccd6}
+  .ltbl td:last-child,.ltbl th:last-child{text-align:right}
+  .up{color:var(--green)}.dn{color:var(--red)}
+  /* THE EXPAND ACTUALLY EXPANDS. */
+  .detail{max-height:0;overflow:hidden;transition:max-height .46s cubic-bezier(.22,1,.36,1)}
+  .pcard[data-open] .detail{max-height:760px}
+  .detail-in{padding:17px 19px 20px;border-top:1px solid var(--line);background:#151922}
+  .detail-in p{margin:0 0 11px;font-size:13.5px;color:var(--ink2);line-height:1.6}
+  .detail-in p b{color:var(--ink);font-weight:650}
+  .mini{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:13px}
+  .mini .r{display:flex;justify-content:space-between;padding:9px 12px;font-size:12px;
+           border-bottom:1px solid var(--line)}
+  .mini .r:last-child{border-bottom:0}
+  .mini .r span{color:var(--ink3)}
+  .mini .r b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
+  .nobody{display:flex;gap:8px;align-items:flex-start;margin-top:13px;padding:11px 12px;
+          border-radius:11px;background:rgba(61,220,132,.07);border:1px solid rgba(61,220,132,.2);
+          font-size:12.5px;color:#9fe6bd;line-height:1.5}
+  .nobody b{color:var(--green);font-weight:650}
+
   /* --- plans --- */
   .pv{border:1px solid var(--line);border-radius:14px;background:var(--sunken);
       padding:14px;margin-bottom:12px}
@@ -437,43 +527,172 @@
      objections and the second one is answered by showing, not claiming.
      It also sharpens the free offer: all of this, on every graded card, for
      an email address. #}
+  {# ===== THE CARD SECTION =====
+     Each capability is a card: headline top-left, expand top-right, and a
+     gradient canvas holding a REAL dark product fragment. The expand actually
+     expands -- an affordance that does nothing is worse than no affordance.
+     The paywall is deliberately absent here and stated once, in pricing. A
+     feature list should only contain things the reader gets. #}
+  <h2 style="margin-top:38px">Read the market, not the noise.</h2>
+  <p class="lede">A 90% favourite at &minus;900 is not an edge, it's arithmetic.</p>
+  <p class="lede2b">The model exists to find the fights the market has mispriced &mdash; and the
+     ledger exists to show you, in units, what that disagreement was actually worth.</p>
+
   {% if preview %}
-  <h2 style="margin-top:34px">And this is the rest of it.</h2>
-  <p class="lede">Free on every card we have already graded &mdash; {{ preview.fighter_a }} vs {{ preview.fighter_b }} below.</p>
-
-  <div class="pv">
-    <div class="pv-label">Scouting report</div>
-    <p class="pv-note">Every fighter ranked against the division, not against each other. Longer bar wins the category.</p>
-    <div class="pv-rails">
-      {% for row in preview.rows %}
-      <div class="pv-row">
-        <div class="pv-side"><i style="width:{{ row.a or 0 }}%;background:var(--red)"></i></div>
-        <span>{{ row.label }}</span>
-        <div class="pv-side r"><i style="width:{{ row.b or 0 }}%;background:var(--blue)"></i></div>
-      </div>
-      {% endfor %}
+  <div class="pcard" data-card>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      <div><span class="kick">Live market</span>
+        <h3>Watch the market move, minute by minute</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
     </div>
+    <div class="canvas cool">{{ preview.moneyline_chart | safe }}</div>
+    <div class="detail"><div class="detail-in">
+      <p>Every price we have recorded since the fight was booked, not just today's.
+         <b>Hold anywhere on the chart</b> to read both sides at that moment, and see exactly
+         when the money arrived.</p>
+      <div class="mini">
+        <div class="r"><span>Recalculated</span><b>every 5 min</b></div>
+        <div class="r"><span>Sources</span><b>Polymarket &middot; The Rundown</b></div>
+      </div>
+    </div></div>
   </div>
 
-  <div class="pv">
-    <div class="pv-label">Five-category radar</div>
-    <p class="pv-note">The same percentiles as a shape, so a lopsided matchup is obvious before you read a number.</p>
-    <div class="pv-radar">{{ preview.radar_svg | safe }}</div>
+  <div class="pcard" data-card>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      <div><span class="kick">Scouting</span>
+        <h3>Every fighter, ranked against the division</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+    </div>
+    <div class="canvas warm">
+      <div class="shot">
+        <div class="sh-top"><span>Scouting report</span><span>{{ preview.fighter_a.split()[-1] }} vs {{ preview.fighter_b.split()[-1] }}</span></div>
+        {% for row in preview.rows %}
+        <div class="rail">
+          <div class="l"><i style="width:{{ row.a or 0 }}%;background:var(--red)"></i></div>
+          <span>{{ row.label }}</span>
+          <div class="r"><i style="width:{{ row.b or 0 }}%;background:var(--blue)"></i></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      <p><b>Percentiles against the division, not against each other.</b> An 88th-percentile jab
+         is elite in the weight class &mdash; not merely better than the man across from you,
+         which is all a head-to-head bar can tell you.</p>
+      <div class="pv-radar" style="margin-top:12px">{{ preview.radar_svg | safe }}</div>
+    </div></div>
+  </div>
+  {% endif %}
+
+  {% if best_clv %}
+  <div class="pcard" data-card data-open>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="true">
+      <div><span class="kick">Closing line value</span>
+        <h3>We were on {{ best_clv.surname }} at {{ best_clv.pick_odds }}. The market closed him at {{ best_clv.closing_odds }}.</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+    </div>
+    <div class="canvas green">
+      <div class="shot">
+        <div class="sh-top"><span>{{ best_clv.surname }} vs {{ best_clv.opponent.split()[-1] }}</span><span>{{ best_clv.when }}</span></div>
+        <div class="clv">
+          <div class="p"><em>Our price</em><b style="color:var(--green)">{{ best_clv.pick_odds }}</b></div>
+          <div class="arrow"><i></i>{{ best_clv.swing }} pts</div>
+          <div class="p"><em>Closing</em><b>{{ best_clv.closing_odds }}</b></div>
+        </div>
+        <div class="verdict">Won by {{ best_clv.method }} &middot; {{ '%+.2f'|format(best_clv.units) }}U</div>
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      <p>The market agreed with us &mdash; <b>eventually</b>. Taking a fighter at
+         {{ best_clv.pick_odds }} who closes at {{ best_clv.closing_odds }} means the number was
+         wrong when we published and right by fight night. That gap is the edge, and it is
+         measurable whether the fighter wins or loses.</p>
+      {% if clv_stats %}
+      <div class="mini">
+        <div class="r"><span>Beat the closing line</span><b class="up">{{ clv_stats.beat_pct }}%</b></div>
+        <div class="r"><span>Priced positions measured</span><b>{{ clv_stats.total }}</b></div>
+        <div class="r"><span>This one</span><b class="up">+{{ '%.1f'|format(best_clv.clv_pct) }}%</b></div>
+      </div>
+      {% endif %}
+      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> It needs a
+        timestamped price at pick time and at close. Retro-fitting means inventing prices &mdash;
+        and the closing line is public.</span></div>
+    </div></div>
+  </div>
+  {% endif %}
+
+  <div class="pcard" data-card>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      <div><span class="kick">The ledger</span>
+        <h3>Priced, not just picked &mdash; including what lost</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+    </div>
+    <div class="canvas warm">
+      <div class="shot">
+        <div class="sh-top"><span>By confidence tier</span><span>{{ tr.units_stats.eligible_count }} positions</span></div>
+        <table class="ltbl">
+          <tr><th>Tier</th><th>N</th><th>Units</th></tr>
+          {% for tier_name, st in tr.units_stats.by_tier.items() %}
+          <tr><td>{{ tier_name|replace(' Confidence','') }}</td><td>{{ st.count }}</td>
+              <td class="{{ 'up' if st.units >= 0 else 'dn' }}">{{ '%+.2f'|format(st.units) }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      <p>A win-loss record can hide a losing business. <b>{{ tr.accuracy_pct }}% at short prices
+         still loses money</b> &mdash; so every pick is scored in units at the real market price
+         when it was published, never at the model's own probability.</p>
+      {% set med = tr.units_stats.by_tier.get('Medium Confidence') %}
+      {% if med and med.units < 0 %}
+      <p>The Medium tier is <b>{{ '%+.2f'|format(med.units) }}U</b> and it stays on the page. It
+         is the row that proves the other three.</p>
+      {% endif %}
+      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> Publishing
+        the tier that loses money is a choice no one selling picks will make.</span></div>
+    </div></div>
   </div>
 
-  <div class="pv">
-    <div class="pv-label">Live moneyline movement</div>
-    <p class="pv-note">Every price we have recorded since the fight was booked. Hold anywhere on the chart to read the market at that moment.</p>
-    {{ preview.moneyline_chart | safe }}
+  <div class="pcard" data-card>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      <div><span class="kick">Integrity</span>
+        <h3>Nothing is ever edited after the bell</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+    </div>
+    <div class="canvas green">
+      <div class="shot">
+        <div class="sh-top"><span>Prediction log</span><span>append only</span></div>
+        <div class="verdict">{{ tr.total }} rows &middot; 0 edited &middot; 0 removed</div>
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      <p>A pick is written to an append-only log before the fight and <b>frozen the moment a
+         result lands</b>. Losers cannot be quietly removed, and a pick cannot be improved after
+         the fact.</p>
+      <p>This is not a promise, it's how the thing is built: re-running the model on a decided
+         fight would &ldquo;predict&rdquo; the winner, because the inputs are contaminated by the
+         result. <b>The published record reads the log, never the model.</b></p>
+      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> It has to
+        have been built that way from the first card. It cannot be added later.</span></div>
+    </div></div>
   </div>
 
   <div class="pv-free">
-    <b>All of the above is free.</b> A free account gets you every graded card
-    &mdash; the tape, the rails, the radar, the movement, and what the model
-    picked with whether it was right. No card required.
+    <b>All of the above is free.</b> A free account gets you every graded card &mdash; the tape,
+    the rails, the radar, the movement, and what the model picked with whether it was right.
+    No card required.
     <button type="button" class="cta" style="margin-top:12px" data-auth data-free-cta>Create a free account</button>
   </div>
-  {% endif %}
 
   {# PLANS. Annual is pre-selected because a weekly-cadence product invites a
      cancel after any bad Saturday, and annual moves that decision out of the
@@ -641,6 +860,22 @@
       els.was.style.display = p.was ? "" : "none";
       els.billed.textContent = p.billed;
       els.charge.innerHTML = p.charge;
+    });
+  });
+
+  /* --- card expands ---
+     The whole header is the hit target, not the 34px button: a tap target that
+     small is a miss most of the time on a phone. */
+  document.querySelectorAll("[data-toggle]").forEach(function (h) {
+    function toggle() {
+      var card = h.closest("[data-card]");
+      var open = card.hasAttribute("data-open");
+      if (open) card.removeAttribute("data-open"); else card.setAttribute("data-open", "");
+      h.setAttribute("aria-expanded", String(!open));
+    }
+    h.addEventListener("click", toggle);
+    h.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
     });
   });
 
