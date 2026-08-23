@@ -69,7 +69,23 @@ export function trialEndTimestamp(nextEventDate) {
 }
 
 export async function findOrCreateCustomer({ email, userId, existingId }, env) {
-  if (existingId) return existingId;
+  // A STORED CUSTOMER ID IS NOT PROOF THE CUSTOMER EXISTS. Customer ids are
+  // per-account and per-mode, so every id created while testing against a
+  // sandbox is meaningless to a live key -- checkout then fails with "No such
+  // customer" for a user whose record looks perfectly healthy.
+  //
+  // That is not only a migration problem: a customer deleted in the Stripe
+  // dashboard would break checkout for that account permanently, with no path
+  // to recovery except editing the database by hand. Verifying and re-creating
+  // costs one API call and removes the whole class of failure.
+  if (existingId) {
+    try {
+      const found = await stripe(`/customers/${existingId}`, null, env, "GET");
+      if (found && !found.deleted) return existingId;
+    } catch (err) {
+      console.log(`stale stripe customer ${existingId}, creating a new one: ${err.message}`);
+    }
+  }
   const customer = await stripe("/customers", {
     email,
     // The Supabase user id travels with the customer so a webhook can map
