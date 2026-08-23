@@ -417,15 +417,15 @@
     <button type="button" class="acct-out" data-acct-signout>Sign out</button>
   </div>
   <div data-signin>
-  <h3>Sign in</h3>
-  <p>Free forever on everything already graded. No card unless you start a trial.</p>
+  <h3 data-signin-title>Sign in</h3>
+  <p data-signin-sub>Free forever on everything already graded. No card unless you start a trial.</p>
   <button type="button" class="oauth g">
     <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.5 5-4.4 7l6.8 5.3C42.4 36 45 30.6 45 24z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.2l-6.8-5.3c-1.9 1.3-4.4 2.2-7.7 2.2-5.9 0-10.9-3.9-12.7-9.2l-7 5.4C7.9 41 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.3 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.7-4.5l-7-5.4C3.5 17 2.7 20.4 2.7 24s.8 7 2.5 9.9l6.1-5.4z"/><path fill="#EA4335" d="M24 9.5c4.2 0 7 1.8 8.6 3.3l6.3-6.1C35 3.1 29.9 1 24 1 15.4 1 7.9 6 5.2 14.1l7 5.4C14 14.2 19 9.5 24 9.5z"/></svg>
     Continue with Google
   </button>
   <div class="or"><span>or</span></div>
-  <input type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address">
-  <button type="button" class="cta">Email me a sign-in link</button>
+  <input type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email address" data-email>
+  <button type="button" class="cta" data-send>Email me a sign-in link</button>
   {# THE CODE IS NOT A FALLBACK, IT IS THE RELIABLE PATH.
      Magic links are single-use, and mail providers and corporate security
      scanners routinely FETCH every link in an incoming message to check it.
@@ -471,9 +471,16 @@
     billed: $("[data-billed]"), charge: $("[data-charge]"),
     signin: $(".nav button[data-auth]"), cta: $(".plan.gold .cta"),
     scrim: $("[data-scrim]"), sheet: $("[data-sheet]"),
-    email: $("[data-sheet] input"), send: $("[data-sheet] .cta"),
-    fine: $("[data-sheet] .fine"), title: $("[data-sheet] h3"),
-    sub: $("[data-sheet] p"), google: $(".oauth.g"),
+    /* ADDRESSED BY NAME, NOT BY POSITION. These were
+       $("[data-sheet] .cta") / h3 / p, which silently repointed at the
+       account panel the moment it was inserted above the sign-in panel:
+       .cta became the account's primary button, so "Email me a sign-in link"
+       had its listener attached to a hidden element and did nothing at all,
+       and the "Check your email" copy was written into the account heading.
+       Nothing threw. Position is not an identity. */
+    email: $("[data-sheet] [data-email]"), send: $("[data-sheet] [data-send]"),
+    fine: $("[data-sheet] .fine"), title: $("[data-sheet] [data-signin-title]"),
+    sub: $("[data-sheet] [data-signin-sub]"), google: $(".oauth.g"),
     codeStep: $("[data-code-step]"), code: $("[data-code]"),
     codeSubmit: $("[data-code-submit]"),
     signinPanel: $("[data-signin]"), acct: $("[data-acct]"),
