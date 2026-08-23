@@ -173,15 +173,25 @@
      the address bar so a live token is not left in browser history. */
   /* Trade a Supabase access token for our own session cookie. Shared by the
      magic link and the six-digit code -- both end up here. */
+  /* See landing.html: a bare false here was a silent signed-out page for any
+     token our own Worker rejected. Failures must name themselves. */
+  var SESSION_ERRORS = {
+    401: "Your sign-in link was valid, but we could not verify it here. Try the six-digit code from the same email. (401)",
+    503: "Sign-in is temporarily unavailable on our side \u2014 not your link. Try again in a minute. (503)"
+  };
+
   async function establishSession(token) {
-    if (!token) return false;
+    if (!token) return { ok: false, reason: "No sign-in token in that link." };
     try {
       var r = await fetch("/auth/session", {
         method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ access_token: token })
       });
-      if (!r.ok) return false;
+      if (!r.ok) {
+        return { ok: false, reason: SESSION_ERRORS[r.status]
+          || ("Sign-in failed (" + r.status + "). Try the code from your email.") };
+      }
       var out = await r.json();
       state = { signedIn: true, member: !!out.member };
       render();
@@ -189,8 +199,18 @@
       // because entitlement was decided before this request. Reload so the
       // Worker serves the member build.
       if (out.member) location.reload();
-      return true;
-    } catch (e) { return false; }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: "Network error finishing sign-in. Check your connection and try again." };
+    }
+  }
+
+  function showAuthFailure(reason) {
+    open(true);
+    if (codeEmail && !email.value) email.value = codeEmail;
+    showCodeStep();
+    fine.className = "oa-fine bad";
+    fine.textContent = reason;
   }
 
   var AUTH_ERRORS = {
@@ -210,19 +230,17 @@
     var err = params.get("error_code") || params.get("error");
     if (err) {
       history.replaceState(null, "", location.pathname + location.search);
-      open(true);
-      if (codeEmail && !email.value) email.value = codeEmail;
-      showCodeStep();
-      fine.className = "oa-fine bad";
-      fine.textContent = AUTH_ERRORS[err]
+      showAuthFailure(AUTH_ERRORS[err]
         || (params.get("error_description") || "").replace(/\+/g, " ")
-        || "That sign-in link did not work. Enter the code from your email instead.";
+        || "That sign-in link did not work. Enter the code from your email instead.");
       return true;
     }
 
     if (h.indexOf("access_token") === -1) return false;
     history.replaceState(null, "", location.pathname + location.search);
-    return await establishSession(params.get("access_token"));
+    var res = await establishSession(params.get("access_token"));
+    if (!res.ok) showAuthFailure(res.reason);
+    return true;
   }
 
   /* Persisted: the error path is a FRESH page load and Supabase's error
@@ -267,8 +285,12 @@
         out = await r.json().catch(function () { return {}; });
         if (r.ok && out.access_token) break;
       }
-      if (out.access_token && await establishSession(out.access_token)) {
-        open(false);
+      if (out.access_token) {
+        var res = await establishSession(out.access_token);
+        if (res.ok) { open(false); return; }
+        fine.className = "oa-fine bad";
+        fine.textContent = res.reason;
+        codeSend.disabled = false; codeSend.textContent = "Sign in with code";
         return;
       }
       fine.className = "oa-fine bad";

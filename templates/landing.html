@@ -557,20 +557,46 @@
    * ------------------------------------------------------------------ */
   /* Trade a Supabase access token for our own session cookie. Shared by the
      magic link and the code, because both arrive at the same place. */
+  /* SESSION_ERRORS / establishSession REPORT WHY THEY FAILED.
+     The first version returned a bare false, so a token our own Worker
+     rejected produced a silent signed-out page -- the identical dead end the
+     swallowed error fragment produced, one step further along. A sign-in that
+     fails must always say something, and the status is included because
+     "it did not work" is not a thing anyone can act on or report. */
+  var SESSION_ERRORS = {
+    401: "Your sign-in link was valid, but we could not verify it here. Try the six-digit code from the same email. (401)",
+    503: "Sign-in is temporarily unavailable on our side \u2014 not your link. Try again in a minute. (503)"
+  };
+
   async function establishSession(token) {
-    if (!token) return false;
+    if (!token) return { ok: false, reason: "No sign-in token in that link." };
     try {
       var r = await fetch("/auth/session", {
         method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ access_token: token })
       });
-      if (!r.ok) return false;
+      if (!r.ok) {
+        return { ok: false, reason: SESSION_ERRORS[r.status]
+          || ("Sign-in failed (" + r.status + "). Try the code from your email.") };
+      }
       var out = await r.json();
       state = { signedIn: true, member: !!out.member };
       render();
-      return true;
-    } catch (e) { return false; }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: "Network error finishing sign-in. Check your connection and try again." };
+    }
+  }
+
+  /* Every failed sign-in ends here, so there is exactly one place that can
+     forget to tell the reader. */
+  function showAuthFailure(reason) {
+    openSheet(true);
+    if (codeEmail && !els.email.value) els.email.value = codeEmail;
+    showCodeStep();
+    els.fine.className = "fine bad";
+    els.fine.textContent = reason;
   }
 
   var AUTH_ERRORS = {
@@ -591,19 +617,17 @@
     var err = params.get("error_code") || params.get("error");
     if (err) {
       history.replaceState(null, "", location.pathname + location.search);
-      openSheet(true);
-      if (codeEmail && !els.email.value) els.email.value = codeEmail;
-      showCodeStep();
-      els.fine.className = "fine bad";
-      els.fine.textContent = AUTH_ERRORS[err]
+      showAuthFailure(AUTH_ERRORS[err]
         || (params.get("error_description") || "").replace(/\+/g, " ")
-        || "That sign-in link did not work. Enter the code from your email instead.";
+        || "That sign-in link did not work. Enter the code from your email instead.");
       return true;
     }
 
     if (hash.indexOf("access_token") === -1) return false;
     history.replaceState(null, "", location.pathname + location.search);
-    return await establishSession(params.get("access_token"));
+    var res = await establishSession(params.get("access_token"));
+    if (!res.ok) showAuthFailure(res.reason);
+    return true;      // handled either way; do not fall through to refreshState
   }
 
   /* --- sign in ------------------------------------------------------ */
@@ -673,8 +697,13 @@
         out = await r.json().catch(function () { return {}; });
         if (r.ok && out.access_token) break;
       }
-      if (out.access_token && await establishSession(out.access_token)) {
-        openSheet(false);
+      if (out.access_token) {
+        var res = await establishSession(out.access_token);
+        if (res.ok) { openSheet(false); return; }
+        els.fine.className = "fine bad";
+        els.fine.textContent = res.reason;
+        els.codeSubmit.disabled = false;
+        els.codeSubmit.textContent = "Sign in with code";
         return;
       }
       els.fine.className = "fine bad";
