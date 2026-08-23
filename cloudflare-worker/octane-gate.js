@@ -595,6 +595,30 @@ async function handleAuthMode(request, env, ctx, url, path, mode) {
   if (!wantsDocument) return null;
 
   const session = await readSession(request, env.SESSION_SECRET);
+
+  // A FIRST-TIME VISITOR SHOULD MEET THE PITCH, NOT THE PRODUCT. Landing on
+  // the app cold, the free tier reads as a fight-stats site with some things
+  // greyed out; /welcome explains what it is and what an account gets you.
+  //
+  // Only for a visitor with NO SESSION AT ALL. A signed-in free user has
+  // already seen the pitch and wants the content.
+  //
+  // Skipped when the URL carries a query string, so returning from Stripe
+  // (?checkout=success) or any future campaign parameter lands where it was
+  // sent rather than being bounced.
+  //
+  // REVISIT WHEN INDEXING IS TURNED ON. Googlebot never has a session, so
+  // while this redirect exists a crawler only ever sees /welcome and the free
+  // content goes unindexed. At that point the better shape is the pitch
+  // inlined at the top of the app for signed-out visitors: same content, no
+  // redirect, fully indexable.
+  if (!session && !url.search && env.INDEXING !== "on") {
+    return new Response(null, {
+      status: 302,
+      headers: { "Location": "/welcome", "Cache-Control": "no-store" },
+    });
+  }
+
   if (!session || !session.member) return null;      // free build from the origin
 
   const object = await env.MEMBER_PAYLOAD.get("index.html");

@@ -1,0 +1,59 @@
+{# Shared moneyline-chart CSS. Lived inline in site.html until the landing
+   page started embedding a real chart as a preview and inherited none of it --
+   the rail collapsed to a text run and every axis label drew its percentage
+   and its price on top of each other. One definition, two includes. #}
+  .sparkline, .dual-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+  /* Moneyline chart labels: American odds shown by default, raw % hidden;
+     body.pct-mode flips it. Class-based (not JS-recomputed) so it works
+     correctly even for charts inside not-yet-opened <details> accordions. */
+  /* The legend rail. Was two rows of 9px text pinned inside the plot's top
+     right -- which is exactly where a scrub timestamp wants to go, so the
+     two collided. Out here it gets its own row under the heading and the
+     whole top of the chart comes free. */
+  .ml-rail {
+    display: flex; justify-content: center; align-items: center;
+    gap: 14px; flex-wrap: wrap; margin: 0 0 4px;
+  }
+  .ml-rail-item {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: var(--t-tiny); color: var(--muted); white-space: nowrap;
+  }
+  .ml-rail-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .ml-rail-name { color: var(--muted); }
+  .ml-rail b {
+    color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  /* BOTH the rail and the chart. The gridline labels inside the svg carry
+     these same two classes, so scoping the toggle to the rail alone left
+     them with no rule at all and every axis label rendered its percentage
+     and its price on top of each other. */
+  .ml-rail .label-pct, .dual-chart .label-pct { display: none; }
+  .ml-rail .label-odds, .dual-chart .label-odds { display: inline; }
+  body.pct-mode .ml-rail .label-pct,
+  body.pct-mode .dual-chart .label-pct { display: inline; }
+  body.pct-mode .ml-rail .label-odds,
+  body.pct-mode .dual-chart .label-odds { display: none; }
+  /* ===== Moneyline chart scrubbing =====
+     Hold anywhere on a dual chart to read both prices at that moment. What is
+     AFTER the finger dims, so the chart reads as "here is what was known
+     then" rather than as a cursor sitting on a finished picture. */
+  .dual-chart { touch-action: pan-y; }
+  /* Opacity, not a darker stroke: the two series are red and blue here and
+     gold elsewhere, and a dim colour would have to be chosen per series. */
+  .ml-future { opacity: 0; transition: opacity 0.12s ease; }
+  .dual-chart.scrubbing .ml-future { opacity: 0.22; }
+  .ml-scrub-line { stroke: rgba(255,255,255,0.45); stroke-width: 1; stroke-dasharray: 3,3; pointer-events: none; }
+  .ml-scrub-dot { pointer-events: none; }
+  .ml-stamp {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.06em; fill: var(--text-soft);
+    text-anchor: middle; pointer-events: none;
+  }
+  .ml-scrub-line, .ml-scrub-dot, .ml-stamp { opacity: 0; transition: opacity 0.12s ease; }
+  /* The stamp is back at the top of the plot, so Aug 8 / Aug 22 keep their
+     baseline to themselves and no longer need to fade for it. */
+  .dual-chart.scrubbing .ml-scrub-line,
+  .dual-chart.scrubbing .ml-scrub-dot,
+  .dual-chart.scrubbing .ml-stamp { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .ml-future, .ml-scrub-line, .ml-scrub-dot, .ml-stamp { transition: none; }
+  }

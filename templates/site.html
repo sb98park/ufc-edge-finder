@@ -3264,37 +3264,7 @@
      axis labels and odds became enormous. Mobile is already correct and this
      rule must not change it -- the chart fills the column there, so auto
      margins are a no-op. */
-  .sparkline, .dual-chart { display: block; max-width: 100%; height: auto; margin: 0 auto; }
-  /* Moneyline chart labels: American odds shown by default, raw % hidden;
-     body.pct-mode flips it. Class-based (not JS-recomputed) so it works
-     correctly even for charts inside not-yet-opened <details> accordions. */
-  /* The legend rail. Was two rows of 9px text pinned inside the plot's top
-     right -- which is exactly where a scrub timestamp wants to go, so the
-     two collided. Out here it gets its own row under the heading and the
-     whole top of the chart comes free. */
-  .ml-rail {
-    display: flex; justify-content: center; align-items: center;
-    gap: 14px; flex-wrap: wrap; margin: 0 0 4px;
-  }
-  .ml-rail-item {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: var(--t-tiny); color: var(--muted); white-space: nowrap;
-  }
-  .ml-rail-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-  .ml-rail-name { color: var(--muted); }
-  .ml-rail b {
-    color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums;
-  }
-  /* BOTH the rail and the chart. The gridline labels inside the svg carry
-     these same two classes, so scoping the toggle to the rail alone left
-     them with no rule at all and every axis label rendered its percentage
-     and its price on top of each other. */
-  .ml-rail .label-pct, .dual-chart .label-pct { display: none; }
-  .ml-rail .label-odds, .dual-chart .label-odds { display: inline; }
-  body.pct-mode .ml-rail .label-pct,
-  body.pct-mode .dual-chart .label-pct { display: inline; }
-  body.pct-mode .ml-rail .label-odds,
-  body.pct-mode .dual-chart .label-odds { display: none; }
+  {% include "_ml_chart_css.html" %}
   details.chart-toggle {
     background: var(--panel2); border: 1px solid var(--border); border-radius: var(--r-lg);
     margin: 8px 0; overflow: hidden;
@@ -4797,30 +4767,6 @@
      equivalent is what lands -- but it stops shouting. */
   .units-dollars strong { color: var(--text-soft); font-weight: 600; font-family: var(--font-display); }
 
-  /* ===== Moneyline chart scrubbing =====
-     Hold anywhere on a dual chart to read both prices at that moment. What is
-     AFTER the finger dims, so the chart reads as "here is what was known
-     then" rather than as a cursor sitting on a finished picture. */
-  .dual-chart { touch-action: pan-y; }
-  /* Opacity, not a darker stroke: the two series are red and blue here and
-     gold elsewhere, and a dim colour would have to be chosen per series. */
-  .ml-future { opacity: 0; transition: opacity 0.12s ease; }
-  .dual-chart.scrubbing .ml-future { opacity: 0.22; }
-  .ml-scrub-line { stroke: rgba(255,255,255,0.45); stroke-width: 1; stroke-dasharray: 3,3; pointer-events: none; }
-  .ml-scrub-dot { pointer-events: none; }
-  .ml-stamp {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.06em; fill: var(--text-soft);
-    text-anchor: middle; pointer-events: none;
-  }
-  .ml-scrub-line, .ml-scrub-dot, .ml-stamp { opacity: 0; transition: opacity 0.12s ease; }
-  /* The stamp is back at the top of the plot, so Aug 8 / Aug 22 keep their
-     baseline to themselves and no longer need to fade for it. */
-  .dual-chart.scrubbing .ml-scrub-line,
-  .dual-chart.scrubbing .ml-scrub-dot,
-  .dual-chart.scrubbing .ml-stamp { opacity: 1; }
-  @media (prefers-reduced-motion: reduce) {
-    .ml-future, .ml-scrub-line, .ml-scrub-dot, .ml-stamp { transition: none; }
-  }
   /* ===== Units chart scrubbing ===== */
   /* Same dimming contract as the moneyline charts above: what is AFTER the
      finger fades, so a held point reads as "the record as it stood then"
@@ -7665,6 +7611,7 @@
       <button type="button" class="oa-upsell-cta" data-oa-subscribe="year">Start 7 days free</button>
       <div class="oa-upsell-fine">$190/yr, or $19/mo &middot; cancel in one tap &middot;
         <a href="/welcome">see the track record</a></div>
+      <div class="oa-upsell-fine">Payments secured by <b>Stripe</b> &middot; we never see your card details</div>
     </div>
 {% endif %}
   {% if events %}
@@ -8623,153 +8570,7 @@
     })();
 
 
-    // ===== Moneyline chart scrubbing =====
-    // Hold a finger anywhere on a dual chart to read BOTH prices at that
-    // moment. The legend already names the two fighters and shows their
-    // current price, so it is the natural readout -- no second panel to place,
-    // and the reader's eye is already there.
-    //
-    // Everything after the held point dims. Without that the chart still
-    // shows its endpoint, and a scrub reads as a cursor laid over a finished
-    // picture rather than as the market at that time.
-    //
-    // Delegated, in the CAPTURE phase, for the same reason the scout pills
-    // are: the fight card's handler chain calls stopPropagation, so a
-    // bubble-phase listener inside a card never fires.
-    function initMoneylineScrub() {
-      const state = new WeakMap();
-
-      function setup(svg) {
-        if (state.has(svg)) return state.get(svg);
-        let data;
-        try { data = JSON.parse(svg.dataset.scrub || 'null'); } catch (e) { data = null; }
-        if (!data || !data.x || data.x.length < 2) { state.set(svg, null); return null; }
-
-        const ns = 'http://www.w3.org/2000/svg';
-        const vb = svg.viewBox.baseVal;
-        const top = parseFloat(svg.dataset.plotTop) || 0;
-        const h = parseFloat(svg.dataset.plotH) || 0;
-        const line = document.createElementNS(ns, 'line');
-        line.setAttribute('class', 'ml-scrub-line');
-        line.setAttribute('y1', top); line.setAttribute('y2', top + h);
-        const dotA = document.createElementNS(ns, 'circle');
-        const dotB = document.createElementNS(ns, 'circle');
-        [dotA, dotB].forEach(d => { d.setAttribute('class', 'ml-scrub-dot'); d.setAttribute('r', '4'); });
-        const stamp = document.createElementNS(ns, 'text');
-        stamp.setAttribute('class', 'ml-stamp');
-        // Centred above the plot and FIXED there. It sat on the x axis for a
-        // while to dodge the legend, but that put it under the reader's own
-        // thumb. With the legend moved out to its rail the top band is empty,
-        // and holding it still means it never tracks toward a frame edge or
-        // needs clamping -- the dashed cursor already shows the position.
-        stamp.setAttribute('x', (vb.width || 300) / 2);
-        stamp.setAttribute('y', 13);
-        svg.appendChild(line); svg.appendChild(dotA); svg.appendChild(dotB); svg.appendChild(stamp);
-
-        // The legend is two labels per fighter (a % one and an odds one, one
-        // of which the unit toggle hides). Each reads "Surname value", so the
-        // prefix is kept and only the value swapped -- and the original text
-        // is stored, because release has to put the CURRENT price back.
-        // On the RAIL, which is a sibling of the svg rather than inside it.
-        // Each label holds only its value now -- the fighter's name is its
-        // own element -- so a scrub overwrites the number and nothing has to
-        // parse a "Surname value" string back apart.
-        const rail = svg.parentElement
-          && svg.parentElement.querySelector('.ml-rail');
-        const labels = rail ? [...rail.querySelectorAll('.ml-legend')] : [];
-        labels.forEach(el => { el.dataset.original = el.textContent; });
-
-        const past = svg.querySelector('.ml-clip-past');
-        const future = svg.querySelector('.ml-clip-future');
-        // The polylines live in <defs> now and are drawn through <use>, so
-        // they are no longer DOM children of .ml-past -- read the colours off
-        // the definition itself.
-        const strokes = svg.querySelectorAll('.ml-series polyline');
-        const strokeA = strokes[0], strokeB = strokes[1];
-        dotA.setAttribute('fill', strokeA ? strokeA.getAttribute('stroke') : '#fff');
-        dotB.setAttribute('fill', strokeB ? strokeB.getAttribute('stroke') : '#fff');
-
-        const ctx = { data, line, dotA, dotB, stamp, labels, past, future,
-                      vbWidth: vb.width || 300,
-                      left: parseFloat(svg.dataset.plotLeft) || 0,
-                      right: parseFloat(svg.dataset.plotRight) || 0 };
-        state.set(svg, ctx);
-        return ctx;
-      }
-
-      function nearest(ctx, svg, clientX) {
-        const r = svg.getBoundingClientRect();
-        const vb = svg.viewBox.baseVal;
-        const sx = ((clientX - r.left) / r.width) * vb.width + vb.x;
-        const xs = ctx.data.x;
-        let lo = 0, hi = xs.length - 1;
-        while (lo < hi) {                         // binary search: 240 points
-          const mid = (lo + hi) >> 1;
-          if (xs[mid] < sx) lo = mid + 1; else hi = mid;
-        }
-        if (lo > 0 && Math.abs(xs[lo - 1] - sx) < Math.abs(xs[lo] - sx)) lo--;
-        return lo;
-      }
-
-      function show(svg, ctx, i) {
-        const d = ctx.data, x = d.x[i];
-        ctx.line.setAttribute('x1', x); ctx.line.setAttribute('x2', x);
-        ctx.dotA.setAttribute('cx', x); ctx.dotA.setAttribute('cy', d.ya[i]);
-        ctx.dotB.setAttribute('cx', x); ctx.dotB.setAttribute('cy', d.yb[i]);
-        ctx.stamp.textContent = d.t[i];
-        if (ctx.past) ctx.past.setAttribute('width', Math.max(0, x - ctx.left));
-        if (ctx.future) {
-          ctx.future.setAttribute('x', x);
-          ctx.future.setAttribute('width', Math.max(0, ctx.right + 44 - x));
-        }
-        ctx.labels.forEach(el => {
-          const isPct = el.classList.contains('label-pct');
-          const isB = el.dataset.series === 'b';
-          const value = isPct ? ((isB ? d.pb[i] : d.pa[i]) + '%')
-                              : (isB ? d.ob[i] : d.oa[i]);
-          if (value) el.textContent = value;
-        });
-        svg.classList.add('scrubbing');
-      }
-
-      function clear(svg) {
-        const ctx = state.get(svg);
-        if (!ctx) return;
-        svg.classList.remove('scrubbing');
-        if (ctx.past) ctx.past.setAttribute('width', (ctx.right + 44) - ctx.left);
-        if (ctx.future) ctx.future.setAttribute('width', 0);
-        ctx.labels.forEach(el => { if (el.dataset.original) el.textContent = el.dataset.original; });
-      }
-
-      let active = null;
-      document.addEventListener('pointerdown', function (e) {
-        const svg = e.target.closest && e.target.closest('.dual-chart[data-scrub]');
-        if (!svg) return;
-        const ctx = setup(svg);
-        if (!ctx) return;
-        active = svg;
-        show(svg, ctx, nearest(ctx, svg, e.clientX));
-      }, true);
-
-      document.addEventListener('pointermove', function (e) {
-        if (!active) return;
-        const ctx = state.get(active);
-        if (!ctx) return;
-        // Holding the chart is a read, not a scroll -- otherwise the page
-        // slides away under the finger the moment it drifts vertically.
-        e.preventDefault();
-        show(active, ctx, nearest(ctx, active, e.clientX));
-      }, { capture: true, passive: false });
-
-      ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
-        document.addEventListener(evt, function () {
-          if (!active) return;
-          clear(active);
-          active = null;
-        }, true);
-      });
-    }
-    initMoneylineScrub();
+    {% include "_ml_chart_js.html" %}
 
     // ===== Units chart scrubbing =====
     // Drag (or hover on desktop) along the chart to read the cumulative

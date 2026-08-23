@@ -22,6 +22,10 @@
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     color-scheme:dark;
+    /* Aliases for the shared chart CSS below, which is written against the
+       app's token names. Kept here rather than renaming in the partial so the
+       two pages stay one definition. */
+    --text:var(--ink); --text-soft:var(--ink2); --muted:var(--ink3); --t-tiny:9px;
   }
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
@@ -100,6 +104,24 @@
   .cap{font-size:12.5px;color:var(--ink2);margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
   .cap b{color:var(--ink)}
   /* --- plans --- */
+  .pv{border:1px solid var(--line);border-radius:14px;background:var(--sunken);
+      padding:14px;margin-bottom:12px}
+  .pv-label{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+            color:var(--gold);margin-bottom:6px}
+  .pv-note{font-size:11.5px;color:var(--ink2);line-height:1.55;margin:0 0 12px}
+  .pv-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .pv-side{flex:1;display:flex;justify-content:flex-end}
+  .pv-side.r{justify-content:flex-start}
+  .pv-side i{height:3px;border-radius:2px;display:block;max-width:100%}
+  .pv-row span{font-family:var(--mono);font-size:7px;letter-spacing:.09em;color:var(--ink3);
+               width:72px;text-align:center;flex:none;text-transform:uppercase}
+  .pv-radar{display:flex;justify-content:center}
+  .pv-radar svg{max-width:100%;height:auto}
+  {% include "_ml_chart_css.html" %}
+  .pv-free{border:1px solid rgba(61,220,132,.32);background:rgba(61,220,132,.05);
+           border-radius:14px;padding:15px;margin:4px 0 8px;font-size:12.5px;
+           color:var(--ink2);line-height:1.6}
+  .pv-free b{color:var(--ink)}
   .seg{display:flex;background:var(--sunken);border:1px solid var(--line);border-radius:10px;
        padding:3px;margin:16px 0 14px}
   .seg button{flex:1;font:inherit;font-size:12px;padding:8px 4px;border:0;border-radius:8px;
@@ -135,6 +157,9 @@
   .cta{width:100%;font:inherit;font-size:14.5px;font-weight:700;border:0;border-radius:11px;
        padding:13px;background:var(--gold);color:#151208;cursor:pointer;margin-top:4px}
   .trust{display:flex;justify-content:center;gap:10px;margin-top:10px;font-size:8.5px;color:var(--ink3)}
+  .powered{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px;
+           font-size:9.5px;color:var(--ink3)}
+  .powered b{color:var(--ink2);font-weight:700}
   .disc{font-size:10.5px;color:var(--ink3);line-height:1.6;margin-top:4px;padding:11px 12px;
         background:var(--sunken);border:1px solid var(--line);border-radius:10px}
   .disc b{color:var(--ink2)}
@@ -149,6 +174,7 @@
          padding:12px 18px calc(24px + env(safe-area-inset-bottom));
          transform:translateY(100%);transition:transform .24s cubic-bezier(.22,1,.36,1)}
   .sheet[data-open]{transform:translateY(0)}
+  .sheet{touch-action:pan-y}
   .grab{width:36px;height:4px;border-radius:2px;background:#33333a;margin:0 auto 14px}
   .sheet h3{font-size:20px;margin:0 0 5px;letter-spacing:-.015em}
   .sheet p{font-size:13px;color:var(--ink2);margin:0 0 16px}
@@ -242,6 +268,49 @@
 
   <div class="cap">Same card, same numbers. <b>The tape, the rails and the market price stay free forever.</b> What members pay for is the read on top of them.</div>
 
+  {# WHAT THE SOFTWARE ACTUALLY LOOKS LIKE. The proof above argues the picks
+     are good; this argues the product is worth opening. Those are different
+     objections and the second one is answered by showing, not claiming.
+     It also sharpens the free offer: all of this, on every graded card, for
+     an email address. #}
+  {% if preview %}
+  <h2 style="margin-top:34px">And this is the rest of it.</h2>
+  <p class="lede">Free on every card we have already graded &mdash; {{ preview.fighter_a }} vs {{ preview.fighter_b }} below.</p>
+
+  <div class="pv">
+    <div class="pv-label">Scouting report</div>
+    <p class="pv-note">Every fighter ranked against the division, not against each other. Longer bar wins the category.</p>
+    <div class="pv-rails">
+      {% for row in preview.rows %}
+      <div class="pv-row">
+        <div class="pv-side"><i style="width:{{ row.a or 0 }}%;background:var(--red)"></i></div>
+        <span>{{ row.label }}</span>
+        <div class="pv-side r"><i style="width:{{ row.b or 0 }}%;background:var(--blue)"></i></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="pv">
+    <div class="pv-label">Five-category radar</div>
+    <p class="pv-note">The same percentiles as a shape, so a lopsided matchup is obvious before you read a number.</p>
+    <div class="pv-radar">{{ preview.radar_svg | safe }}</div>
+  </div>
+
+  <div class="pv">
+    <div class="pv-label">Live moneyline movement</div>
+    <p class="pv-note">Every price we have recorded since the fight was booked. Hold anywhere on the chart to read the market at that moment.</p>
+    {{ preview.moneyline_chart | safe }}
+  </div>
+
+  <div class="pv-free">
+    <b>All of the above is free.</b> A free account gets you every graded card
+    &mdash; the tape, the rails, the radar, the movement, and what the model
+    picked with whether it was right. No card required.
+    <button type="button" class="cta" style="margin-top:12px" data-auth>Create a free account</button>
+  </div>
+  {% endif %}
+
   {# PLANS. Annual is pre-selected because a weekly-cadence product invites a
      cancel after any bad Saturday, and annual moves that decision out of the
      weekly cycle. Monthly stays one tap away and is never hidden -- trapping
@@ -268,7 +337,21 @@
     <div class="ft"><span class="tick">&#10003;</span><div><b>The full props board</b><i>Fighter, fight and round markets with EV</i></div></div>
     <div class="ft"><span class="tick">&#10003;</span><div><b>Parlay slips, tracked live</b><i>Published before the card, graded during it</i></div></div>
     <button type="button" class="cta" data-auth>Start 7 days free</button>
-    <div class="trust"><span>&#63743;&nbsp;Apple Pay</span><span>Stripe secured</span><span>Cancel in one tap</span></div>
+    <div class="trust">
+      <span>&#63743;&nbsp;Apple Pay</span>
+      <span>Cancel in one tap</span>
+    </div>
+    {# NAMING STRIPE IS NOT DECORATION. Nobody has heard of Octane Alpha, and
+       the card form is the moment that matters -- saying who handles the
+       payment, and that we never see the card, answers the question a first
+       time visitor is actually asking. #}
+    <div class="powered">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2 4 6v6c0 4.4 3.4 8.5 8 10 4.6-1.5 8-5.6 8-10V6l-8-4z"
+              stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+      Payments secured by <b>Stripe</b> &middot; we never see your card details
+    </div>
   </div>
 
   <div class="plan flat">
@@ -366,6 +449,58 @@
     else if (lastFocus) lastFocus.focus();
   }
   els.scrim.addEventListener("click", function () { openSheet(false); });
+
+  var SHEET = els.sheet, CLOSE = function () { openSheet(false); };
+  /* DRAG-TO-DISMISS. The grab handle looks draggable, so it has to BE
+     draggable -- an affordance that does nothing is worse than no affordance,
+     because the user concludes the page is broken rather than that the
+     gesture does not exist.
+     Threshold is distance OR velocity: a slow deliberate pull past a third of
+     the sheet dismisses, and so does a quick flick that never gets that far,
+     which is how the gesture actually gets performed on a phone. */
+  (function () {
+    var startY = null, lastY = 0, lastT = 0, velocity = 0, dragging = false;
+    var H = function () { return SHEET.getBoundingClientRect().height || 320; };
+
+    function begin(e) {
+      // Only from the top strip. Starting a drag anywhere would fight with
+      // selecting the email field or scrolling inside the sheet.
+      var r = SHEET.getBoundingClientRect();
+      if (e.clientY - r.top > 56) return;
+      dragging = true; startY = lastY = e.clientY; lastT = e.timeStamp; velocity = 0;
+      SHEET.style.transition = "none";
+      SHEET.setPointerCapture && SHEET.setPointerCapture(e.pointerId);
+    }
+    function move(e) {
+      if (!dragging) return;
+      var dy = e.clientY - startY;
+      if (dy < 0) dy = dy / 6;               // resist upward; it goes nowhere
+      var dt = e.timeStamp - lastT;
+      if (dt > 0) velocity = (e.clientY - lastY) / dt;
+      lastY = e.clientY; lastT = e.timeStamp;
+      SHEET.style.transform = "translateY(" + dy + "px)";
+      if (e.cancelable) e.preventDefault();
+    }
+    function end(e) {
+      if (!dragging) return;
+      dragging = false;
+      var dy = lastY - startY;
+      SHEET.style.transition = "";
+      SHEET.style.transform = "";
+      // Velocity is measured from the last move, so a finger that pulls down
+      // and then HOLDS still carries the stale speed of the pull. Both guards
+      // are needed: the sheet must not fly away on release after the reader
+      // has already stopped, and a 4px twitch is not a flick however fast.
+      var stale = !e || (e.timeStamp - lastT) > 100;
+      var flick = !stale && velocity > 0.6 && dy > 40;
+      if (dy > H() / 3 || flick) CLOSE();
+    }
+    SHEET.addEventListener("pointerdown", begin);
+    SHEET.addEventListener("pointermove", move, { passive: false });
+    SHEET.addEventListener("pointerup", end);
+    SHEET.addEventListener("pointercancel", end);
+  })();
+
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") openSheet(false); });
 
   /* --- session state ------------------------------------------------ */
@@ -517,6 +652,13 @@
   }
 
   consumeAuthFragment().then(function (handled) { if (!handled) refreshState(); });
+})();
+
+// The preview chart is a real chart, and the copy above it tells the reader
+// to hold it -- so it gets the same scrub behaviour the app uses, from the
+// same source.
+(function () {
+    {% include "_ml_chart_js.html" %}
 })();
 </script>
 </body>

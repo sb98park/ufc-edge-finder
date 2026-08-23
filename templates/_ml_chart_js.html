@@ -1,0 +1,150 @@
+{# Shared moneyline-scrub behaviour. Included by both the app and the landing
+   page, whose preview embeds a real chart and promises the reader they can
+   hold it. Self-contained: it depends on nothing else on the page. #}
+    // ===== Moneyline chart scrubbing =====
+    // Hold a finger anywhere on a dual chart to read BOTH prices at that
+    // moment. The legend already names the two fighters and shows their
+    // current price, so it is the natural readout -- no second panel to place,
+    // and the reader's eye is already there.
+    //
+    // Everything after the held point dims. Without that the chart still
+    // shows its endpoint, and a scrub reads as a cursor laid over a finished
+    // picture rather than as the market at that time.
+    //
+    // Delegated, in the CAPTURE phase, for the same reason the scout pills
+    // are: the fight card's handler chain calls stopPropagation, so a
+    // bubble-phase listener inside a card never fires.
+    function initMoneylineScrub() {
+      const state = new WeakMap();
+
+      function setup(svg) {
+        if (state.has(svg)) return state.get(svg);
+        let data;
+        try { data = JSON.parse(svg.dataset.scrub || 'null'); } catch (e) { data = null; }
+        if (!data || !data.x || data.x.length < 2) { state.set(svg, null); return null; }
+
+        const ns = 'http://www.w3.org/2000/svg';
+        const vb = svg.viewBox.baseVal;
+        const top = parseFloat(svg.dataset.plotTop) || 0;
+        const h = parseFloat(svg.dataset.plotH) || 0;
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('class', 'ml-scrub-line');
+        line.setAttribute('y1', top); line.setAttribute('y2', top + h);
+        const dotA = document.createElementNS(ns, 'circle');
+        const dotB = document.createElementNS(ns, 'circle');
+        [dotA, dotB].forEach(d => { d.setAttribute('class', 'ml-scrub-dot'); d.setAttribute('r', '4'); });
+        const stamp = document.createElementNS(ns, 'text');
+        stamp.setAttribute('class', 'ml-stamp');
+        // Centred above the plot and FIXED there. It sat on the x axis for a
+        // while to dodge the legend, but that put it under the reader's own
+        // thumb. With the legend moved out to its rail the top band is empty,
+        // and holding it still means it never tracks toward a frame edge or
+        // needs clamping -- the dashed cursor already shows the position.
+        stamp.setAttribute('x', (vb.width || 300) / 2);
+        stamp.setAttribute('y', 13);
+        svg.appendChild(line); svg.appendChild(dotA); svg.appendChild(dotB); svg.appendChild(stamp);
+
+        // The legend is two labels per fighter (a % one and an odds one, one
+        // of which the unit toggle hides). Each reads "Surname value", so the
+        // prefix is kept and only the value swapped -- and the original text
+        // is stored, because release has to put the CURRENT price back.
+        // On the RAIL, which is a sibling of the svg rather than inside it.
+        // Each label holds only its value now -- the fighter's name is its
+        // own element -- so a scrub overwrites the number and nothing has to
+        // parse a "Surname value" string back apart.
+        const rail = svg.parentElement
+          && svg.parentElement.querySelector('.ml-rail');
+        const labels = rail ? [...rail.querySelectorAll('.ml-legend')] : [];
+        labels.forEach(el => { el.dataset.original = el.textContent; });
+
+        const past = svg.querySelector('.ml-clip-past');
+        const future = svg.querySelector('.ml-clip-future');
+        // The polylines live in <defs> now and are drawn through <use>, so
+        // they are no longer DOM children of .ml-past -- read the colours off
+        // the definition itself.
+        const strokes = svg.querySelectorAll('.ml-series polyline');
+        const strokeA = strokes[0], strokeB = strokes[1];
+        dotA.setAttribute('fill', strokeA ? strokeA.getAttribute('stroke') : '#fff');
+        dotB.setAttribute('fill', strokeB ? strokeB.getAttribute('stroke') : '#fff');
+
+        const ctx = { data, line, dotA, dotB, stamp, labels, past, future,
+                      vbWidth: vb.width || 300,
+                      left: parseFloat(svg.dataset.plotLeft) || 0,
+                      right: parseFloat(svg.dataset.plotRight) || 0 };
+        state.set(svg, ctx);
+        return ctx;
+      }
+
+      function nearest(ctx, svg, clientX) {
+        const r = svg.getBoundingClientRect();
+        const vb = svg.viewBox.baseVal;
+        const sx = ((clientX - r.left) / r.width) * vb.width + vb.x;
+        const xs = ctx.data.x;
+        let lo = 0, hi = xs.length - 1;
+        while (lo < hi) {                         // binary search: 240 points
+          const mid = (lo + hi) >> 1;
+          if (xs[mid] < sx) lo = mid + 1; else hi = mid;
+        }
+        if (lo > 0 && Math.abs(xs[lo - 1] - sx) < Math.abs(xs[lo] - sx)) lo--;
+        return lo;
+      }
+
+      function show(svg, ctx, i) {
+        const d = ctx.data, x = d.x[i];
+        ctx.line.setAttribute('x1', x); ctx.line.setAttribute('x2', x);
+        ctx.dotA.setAttribute('cx', x); ctx.dotA.setAttribute('cy', d.ya[i]);
+        ctx.dotB.setAttribute('cx', x); ctx.dotB.setAttribute('cy', d.yb[i]);
+        ctx.stamp.textContent = d.t[i];
+        if (ctx.past) ctx.past.setAttribute('width', Math.max(0, x - ctx.left));
+        if (ctx.future) {
+          ctx.future.setAttribute('x', x);
+          ctx.future.setAttribute('width', Math.max(0, ctx.right + 44 - x));
+        }
+        ctx.labels.forEach(el => {
+          const isPct = el.classList.contains('label-pct');
+          const isB = el.dataset.series === 'b';
+          const value = isPct ? ((isB ? d.pb[i] : d.pa[i]) + '%')
+                              : (isB ? d.ob[i] : d.oa[i]);
+          if (value) el.textContent = value;
+        });
+        svg.classList.add('scrubbing');
+      }
+
+      function clear(svg) {
+        const ctx = state.get(svg);
+        if (!ctx) return;
+        svg.classList.remove('scrubbing');
+        if (ctx.past) ctx.past.setAttribute('width', (ctx.right + 44) - ctx.left);
+        if (ctx.future) ctx.future.setAttribute('width', 0);
+        ctx.labels.forEach(el => { if (el.dataset.original) el.textContent = el.dataset.original; });
+      }
+
+      let active = null;
+      document.addEventListener('pointerdown', function (e) {
+        const svg = e.target.closest && e.target.closest('.dual-chart[data-scrub]');
+        if (!svg) return;
+        const ctx = setup(svg);
+        if (!ctx) return;
+        active = svg;
+        show(svg, ctx, nearest(ctx, svg, e.clientX));
+      }, true);
+
+      document.addEventListener('pointermove', function (e) {
+        if (!active) return;
+        const ctx = state.get(active);
+        if (!ctx) return;
+        // Holding the chart is a read, not a scroll -- otherwise the page
+        // slides away under the finger the moment it drifts vertically.
+        e.preventDefault();
+        show(active, ctx, nearest(ctx, active, e.clientX));
+      }, { capture: true, passive: false });
+
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
+        document.addEventListener(evt, function () {
+          if (!active) return;
+          clear(active);
+          active = null;
+        }, true);
+      });
+    }
+    initMoneylineScrub();

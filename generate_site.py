@@ -1643,7 +1643,32 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
     if not upcoming:
         raise ValueError("no upcoming fight to seal")
 
+    # A REAL FIGHT'S REAL COMPONENTS for the preview strip. Mockups would be
+    # easier and would also be a lie: the point of showing the scout rails and
+    # the movement chart is that this is what you actually get, so they are
+    # pulled from a graded fight -- graded because that card is free, so the
+    # preview promises nothing the free tier does not deliver.
+    preview = None
+    for source in (events or []), (future_events or []):
+        for ev in source:
+            for f in ev.get("fights", []):
+                prof = f.get("profile") or {}
+                if prof.get("rows") and prof.get("radar_svg") and f.get("moneyline_chart"):
+                    preview = {
+                        "fighter_a": f.get("fighter_a", ""),
+                        "fighter_b": f.get("fighter_b", ""),
+                        "rows": prof["rows"][:4],
+                        "radar_svg": prof["radar_svg"],
+                        "moneyline_chart": f["moneyline_chart"],
+                    }
+                    break
+            if preview:
+                break
+        if preview:
+            break
+
     html = env.get_template("landing.html").render(
+        preview=preview,
         # Both public by design. The anon key carries no privileges of its
         # own -- everything it can do is what the RLS policies in
         # supabase/migrations allow -- which is why it can sit in page source.
