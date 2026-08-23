@@ -17,15 +17,15 @@ main = "octane-gate.js"
 compatibility_date = "2026-08-01"
 workers_dev = false
 
-# ROUTES ARE NOT DECLARED YET, AND THIS WORKER MUST NOT BE DEPLOYED UNTIL THEY
-# ARE. The running gate was bound to octanealpha.com through the dashboard, and
-# a `wrangler deploy` from a config that omits routes can drop that binding --
-# which would take the live site down rather than merely fail. Confirm the
-# existing route in the dashboard, add it here, and only then deploy:
-#
-#   [[routes]]
-#   pattern = "octanealpha.com/*"
-#   zone_name = "octanealpha.com"
+# THE ROUTE MUST BE DECLARED HERE, not left to the dashboard. A `wrangler
+# deploy` from a config that omits routes can drop the existing binding, and
+# for a Worker sitting in front of the whole site that does not fail safely --
+# it takes the site down. Read from the API rather than assumed:
+# GET /zones/{zone}/workers/routes returned exactly this one pattern bound to
+# this script, and no www variant.
+[[routes]]
+pattern = "octanealpha.com/*"
+zone_name = "octanealpha.com"
 
 # The member payload. PRIVATE BY DEFAULT and reachable only through this
 # binding -- that is the entire reason paid content lives in R2 rather than
