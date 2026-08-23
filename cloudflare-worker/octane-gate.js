@@ -614,6 +614,18 @@ async function applyStripeEvent(event, env) {
     }
 
     const item = obj.items && obj.items.data && obj.items.data[0];
+
+    // WHERE THE BILLING PERIOD LIVES DEPENDS ON THE API VERSION. Stripe moved
+    // current_period_end off the subscription and onto each subscription ITEM
+    // in a recent version, and the account here is pinned to a 2026 one. Read
+    // whichever is present rather than betting on the shape: the failure mode
+    // if this is wrong is silent -- entitlement still works, because
+    // is_member() treats a null period end as "no known expiry", so nothing
+    // breaks visibly while access quietly stops expiring when it should.
+    const periodEnd = obj.current_period_end
+      || (item && item.current_period_end)
+      || null;
+
     await upsertSubscription({
       user_id: userId,
       stripe_subscription_id: obj.id,
@@ -621,8 +633,7 @@ async function applyStripeEvent(event, env) {
       price_id: item ? item.price.id : "",
       plan_interval: item && item.price.recurring ? item.price.recurring.interval : "month",
       trial_end: obj.trial_end ? new Date(obj.trial_end * 1000).toISOString() : null,
-      current_period_end: obj.current_period_end
-        ? new Date(obj.current_period_end * 1000).toISOString() : null,
+      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       cancel_at_period_end: Boolean(obj.cancel_at_period_end),
     }, env);
 
