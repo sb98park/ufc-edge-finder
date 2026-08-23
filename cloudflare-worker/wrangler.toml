@@ -48,8 +48,12 @@ SUPABASE_URL = "https://kmifrsmgypghjwmzoffd.supabase.co"
 # Public by design: it carries no privileges of its own, only what the row
 # level security policies in supabase/migrations grant it.
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttaWZyc21neXBnaGp3bXpvZmZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MzU3OTEsImV4cCI6MjEwMzAxMTc5MX0.iKjw9pcpFQPfCd8H0_pt3EUJl3svd29aPMH2CWlGBco"
-STRIPE_PRICE_MONTHLY = "price_1U7R5ODSgC9GOVMwny77PHJ4"
-STRIPE_PRICE_ANNUAL  = "price_1U7R5nDSgC9GOVMwlV5lbNA5"
+# LIVE prices, in the parent account. The sandbox ones we tested against
+# (…DSgC9GOVMw…) belonged to a separate account entirely and are gone from
+# here deliberately: leaving them as a fallback would mean a
+# misconfiguration silently charged nobody instead of failing loudly.
+STRIPE_PRICE_MONTHLY = "price_1U7dZ7DlM6LyKh592dHyXuoe"
+STRIPE_PRICE_ANNUAL  = "price_1U7daUDlM6LyKh59FUiiXvtg"
 
 # "password" keeps the original shared-password wall. "auth" switches on real
 # accounts, entitlement and the R2 member payload. Deliberately still
