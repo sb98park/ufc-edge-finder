@@ -55,12 +55,17 @@ SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 STRIPE_PRICE_MONTHLY = "price_1U7dZ7DlM6LyKh592dHyXuoe"
 STRIPE_PRICE_ANNUAL  = "price_1U7daUDlM6LyKh59FUiiXvtg"
 
-# "password" keeps the original shared-password wall. "auth" switches on real
-# accounts, entitlement and the R2 member payload. Deliberately still
-# "password" here: the first deploy of the new gate must not also be the
-# moment the site becomes public, or a mistake in sign-in or entitlement gets
-# found by strangers instead of by us. Flip it once auth is verified live.
-GATE_MODE = "password"
+# PUBLIC. The shared-password wall is off; the site serves the free build to
+# anyone and the R2 member payload to accounts with an entitlement.
+#
+# Flipped only after the whole chain was exercised against live
+# infrastructure: Supabase sign-in, JWKS verification, the lifetime grant,
+# R2 delivery, a real Stripe subscription created and cancelled, and the live
+# webhook signature verified in both directions.
+#
+# Rollback is this value back to "password" and a redeploy -- the wall's code
+# is still here and still works.
+GATE_MODE = "auth"
 
 # SECRETS ARE NOT DECLARED HERE. They are set with `wrangler secret put` and
 # live only in Cloudflare. Anything in [vars] is committed to git in plain
