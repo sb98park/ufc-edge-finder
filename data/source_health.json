@@ -1,13 +1,13 @@
 {
-  "at": "2026-08-23T02:03:11+00:00",
+  "at": "2026-08-23T02:16:45+00:00",
   "edges_two_way": {
     "best_book": {
-      "Polymarket": 92
+      "Polymarket": 90
     },
     "books_quoting": {
-      "1.0": 92
+      "1.0": 90
     },
-    "n": 92
+    "n": 90
   },
   "moneyline": {
     "best_book": {
@@ -26,7 +26,7 @@
     "measured": {}
   },
   "rows_by_source": {
-    "Polymarket": 276
+    "Polymarket": 278
   },
   "rundown_dates_requested": [
     "2026-08-29"
