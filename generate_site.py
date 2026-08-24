@@ -1831,6 +1831,14 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         if preview:
             break
 
+    if not preview:
+        # THE CARDS NO LONGER DEPEND ON THIS, but its absence still says
+        # something about the data -- it means no graded fight carried a
+        # profile, a radar and a price chart together. Two cards used to
+        # disappear from the live page when that happened and nothing said so.
+        print("[landing] no graded fight with rows+radar+chart -- "
+              "the market and scouting cards will render illustrations")
+
     html = env.get_template("landing.html").render(
         preview=preview,
         tape=tape,

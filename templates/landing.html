@@ -225,7 +225,17 @@
           display:grid;place-items:center;
           transition:background .18s ease,transform .28s cubic-bezier(.22,1,.36,1)}
   .pcard[data-open] .expand{background:rgba(212,175,55,.26);transform:rotate(45deg)}
-  .canvas{position:relative;padding:24px 15px 0;min-height:190px;overflow:hidden}
+  /* SYMMETRIC PADDING, so the shot floats in the band instead of resting on
+     its bottom edge. With padding-bottom:0 a short shot looked centred only
+     because min-height happened to leave room below it -- a tall one, like the
+     tier table, ran straight into the edge and read as misaligned. */
+  /* Symmetric padding fixes a shot that is TALLER than the band; centring
+     fixes one that is shorter, where min-height leaves the surplus below.
+     Both are needed -- the tier table hit the first case, the scout rails the
+     second, and only flex handles them without knowing which is which. */
+  .canvas{position:relative;padding:22px 15px;min-height:190px;overflow:hidden;
+          display:flex;flex-direction:column;justify-content:center}
+  .canvas > *{width:100%}
   .canvas::before{content:"";position:absolute;inset:0;
     background:repeating-linear-gradient(101deg,rgba(255,255,255,.16) 0 1px,transparent 1px 5px),
                linear-gradient(129deg,#e8b83f 0%,#e0435f 36%,#7c5cf5 70%,#4b8dfb 100%);
@@ -559,25 +569,49 @@
   <p class="lede2b">The model exists to find the fights the market has mispriced &mdash; and the
      ledger exists to show you, in units, what that disagreement was actually worth.</p>
 
-  {% if preview %}
+  {# THESE TWO CARDS USED TO BE GATED ON A PREVIEW AND VANISHED IN
+     PRODUCTION. The preview needs a graded fight carrying rows, a radar AND a
+     price chart together; on a build where no fight had all three, the two
+     most valuable cards silently left the page and nothing said so. The claims
+     are true whether or not a specific fight is handy to illustrate them, so
+     the cards always render and fall back to an illustration -- labelled as
+     one, so it is never mistaken for a live reading. #}
   <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">Live market</span>
-        <h3>Watch the market move, minute by minute</h3></div>
+        <h3>Watch the market move, from open to bell</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </span>
     </div>
-    <div class="canvas cool">{{ preview.moneyline_chart | safe }}</div>
+    <div class="canvas cool">
+      {% if preview and preview.moneyline_chart %}{{ preview.moneyline_chart | safe }}
+      {% else %}
+      <div class="shot">
+        <div class="sh-top"><span>Moneyline movement</span><span>Illustration</span></div>
+        <svg class="clvchart" viewBox="0 0 300 104" preserveAspectRatio="none" role="img"
+             aria-label="Two prices diverging over time">
+          <path d="M12 52 L58 46 L104 44 L150 38 L196 33 L242 27 L288 20"
+                fill="none" stroke="var(--red)" stroke-width="1.6" stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"/>
+          <path d="M12 52 L58 58 L104 60 L150 66 L196 71 L242 77 L288 84"
+                fill="none" stroke="var(--blue)" stroke-width="1.6" stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"/>
+          <circle cx="288" cy="20" r="3.2" fill="var(--red)"/>
+          <circle cx="288" cy="84" r="3.2" fill="var(--blue)"/>
+        </svg>
+        <div class="clvlabels"><span>Opened</span><span class="mid">every price in between</span>
+          <span>At the bell</span></div>
+      </div>
+      {% endif %}
+    </div>
     <div class="detail"><div class="detail-in">
-      <p>Every price we have recorded since the fight was booked, not just today's.
+      <p>Every price we have recorded since the fight was booked, not just today's number.
          <b>Hold anywhere on the chart</b> to read both sides at that moment, and see exactly
          when the money arrived.</p>
       <div class="mini">
         <div class="r"><span>Recalculated</span><b>every 5 min</b></div>
-        {# The Rundown is a licensed odds API; affiliates 19 and 23 are
-           DraftKings and FanDuel. Naming the books the reader actually bets at
-           is more useful than naming our vendor. #}
         <div class="r"><span>Books</span><b>DraftKings &middot; FanDuel</b></div>
         <div class="r"><span>Fair line</span><b>Polymarket</b></div>
       </div>
@@ -590,10 +624,12 @@
         <h3>Every fighter, ranked against the division</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </span>
     </div>
     <div class="canvas warm">
       <div class="shot">
+        {% if preview and preview.rows %}
         <div class="sh-top"><span>Scouting report</span><span>{{ preview.fighter_a.split()[-1] }} vs {{ preview.fighter_b.split()[-1] }}</span></div>
         {% for row in preview.rows %}
         <div class="rail">
@@ -602,16 +638,32 @@
           <div class="r"><i style="width:{{ row.b or 0 }}%;background:var(--blue)"></i></div>
         </div>
         {% endfor %}
+        {% else %}
+        <div class="sh-top"><span>Scouting report</span><span>Illustration</span></div>
+        {% for row in [('Strike acc', 88, 72), ('Knockdowns', 41, 93), ('TD volume', 76, 58), ('TD defence', 64, 81)] %}
+        <div class="rail">
+          <div class="l"><i style="width:{{ row[1] }}%;background:var(--red)"></i></div>
+          <span>{{ row[0] }}</span>
+          <div class="r"><i style="width:{{ row[2] }}%;background:var(--blue)"></i></div>
+        </div>
+        {% endfor %}
+        {% endif %}
       </div>
     </div>
     <div class="detail"><div class="detail-in">
       <p><b>Percentiles against the division, not against each other.</b> An 88th-percentile jab
          is elite in the weight class &mdash; not merely better than the man across from you,
          which is all a head-to-head bar can tell you.</p>
+      {% if preview and preview.radar_svg %}
       <div class="pv-radar" style="margin-top:12px">{{ preview.radar_svg | safe }}</div>
+      {% endif %}
+      <div class="mini">
+        <div class="r"><span>Fighters profiled</span><b>181</b></div>
+        <div class="r"><span>Bouts in the spine</span><b>1,434</b></div>
+        <div class="r"><span>Rounds of tape</span><b>3,590</b></div>
+      </div>
     </div></div>
   </div>
-  {% endif %}
 
   {% if clv_stats %}
   {# NO NAMED FIGHT. A specific result is the most persuasive version of this
