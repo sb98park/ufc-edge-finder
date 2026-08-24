@@ -49,6 +49,7 @@ from src.line_movement import (
     load_token_cache, save_token_cache, update_token_cache,
 )
 from src.track_record import (
+    _is_settled_price,
     log_predictions, compute_track_record, load_momentum_by_key,
     load_logged_predictions_by_key, _pair_key,
     LOCK_OF_WEEK_MAX, LOCK_OF_WEEK_MIN_PROB,
@@ -1827,6 +1828,19 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
                     if not name or name in _seen:
                         continue
                     hist = ((_snap.get(f"{name}|Moneyline") or {}).get("history")) or []
+                    if not hist:
+                        continue
+                    # THE LAST QUOTE IS NOT ALWAYS A QUOTE. A market that has
+                    # resolved prints its outcome as a price: -199900 is
+                    # 99.95%, a settlement tick rather than a line anyone
+                    # could have bet. Four fighters were riding the tape at
+                    # -199900 with a "+75.0%" move next to them that was
+                    # nothing but the market closing.
+                    # The charts have always stripped these (_drop_settled in
+                    # line_movement). Reusing track_record's threshold rather
+                    # than picking a third one: 0.97 is loose enough that a
+                    # genuine -3000 blowout favourite still rides the tape.
+                    hist = [h for h in hist if not _is_settled_price(h.get("odds"))]
                     if not hist:
                         continue
                     try:

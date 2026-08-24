@@ -510,10 +510,6 @@
   .pv-radar{display:flex;justify-content:center}
   .pv-radar svg{max-width:100%;height:auto}
   {% include "_ml_chart_css.html" %}
-  .pv-free{border:1px solid rgba(61,220,132,.32);background:rgba(61,220,132,.05);
-           border-radius:14px;padding:15px;margin:4px 0 8px;font-size:12.5px;
-           color:var(--ink2);line-height:1.6}
-  .pv-free b{color:var(--ink)}
   .seg{display:flex;background:var(--sunken);border:1px solid var(--line);border-radius:10px;
        padding:3px;margin:16px 0 14px}
   .seg button{flex:1;font:inherit;font-size:12px;padding:8px 4px;border:0;border-radius:8px;
@@ -716,10 +712,12 @@
         {# Percentage POINTS of implied probability -- see the note in
            generate_site.py on why a percent change of the price itself is
            not a quantity that means anything. #}
-        {% if t.delta is none %}<span class="dl fl">&middot;&middot;</span>
-        {% elif t.delta >= 0.05 %}<span class="dl up">&#9650;{{ '%.1f'|format(t.delta) }}%</span>
-        {% elif t.delta <= -0.05 %}<span class="dl dn">&#9660;{{ '%.1f'|format(-t.delta) }}%</span>
-        {% else %}<span class="dl fl">&middot;&middot;</span>{% endif %}
+        {# A LINE THAT HAS NOT MOVED SAYS SO BY SAYING NOTHING. The two dots
+           were a placeholder for a number that does not exist, and on a quiet
+           tape a third of the ticks were dots -- which reads as missing data
+           rather than as a still market. No delta, no element. #}
+        {% if t.delta is not none and t.delta >= 0.05 %}<span class="dl up">&#9650;{{ '%.1f'|format(t.delta) }}%</span>
+        {% elif t.delta is not none and t.delta <= -0.05 %}<span class="dl dn">&#9660;{{ '%.1f'|format(-t.delta) }}%</span>{% endif %}
       </div>
       {% endfor %}{% endfor %}
     </div>
@@ -1107,22 +1105,24 @@
   </div>
   {% endif %}
 
-  <div class="pv-free">
-    {# NOT "all of the above" any more. The forward-coverage card at the top of
-       this section is the paid capability, so the blanket claim stopped being
-       true the moment that card was added. The enumeration below was always
-       the real content of this block; the headline now matches it. #}
-    <b>Every graded card is free.</b> A free account gets you every graded card &mdash; the tape,
-    the rails, the radar, the movement, and what the model picked with whether it was right.
-    No card required.
-    <button type="button" class="cta" style="margin-top:12px" data-auth data-free-cta>Create a free account</button>
-  </div>
+  {# THE FREE-ACCOUNT BLOCK THAT SAT HERE IS GONE. It was a bordered card
+     with a gold button, directly beneath three bordered fact cards and
+     directly above the pricing section -- so it read as a fourth fact card,
+     and it made the same offer, in the same words, with the same button, as
+     the Free plan 250px below it. Two calls to action for one decision, one
+     of them dressed as content.
+     What it was actually for -- reassuring a reader that the page they just
+     scrolled is free before the prices appear -- now leads the pricing
+     section as type, where the choice is being made anyway. #}
 
   {# PLANS. Annual is pre-selected because a weekly-cadence product invites a
      cancel after any bad Saturday, and annual moves that decision out of the
      weekly cycle. Monthly stays one tap away and is never hidden -- trapping
      people into annual generates refunds, which cost more than the churn. #}
-  <h2 style="margin-top:32px">Choose your access</h2>
+  <h2 style="margin-top:34px">Choose your access</h2>
+  <p class="lede2b">Everything already graded is free and stays free &mdash; the tape, the rails,
+     the radar, and every pick with whether it was right. Pro is the layer that reads the fights
+     that <em>have not happened yet</em>.</p>
   <div class="seg" role="group" aria-label="Billing period">
     <button type="button" data-plan="month" aria-pressed="false">Monthly</button>
     <button type="button" data-plan="year" aria-pressed="true">Annual <b class="pill">Save $38</b></button>
@@ -1175,7 +1175,11 @@
       <li>Full tape, scout rails and matchup breakdowns</li>
       <li>The complete public track record</li>
     </ul>
-    <button type="button" class="cta ghost" data-free-cta2>Create a free account</button>
+    {# data-free-cta, not -cta2: it was the second of two and is now the only
+       one, and render() flips this label to "Open the app" for a reader who
+       already has an account. Renaming beats repointing the selector -- the
+       attribute says which button this is, and there is only one. #}
+    <button type="button" class="cta ghost" data-free-cta>Create a free account</button>
     <div class="cur">No card required &middot; keeps your history</div>
   </div>
 
