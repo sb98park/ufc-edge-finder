@@ -78,9 +78,19 @@
     background:radial-gradient(closest-side,rgba(124,92,245,.20),transparent 72%);
     filter:blur(44px);z-index:-2;pointer-events:none}
 
-  .cd{font-size:12.5px;color:var(--ink2);margin:70px 0 0}
-  .cd b{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);
-        font-weight:500;letter-spacing:-.02em}
+  .cd{margin:70px 0 0}
+  /* Same dot, same 1.9s pulse and the same reduced-motion opt-out as the LIVE
+     pill on the tape below -- one animation reused rather than a second one
+     invented, so the two read as parts of one system. */
+  .cd-ev{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);
+         font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)}
+  .cd-ev i{width:5px;height:5px;border-radius:50%;background:var(--gold);flex:none;
+           box-shadow:0 0 7px 1px rgba(212,175,55,.55);
+           animation:oaPulse 1.9s ease-in-out infinite}
+  .cd-l{font-size:12.5px;color:var(--ink3);margin-top:6px;line-height:1.4}
+  .cd-l b{color:var(--ink);font-weight:600}
+  .cd-l [data-countdown]{font-family:var(--mono);font-variant-numeric:tabular-nums;
+                         color:var(--ink2);letter-spacing:-.01em}
   .hero h1{font-size:clamp(33px,9.2vw,42px);line-height:1.06;letter-spacing:-.036em;
            font-weight:750;margin:14px 0 0;text-wrap:balance}
   .hero h1 .grad{background:linear-gradient(97deg,#8fb4ff 2%,#ff7a86 48%,#f0c245 94%);
@@ -130,7 +140,7 @@
                box-shadow:0 0 7px 1px rgba(212,175,55,.8);
                animation:oaPulse 1.9s ease-in-out infinite}
   @keyframes oaPulse{0%,100%{opacity:1}50%{opacity:.28}}
-  @media (prefers-reduced-motion:reduce){.tape-live i{animation:none}}
+  @media (prefers-reduced-motion:reduce){.tape-live i,.cd-ev i{animation:none}}
 
   /* --- hero --- */
   .eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--ink3);
@@ -159,10 +169,10 @@
   .rails b{display:block;font-family:var(--mono);font-size:19px;letter-spacing:-.03em;
            font-weight:600;font-variant-numeric:tabular-nums}
   .rails span{font-size:10.5px;letter-spacing:0;color:var(--ink3);text-transform:none}
-  /* --- claim --- */
-  .claim{margin:24px 0;padding:15px 16px;border-left:2px solid var(--gold);
-         background:var(--sunken);border-radius:0 10px 10px 0;font-size:13.5px;color:var(--ink2)}
-  .claim em{color:var(--ink);font-style:italic}
+  /* --- record footnote --- */
+  .rec-note{margin:15px 0 0;padding-top:13px;border-top:1px solid var(--line);
+            font-size:11.5px;line-height:1.55;color:var(--ink3)}
+  .rec-note em{color:var(--ink2);font-style:italic}
   /* --- the paired demo --- */
   h2{font-size:19px;font-weight:700;letter-spacing:-.015em;margin:0 0 4px}
   .lede{font-size:13.5px;color:var(--ink2);margin:0 0 16px}
@@ -667,10 +677,29 @@
      everything else. #}
   <div class="hero">
     <canvas id="hero-canvas" aria-hidden="true"></canvas>
+    {# WAS "Next card sealed in 4d 15:47:24", one grey line doing four things
+       badly. "Next card" was a placeholder for a fact we hold -- the event has
+       a name, and a name is proof where a category is not. "4d 15:47:24" gluid
+       a day count to a wall clock, two notations in one string, and the
+       ticking seconds drew the eye to its least meaningful digit while
+       borrowing the visual grammar of a sales timer -- which argues against
+       the patience this page is selling. And "sealed" is the first word on the
+       page doing work the reader cannot follow yet; the lede three lines below
+       makes the same point with room to explain it.
+       Series above, matchup and clock below: the same eyebrow/matchup split
+       the app's own card banner uses, so the two pages agree. #}
     {% if countdown_target_iso %}
-    <p class="cd">Next card sealed in <b data-countdown="{{ countdown_target_iso }}">&mdash;</b></p>
+    <div class="cd">
+      {% if countdown_series %}
+      <span class="cd-ev"><i></i>{{ countdown_series }}</span>
+      {% else %}
+      <span class="cd-ev"><i></i>Next card</span>
+      {% endif %}
+      <div class="cd-l">{% if countdown_matchup %}<b>{{ countdown_matchup }}</b> &middot;
+        {% endif %}first bell in <span data-countdown="{{ countdown_target_iso }}">&mdash;</span></div>
+    </div>
     {% else %}
-    <p class="cd">Updated {{ generated_at_short }}</p>
+    <div class="cd"><div class="cd-l">Updated {{ generated_at_short }}</div></div>
     {% endif %}
     {# THE GRADIENT SPAN CARRIES THE DIFFERENTIATOR, not the category. "Fight
        intelligence" says what this is; "before the market moves" says why it
@@ -753,9 +782,16 @@
       <div><b class="up" data-roll>{{ '%+.2f'|format(tr.units_stats.by_tier['Lock of the Week'].units) }}U</b><span>Lock of the Week {{ tr.lock_record.correct }}/{{ tr.lock_record.total }}</span></div>
       <div><b data-roll>{{ tr.total }}</b><span>Fights graded</span></div>
     </div>
+    {# THIS WAS A SEPARATE BOX WITH A GOLD BAR DOWN ITS LEFT EDGE, floating
+       between the record and the section below it. The bar was the only thing
+       tying the sentence to the figures it describes, and a coloured strip is
+       a weak substitute for the obvious structural answer: it is a note ABOUT
+       the record, so it belongs inside the record, under a hairline, in the
+       shape every set of published figures uses for exactly this. No border
+       colour required -- the position carries the meaning. #}
+    <p class="rec-note">Every pick above was published <em>before</em> the bell, then graded
+       against the closing line &mdash; win or lose. Nothing is added afterwards.</p>
   </div>
-
-  <div class="claim">Every pick above was published <em>before</em> the bell, then graded against the closing line &mdash; win or lose. Nothing is added afterwards.</div>
 
   {# THE PAIRED FREE/PAID DEMO WAS REMOVED HERE.
      It showed a graded card beside a sealed one, which meant a first-time
@@ -1698,13 +1734,24 @@
     if (!el) return;
     var target = Date.parse(el.getAttribute("data-countdown"));
     if (isNaN(target)) return;
-    var p = function (n) { return String(n).padStart(2, "0"); };
+    /* COARSE UNITS, AND NO SECONDS. "4d 15:47:24" was a day count welded to a
+       wall clock, and the seconds ticking made the least useful digit the most
+       animated thing in the hero. Days-and-hours reads as a fact about when
+       the card is; a running second hand reads as a countdown to a deal
+       expiring. Repainting every 30s keeps the minute honest near the bell
+       without a per-second reflow behind the canvas. */
+    function fmt(s) {
+      var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600),
+          m = Math.floor(s % 3600 / 60);
+      if (d > 0) return d + "d " + h + "h";
+      if (h > 0) return h + "h " + m + "m";
+      return Math.max(1, m) + "m";
+    }
     function tick() {
       var s = Math.floor((target - Date.now()) / 1000);
-      if (s <= 0) { el.textContent = "the next card is live"; return; }
-      el.textContent = Math.floor(s / 86400) + "d " + p(Math.floor(s % 86400 / 3600)) +
-                       ":" + p(Math.floor(s % 3600 / 60)) + ":" + p(s % 60);
-      setTimeout(tick, 1000);
+      if (s <= 0) { el.textContent = "moments"; return; }
+      el.textContent = fmt(s);
+      setTimeout(tick, 30000);
     }
     tick();
   })();

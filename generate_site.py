@@ -1568,7 +1568,8 @@ def main(tier: str = "member", output_path: str | None = None):
         try:
             _write_landing(env, track_record, units_timeseries_svg,
                            events, future_events, generated_at_short,
-                           countdown_target_iso, landing_facts, updated_snapshot)
+                           countdown_target_iso, landing_facts, updated_snapshot,
+                           countdown_series, countdown_matchup)
         except Exception as exc:                      # never break the main build
             print(f"[landing] skipped: {exc}")
 
@@ -1669,7 +1670,8 @@ def _write_legal(env, updated):
 
 
 def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short,
-                   countdown_target_iso=None, landing_facts=None, odds_snapshot=None):
+                   countdown_target_iso=None, landing_facts=None, odds_snapshot=None,
+                   countdown_series=None, countdown_matchup=None):
     """
     docs/welcome.html -- the marketing page.
 
@@ -1760,12 +1762,24 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
 
     countdown_target_iso = _future_or_none(countdown_target_iso)
     if not countdown_target_iso:
+        # THE NAME MOVES WITH THE CLOCK. The landing page now prints the event
+        # beside the countdown, so re-deriving the target without re-deriving
+        # the label would leave the hero naming last Saturday's card against
+        # next Saturday's timer -- a wrong fact stated confidently, which is
+        # worse than the stale timer this block was written to prevent.
+        countdown_series = countdown_matchup = None
         for ev in sorted((future_events or []), key=lambda e: e.get("event_date") or "9999"):
             candidate = (f"{ev.get('event_date')}T"
                          f"{ev.get('event_start_time_et', '19:00')}:00-04:00")
             countdown_target_iso = _future_or_none(candidate)
             if countdown_target_iso:
+                _name = (ev.get("event_name") or "").strip()
+                countdown_matchup = _name
+                if ": " in _name:
+                    countdown_series, countdown_matchup = _name.split(": ", 1)
                 break
+    if not countdown_target_iso:
+        countdown_series = countdown_matchup = None
 
     # ---- THE CLV STORY -----------------------------------------------------
     # DYNAMIC, not pinned to one fight. A hardcoded "we took McMillen at +160"
@@ -2161,6 +2175,8 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         best_clv=best_clv,
         clv_stats=track_record.get("clv_stats"),
         countdown_target_iso=countdown_target_iso or "",
+        countdown_series=countdown_series,
+        countdown_matchup=countdown_matchup,
         # Both public by design. The anon key carries no privileges of its
         # own -- everything it can do is what the RLS policies in
         # supabase/migrations allow -- which is why it can sit in page source.
