@@ -13410,6 +13410,8 @@
     <button class="tabbar-btn" data-tab="track">{{ icon_barchart() }}<span>Record</span></button>
     <button class="tabbar-btn" data-tab="__hub">{{ icon_list() }}<span>More</span></button>
   </nav>
+{# window.OctanePasskey -- must parse BEFORE the auth widget, which reads it. #}
+{% include "_passkey.html" %}
 {% include "_auth.html" %}
 </body>
 </html>

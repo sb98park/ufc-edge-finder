@@ -687,6 +687,8 @@
   .oauth{width:100%;font:inherit;font-size:14px;font-weight:600;border-radius:11px;padding:12px;
          display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:9px;
          border:1px solid var(--line);background:none;color:var(--ink);cursor:pointer}
+  .oauth.pk{border-color:rgba(212,175,55,.42);background:rgba(212,175,55,.07)}
+  .oauth.pk:active{background:rgba(212,175,55,.13)}
   .oauth.g{background:#fff;color:#111;border-color:#fff}
   .or{display:flex;align-items:center;gap:9px;margin:12px 0;color:var(--ink3);font-size:11px}
   .or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -1451,6 +1453,23 @@
   <div data-signin>
   <h3 data-signin-title>Sign in</h3>
   <p data-signin-sub>Free forever on everything already graded. No card unless you start a trial.</p>
+  {# FIRST, because for a returning reader it is the only control that
+     matters -- one tap and Face ID, no address, no inbox, no code. Hidden
+     until isUserVerifyingPlatformAuthenticatorAvailable() says there is
+     something to talk to; offering it on a device with no biometric is worse
+     than not offering it. #}
+  <button type="button" class="oauth pk" data-passkey hidden>
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="9.5" cy="8" r="3.6" stroke="var(--gold)" stroke-width="1.7"/>
+      <path d="M3.4 20c0-3.1 2.7-5.2 6.1-5.2 1 0 2 .2 2.8.5" stroke="var(--gold)"
+            stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M17 13.5v-1.2a2 2 0 0 1 4 0v1.2" stroke="var(--gold)" stroke-width="1.7"
+            stroke-linecap="round"/>
+      <rect x="15.6" y="13.5" width="6.8" height="5.6" rx="1.5" stroke="var(--gold)"
+            stroke-width="1.7"/>
+    </svg>
+    Sign in with Face ID
+  </button>
   <button type="button" class="oauth g">
     <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.5 5-4.4 7l6.8 5.3C42.4 36 45 30.6 45 24z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.2l-6.8-5.3c-1.9 1.3-4.4 2.2-7.7 2.2-5.9 0-10.9-3.9-12.7-9.2l-7 5.4C7.9 41 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.3 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.7-4.5l-7-5.4C3.5 17 2.7 20.4 2.7 24s.8 7 2.5 9.9l6.1-5.4z"/><path fill="#EA4335" d="M24 9.5c4.2 0 7 1.8 8.6 3.3l6.3-6.1C35 3.1 29.9 1 24 1 15.4 1 7.9 6 5.2 14.1l7 5.4C14 14.2 19 9.5 24 9.5z"/></svg>
     Continue with Google
@@ -1476,6 +1495,8 @@
   </div>
 </div>
 
+{# window.OctanePasskey -- must parse BEFORE the sheet logic, which reads it. #}
+{% include "_passkey.html" %}
 <script>
 (function () {
   var SUPABASE = {{ supabase_url | tojson }};
@@ -1514,6 +1535,7 @@
     email: $("[data-sheet] [data-email]"), send: $("[data-sheet] [data-send]"),
     fine: $("[data-sheet] .fine"), title: $("[data-sheet] [data-signin-title]"),
     sub: $("[data-sheet] [data-signin-sub]"), google: $(".oauth.g"),
+    passkey: $("[data-passkey]"),
     codeStep: $("[data-code-step]"), code: $("[data-code]"),
     codeSubmit: $("[data-code-submit]"),
     signinPanel: $("[data-signin]"), acct: $("[data-acct]"),
@@ -1942,6 +1964,37 @@
     tick();
   })();
 
+  /* --- passkeys ------------------------------------------------------
+     window.OctanePasskey comes from _passkey.html, included below. Revealed
+     only once a platform authenticator is confirmed present. */
+  (async function () {
+    if (!els.passkey || !window.OctanePasskey) return;
+    if (!(await window.OctanePasskey.available())) return;
+    els.passkey.hidden = false;
+
+    els.passkey.addEventListener("click", async function () {
+      els.passkey.disabled = true;
+      var was = els.passkey.textContent;
+      els.passkey.textContent = "Waiting for Face ID\u2026";
+      try {
+        var token = await window.OctanePasskey.signIn();
+        var res = await establishSession(token);
+        if (!res.ok) { showAuthFailure(res.reason); return; }
+        openSheet(false);
+        goToApp();
+      } catch (err) {
+        // A cancelled prompt is not a failure to report -- the reader
+        // dismissed it on purpose and the email form is still right there.
+        if (!err || err.code !== "cancelled") {
+          showAuthFailure("Face ID sign-in did not work. Use your email below instead.");
+        }
+      } finally {
+        els.passkey.disabled = false;
+        els.passkey.textContent = was;
+      }
+    });
+  })();
+
   var recordBtn = $("[data-scroll-record]");
   if (recordBtn) {
     recordBtn.addEventListener("click", function () {
@@ -2154,6 +2207,18 @@
     } catch (e) { /* a label is not worth an exception */ }
   }
 
+  /* Fire-and-forget: a failed or declined enrolment must never block a
+     sign-in that has already succeeded. */
+  async function offerPasskeyEnrolment(token) {
+    try {
+      if (!token || !window.OctanePasskey) return;
+      if (!(await window.OctanePasskey.available())) return;
+      if (localStorage.getItem("oa_passkey") === "done") return;
+      await window.OctanePasskey.enrol(token, "Octane Alpha");
+      localStorage.setItem("oa_passkey", "done");
+    } catch (e) { /* declined, unsupported, or already enrolled -- all fine */ }
+  }
+
   async function establishSession(token) {
     if (!token) return { ok: false, reason: "No sign-in token in that link." };
     try {
@@ -2212,6 +2277,7 @@
 
     if (hash.indexOf("access_token") === -1) return false;
     history.replaceState(null, "", location.pathname + location.search);
+    await offerPasskeyEnrolment(params.get("access_token"));
     var res = await establishSession(params.get("access_token"));
     if (!res.ok) { showAuthFailure(res.reason); return true; }
     goToApp();
@@ -2310,6 +2376,10 @@
         if (r.ok && out.access_token) break;
       }
       if (out.access_token) {
+        // ENROL WHILE WE STILL HOLD A TOKEN. The registration endpoints need
+        // the user's own access token, and this is the one moment we have
+        // one -- the Worker cookie that replaces it cannot be exchanged back.
+        await offerPasskeyEnrolment(out.access_token);
         var res = await establishSession(out.access_token);
         if (res.ok) { openSheet(false); goToApp(); return; }
         els.fine.className = "fine bad";

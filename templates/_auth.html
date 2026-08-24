@@ -129,6 +129,8 @@
     display: flex; align-items: center; justify-content: center; gap: 8px;
   }
   .oa-sheet button.oa-oauth { background: #fff; color: #111; border-color: #fff; }
+  .oa-sheet button.oa-pk { background: rgba(212,175,55,.08); color: var(--text);
+                           border-color: var(--accent); }
   .oa-sheet button.oa-go { background: var(--accent); color: #151208; border: 0; }
   .oa-sheet button:disabled { opacity: .55; cursor: default; }
   .oa-or { display: flex; align-items: center; gap: 9px; margin: 12px 0; color: var(--muted); font-size: 11px; }
@@ -159,6 +161,22 @@
   <div data-oa-signin>
   <h3 data-oa-title>Sign in</h3>
   <p data-oa-sub>Everything already graded is free, permanently. No card unless you start a trial.</p>
+  {# FIRST, because for a returning reader it is the only control that
+     matters: one tap, Face ID, in. Hidden until the browser confirms there is
+     a platform authenticator to talk to -- offering "Sign in with Face ID" on
+     a machine that has none is worse than not offering it. #}
+  <button type="button" class="oa-oauth oa-pk" data-oa-passkey hidden>
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="9.5" cy="8" r="3.6" stroke="currentColor" stroke-width="1.7"/>
+      <path d="M3.4 20c0-3.1 2.7-5.2 6.1-5.2 1 0 2 .2 2.8.5" stroke="currentColor"
+            stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M17 13.5v-1.2a2 2 0 0 1 4 0v1.2" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round"/>
+      <rect x="15.6" y="13.5" width="6.8" height="5.6" rx="1.5" stroke="currentColor"
+            stroke-width="1.7"/>
+    </svg>
+    Sign in with Face ID
+  </button>
   <button type="button" class="oa-oauth" data-oa-google>
     <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.5 5-4.4 7l6.8 5.3C42.4 36 45 30.6 45 24z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.2l-6.8-5.3c-1.9 1.3-4.4 2.2-7.7 2.2-5.9 0-10.9-3.9-12.7-9.2l-7 5.4C7.9 41 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.3 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.7-4.5l-7-5.4C3.5 17 2.7 20.4 2.7 24s.8 7 2.5 9.9l6.1-5.4z"/><path fill="#EA4335" d="M24 9.5c4.2 0 7 1.8 8.6 3.3l6.3-6.1C35 3.1 29.9 1 24 1 15.4 1 7.9 6 5.2 14.1l7 5.4C14 14.2 19 9.5 24 9.5z"/></svg>
     Continue with Google
@@ -192,6 +210,7 @@
   var signinPanel = q("[data-oa-signin]"), acct = q("[data-oa-acct]"),
       acctWho = q("[data-oa-acct-who]"), acctTier = q("[data-oa-acct-tier]"),
       acctPrimary = q("[data-oa-acct-primary]"), acctSignout = q("[data-oa-acct-signout]");
+  var passkeyBtn = q("[data-oa-passkey]");
   var acctEmail = "";
   try { acctEmail = localStorage.getItem("oa_who") || ""; } catch (e) {}
   var state = { signedIn: false, member: false };
@@ -376,6 +395,48 @@
     } catch (e) { /* a label is not worth an exception */ }
   }
 
+  /* Fire-and-forget. A declined or failed enrolment must never disturb a
+     sign-in that has already succeeded -- the reader is in either way.
+     Registration needs the USER's own access token, and the moment just after
+     an email sign-in is the only time we hold one; the Worker cookie that
+     replaces it cannot be exchanged back for a Supabase token. */
+  async function offerPasskeyEnrolment(token) {
+    try {
+      if (!token || !window.OctanePasskey) return;
+      if (!(await window.OctanePasskey.available())) return;
+      if (localStorage.getItem("oa_passkey") === "done") return;
+      await window.OctanePasskey.enrol(token, "Octane Alpha");
+      localStorage.setItem("oa_passkey", "done");
+    } catch (e) { /* declined, unsupported, or already enrolled -- all fine */ }
+  }
+
+  (async function () {
+    if (!passkeyBtn || !window.OctanePasskey) return;
+    if (!(await window.OctanePasskey.available())) return;
+    passkeyBtn.hidden = false;
+
+    passkeyBtn.addEventListener("click", async function () {
+      passkeyBtn.disabled = true;
+      var was = passkeyBtn.textContent;
+      passkeyBtn.textContent = "Waiting for Face ID\u2026";
+      try {
+        var token = await window.OctanePasskey.signIn();
+        var res = await establishSession(token);
+        if (!res.ok) { showAuthFailure(res.reason); return; }
+        open(false);
+      } catch (err) {
+        // A dismissed prompt is not a failure worth reporting: the reader
+        // closed it on purpose and the email form is still right there.
+        if (!err || err.code !== "cancelled") {
+          showAuthFailure("Face ID sign-in did not work. Use your email below instead.");
+        }
+      } finally {
+        passkeyBtn.disabled = false;
+        passkeyBtn.textContent = was;
+      }
+    });
+  })();
+
   async function establishSession(token) {
     if (!token) return { ok: false, reason: "No sign-in token in that link." };
     try {
@@ -435,6 +496,7 @@
 
     if (h.indexOf("access_token") === -1) return false;
     history.replaceState(null, "", location.pathname + location.search);
+    await offerPasskeyEnrolment(params.get("access_token"));
     var res = await establishSession(params.get("access_token"));
     if (!res.ok) showAuthFailure(res.reason);
     return true;
@@ -488,6 +550,7 @@
         if (r.ok && out.access_token) break;
       }
       if (out.access_token) {
+        await offerPasskeyEnrolment(out.access_token);
         var res = await establishSession(out.access_token);
         if (res.ok) { open(false); return; }
         fine.className = "oa-fine bad";

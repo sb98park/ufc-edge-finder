@@ -1,0 +1,182 @@
+{# PASSKEY SIGN-IN, spoken to GoTrue directly.
+
+   The rest of this site talks to Supabase over raw REST and carries no SDK,
+   so this does the same rather than pulling in @supabase/supabase-js for two
+   requests. The contract below was read out of auth-js rather than guessed:
+
+     POST /auth/v1/passkeys/authentication/options   anon key, no session
+          -> { challenge_id, options: { challenge, timeout, rpId,
+                                        userVerification }, expires_at }
+     navigator.credentials.get({ publicKey: options })
+     POST /auth/v1/passkeys/authentication/verify    { challenge_id, credential }
+          -> a normal Supabase session
+
+   Registration is the same shape at /passkeys/registration/*, except those
+   two DO need the user's own access token -- which is why enrolment is
+   offered right after an email sign-in, while we still hold one.
+
+   DISCOVERABLE CREDENTIALS. The options come back with no allowCredentials
+   list, so the authenticator shows its own account picker and we never ask
+   for an email first. That is the whole point: tap, Face ID, in.
+#}
+<script>
+(function () {
+  var SB   = {{ supabase_url | tojson }};
+  var ANON = {{ supabase_anon_key | tojson }};
+
+  /* base64url, not base64: WebAuthn uses the URL-safe alphabet with the
+     padding stripped, and atob rejects both differences. */
+  function b64urlToBuf(s) {
+    s = String(s).replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    var bin = atob(s), buf = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    return buf.buffer;
+  }
+  function bufToB64url(buf) {
+    var bytes = new Uint8Array(buf), bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function post(path, body, bearer) {
+    return fetch(SB + "/auth/v1" + path, {
+      method: "POST",
+      headers: {
+        "apikey": ANON,
+        // GoTrue wants BOTH: apikey identifies the project, Authorization
+        // carries whichever principal is acting. For the sign-in ceremony
+        // that is the anon key itself; for enrolment it is the user.
+        "Authorization": "Bearer " + (bearer || ANON),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body || {}),
+    });
+  }
+
+  /* Modern browsers serialise a credential themselves (WebAuthn Level 3).
+     The manual path is for anything that does not, and matches auth-js field
+     for field -- rawId deliberately mirrors id, which is what the JSON form
+     of the spec expects. */
+  function serializeAssertion(cred) {
+    if (cred.toJSON) return cred.toJSON();
+    var r = cred.response;
+    return {
+      id: cred.id, rawId: cred.id, type: "public-key",
+      response: {
+        authenticatorData: bufToB64url(r.authenticatorData),
+        clientDataJSON: bufToB64url(r.clientDataJSON),
+        signature: bufToB64url(r.signature),
+        userHandle: r.userHandle ? bufToB64url(r.userHandle) : undefined,
+      },
+      clientExtensionResults: cred.getClientExtensionResults(),
+      authenticatorAttachment: cred.authenticatorAttachment || undefined,
+    };
+  }
+  function serializeAttestation(cred) {
+    if (cred.toJSON) return cred.toJSON();
+    return {
+      id: cred.id, rawId: cred.id, type: "public-key",
+      response: {
+        attestationObject: bufToB64url(cred.response.attestationObject),
+        clientDataJSON: bufToB64url(cred.response.clientDataJSON),
+      },
+      clientExtensionResults: cred.getClientExtensionResults(),
+      authenticatorAttachment: cred.authenticatorAttachment || undefined,
+    };
+  }
+
+  var api = {};
+
+  /* Feature detection is deliberately two-part. PublicKeyCredential existing
+     only says the API is present; isUserVerifyingPlatformAuthenticatorAvailable
+     says there is actually a Face ID / Touch ID / Windows Hello to talk to.
+     Offering "Sign in with Face ID" on a machine that has none is worse than
+     not offering it. */
+  api.available = async function () {
+    if (!window.PublicKeyCredential || !navigator.credentials) return false;
+    try {
+      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch (e) { return false; }
+  };
+
+  /* Returns a Supabase access_token, or throws with a `code` the caller can
+     branch on: "cancelled" (user dismissed, say nothing), "none" (no passkey
+     on this device, offer the email path), "unsupported", or "failed". */
+  api.signIn = async function () {
+    var r = await post("/passkeys/authentication/options",
+                       { gotrue_meta_security: { captcha_token: null } });
+    if (!r.ok) throw Object.assign(new Error("options " + r.status), { code: "failed" });
+    var start = await r.json();
+
+    var publicKey = Object.assign({}, start.options);
+    publicKey.challenge = b64urlToBuf(start.options.challenge);
+    if (start.options.allowCredentials) {
+      publicKey.allowCredentials = start.options.allowCredentials.map(function (c) {
+        return Object.assign({}, c, { id: b64urlToBuf(c.id) });
+      });
+    }
+
+    var cred;
+    try {
+      cred = await navigator.credentials.get({ publicKey: publicKey });
+    } catch (err) {
+      // NotAllowedError covers BOTH "the user cancelled" and "there was
+      // nothing to offer them" -- the spec deliberately refuses to
+      // distinguish, so an attacker cannot probe which accounts exist. We
+      // cannot tell them apart either; treating it as cancelled and leaving
+      // the email form on screen is right for both.
+      if (err && (err.name === "NotAllowedError" || err.name === "AbortError")) {
+        throw Object.assign(new Error("cancelled"), { code: "cancelled" });
+      }
+      throw Object.assign(new Error(err && err.message), { code: "failed" });
+    }
+    if (!cred) throw Object.assign(new Error("no credential"), { code: "none" });
+
+    var v = await post("/passkeys/authentication/verify", {
+      challenge_id: start.challenge_id,
+      credential: serializeAssertion(cred),
+    });
+    if (!v.ok) throw Object.assign(new Error("verify " + v.status), { code: "failed" });
+    var session = await v.json();
+    if (!session || !session.access_token) {
+      throw Object.assign(new Error("no session"), { code: "failed" });
+    }
+    return session.access_token;
+  };
+
+  /* Enrolment needs the user's own token, which is why this is offered
+     straight after an email sign-in rather than from a cold account panel --
+     that is the one moment we are holding one. */
+  api.enrol = async function (accessToken, friendlyName) {
+    var r = await post("/passkeys/registration/options", {}, accessToken);
+    if (!r.ok) throw new Error("registration options " + r.status);
+    var start = await r.json();
+
+    var publicKey = Object.assign({}, start.options);
+    publicKey.challenge = b64urlToBuf(start.options.challenge);
+    if (start.options.user && start.options.user.id) {
+      publicKey.user = Object.assign({}, start.options.user,
+                                     { id: b64urlToBuf(start.options.user.id) });
+    }
+    if (start.options.excludeCredentials) {
+      publicKey.excludeCredentials = start.options.excludeCredentials.map(function (c) {
+        return Object.assign({}, c, { id: b64urlToBuf(c.id) });
+      });
+    }
+
+    var cred = await navigator.credentials.create({ publicKey: publicKey });
+    if (!cred) throw new Error("no credential created");
+
+    var v = await post("/passkeys/registration/verify", {
+      challenge_id: start.challenge_id,
+      credential: serializeAttestation(cred),
+      friendly_name: friendlyName || "This device",
+    }, accessToken);
+    if (!v.ok) throw new Error("registration verify " + v.status);
+    return true;
+  };
+
+  window.OctanePasskey = api;
+})();
+</script>
