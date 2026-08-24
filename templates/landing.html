@@ -169,6 +169,17 @@
   .rails b{display:block;font-family:var(--mono);font-size:19px;letter-spacing:-.03em;
            font-weight:600;font-variant-numeric:tabular-nums}
   .rails span{font-size:10.5px;letter-spacing:0;color:var(--ink3);text-transform:none}
+  /* --- capability group headings --- */
+  .grouphd{margin:26px 0 12px}
+  /* The rule grows out of the label rather than boxing it: a divider that
+     starts gold at the text and fades to nothing reads as the heading
+     extending, not as a line someone drew across the page. */
+  .g1{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+      color:var(--gold);display:flex;align-items:center;gap:9px}
+  .g1::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,
+    rgba(212,175,55,.4),rgba(255,255,255,.06) 60%,transparent)}
+  .g2{font-size:12.5px;color:var(--ink3);margin-top:5px}
+
   /* --- the mid-page CTA --- */
   .actband{margin:22px 0 4px;padding:17px 15px;border-radius:16px;
     background:linear-gradient(135deg,rgba(212,175,55,.13),rgba(212,175,55,.03) 60%,transparent);
@@ -844,6 +855,21 @@
      See the selection in generate_site.py for why the old rule could never
      find one. #}
 
+  {# TWO NAMED GROUPS, NOT ONE LIST OF SIX. By the fourth identically-shaped
+     card the eye is skimming; naming the halves turns a stack into two short
+     sets a reader can actually hold.
+     FOUR AND TWO, not the tidier three and three. Method & round is a
+     capability -- it is part of what the model produces, not evidence that it
+     works -- so filing it under "what it proves" to balance the columns would
+     be a label that lies for the sake of symmetry. It moved up to sit with
+     the other three instead, which also stops the section ending on a
+     capability card: it now closes on the ledger publishing its own losing
+     tier, which is a far better last word. #}
+  <div class="grouphd">
+    <div class="g1">What it reads</div>
+    <div class="g2">Every announced fight, priced and profiled.</div>
+  </div>
+
   {% if coverage %}
   {# ===== FORWARD COVERAGE =====
      Every competing product's landing page is about this Saturday, because
@@ -1010,6 +1036,46 @@
     </div></div>
   </div>
 
+  {# WAS "Nothing is ever edited after the bell". True, and table stakes --
+     the reader's reaction is "obviously", which spends a card to say nothing.
+     Not editing your picks is the floor, not the product. This is a capability
+     they actually get and most services do not offer at all. #}
+  <div class="pcard" data-card>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      <div><span class="kick">Method &amp; round</span>
+        <h3>Not just who wins &mdash; how, and when</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="canvas" data-reveal>
+      <div class="shot">
+        <div class="sh-top"><span>Method grid</span><span>every fight</span></div>
+        <div class="mrow"><span>KO / TKO</span><i><b style="width:46%"></b></i><em>46%</em></div>
+        <div class="mrow"><span>Submission</span><i><b style="width:12%"></b></i><em>12%</em></div>
+        <div class="mrow"><span>Decision</span><i><b style="width:42%"></b></i><em>42%</em></div>
+        <div class="mrow rr"><span>Most likely round</span><i></i><em>R2</em></div>
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      <p>Every fight carries a full method distribution and a round, not a single side. A
+         KO/TKO read and a decision read on the same fighter are <b>completely different
+         bets</b> at completely different prices &mdash; and the props board is where the
+         mispricing usually is.</p>
+      <p>The distribution is coherent with the round curve by construction: the chance a fight
+         ends early and the chance it goes the distance are the same number seen from two
+         directions, so they cannot contradict each other.</p>
+      <div class="nobody"><span>&#9679;</span><span><b>Most services pick a side and stop.</b>
+        Method and round need an actual model of how the fight plays out, not a lean on who is
+        better.</span></div>
+    </div></div>
+  </div>
+
+  <div class="grouphd">
+    <div class="g1">What it proves</div>
+    <div class="g2">Scored against the closing line, losses included.</div>
+  </div>
+
   {% if clv_stats %}
   {# NO NAMED FIGHT. A specific result is the most persuasive version of this
      card, but it makes the page's strongest claim hostage to one performance
@@ -1138,41 +1204,6 @@
       {% endif %}
       <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> Publishing
         the tier that loses money is a choice no one selling picks will make.</span></div>
-    </div></div>
-  </div>
-
-  {# WAS "Nothing is ever edited after the bell". True, and table stakes --
-     the reader's reaction is "obviously", which spends a card to say nothing.
-     Not editing your picks is the floor, not the product. This is a capability
-     they actually get and most services do not offer at all. #}
-  <div class="pcard" data-card>
-    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
-      <div><span class="kick">Method &amp; round</span>
-        <h3>Not just who wins &mdash; how, and when</h3></div>
-      <span class="expand" aria-hidden="true">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-    </div>
-    <div class="canvas" data-reveal>
-      <div class="shot">
-        <div class="sh-top"><span>Method grid</span><span>every fight</span></div>
-        <div class="mrow"><span>KO / TKO</span><i><b style="width:46%"></b></i><em>46%</em></div>
-        <div class="mrow"><span>Submission</span><i><b style="width:12%"></b></i><em>12%</em></div>
-        <div class="mrow"><span>Decision</span><i><b style="width:42%"></b></i><em>42%</em></div>
-        <div class="mrow rr"><span>Most likely round</span><i></i><em>R2</em></div>
-      </div>
-    </div>
-    <div class="detail"><div class="detail-in">
-      <p>Every fight carries a full method distribution and a round, not a single side. A
-         KO/TKO read and a decision read on the same fighter are <b>completely different
-         bets</b> at completely different prices &mdash; and the props board is where the
-         mispricing usually is.</p>
-      <p>The distribution is coherent with the round curve by construction: the chance a fight
-         ends early and the chance it goes the distance are the same number seen from two
-         directions, so they cannot contradict each other.</p>
-      <div class="nobody"><span>&#9679;</span><span><b>Most services pick a side and stop.</b>
-        Method and round need an actual model of how the fight plays out, not a lean on who is
-        better.</span></div>
     </div></div>
   </div>
 
