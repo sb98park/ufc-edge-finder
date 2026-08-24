@@ -1926,6 +1926,11 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .units-tier-size { color: var(--muted); font-size: var(--t-micro); flex-shrink: 0; }
+  /* Said once under the table instead of as an arrow inside every affected
+     row -- see the note on the row markup for why the fact has to survive
+     somewhere. */
+  .units-tier-note { font-size: var(--t-micro); color: var(--muted); line-height: 1.5;
+                     margin: 9px 2px 0; }
   .units-tier-count { color: var(--muted); font-size: var(--t-micro); margin-left: auto; }
   .units-tier-value { font-family: var(--font-display); font-weight: 700; width: 56px; text-align: right; flex-shrink: 0; }
   .units-tier-value.positive { color: var(--green); }
@@ -6064,20 +6069,37 @@
         <div class="units-tier-row">
           <span class="units-tier-dot {{ 'lock' if tier == 'Lock of the Week' else tier|lower|replace(' confidence','') }}"></span>
           <span class="units-tier-label">{{ 'Lock of the Week' if tier == 'Lock of the Week' else tier|replace(' Confidence','') }}</span>
-          {# The stake can change between cards, and when it does this row
-             reports two different things at once: what the history was
-             graded at, and what the next pick will be staked. "3->2U" says
-             both. Printing the new number alone over an old record would be
-             the same retroactive lie STAKE_SCHEDULE exists to prevent. #}
-          {%- set old_sizes = (stats.unit_sizes or [])|reject('equalto', stats.unit_size)|list -%}
-          <span class="units-tier-size">
-            {%- if old_sizes %}{{ old_sizes|max|int }}&rarr;{{ stats.unit_size|int }}U/pick
-            {%- else %}{{ stats.unit_size|int }}U/pick{% endif -%}
-          </span>
+          {# THE ARROW IS GONE FROM THE ROW, NOT THE FACT. This read "3->2U",
+             saying two things in one cell: what the history was graded at and
+             what the next pick will be staked at. It was accurate and it was
+             clutter in a six-character column.
+             The cell now states the CURRENT stake only. The historical one
+             moves to a single note under the table, because dropping it
+             entirely would leave a row where the units cannot be
+             reconstructed from the stake beside them -- Medium's history was
+             staked at 3U, so 35 picks at "2U/pick" implies 70U risked when
+             the true figure is nearer 105U, and an ROI a third too harsh.
+             That is exactly the retroactive misstatement STAKE_SCHEDULE
+             exists to prevent; it just does not need to live in the cell. #}
+          <span class="units-tier-size">{{ stats.unit_size|int }}U/pick</span>
           <span class="units-tier-count">{{ stats.count }}p</span>
           <span class="units-tier-value {{ 'positive' if stats.units >= 0 else 'negative' }}">{{ '+' if stats.units >= 0 else '' }}{{ stats.units }}U</span>
         </div>
         {% endfor %}
+        {%- set _changed = [] -%}
+        {%- for tier, stats in track_record.units_stats.by_tier.items() -%}
+          {%- for old in (stats.unit_sizes or []) if old != stats.unit_size -%}
+            {%- if _changed.append((tier, old, stats.unit_size)) -%}{%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}
+        {% if _changed %}
+        <p class="units-tier-note">
+          {%- for tier, old, now in _changed -%}
+          {{ tier|replace(' Confidence','') }} was staked at {{ old|int }}U before
+          {{ stake_change_date }}{{ ', ' if not loop.last else '' }}
+          {%- endfor %} &mdash; the units above are what that history actually returned.
+        </p>
+        {% endif %}
       </div>
       <div class="units-caption">Sized by conviction ({{ lock_units|int }}U lock of the week · {{ stake_ladder['High Confidence']|int }}U high confidence · {{ stake_ladder['Medium Confidence']|int }}U medium · {{ stake_ladder['Low Confidence']|int }}U low), priced at the real market odds when picked — never the model's own probability. A lock counts only once, at its own weight — not also folded into High Confidence. Only counts picks with known odds on record.</div>
     </div>

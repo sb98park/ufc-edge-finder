@@ -49,6 +49,7 @@ from src.line_movement import (
     load_token_cache, save_token_cache, update_token_cache,
 )
 from src.track_record import (
+    STAKE_SCHEDULE,
     _is_settled_price,
     log_predictions, compute_track_record, load_momentum_by_key,
     load_logged_predictions_by_key, _pair_key,
@@ -1257,6 +1258,15 @@ def main(tier: str = "member", output_path: str | None = None):
     env.globals["otp_length"] = 8
     env.globals["otp_max_length"] = 10
     env.globals["stake_ladder"] = UNITS_BY_CONFIDENCE
+    # The day the current ladder took effect, for the one-line note under the
+    # units table. Read off STAKE_SCHEDULE rather than typed, so the date and
+    # the stakes can never drift apart.
+    _eff = next((d for d, _ in STAKE_SCHEDULE if d), "")
+    try:
+        env.globals["stake_change_date"] = dt.datetime.strptime(
+            _eff, "%Y-%m-%d").strftime("%b %-d")
+    except ValueError:
+        env.globals["stake_change_date"] = _eff
     env.globals["lock_units"] = LOCK_OF_WEEK_UNITS
     env.filters["american"] = format_american_odds
     # Probability -> the price at which a bet on it breaks even, i.e. the
