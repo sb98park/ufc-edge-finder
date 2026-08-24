@@ -191,11 +191,16 @@
   .pick i{font-style:normal;font-size:11px;color:var(--ink2)}
   .conf{font-family:var(--mono);font-size:8px;background:var(--gold);color:#151208;
         padding:3px 6px;border-radius:5px;font-weight:700;flex:none}
-  .rail{display:flex;align-items:center;gap:7px;margin-top:7px}
-  .rail span{font-family:var(--mono);font-size:7px;letter-spacing:.09em;color:var(--ink3);
-             width:64px;text-align:center;flex:none}
-  .rail i{height:3px;border-radius:2px;display:block;flex:1;max-width:34%}
-  .rail i:first-child{margin-left:auto}
+  {# The second .rail block that used to sit here belonged to the paired
+     free/paid demo removed further down, and it outlived its markup. It was
+     not inert: it set flex:1 and max-width:34% on .rail i, and the LIVE
+     scouting rules below only override height, radius and display -- so every
+     scouting bar inherited flex:1 1 0 and grew to the same 34.5px regardless
+     of its width. Acosta's 5th-percentile takedown volume and Blaydes's 98th
+     rendered as identical bars. The card looked like it was working and was
+     showing nothing, which is why the illustration it replaced never looked
+     wrong either. Two rules for one class in one stylesheet, one of them
+     dead. #}
   .foot{display:flex;justify-content:space-between;margin-top:11px;padding-top:9px;
         border-top:1px solid var(--line);font-family:var(--mono);font-size:8.5px;
         color:var(--ink3);letter-spacing:.04em}
@@ -730,12 +735,14 @@
      ledger exists to show you, in units, what that disagreement was actually worth.</p>
 
   {# THESE TWO CARDS USED TO BE GATED ON A PREVIEW AND VANISHED IN
-     PRODUCTION. The preview needs a graded fight carrying rows, a radar AND a
-     price chart together; on a build where no fight had all three, the two
-     most valuable cards silently left the page and nothing said so. The claims
-     are true whether or not a specific fight is handy to illustrate them, so
-     the cards always render and fall back to an illustration -- labelled as
-     one, so it is never mistaken for a live reading. #}
+     PRODUCTION, so they render unconditionally now and fall back to an
+     illustration -- always labelled as one, so it can never be mistaken for a
+     live reading.
+     The fallback is the exception rather than the rule again: the market and
+     scouting cards each pick their own real fight, ranked for contrast, and
+     only draw the illustration when the data genuinely has nothing to show.
+     See the selection in generate_site.py for why the old rule could never
+     find one. #}
 
   {% if coverage %}
   {# ===== FORWARD COVERAGE =====
@@ -804,7 +811,11 @@
       </span>
     </div>
     <div class="canvas cool">
-      {% if preview and preview.moneyline_chart %}{{ preview.moneyline_chart | safe }}
+      {# The real chart arrives as its own two-piece stack: an .ml-rail naming
+         both fighters with their live prices, then the .dual-chart under it.
+         The landing CSS has styled that pair as one card since it was written
+         -- this is simply the first build in which the data reaches it. #}
+      {% if market_preview %}{{ market_preview.chart | safe }}
       {% else %}
       <div class="shot">
         <div class="sh-top"><span>Moneyline movement</span><span>Illustration</span></div>
@@ -847,9 +858,9 @@
     </div>
     <div class="canvas warm">
       <div class="shot">
-        {% if preview and preview.rows %}
-        <div class="sh-top"><span>Scouting report</span><span>{{ preview.fighter_a.split()[-1] }} vs {{ preview.fighter_b.split()[-1] }}</span></div>
-        {% for row in preview.rows %}
+        {% if scout_preview %}
+        <div class="sh-top"><span>Scouting report</span><span>{{ scout_preview.fighter_a.split()[-1] }} vs {{ scout_preview.fighter_b.split()[-1] }}</span></div>
+        {% for row in scout_preview.rows %}
         <div class="rail">
           <div class="l"><i style="width:{{ row.a or 0 }}%;background:var(--red)"></i></div>
           <span>{{ row.label }}</span>
@@ -872,8 +883,8 @@
       <p><b>Percentiles against the division, not against each other.</b> An 88th-percentile jab
          is elite in the weight class &mdash; not merely better than the man across from you,
          which is all a head-to-head bar can tell you.</p>
-      {% if preview and preview.radar_svg %}
-      <div class="pv-radar" style="margin-top:12px">{{ preview.radar_svg | safe }}</div>
+      {% if scout_preview %}
+      <div class="pv-radar" style="margin-top:12px">{{ scout_preview.radar_svg | safe }}</div>
       {% endif %}
       <div class="mini">
         <div class="r"><span>Fighters profiled</span><b>181</b></div>

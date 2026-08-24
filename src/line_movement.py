@@ -754,6 +754,38 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
         points_a, points_b, fighter_a, fighter_b, implied_a=implied_a, implied_b=implied_b
     )
     fight["moneyline_chart_has_implied"] = implied_a or implied_b
+
+    # HOW FAR THE LINE ACTUALLY TRAVELLED, in probability points, and whether
+    # it ever changed its mind about who wins. Recorded here because this is
+    # the one place the plotted series exists in full.
+    # Measured on side A only: the two lines are exact complements by the
+    # time they reach here, so B's swing is A's swing and B's crossing is A's.
+    fight["moneyline_swing_pp"] = None
+    fight["moneyline_net_pp"] = None
+    fight["moneyline_span_days"] = None
+    fight["moneyline_max_step_pp"] = None
+    fight["moneyline_flipped"] = False
+    if fight["moneyline_chart"] and len(points_a) >= 2:
+        _pts = sorted(points_a, key=lambda q: q[0])
+        _probs = [p for _, p in _pts]
+        _lo, _hi = min(_probs), max(_probs)
+        fight["moneyline_swing_pp"] = round((_hi - _lo) * 100, 1)
+        # NET is the story the chart tells; SWING is only its envelope. A
+        # price that wandered 40 points and came back has a huge swing and
+        # says nothing.
+        fight["moneyline_net_pp"] = round((_probs[-1] - _probs[0]) * 100, 1)
+        fight["moneyline_span_days"] = round((_pts[-1][0] - _pts[0][0]) / 86400.0, 2)
+        # The largest single step between consecutive quotes. On a liquid
+        # market this stays small; a double-digit jump is a thin book or a
+        # gap in the history, and a chart built from those reads as erratic
+        # rather than as a market moving.
+        fight["moneyline_max_step_pp"] = round(max(
+            abs(_probs[i + 1] - _probs[i]) for i in range(len(_probs) - 1)) * 100, 1)
+        # A REAL CHANGE OF MIND, not a graze. Testing _lo < 0.5 < _hi called
+        # Xiaonan/Gomes a flip on a low of 0.4987 -- four thousandths under
+        # even money, invisible on the chart and gone at the next quote. The
+        # band asks the price to have actually traded on both sides.
+        fight["moneyline_flipped"] = _lo < 0.47 and _hi > 0.53
     if points_a and points_b:
         final_a = sorted(points_a, key=lambda p: p[0])[-1][1]
         final_b = sorted(points_b, key=lambda p: p[0])[-1][1]

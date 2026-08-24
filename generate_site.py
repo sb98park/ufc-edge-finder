@@ -1864,42 +1864,113 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
             break
 
 
-    # A REAL FIGHT'S REAL COMPONENTS for the preview strip. Mockups would be
-    # easier and would also be a lie: the point of showing the scout rails and
-    # the movement chart is that this is what you actually get, so they are
-    # pulled from a graded fight -- graded because that card is free, so the
-    # preview promises nothing the free tier does not deliver.
-    # The graded filter is the point, not decoration: an ungraded fight's card
-    # is the one the free tier redacts, and showing it here would advertise a
-    # sample the free offer below does not honour.
-    preview = None
-    for source in (events or []), (future_events or []):
-        for ev in source:
-            for f in ev.get("fights", []):
-                if not tiering.is_graded(f):
-                    continue
-                prof = f.get("profile") or {}
-                if prof.get("rows") and prof.get("radar_svg") and f.get("moneyline_chart"):
-                    preview = {
-                        "fighter_a": f.get("fighter_a", ""),
-                        "fighter_b": f.get("fighter_b", ""),
-                        "rows": prof["rows"][:4],
-                        "radar_svg": prof["radar_svg"],
-                        "moneyline_chart": f["moneyline_chart"],
-                    }
-                    break
-            if preview:
-                break
-        if preview:
-            break
+    # --------------------------------------------------------------------
+    # TWO REAL FIGHTS, ONE PER CARD.
+    #
+    # This was a single fight required to carry the price chart, the scouting
+    # rails AND the radar together, and to be graded. That combination never
+    # occurs: events and future_events only ever hold the current and the
+    # upcoming cards, and a graded fight is by definition on neither. So the
+    # page served the illustration fallback on every build from the day the
+    # filter was written, and the diagnostic reporting it read as a data
+    # problem rather than as the logical impossibility it actually was.
+    #
+    # THE GRADED FILTER WAS THE WRONG GUARD. Its stated job was to stop the
+    # preview advertising something the free tier redacts. But redact_fight
+    # strips the MODEL layer and nothing else -- the pick, the confidence, the
+    # waterfall, the per-row opinions. profile.rows, profile.radar_svg and
+    # moneyline_chart all pass through it untouched, and the free block on the
+    # page names the rails, the radar and the movement out loud. All three are
+    # free on an upcoming fight too, so the honest constraint was never
+    # "graded", it is "carries no model opinion" -- which these cards do not.
+    #
+    # CHOSEN INDEPENDENTLY, AND RANKED FOR CONTRAST. One fight rarely has both
+    # a dramatic price path and two sharply divergent fighters; demanding one
+    # supply both is how the old rule ended up asking for four things at once.
+    # A flat line, or two near-identical scouting profiles, would show the
+    # feature working while making it look like it had found nothing.
+    # --------------------------------------------------------------------
+    _all_fights = [f for ev in (list(events or []) + list(future_events or []))
+                   for f in (ev.get("fights") or [])]
 
-    if not preview:
-        # THE CARDS NO LONGER DEPEND ON THIS, but its absence still says
-        # something about the data -- it means no graded fight carried a
-        # profile, a radar and a price chart together. Two cards used to
-        # disappear from the live page when that happened and nothing said so.
-        print("[landing] no graded fight with rows+radar+chart -- "
-              "the market and scouting cards will render illustrations")
+    # WHAT MAKES A GOOD PRICE CHART is not the biggest number. Ranking on
+    # swing alone picked a 72-point "move" that was a thin Polymarket book
+    # with a single 38-point discontinuity in it and 37 hours of history --
+    # dramatic, erratic, and a direct contradiction of the copy above it,
+    # which promises every price since the fight was booked.
+    # So: a real span, a smooth line, and a net move that went somewhere.
+    _MIN_NET_PP = 6.0        # below this the line is flat and shows nothing
+    _MIN_SPAN_DAYS = 3.0     # "open to bell" needs more than one evening
+    _MAX_STEP_PP = 12.0      # a bigger jump than this is a gap, not a move
+    _cands = []
+    for _f in _all_fights:
+        if not _f.get("moneyline_chart"):
+            continue
+        _net = abs(_f.get("moneyline_net_pp") or 0)
+        _span = _f.get("moneyline_span_days") or 0
+        _step = _f.get("moneyline_max_step_pp")
+        if _net < _MIN_NET_PP or _span < _MIN_SPAN_DAYS:
+            continue
+        if _step is None or _step > _MAX_STEP_PP:
+            continue
+        # Net move is the story. Crossing even money is the strongest version
+        # of it -- the market changed its mind about who wins -- and a longer
+        # window is worth a little on top, capped so a stale six-week chart
+        # cannot beat a decisive two-week one on age alone.
+        _score = _net + (25 if _f.get("moneyline_flipped") else 0) + min(_span, 21) * 0.5
+        _cands.append((_score, _net, _span, _step, _f))
+    _cands.sort(key=lambda c: -c[0])
+    if _cands:
+        print("[landing] market card candidates (net / span / worst step):")
+        for _sc, _net, _span, _step, _f in _cands[:5]:
+            print(f"           {_f.get('fighter_a','?')[:18]:18s} vs {_f.get('fighter_b','?')[:18]:18s} "
+                  f"net {_net:5.1f}pp  span {_span:5.1f}d  step {_step:4.1f}pp"
+                  + ("  FLIP" if _f.get("moneyline_flipped") else ""))
+    market_preview = None
+    if _cands:
+        _f = _cands[0][4]
+        market_preview = {
+            "fighter_a": _f.get("fighter_a", ""), "fighter_b": _f.get("fighter_b", ""),
+            "chart": _f["moneyline_chart"],
+            "net": _f.get("moneyline_net_pp"),
+            "span_days": _f.get("moneyline_span_days"),
+            "flipped": _f.get("moneyline_flipped"),
+        }
+        print(f"[landing] market card: {market_preview['fighter_a']} vs "
+              f"{market_preview['fighter_b']}, net {market_preview['net']:+}pp over "
+              f"{market_preview['span_days']}d"
+              + (", favourite flipped" if market_preview["flipped"] else ""))
+    else:
+        print("[landing] no chart with a real, clean move -- market card falls back")
+
+    scout_preview, _best = None, None
+    for _f in _all_fights:
+        _prof = _f.get("profile") or {}
+        # Both men profiled, or one side's rails come out empty and the card
+        # reads as a rendering failure rather than as a thin record.
+        if not (_prof.get("radar_svg") and _prof.get("a_ok") and _prof.get("b_ok")):
+            continue
+        # RANK ON EXACTLY THE FOUR RAILS THE CARD SHOWS, in their canonical
+        # order. Scoring all six -- or picking whichever four diverge most --
+        # would overstate what is on screen: the reader would be looking at a
+        # curated subset presented as an ordinary sample. What is measured
+        # here is what renders.
+        _rows = (_prof.get("rows") or [])[:4]
+        if len(_rows) < 4 or any(r.get("a") is None or r.get("b") is None for r in _rows):
+            continue
+        _contrast = sum(abs(r["a"] - r["b"]) for r in _rows) / len(_rows)
+        if _best is None or _contrast > _best[0]:
+            _best = (_contrast, _f, _rows, _prof)
+    if _best:
+        _contrast, _f, _rows, _prof = _best
+        scout_preview = {
+            "fighter_a": _f.get("fighter_a", ""), "fighter_b": _f.get("fighter_b", ""),
+            "rows": _rows, "radar_svg": _prof["radar_svg"],
+        }
+        print(f"[landing] scouting card: {scout_preview['fighter_a']} vs "
+              f"{scout_preview['fighter_b']}, {_contrast:.0f}pt mean rail gap")
+    else:
+        print("[landing] no fight with both sides profiled -- scouting card falls back")
 
     # ---------------------------------------------------------------------
     # FORWARD COVERAGE. Every competitor's landing page is about this
@@ -1952,7 +2023,8 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         print("[landing] no future cards with fights -- coverage section omitted")
 
     html = env.get_template("landing.html").render(
-        preview=preview,
+        market_preview=market_preview,
+        scout_preview=scout_preview,
         tape=tape,
         coverage=coverage,
         landing_facts=landing_facts or [],
