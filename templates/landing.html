@@ -450,8 +450,20 @@
   .rv [data-reveal] .mrow:nth-child(4) i b{transition-delay:.18s}
   .rv [data-reveal] .mrow:nth-child(5) i b{transition-delay:.27s}
   /* Ledger rows and fact cards arrive in sequence; --fd is authored per row. */
+  /* THE BOARD FILLS IN, ROW BY ROW. This replaced a split-flap that scrambled
+     every cell: it ran at 34ms a character, picked random glyphs instead of
+     sweeping an ordered alphabet, and did both to fighter NAMES -- so for
+     about a second the schedule looked like a table full of corrupt data,
+     which is the one impression a page arguing that its numbers are
+     trustworthy cannot afford. Rows arriving in sequence say the same thing
+     ("this is a board being filled") and every name is legible from the first
+     frame it exists.
+     --fd is authored per row, so a row's drift, its fade and its number all
+     run off one clock. */
+  .rv [data-reveal] .srow,
   .rv [data-reveal] .ltbl tr,.rv [data-reveal] .fact{opacity:0;transform:translateY(9px);
     transition:opacity .45s ease-out var(--fd,0s),transform .45s ease-out var(--fd,0s)}
+  .rv [data-reveal].seen .srow,
   .rv [data-reveal].seen .ltbl tr,.rv [data-reveal].seen .fact{opacity:1;transform:none}
 
   @media (prefers-reduced-motion:reduce){
@@ -463,11 +475,13 @@
     .rv [data-reveal] [data-fade]{transition:none;opacity:1}
     .rv [data-reveal] .rail i{transition:none;transform:none}
     .rv [data-reveal] .mrow i b{transition:none;transform:none}
+    .rv [data-reveal] .srow,
     .rv [data-reveal] .ltbl tr,.rv [data-reveal] .fact{transition:none;opacity:1;transform:none}
   }
-  /* FIXED LAYOUT, because the split-flap below rewrites these cells one
-     character at a time. Under auto layout every substituted glyph
-     re-measures the column and the table twitches for the whole animation. */
+  /* FIXED LAYOUT so the columns do not depend on their contents. It was
+     added for a split-flap that no longer exists, and it stays for the
+     count-up that replaced it: the units column animates through its digits,
+     and under auto layout a re-measured column drags the other two with it. */
   .ltbl{table-layout:fixed}
   .ltbl th:first-child,.ltbl td:first-child{width:46%}
   .ltbl th:nth-child(2),.ltbl td:nth-child(2){width:20%}
@@ -798,15 +812,18 @@
         <div class="sh-top"><span>Already priced</span><span>{{ coverage.fight_count }} fights</span></div>
         <div class="sched">
           {% for c in coverage.cards %}
-          <div class="srow{% if loop.last %} last{% endif %}">
-            <span class="sb" data-flip>{{ c.label }}</span>
+          <div class="srow{% if loop.last %} last{% endif %}"
+               style="--fd:{{ loop.index0 * 0.07 }}s">
+            <span class="sb">{{ c.label }}</span>
             {# NOT "Card announced", which said nothing and read as a shrug.
                The UFC only appends "X vs. Y" to an event name once the
                headliner is signed, so a bare "UFC 332" carrying {{ c.fights }}
                read bouts means precisely this and nothing worse. #}
-            <span class="sm" data-flip>{{ c.matchup or 'Main event TBD' }}</span>
-            <span class="sd" data-flip>{{ c.date }}</span>
-            <span class="sn" data-flip>{{ c.fights }}</span>
+            <span class="sm">{{ c.matchup or 'Main event TBD' }}</span>
+            <span class="sd">{{ c.date }}</span>
+            {# The one number on the row that is a quantity rather than a
+               label, so it is the one that counts. #}
+            <span class="sn" data-roll data-roll-delay="{{ loop.index0 * 70 + 140 }}">{{ c.fights }}</span>
           </div>
           {% endfor %}
         </div>
@@ -1020,9 +1037,10 @@
           <tr><th>Tier</th><th>N</th><th>Units</th></tr>
           {% for tier_name, st in tr.units_stats.by_tier.items() %}
           <tr style="--fd:{{ loop.index0 * 0.07 }}s">
-            <td data-flip>{{ tier_name|replace(' Confidence','') }}</td>
-            <td data-flip>{{ st.count }}</td>
-            <td class="{{ 'up' if st.units >= 0 else 'dn' }}" data-flip>{{ '%+.2f'|format(st.units) }}</td></tr>
+            <td>{{ tier_name|replace(' Confidence','') }}</td>
+            <td>{{ st.count }}</td>
+            <td class="{{ 'up' if st.units >= 0 else 'dn' }}"
+                data-roll data-roll-delay="{{ loop.index0 * 70 + 140 }}">{{ '%+.2f'|format(st.units) }}</td></tr>
           {% endfor %}
         </table>
       </div>
@@ -1363,6 +1381,11 @@
     function roll(root) {
       root.querySelectorAll("[data-roll]").forEach(function (el) {
         if (el._rt === undefined) return;
+        // Each number waits for its own row to arrive. Without this the whole
+        // column counted up in unison while the rows were still cascading in
+        // underneath it, which reads as two unrelated animations rather than
+        // as one row landing complete.
+        var delay = parseFloat(el.getAttribute("data-roll-delay") || 0);
         var t0 = 0, dur = 850;
         // One loop per element. The observer unobserves on first entry so a
         // second loop should be impossible, but the guard costs nothing and
@@ -1370,7 +1393,8 @@
         if (el._raf) cancelAnimationFrame(el._raf);
         function tick(now) {
           if (!t0) t0 = now;
-          var t = Math.min(1, (now - t0) / dur);
+          var t = (now - t0 - delay) / dur;
+          if (t < 0) { el._raf = requestAnimationFrame(tick); return; }
           if (t < 1) {
             // ease-out cubic: the last few counts land slowly, which reads as
             // arriving at a number rather than as a slot machine stopping.
@@ -1384,89 +1408,6 @@
         }
         el._raf = requestAnimationFrame(tick);
       });
-    }
-
-    /* --- split-flap ------------------------------------------------------
-       A departure board. The schedule and the ledger are both grids of short
-       fixed-width strings, which is exactly the content that board was built
-       for, and it gives two tabular sections a reveal of their own without
-       inventing a chart neither of them wants.
-
-       SUBSTITUTION, NOT INSERTION. Each character is replaced by another of
-       its own kind -- digit for digit, letter for letter, and punctuation
-       held completely still -- so the string keeps its length and its shape
-       for the whole animation and no cell ever reflows. The columns are
-       fixed-width on top of that; belt and braces, because a table that
-       twitches for a second reads as broken however good the effect is.
-
-       Cells are scrambled at PRIME TIME, next to the numbers, so the reader
-       never sees real text turn into noise and settle back -- by the time a
-       cell is on screen it has always been mid-flip. */
-    var FLIP_SETS = {
-      u: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-      l: "abcdefghijklmnopqrstuvwxyz",
-      d: "0123456789"
-    };
-    function flipKind(ch) {
-      if (ch >= "0" && ch <= "9") return "d";
-      if (ch >= "a" && ch <= "z") return "l";
-      if (ch >= "A" && ch <= "Z") return "u";
-      return null;                    // spaces, dots and dashes never move
-    }
-    function scramble(text, from) {
-      var out = "";
-      for (var i = 0; i < text.length; i++) {
-        var k = i < from ? null : flipKind(text[i]);
-        if (!k) { out += text[i]; continue; }
-        var set = FLIP_SETS[k];
-        out += set[(Math.random() * set.length) | 0];
-      }
-      return out;
-    }
-    function primeFlip(el) {
-      var text = el.textContent;
-      if (!text || !text.trim()) return;
-      el._ft = text;
-      el.textContent = scramble(text, 0);
-    }
-
-    var FLIP_PER_CHAR = 34;           // ms between two adjacent characters landing
-    var FLIP_PER_ROW  = 70;           // ms between one row starting and the next
-
-    function runFlip(root) {
-      var cells = root.querySelectorAll("[data-flip]");
-      if (!cells.length) return;
-      // Staggered BY ROW, not by cell. Indexing every cell in document order
-      // put row eight's last column 31 steps behind row one's first, which
-      // stretched a 1.2s reveal to well over two seconds.
-      var rows = [], items = [];
-      cells.forEach(function (el) {
-        if (el._ft === undefined) return;
-        var row = el.parentElement, r = rows.indexOf(row);
-        if (r === -1) { r = rows.length; rows.push(row); }
-        items.push({ el: el, text: el._ft, start: r * FLIP_PER_ROW, done: false });
-      });
-      if (!items.length) return;
-      var t0 = 0;
-      function tick(now) {
-        if (!t0) t0 = now;
-        var elapsed = now - t0, live = false;
-        for (var i = 0; i < items.length; i++) {
-          var it = items[i];
-          if (it.done) continue;
-          var settled = (elapsed - it.start) / FLIP_PER_CHAR;
-          if (settled >= it.text.length) {
-            // Land on the authored string, never on a reconstruction of it.
-            it.el.textContent = it.text;
-            it.done = true;
-            continue;
-          }
-          it.el.textContent = scramble(it.text, Math.max(0, settled | 0));
-          live = true;
-        }
-        if (live) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
     }
 
     /* --- hand-authored strokes -----------------------------------------
@@ -1488,7 +1429,6 @@
       blocks.forEach(function (b) {
         primeDraw(b);
         b.querySelectorAll("[data-roll]").forEach(prime);
-        b.querySelectorAll("[data-flip]").forEach(primeFlip);
       });
 
       // ONLY NOW. .rv is what switches every "start hidden" rule on, so it
@@ -1502,7 +1442,6 @@
           io.unobserve(e.target);
           e.target.classList.add("seen");
           roll(e.target);
-          runFlip(e.target);
         });
       }, {
         // Threshold 0 with a negative bottom margin, NOT a ratio: a ratio
@@ -1519,14 +1458,7 @@
       // Put the page back the way it renders with no script at all rather
       // than leaving content primed-but-never-revealed.
       document.documentElement.classList.remove("rv");
-      blocks.forEach(function (b) {
-        b.classList.add("seen");
-        // Scrambled cells are the one primed state that is not merely
-        // invisible -- left as-is they would ship gibberish to the reader.
-        b.querySelectorAll("[data-flip]").forEach(function (el) {
-          if (el._ft !== undefined) el.textContent = el._ft;
-        });
-      });
+      blocks.forEach(function (b) { b.classList.add("seen"); });
     }
   })();
 
