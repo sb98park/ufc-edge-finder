@@ -1894,41 +1894,59 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
                    for f in (ev.get("fights") or [])]
 
     # WHAT MAKES A GOOD PRICE CHART is not the biggest number. Ranking on
-    # swing alone picked a 72-point "move" that was a thin Polymarket book
-    # with a single 38-point discontinuity in it and 37 hours of history --
-    # dramatic, erratic, and a direct contradiction of the copy above it,
-    # which promises every price since the fight was booked.
-    # So: a real span, a smooth line, and a net move that went somewhere.
-    _MIN_NET_PP = 6.0        # below this the line is flat and shows nothing
-    _MIN_SPAN_DAYS = 3.0     # "open to bell" needs more than one evening
-    _MAX_STEP_PP = 12.0      # a bigger jump than this is a gap, not a move
+    # swing alone picked a 72-point "move" that was a thin book with a single
+    # 38-point discontinuity in it and 37 hours of history -- dramatic,
+    # erratic, and a flat contradiction of the copy above it promising every
+    # price since the fight was booked.
+    #
+    # THOSE PREFERENCES ARE A SCORE, NOT A GATE. They were hard rejects
+    # first, and that shipped the illustration to production: a minimum span,
+    # a maximum step and a minimum move together left exactly ONE qualifying
+    # fight on my snapshot, and none at all on the build CI ran an hour later.
+    # A filter that admits one candidate is a filter that admits zero on the
+    # next set of data. Preferences belong in the ranking, where a mediocre
+    # real chart still beats a drawing; only a genuinely flat line is
+    # rejected, because that is the one case where the illustration is
+    # honestly the better picture.
+    _MIN_NET_PP = 3.0
     _cands = []
     for _f in _all_fights:
         if not _f.get("moneyline_chart"):
             continue
-        _net = abs(_f.get("moneyline_net_pp") or 0)
+        _net  = abs(_f.get("moneyline_net_pp") or 0)
         _span = _f.get("moneyline_span_days") or 0
-        _step = _f.get("moneyline_max_step_pp")
-        if _net < _MIN_NET_PP or _span < _MIN_SPAN_DAYS:
+        _step  = _f.get("moneyline_max_step_pp") or 0
+        _jumps = _f.get("moneyline_jumps") or 0
+        if _net < _MIN_NET_PP:
             continue
-        if _step is None or _step > _MAX_STEP_PP:
-            continue
-        # Net move is the story. Crossing even money is the strongest version
-        # of it -- the market changed its mind about who wins -- and a longer
-        # window is worth a little on top, capped so a stale six-week chart
-        # cannot beat a decisive two-week one on age alone.
-        _score = _net + (25 if _f.get("moneyline_flipped") else 0) + min(_span, 21) * 0.5
-        _cands.append((_score, _net, _span, _step, _f))
+        _score = (
+            _net
+            # A flip is worth something -- the market changed its mind about
+            # who wins -- but not enough to outrank a big clean move. At 25 it
+            # put an 8-point wobble over 1.6 days ahead of a 34-point climb
+            # over 8.6, which is the opposite of the intended ranking.
+            + (12 if _f.get("moneyline_flipped") else 0)
+            # Span carries real weight: "open to bell" is the claim on the
+            # card, and a fortnight of history tells that story where a single
+            # evening cannot. Capped so age alone cannot win it.
+            + min(_span, 21) * 2.0
+            # Count of jumps, not the size of the largest. See the note in
+            # line_movement.py: one big step is an event, several are a feed
+            # with gaps, and only the second should cost anything.
+            - _jumps * 5.0
+        )
+        _cands.append((_score, _net, _span, _step, _jumps, _f))
     _cands.sort(key=lambda c: -c[0])
     if _cands:
-        print("[landing] market card candidates (net / span / worst step):")
-        for _sc, _net, _span, _step, _f in _cands[:5]:
-            print(f"           {_f.get('fighter_a','?')[:18]:18s} vs {_f.get('fighter_b','?')[:18]:18s} "
-                  f"net {_net:5.1f}pp  span {_span:5.1f}d  step {_step:4.1f}pp"
+        print(f"[landing] market card: {len(_cands)} candidates (net / span / worst step)")
+        for _sc, _net, _span, _step, _jumps, _f in _cands[:5]:
+            print(f"           {_sc:6.1f}  {_f.get('fighter_a','?')[:16]:16s} vs "
+                  f"{_f.get('fighter_b','?')[:16]:16s} net {_net:5.1f}pp  "
+                  f"span {_span:5.1f}d  worst step {_step:4.1f}pp  jumps {_jumps}"
                   + ("  FLIP" if _f.get("moneyline_flipped") else ""))
     market_preview = None
     if _cands:
-        _f = _cands[0][4]
+        _f = _cands[0][5]
         market_preview = {
             "fighter_a": _f.get("fighter_a", ""), "fighter_b": _f.get("fighter_b", ""),
             "chart": _f["moneyline_chart"],
@@ -1936,12 +1954,14 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
             "span_days": _f.get("moneyline_span_days"),
             "flipped": _f.get("moneyline_flipped"),
         }
-        print(f"[landing] market card: {market_preview['fighter_a']} vs "
+        print(f"[landing] market card picked: {market_preview['fighter_a']} vs "
               f"{market_preview['fighter_b']}, net {market_preview['net']:+}pp over "
-              f"{market_preview['span_days']}d"
-              + (", favourite flipped" if market_preview["flipped"] else ""))
+              f"{market_preview['span_days']}d")
     else:
-        print("[landing] no chart with a real, clean move -- market card falls back")
+        # Now genuinely says something: every chart on the page is flat.
+        print(f"[landing] no chart moved {_MIN_NET_PP}pp or more across "
+              f"{sum(1 for f in _all_fights if f.get('moneyline_chart'))} charts "
+              f"-- market card falls back to an illustration")
 
     scout_preview, _best = None, None
     for _f in _all_fights:

@@ -779,8 +779,15 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
         # market this stays small; a double-digit jump is a thin book or a
         # gap in the history, and a chart built from those reads as erratic
         # rather than as a market moving.
-        fight["moneyline_max_step_pp"] = round(max(
-            abs(_probs[i + 1] - _probs[i]) for i in range(len(_probs) - 1)) * 100, 1)
+        _steps = [abs(_probs[i + 1] - _probs[i]) * 100 for i in range(len(_probs) - 1)]
+        fight["moneyline_max_step_pp"] = round(max(_steps), 1)
+        # HOW MANY jumps, not how big the biggest one was. A single 16-point
+        # step is a market repricing a fight -- interesting, and the reason
+        # the chart is worth showing. Four of them is a feed with holes in it.
+        # Judging on the max alone cannot tell those apart, and it scored
+        # Tsuruya/Borjas (one jump, mean step 0.27, a clean 34-point climb)
+        # exactly as harshly as two charts that were visibly noise.
+        fight["moneyline_jumps"] = sum(1 for x in _steps if x >= 8.0)
         # A REAL CHANGE OF MIND, not a graze. Testing _lo < 0.5 < _hi called
         # Xiaonan/Gomes a flip on a low of 0.4987 -- four thousandths under
         # even money, invisible on the chart and gone at the next quote. The
