@@ -169,6 +169,17 @@
   .rails b{display:block;font-family:var(--mono);font-size:19px;letter-spacing:-.03em;
            font-weight:600;font-variant-numeric:tabular-nums}
   .rails span{font-size:10.5px;letter-spacing:0;color:var(--ink3);text-transform:none}
+  /* --- how you'd use it --- */
+  .howto{margin-top:34px}
+  .steps{margin-top:13px}
+  .step{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.055)}
+  .step:last-child{border-bottom:0}
+  .step .sn{flex:none;width:22px;height:22px;border-radius:50%;
+            border:1px solid rgba(212,175,55,.5);color:var(--gold);font-family:var(--mono);
+            font-size:9.5px;display:grid;place-items:center}
+  .step b{display:block;font-size:13px;font-weight:650}
+  .step span{font-size:11.5px;color:var(--ink3);line-height:1.45}
+
   /* --- capability group headings --- */
   .grouphd{margin:26px 0 12px}
   /* The rule grows out of the label rather than boxing it: a divider that
@@ -503,10 +514,10 @@
      frame it exists.
      --fd is authored per row, so a row's drift, its fade and its number all
      run off one clock. */
-  .rv [data-reveal] .srow,
+  .rv [data-reveal] .srow,.rv [data-reveal] .step,
   .rv [data-reveal] .ltbl tr,.rv [data-reveal] .fact{opacity:0;transform:translateY(9px);
     transition:opacity .45s ease-out var(--fd,0s),transform .45s ease-out var(--fd,0s)}
-  .rv [data-reveal].seen .srow,
+  .rv [data-reveal].seen .srow,.rv [data-reveal].seen .step,
   .rv [data-reveal].seen .ltbl tr,.rv [data-reveal].seen .fact{opacity:1;transform:none}
 
   @media (prefers-reduced-motion:reduce){
@@ -518,7 +529,7 @@
     .rv [data-reveal] [data-fade]{transition:none;opacity:1}
     .rv [data-reveal] .rail i{transition:none;transform:none}
     .rv [data-reveal] .mrow i b{transition:none;transform:none}
-    .rv [data-reveal] .srow,
+    .rv [data-reveal] .srow,.rv [data-reveal] .step,
     .rv [data-reveal] .ltbl tr,.rv [data-reveal] .fact{transition:none;opacity:1;transform:none}
   }
   /* FIXED LAYOUT so the columns do not depend on their contents. It was
@@ -843,6 +854,35 @@
      expands -- an affordance that does nothing is worse than no affordance.
      The paywall is deliberately absent here and stated once, in pricing. A
      feature list should only contain things the reader gets. #}
+  {# THE FIRST TIME THE PAGE SAYS "YOU".
+     Every other section describes the product or the evidence; none of them
+     describes a person using it, so a reader could finish impressed and still
+     not picture their own Saturday. That is the gap between "this is good"
+     and "this is for me".
+     It sits here, directly after the record, because "what would I actually
+     do with this?" is the question the record provokes and nothing answered.
+     Three steps, not five: three is the most anyone reads.
+     DESCRIPTIVE, NOT ADVISORY. Step three follows a price; it does not tell
+     anyone to back anything. The footer is explicit that this is information
+     rather than betting advice, and a how-to block is exactly where that line
+     would get blurred by accident. #}
+  <div class="howto" data-reveal>
+    <div class="g1">How you'd use it</div>
+    <h2 style="margin-top:6px">Four days before the bell.</h2>
+    <p class="lede">Not Saturday morning, when the price has already moved.</p>
+    <div class="steps">
+      <div class="step" style="--fd:0s"><span class="sn">1</span><div>
+        <b>Open the card the day it's booked</b>
+        <span>Every announced fight, not just this weekend's</span></div></div>
+      <div class="step" style="--fd:.08s"><span class="sn">2</span><div>
+        <b>See where the model and the book disagree</b>
+        <span>Pick, confidence, method and round, against the live line</span></div></div>
+      <div class="step" style="--fd:.16s"><span class="sn">3</span><div>
+        <b>Follow the price to the bell</b>
+        <span>Every quote from open to close, so you see the money arrive</span></div></div>
+    </div>
+  </div>
+
   <h2 style="margin-top:38px">Read the market, not the noise.</h2>
   <p class="lede">A 90% favorite at &minus;900 is not an edge, it's arithmetic.</p>
   <p class="lede2b">The model exists to find the fights the market has mispriced &mdash; and the
@@ -1131,12 +1171,15 @@
       </div>
     </div>
     <div class="detail"><div class="detail-in">
-      <p><b>The closing line is the market's final answer</b>, and it is the most accurate
-         number anyone has. If the price consistently moves toward our pick between publication
-         and the bell, the model saw something before the market did.</p>
-      <p>That is measurable <b>whether the fighter wins or loses</b>, which is why it is the one
-         statistic that separates an edge from a hot streak. Anyone can go 7&ndash;3 on a
-         Saturday.</p>
+      {# ONE PARAGRAPH, NOT TWO. These were making one point twice across 55
+         words, on the longest card on the page -- 848px, more than a full
+         screen, at card four of six. Both ideas survive in 40: the market
+         moving toward us means the model saw it first, and that is true
+         whether the fighter wins or loses. Nothing is hidden and nothing is
+         cut; the card just stops saying it twice. #}
+      <p><b>The closing line is the market's final answer.</b> If the price moves toward our pick
+         before the bell, the model saw something first &mdash; and that holds <b>whether the
+         fighter wins or loses</b>. Anyone can go 7&ndash;3 on a Saturday.</p>
       <div class="mini">
         <div class="r"><span>Beat the closing line</span><b class="up">{{ clv_stats.beat_pct }}%</b></div>
         <div class="r"><span>Priced positions measured</span><b>{{ clv_stats.total }}</b></div>
