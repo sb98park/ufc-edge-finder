@@ -2261,6 +2261,8 @@
      address was, respectively, returning or brand new. */
   var OTP_LEN = {{ otp_length }};        // what the project issues today
   var OTP_MAX = {{ otp_max_length }};    // what Supabase allows it to become
+  var OTP_MIN = 6;                       // the shortest code Supabase will issue
+  var codeSettle = 0;
   var CODE_TYPES = ["email", "magiclink", "signup"];
   var codeEmail = "";
   try { codeEmail = localStorage.getItem("oa_email") || ""; } catch (e) {}
@@ -2336,7 +2338,12 @@
   els.code.addEventListener("input", function () {
     var digits = (els.code.value || "").replace(/\D/g, "").slice(0, OTP_MAX);
     if (digits !== els.code.value) els.code.value = digits;
-    if (digits.length === OTP_LEN) verifyCode();
+    /* SETTLE, DO NOT MATCH A LENGTH. See the twin of this handler in
+       _auth.html: the digit count is a Supabase project setting and OTP_LEN
+       only describes what we believe it to be, so firing on an exact match
+       submits a truncated code the moment the two disagree. */
+    clearTimeout(codeSettle);
+    if (digits.length >= OTP_MIN) codeSettle = setTimeout(verifyCode, 500);
   });
 
   els.send.addEventListener("click", async function () {

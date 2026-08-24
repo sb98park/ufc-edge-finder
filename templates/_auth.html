@@ -509,10 +509,25 @@
   codeBox.addEventListener("keydown", function (e) {
     if (e.key === "Enter") { e.preventDefault(); verifyCode(); }
   });
+  /* SUBMIT WHEN THE CODE STOPS CHANGING, NOT AT AN EXACT LENGTH.
+     This fired the moment the field hit OTP_LEN, which makes the constant
+     load-bearing in the worst way: the digit count is a SUPABASE project
+     setting, and ours only describes what we think it is. Set ours to 6 while
+     the project still issues 8 and every sign-in would submit the first six
+     digits of an eight-digit code -- the same class of bug as the original
+     maxlength="6" truncation, arriving from the opposite direction.
+     Waiting for the input to settle instead works at any length the project
+     is configured for. iOS one-time-code autofill delivers the whole thing in
+     a single input event, so it still feels instant; a human typing keeps
+     resetting the timer until they stop. The button remains for anyone who
+     pauses mid-code. */
+  var OTP_MIN = 6;                       // the shortest code Supabase will issue
+  var codeSettle = 0;
   codeBox.addEventListener("input", function () {
     var digits = (codeBox.value || "").replace(/\D/g, "").slice(0, OTP_MAX);
     if (digits !== codeBox.value) codeBox.value = digits;
-    if (digits.length === OTP_LEN) verifyCode();
+    clearTimeout(codeSettle);
+    if (digits.length >= OTP_MIN) codeSettle = setTimeout(verifyCode, 500);
   });
 
   var cooldownUntil = 0;
