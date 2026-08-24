@@ -237,10 +237,19 @@
              max-width:21ch}
   .pchead .kick{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;
                 color:var(--gold);margin-bottom:7px;display:block}
+  /* THE GLYPH ROTATES, NOT THE BOX. This was transform:rotate(45deg) on the
+     .expand itself, which turned the whole 34px rounded square into a gold
+     diamond the moment a card opened -- an error badge where a collapse
+     control should be. The transform belongs on the svg; the tile stays put.
+     A chevron rather than a plus: it points at the thing it will reveal, and
+     flipping it to point back up is a complete sentence about what pressing
+     it again does. A plus rotating into a close says "dismiss", which is not
+     what this control does. */
   .expand{width:34px;height:34px;flex:none;border-radius:9px;background:rgba(212,175,55,.15);
-          display:grid;place-items:center;
-          transition:background .18s ease,transform .28s cubic-bezier(.22,1,.36,1)}
-  .pcard[data-open] .expand{background:rgba(212,175,55,.26);transform:rotate(45deg)}
+          display:grid;place-items:center;transition:background .18s ease}
+  .expand svg{transition:transform .28s cubic-bezier(.22,1,.36,1)}
+  .pcard[data-open] .expand{background:rgba(212,175,55,.26)}
+  .pcard[data-open] .expand svg{transform:rotate(180deg)}
   /* SYMMETRIC PADDING, so the shot floats in the band instead of resting on
      its bottom edge. With padding-bottom:0 a short shot looked centred only
      because min-height happened to leave room below it -- a tall one, like the
@@ -841,7 +850,7 @@
         <h3>Every announced fight, {{ coverage.weeks_out }} weeks out</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </div>
     <div class="canvas" data-reveal>
       <div class="shot">
@@ -892,7 +901,7 @@
         <h3>Watch the market move, from open to bell</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg>
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
     </div>
     <div class="canvas cool" data-reveal>
@@ -947,7 +956,7 @@
         <h3>Every fighter, ranked against the division</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg>
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
     </div>
     <div class="canvas warm" data-reveal>
@@ -1000,7 +1009,7 @@
         <h3>We beat the closing line {{ clv_stats.beat_pct }}% of the time</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </div>
     <div class="canvas green" data-reveal>
       {# TWO WORDS IN BIG TYPE WAS NOT A DEMONSTRATION. "Longer odds" next to
@@ -1064,7 +1073,7 @@
         <h3>Priced, not just picked &mdash; including what lost</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </div>
     <div class="canvas warm" data-reveal>
       <div class="shot">
@@ -1105,7 +1114,7 @@
         <h3>Not just who wins &mdash; how, and when</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </div>
     <div class="canvas" data-reveal>
       <div class="shot">
