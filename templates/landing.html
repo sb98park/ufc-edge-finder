@@ -586,7 +586,10 @@
   .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
   .pn{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--gold);font-weight:700}
   .pn.sm{color:var(--ink2)}
-  .pt{font-size:11.5px;color:var(--ink2);margin-top:3px}
+  /* Was 11.5px and muted, sized for a caption tucked beside the price. It is
+     the line that says what the money buys, so it sits above the billing
+     detail and reads brighter than it. */
+  .pt{font-size:13px;color:var(--ink);margin:2px 0 9px;letter-spacing:-.005em}
   .pc{text-align:right}
   .pc .was{font-size:10px;color:var(--ink3);text-decoration:line-through}
   .pc b{font-size:27px;font-weight:800;letter-spacing:-.03em}
@@ -1262,12 +1265,30 @@
   <div class="plan gold">
     <div class="rib">7 days free</div>
     <div class="ph">
-      <div><div class="pn">Pro</div><div class="pt">The model layer, unlocked</div></div>
+      {# NOT "The model layer, unlocked". "Layer" is how this codebase divides
+         the analytics from the model, not a word any reader owes us, and
+         "unlocked" describes a paywall moving rather than a thing you get.
+         It also implied the wrong boundary. The split is NOT past versus
+         future -- a free account already sees the rails, the radar and the
+         price chart on fights that have not happened, because redact_fight
+         strips the model layer and leaves the analytics standing. What Pro
+         actually buys is the model's CALL, and the fact that it exists the
+         day a fight is booked rather than on fight week. This says that, in
+         the page's own vocabulary: "the bell" has appeared three times by
+         the time a reader reaches this line. #}
+      <div><div class="pn">Pro</div></div>
       <div class="pc">
         <div class="was" data-year>$19/mo</div>
         <b data-price>$15</b><sup data-cents>.83</sup><i>/mo</i>
       </div>
     </div>
+    {# ON ITS OWN LINE, not beside the price. As a label -- "The model layer,
+       unlocked" -- it fitted the gap left of the figure. As the sentence that
+       states what the money buys, it wrapped onto two lines, stranded "bell"
+       alone on the second, and ran flush against the $15 with no gap at all.
+       The value proposition is not a caption on the plan name; it gets the
+       card's full width. #}
+    <div class="pt">Every fight picked months before the bell</div>
     <div class="billed" data-billed>$190 billed once a year &middot; two months free</div>
     <div class="ft"><span class="tick">&#10003;</span><div><b>Every fight on every card</b><i>Pick, confidence, method and round</i></div></div>
     <div class="ft"><span class="tick">&#10003;</span><div><b>Live edge against the book</b><i>Recomputed every 90 seconds</i></div></div>
@@ -1298,9 +1319,10 @@
      they had decided it. It is a real option in the same shape as Pro now. #}
   <div class="plan flat" data-free-plan>
     <div class="ph">
-      <div><div class="pn sm">Free</div><div class="pt">Everything already graded</div></div>
+      <div><div class="pn sm">Free</div></div>
       <div class="pc"><b style="font-size:19px;color:var(--ink2)">$0</b></div>
     </div>
+    <div class="pt">Everything already graded</div>
     <ul class="fl">
       <li>Every past card, permanently &mdash; picks included</li>
       <li>Full tape, scout rails and matchup breakdowns</li>
