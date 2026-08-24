@@ -53,27 +53,31 @@
      cross, so the gradient is the fight. It enters top-right and leaves by the
      right edge -- it must NOT span the hero, or the lede and the buttons end
      up as low-contrast text on a saturated field. */
-  /* FULL BLEED AND CLIPPED. The ribbon is deliberately wider than the column
+  /* FULL BLEED AND CLIPPED. The canvas is deliberately wider than the column
      so it reaches the screen edge; with overflow:visible that bleed expands
-     the document instead -- 475px of page inside a 375px phone, i.e. sideways
-     scrolling on every screen. The hero escapes .wrap's padding, then clips. */
-  .hero{position:relative;isolation:isolate;overflow:hidden;
+     the document instead. The hero escapes .wrap's padding, then clips. */
+  .hero{position:relative;isolation:isolate;overflow:hidden;min-height:414px;
         margin:0 calc(-16px - env(safe-area-inset-right)) 0 calc(-16px - env(safe-area-inset-left));
         padding:26px calc(16px + env(safe-area-inset-left)) 34px
                      calc(16px + env(safe-area-inset-right))}
-  .ribbon{position:absolute;inset:-20% -34% auto -14%;height:126%;z-index:-1;pointer-events:none;
-    clip-path:polygon(44% 0,100% 0,100% 64%,72% 100%,24% 100%);
-    background:
-      repeating-linear-gradient(102deg,rgba(255,255,255,.3) 0 1px,transparent 1px 5px),
-      repeating-linear-gradient(97deg,rgba(255,255,255,.13) 0 1px,transparent 1px 3px),
-      linear-gradient(106deg,#4b8dfb 0%,#7c5cf5 24%,#e0435f 52%,#e8722f 74%,#e8b83f 100%);
-    filter:blur(.5px) saturate(1.12);opacity:.9}
-  .ribbon::after{content:"";position:absolute;inset:0;
-    background:linear-gradient(184deg,transparent 30%,var(--bg) 94%),
-               linear-gradient(74deg,var(--bg) 2%,transparent 32%)}
-  .hero::before{content:"";position:absolute;top:-30%;right:-24%;width:84%;height:84%;
-    background:radial-gradient(closest-side,rgba(224,67,95,.32),transparent 72%);
-    filter:blur(46px);z-index:-2;pointer-events:none}
+  /* THE CANVAS REPLACES THE CSS RIBBON RATHER THAN SITTING BEHIND IT. Two
+     gradient systems in one hero fight each other -- the band's hard clip-path
+     edge cut straight through the surface's depth, and neither read properly.
+     The surface is a bivariate Gaussian MIXTURE, wireframed and rotated, and
+     coloured by HEIGHT: on a probability surface height is density, so the
+     peaks rise through violet into gold and the flats stay indigo. It is a
+     picture of what the model outputs, not an ornament that happens to move. */
+  #hero-canvas{display:block;position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+  /* A scrim, so the backdrop can never win a contrast fight with the headline.
+     A background that makes text harder to read has failed whatever else it
+     achieved. */
+  .hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:linear-gradient(100deg,var(--bg) 3%,rgba(10,10,11,.74) 33%,
+               rgba(10,10,11,.14) 67%,transparent 100%)}
+  .hero::before{content:"";position:absolute;top:-26%;right:-22%;width:80%;height:80%;
+    background:radial-gradient(closest-side,rgba(124,92,245,.20),transparent 72%);
+    filter:blur(44px);z-index:-2;pointer-events:none}
+
   .cd{font-size:12.5px;color:var(--ink2);margin:70px 0 0}
   .cd b{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);
         font-weight:500;letter-spacing:-.02em}
@@ -459,7 +463,7 @@
      The claim now comes first and the ledger is one scroll down, still above
      everything else. #}
   <div class="hero">
-    <div class="ribbon" aria-hidden="true"></div>
+    <canvas id="hero-canvas" aria-hidden="true"></canvas>
     {% if countdown_target_iso %}
     <p class="cd">Next card sealed in <b data-countdown="{{ countdown_target_iso }}">&mdash;</b></p>
     {% else %}
@@ -893,6 +897,156 @@
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
     });
   });
+
+  /* ===== THE HERO SURFACE =====
+     A bivariate Gaussian mixture, wireframed, rotated, and coloured by height.
+     Canvas 2D rather than WebGL on purpose: no shader compile on first paint,
+     and no context to lose when iOS backgrounds the tab. */
+  (function () {
+    var canvas = document.getElementById("hero-canvas");
+    var hero = document.querySelector(".hero");
+    if (!canvas || !hero || !canvas.getContext) return;
+    var ctx = canvas.getContext("2d", { alpha: true });
+    var REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    /* The ribbon's own stops. Blue and red are the two corners of the octagon
+       and gold is where they cross, so the canvas cannot drift from the page. */
+    var PAL = [[75,141,251],[124,92,245],[224,67,95],[232,184,63]];
+    function ramp(t, a) {
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      var n = PAL.length - 1, i = Math.min(n - 1, Math.floor(t * n)), f = t * n - i;
+      var c0 = PAL[i], c1 = PAL[i + 1];
+      return "rgba(" + Math.round(c0[0] + (c1[0] - c0[0]) * f) + "," +
+                       Math.round(c0[1] + (c1[1] - c0[1]) * f) + "," +
+                       Math.round(c0[2] + (c1[2] - c0[2]) * f) + "," + a.toFixed(3) + ")";
+    }
+
+    var NU = 34, NV = 24;
+    var u = new Float32Array(NU), v = new Float32Array(NV);
+    var sx = new Float32Array(NU * NV), sy = new Float32Array(NU * NV),
+        sd = new Float32Array(NU * NV), rowPeak = new Float32Array(NV);
+    for (var i0 = 0; i0 < NU; i0++) u[i0] = -1 + 2 * i0 / (NU - 1);
+    for (var j0 = 0; j0 < NV; j0++) v[j0] = -1 + 2 * j0 / (NV - 1);
+
+    var W = 0, H = 0, SCALE = 1, t = 0, yaw = 0;
+    var px = 0, py = 0, tx = 0, ty = 0;
+
+    /* Capped at 2, not devicePixelRatio: a 3x phone rasterises 2.25x the
+       pixels of a 2x one and there is nothing to see for it on hairlines. */
+    function resize() {
+      SCALE = Math.min(2, window.devicePixelRatio || 1);
+      var r = hero.getBoundingClientRect();
+      W = Math.max(1, Math.round(r.width));
+      H = Math.max(1, Math.round(r.height));
+      canvas.width = Math.round(W * SCALE);
+      canvas.height = Math.round(H * SCALE);
+      canvas.style.width = W + "px";
+      canvas.style.height = H + "px";
+      ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+    }
+
+    function draw() {
+      var cx = W * 0.66, cy = H * 0.5, sc = Math.min(W, H) * 0.86;
+      var a1x = Math.cos(t * 0.31) * 0.44, a1y = Math.sin(t * 0.23) * 0.4;
+      var a2x = Math.cos(t * 0.19 + 2.1) * 0.5, a2y = Math.sin(t * 0.27 + 1.3) * 0.36;
+      var ang = yaw + px * 0.55, ca = Math.cos(ang), sa = Math.sin(ang);
+      var tilt = 0.92 + py * 0.14, ct = Math.cos(tilt), st = Math.sin(tilt);
+      var i, j, k;
+
+      for (j = 0; j < NV; j++) {
+        rowPeak[j] = 0;
+        for (i = 0; i < NU; i++) {
+          var X = u[i], Y = v[j];
+          var d1 = (X - a1x) * (X - a1x) + (Y - a1y) * (Y - a1y);
+          var d2 = (X - a2x) * (X - a2x) + (Y - a2y) * (Y - a2y);
+          var Z = Math.exp(-d1 * 5.2) * 0.62 + Math.exp(-d2 * 3.4) * 0.44;
+          if (Z > rowPeak[j]) rowPeak[j] = Z;
+          var rx = X * ca - Y * sa, rz = X * sa + Y * ca;
+          var ry = Z - 0.28;
+          var wy = ry * ct - rz * st, wz = ry * st + rz * ct;
+          var pp = 2.6 / (2.6 + wz);
+          k = j * NU + i;
+          sx[k] = cx + rx * sc * pp;
+          sy[k] = cy - wy * sc * pp * 0.86;
+          sd[k] = pp;
+        }
+      }
+      ctx.clearRect(0, 0, W, H);
+      ctx.lineWidth = 1;
+      for (j = 0; j < NV; j++) {
+        ctx.beginPath();
+        for (i = 0; i < NU; i++) {
+          k = j * NU + i;
+          i ? ctx.lineTo(sx[k], sy[k]) : ctx.moveTo(sx[k], sy[k]);
+        }
+        /* height -> hue, depth -> alpha: the ridge lights up as it rises */
+        ctx.strokeStyle = ramp(rowPeak[j] / 0.72, 0.05 + (sd[j * NU + (NU >> 1)] - 0.7) * 0.72);
+        ctx.stroke();
+      }
+      for (i = 0; i < NU; i += 2) {
+        ctx.beginPath();
+        for (j = 0; j < NV; j++) {
+          k = j * NU + i;
+          j ? ctx.lineTo(sx[k], sy[k]) : ctx.moveTo(sx[k], sy[k]);
+        }
+        ctx.strokeStyle = ramp(0.28, 0.085);
+        ctx.stroke();
+      }
+    }
+
+    var raf = 0, last = 0, running = false, visible = true;
+    function frame(now) {
+      raf = requestAnimationFrame(frame);
+      var dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016;
+      last = now;
+      t += dt; yaw += dt * 0.16;
+      px += (tx - px) * Math.min(1, dt * 4);
+      py += (ty - py) * Math.min(1, dt * 4);
+      draw();
+    }
+    function start() { if (!running) { running = true; last = 0; raf = requestAnimationFrame(frame); } }
+    function stop() { running = false; cancelAnimationFrame(raf); }
+
+    /* HORIZONTAL INTENT ONLY. The hero is the first thing a reader scrolls
+       past, so a handler that tracks every finger movement would rotate the
+       camera during an ordinary scroll. Same 6px test the tape uses. */
+    var startX = 0, startY = 0, decided = false, dragging = false;
+    hero.addEventListener("pointerdown", function (e) {
+      dragging = true; decided = false; startX = e.clientX; startY = e.clientY;
+    });
+    hero.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      if (!decided) {
+        var dx = Math.abs(e.clientX - startX), dy = Math.abs(e.clientY - startY);
+        if (dx < 6 && dy < 6) return;
+        if (dy > dx) { dragging = false; return; }
+        decided = true;
+      }
+      var r = hero.getBoundingClientRect();
+      tx = ((e.clientX - r.left) / r.width) * 2 - 1;
+      ty = ((e.clientY - r.top) / r.height) * 2 - 1;
+    }, { passive: true });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) {
+      hero.addEventListener(ev, function () { dragging = false; tx = 0; ty = 0; });
+    });
+
+    addEventListener("resize", function () { resize(); if (!running) draw(); }, { passive: true });
+    resize();
+
+    if (REDUCED) { draw(); return; }        // one frame, no loop
+
+    /* Scrolled past costs nothing. On a page whose hero is on screen for the
+       first second, this is the single biggest thing you can do for battery. */
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (en) {
+        visible = en[0].isIntersecting;
+        visible ? start() : stop();
+      }, { threshold: 0.01 }).observe(hero);
+    } else { start(); }
+    document.addEventListener("visibilitychange", function () {
+      document.hidden ? stop() : (visible && start());
+    });
+  })();
 
   /* --- the tape ------------------------------------------------------
      Hand-driven rather than a CSS marquee, because a CSS animation cannot be
