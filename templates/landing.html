@@ -420,6 +420,19 @@
   .rv [data-reveal].seen [data-fade]{opacity:1}
   /* Bars grow from their own left edge. scaleX rather than width because the
      authored width is an inline style and must stay the source of truth. */
+  /* Scouting rails grow OUT FROM THE LABEL they belong to -- the left side
+     from its right edge, the right from its left -- so the pair opens like a
+     scale being read, not like two unrelated bars sliding in off the margins. */
+  .rv [data-reveal] .rail i{transform:scaleX(0);
+                            transition:transform .8s cubic-bezier(.25,.6,.35,1)}
+  .rv [data-reveal] .rail .l i{transform-origin:right center}
+  .rv [data-reveal] .rail .r i{transform-origin:left center}
+  .rv [data-reveal].seen .rail i{transform:scaleX(1)}
+  /* .sh-top is the shot's first child, so the rails are children 2..5. */
+  .rv [data-reveal] .rail:nth-child(3) i{transition-delay:.08s}
+  .rv [data-reveal] .rail:nth-child(4) i{transition-delay:.16s}
+  .rv [data-reveal] .rail:nth-child(5) i{transition-delay:.24s}
+
   .rv [data-reveal] .mrow i b{transform:scaleX(0);transform-origin:left center;
                           transition:transform .85s cubic-bezier(.25,.6,.35,1)}
   .rv [data-reveal].seen .mrow i b{transform:scaleX(1)}
@@ -438,9 +451,16 @@
     .rv .chart-draw-endpoint{transition:none;opacity:1}
     .rv [data-reveal] [data-draw]{transition:none;stroke-dashoffset:0}
     .rv [data-reveal] [data-fade]{transition:none;opacity:1}
+    .rv [data-reveal] .rail i{transition:none;transform:none}
     .rv [data-reveal] .mrow i b{transition:none;transform:none}
     .rv [data-reveal] .ltbl tr,.rv [data-reveal] .fact{transition:none;opacity:1;transform:none}
   }
+  /* FIXED LAYOUT, because the split-flap below rewrites these cells one
+     character at a time. Under auto layout every substituted glyph
+     re-measures the column and the table twitches for the whole animation. */
+  .ltbl{table-layout:fixed}
+  .ltbl th:first-child,.ltbl td:first-child{width:46%}
+  .ltbl th:nth-child(2),.ltbl td:nth-child(2){width:20%}
   .ltbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px;
         font-variant-numeric:tabular-nums}
   .ltbl th{text-align:left;color:#6d7789;font-size:8px;letter-spacing:.12em;text-transform:uppercase;
@@ -757,7 +777,7 @@
      frame the other five sit inside. It is also the wrong card to put last,
      next to "every graded card is free" -- the forward reads are the paid
      thing, and the two claims must not touch. #}
-  <div class="pcard" data-card data-reveal>
+  <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">Forward coverage</span>
         <h3>Every announced fight, {{ coverage.weeks_out }} weeks out</h3></div>
@@ -765,16 +785,20 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
     </div>
-    <div class="canvas">
+    <div class="canvas" data-reveal>
       <div class="shot">
         <div class="sh-top"><span>Already priced</span><span>{{ coverage.fight_count }} fights</span></div>
         <div class="sched">
           {% for c in coverage.cards %}
           <div class="srow{% if loop.last %} last{% endif %}">
-            <span class="sb">{{ c.label }}</span>
-            <span class="sm">{{ c.matchup or 'Card announced' }}</span>
-            <span class="sd">{{ c.date }}</span>
-            <span class="sn">{{ c.fights }}</span>
+            <span class="sb" data-flip>{{ c.label }}</span>
+            {# NOT "Card announced", which said nothing and read as a shrug.
+               The UFC only appends "X vs. Y" to an event name once the
+               headliner is signed, so a bare "UFC 332" carrying {{ c.fights }}
+               read bouts means precisely this and nothing worse. #}
+            <span class="sm" data-flip>{{ c.matchup or 'Main event TBD' }}</span>
+            <span class="sd" data-flip>{{ c.date }}</span>
+            <span class="sn" data-flip>{{ c.fights }}</span>
           </div>
           {% endfor %}
         </div>
@@ -801,7 +825,7 @@
   </div>
   {% endif %}
 
-  <div class="pcard" data-card data-reveal>
+  <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">Live market</span>
         <h3>Watch the market move, from open to bell</h3></div>
@@ -810,7 +834,7 @@
           <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg>
       </span>
     </div>
-    <div class="canvas cool">
+    <div class="canvas cool" data-reveal>
       {# The real chart arrives as its own two-piece stack: an .ml-rail naming
          both fighters with their live prices, then the .dual-chart under it.
          The landing CSS has styled that pair as one card since it was written
@@ -847,7 +871,7 @@
     </div></div>
   </div>
 
-  <div class="pcard" data-card data-reveal>
+  <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">Scouting</span>
         <h3>Every fighter, ranked against the division</h3></div>
@@ -856,7 +880,7 @@
           <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg>
       </span>
     </div>
-    <div class="canvas warm">
+    <div class="canvas warm" data-reveal>
       <div class="shot">
         {% if scout_preview %}
         <div class="sh-top"><span>Scouting report</span><span>{{ scout_preview.fighter_a.split()[-1] }} vs {{ scout_preview.fighter_b.split()[-1] }}</span></div>
@@ -900,7 +924,7 @@
      that has to be re-argued every time a better or worse one lands. The
      aggregate is the durable form of the same argument -- and it still moves
      on its own as the ledger grows. #}
-  <div class="pcard" data-card data-open data-reveal>
+  <div class="pcard" data-card data-open>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="true">
       <div><span class="kick">Closing line value</span>
         <h3>We beat the closing line {{ clv_stats.beat_pct }}% of the time</h3></div>
@@ -908,7 +932,7 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
     </div>
-    <div class="canvas green">
+    <div class="canvas green" data-reveal>
       {# TWO WORDS IN BIG TYPE WAS NOT A DEMONSTRATION. "Longer odds" next to
          "Shorter odds" is the claim restated, not shown -- and at 375px both
          wrapped onto two lines, so it read as broken as well as abstract.
@@ -964,7 +988,7 @@
   </div>
   {% endif %}
 
-  <div class="pcard" data-card data-reveal>
+  <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">The ledger</span>
         <h3>Priced, not just picked &mdash; including what lost</h3></div>
@@ -972,14 +996,16 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
     </div>
-    <div class="canvas warm">
+    <div class="canvas warm" data-reveal>
       <div class="shot">
         <div class="sh-top"><span>By confidence tier</span><span>{{ tr.units_stats.eligible_count }} positions</span></div>
         <table class="ltbl">
           <tr><th>Tier</th><th>N</th><th>Units</th></tr>
           {% for tier_name, st in tr.units_stats.by_tier.items() %}
-          <tr style="--fd:{{ loop.index0 * 0.07 }}s"><td>{{ tier_name|replace(' Confidence','') }}</td><td>{{ st.count }}</td>
-              <td class="{{ 'up' if st.units >= 0 else 'dn' }}">{{ '%+.2f'|format(st.units) }}</td></tr>
+          <tr style="--fd:{{ loop.index0 * 0.07 }}s">
+            <td data-flip>{{ tier_name|replace(' Confidence','') }}</td>
+            <td data-flip>{{ st.count }}</td>
+            <td class="{{ 'up' if st.units >= 0 else 'dn' }}" data-flip>{{ '%+.2f'|format(st.units) }}</td></tr>
           {% endfor %}
         </table>
       </div>
@@ -1002,7 +1028,7 @@
      the reader's reaction is "obviously", which spends a card to say nothing.
      Not editing your picks is the floor, not the product. This is a capability
      they actually get and most services do not offer at all. #}
-  <div class="pcard" data-card data-reveal>
+  <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">Method &amp; round</span>
         <h3>Not just who wins &mdash; how, and when</h3></div>
@@ -1010,7 +1036,7 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
     </div>
-    <div class="canvas">
+    <div class="canvas" data-reveal>
       <div class="shot">
         <div class="sh-top"><span>Method grid</span><span>every fight</span></div>
         <div class="mrow"><span>KO / TKO</span><i><b style="width:46%"></b></i><em>46%</em></div>
@@ -1337,6 +1363,89 @@
       });
     }
 
+    /* --- split-flap ------------------------------------------------------
+       A departure board. The schedule and the ledger are both grids of short
+       fixed-width strings, which is exactly the content that board was built
+       for, and it gives two tabular sections a reveal of their own without
+       inventing a chart neither of them wants.
+
+       SUBSTITUTION, NOT INSERTION. Each character is replaced by another of
+       its own kind -- digit for digit, letter for letter, and punctuation
+       held completely still -- so the string keeps its length and its shape
+       for the whole animation and no cell ever reflows. The columns are
+       fixed-width on top of that; belt and braces, because a table that
+       twitches for a second reads as broken however good the effect is.
+
+       Cells are scrambled at PRIME TIME, next to the numbers, so the reader
+       never sees real text turn into noise and settle back -- by the time a
+       cell is on screen it has always been mid-flip. */
+    var FLIP_SETS = {
+      u: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      l: "abcdefghijklmnopqrstuvwxyz",
+      d: "0123456789"
+    };
+    function flipKind(ch) {
+      if (ch >= "0" && ch <= "9") return "d";
+      if (ch >= "a" && ch <= "z") return "l";
+      if (ch >= "A" && ch <= "Z") return "u";
+      return null;                    // spaces, dots and dashes never move
+    }
+    function scramble(text, from) {
+      var out = "";
+      for (var i = 0; i < text.length; i++) {
+        var k = i < from ? null : flipKind(text[i]);
+        if (!k) { out += text[i]; continue; }
+        var set = FLIP_SETS[k];
+        out += set[(Math.random() * set.length) | 0];
+      }
+      return out;
+    }
+    function primeFlip(el) {
+      var text = el.textContent;
+      if (!text || !text.trim()) return;
+      el._ft = text;
+      el.textContent = scramble(text, 0);
+    }
+
+    var FLIP_PER_CHAR = 34;           // ms between two adjacent characters landing
+    var FLIP_PER_ROW  = 70;           // ms between one row starting and the next
+
+    function runFlip(root) {
+      var cells = root.querySelectorAll("[data-flip]");
+      if (!cells.length) return;
+      // Staggered BY ROW, not by cell. Indexing every cell in document order
+      // put row eight's last column 31 steps behind row one's first, which
+      // stretched a 1.2s reveal to well over two seconds.
+      var rows = [], items = [];
+      cells.forEach(function (el) {
+        if (el._ft === undefined) return;
+        var row = el.parentElement, r = rows.indexOf(row);
+        if (r === -1) { r = rows.length; rows.push(row); }
+        items.push({ el: el, text: el._ft, start: r * FLIP_PER_ROW, done: false });
+      });
+      if (!items.length) return;
+      var t0 = 0;
+      function tick(now) {
+        if (!t0) t0 = now;
+        var elapsed = now - t0, live = false;
+        for (var i = 0; i < items.length; i++) {
+          var it = items[i];
+          if (it.done) continue;
+          var settled = (elapsed - it.start) / FLIP_PER_CHAR;
+          if (settled >= it.text.length) {
+            // Land on the authored string, never on a reconstruction of it.
+            it.el.textContent = it.text;
+            it.done = true;
+            continue;
+          }
+          it.el.textContent = scramble(it.text, Math.max(0, settled | 0));
+          live = true;
+        }
+        if (live) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
     /* --- hand-authored strokes -----------------------------------------
        Dash the stroke to exactly its own length so a full dashoffset hides
        it and zero shows it whole. The length goes into a custom property
@@ -1356,6 +1465,7 @@
       blocks.forEach(function (b) {
         primeDraw(b);
         b.querySelectorAll("[data-roll]").forEach(prime);
+        b.querySelectorAll("[data-flip]").forEach(primeFlip);
       });
 
       // ONLY NOW. .rv is what switches every "start hidden" rule on, so it
@@ -1369,6 +1479,7 @@
           io.unobserve(e.target);
           e.target.classList.add("seen");
           roll(e.target);
+          runFlip(e.target);
         });
       }, {
         // Threshold 0 with a negative bottom margin, NOT a ratio: a ratio
@@ -1385,7 +1496,14 @@
       // Put the page back the way it renders with no script at all rather
       // than leaving content primed-but-never-revealed.
       document.documentElement.classList.remove("rv");
-      blocks.forEach(function (b) { b.classList.add("seen"); });
+      blocks.forEach(function (b) {
+        b.classList.add("seen");
+        // Scrambled cells are the one primed state that is not merely
+        // invisible -- left as-is they would ship gibberish to the reader.
+        b.querySelectorAll("[data-flip]").forEach(function (el) {
+          if (el._ft !== undefined) el.textContent = el._ft;
+        });
+      });
     }
   })();
 
