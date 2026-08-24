@@ -149,6 +149,26 @@
      louder than the hero above it and belonged to the old design -- the figure
      is the proof, not the pitch, so it sits in the same panel language as
      everything else and lets the headline lead. */
+  /* --- the short list --- */
+  .shortlist{border-top:1px solid var(--gold);padding-top:13px;margin-top:13px}
+  .sl-cap{font-family:var(--mono);font-size:8.5px;letter-spacing:.19em;text-transform:uppercase;
+          color:var(--gold);margin:0 0 15px}
+  .shortlist table{width:100%;border-collapse:collapse}
+  .shortlist th{font-family:var(--mono);font-size:8px;letter-spacing:.13em;text-transform:uppercase;
+                color:#4e4e57;font-weight:400;text-align:right;padding:0 0 9px;
+                border-bottom:1px solid rgba(255,255,255,.055)}
+  .shortlist th:first-child{text-align:left}
+  .shortlist td{font-family:var(--mono);font-size:14px;text-align:right;padding:14px 0 13px;
+                border-bottom:1px solid rgba(255,255,255,.055);color:var(--ink);
+                font-variant-numeric:tabular-nums}
+  .shortlist td:first-child{text-align:left;font-family:var(--sans);font-size:13px;color:var(--ink2)}
+  .shortlist tr:last-child td{border-bottom:0}
+  .sl-lead td:first-child{color:var(--ink);font-weight:600}
+  .sl-stake{display:block;font-family:var(--mono);font-size:9px;color:var(--gold);
+            letter-spacing:.06em;margin-top:3px}
+  .shortlist tr:not(.sl-lead) .sl-stake{color:#4e4e57}
+  .shortlist .up{color:var(--green)}
+
   .reccard{background:var(--panel);border:1px solid var(--line);border-radius:19px;
            padding:18px;margin-top:12px;position:relative;overflow:hidden}
   .reccard::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;
@@ -815,6 +835,30 @@
   {% endif %}
 
   <div class="eyebrow" id="record" style="margin-top:34px">Public track record &middot; updated {{ generated_at_short }}</div>
+  {% if shortlist %}
+  {# THE FIRST THING A NEW READER SHOULD SEE, above the full curve. Nobody
+     bets every fight on a card; a real bettor plays the locks, and maybe the
+     high-confidence picks with them. These two rows are what that would have
+     returned.
+     THE ROWS ARE DISJOINT -- see generate_site.py. Locks are pulled out of the
+     high-confidence tier rather than nested inside it, so 9 + 10 = 19 and the
+     two units figures add to the +58.76U they should, instead of to a number
+     larger than the total on the card directly below. #}
+  <div class="shortlist" data-reveal>
+    <p class="sl-cap">Where the returns came from</p>
+    <table>
+      <tr><th>Tier</th><th>Record</th><th>Returned</th></tr>
+      <tr class="sl-lead">
+        <td>Lock of the Week<span class="sl-stake">max bet &middot; {{ shortlist.lock.stake|int }}U</span></td>
+        <td>{{ shortlist.lock.won }}&ndash;{{ shortlist.lock.lost }}</td>
+        <td class="up">{{ '%+.2f'|format(shortlist.lock.units) }}U</td></tr>
+      <tr>
+        <td>High confidence<span class="sl-stake">{{ shortlist.high.stake|int }}U</span></td>
+        <td>{{ shortlist.high.won }}&ndash;{{ shortlist.high.lost }}</td>
+        <td class="up">{{ '%+.2f'|format(shortlist.high.units) }}U</td></tr>
+    </table>
+  </div>
+  {% endif %}
   <div class="reccard" data-reveal>
     <div class="recline">
       {# The figure is wrapped so the count-up can rewrite it without eating

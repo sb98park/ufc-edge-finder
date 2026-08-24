@@ -2176,6 +2176,38 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
     else:
         print("[landing] no future cards with fights -- coverage section omitted")
 
+    # ------------------------------------------------------------------
+    # THE SHORT LIST. Two tiers, disjoint, each with its own stake.
+    #
+    # DISJOINT ON PURPOSE. Every Lock of the Week is also a High Confidence
+    # pick, so showing "9-0" beside the tier's full "19-1" invites a reader to
+    # add 46.96 and 58.76 into +105.72U -- against a record card 200px below
+    # saying +63.44U. Splitting the locks out leaves two sets that genuinely
+    # do not overlap: 9 + 10 = 19, 46.96 + 11.80 = 58.76, and nothing has to
+    # be disclaimed in a footnote.
+    #
+    # The stake sits under each label because without it the second row reads
+    # as the weaker tier. It is not: 11 picks at 5U returned +21.5% on stake
+    # against the locks' +52.2%. The gap is the stake, not the quality.
+    # ------------------------------------------------------------------
+    shortlist = None
+    _lock = track_record.get("lock_record") or {}
+    _hi = (track_record.get("by_confidence") or {}).get("High Confidence") or {}
+    _bt = (track_record.get("units_stats") or {}).get("by_tier") or {}
+    if _lock.get("total") and _hi.get("total") and "Lock of the Week" in _bt:
+        _nl_total = _hi["total"] - _lock["total"]
+        _nl_ok = _hi["correct"] - _lock["correct"]
+        shortlist = {
+            "lock": {"won": _lock["correct"], "lost": _lock["total"] - _lock["correct"],
+                     "units": _bt["Lock of the Week"]["units"], "stake": LOCK_OF_WEEK_UNITS},
+            "high": {"won": _nl_ok, "lost": _nl_total - _nl_ok,
+                     "units": _bt.get("High Confidence", {}).get("units", 0.0),
+                     "stake": UNITS_BY_CONFIDENCE["High Confidence"]},
+        }
+        print(f"[landing] short list: lock {shortlist['lock']['won']}-{shortlist['lock']['lost']} "
+              f"{shortlist['lock']['units']:+.2f}U · high {shortlist['high']['won']}-"
+              f"{shortlist['high']['lost']} {shortlist['high']['units']:+.2f}U")
+
     html = env.get_template("landing.html").render(
         market_preview=market_preview,
         scout_preview=scout_preview,
@@ -2198,6 +2230,7 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
             "iKjw9pcpFQPfCd8H0_pt3EUJl3svd29aPMH2CWlGBco"
         ),
         tr=track_record,
+        shortlist=shortlist,
         units_timeseries_svg=units_svg,
         demo_graded=graded,
         demo_upcoming=upcoming,
