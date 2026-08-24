@@ -1,0 +1,871 @@
+{
+ "event_name": "UFC Fight Night: Nurmagomedov vs. Song",
+ "event_date": "2026-08-29",
+ "fights": [
+  {
+   "fighter_a": "Umar Nurmagomedov",
+   "fighter_b": "Song Yadong",
+   "weight_class": "Bantamweight",
+   "card_position": "Main Event",
+   "cancelled": false,
+   "is_lock_of_week": null,
+   "preview": {
+    "favorite": "Umar Nurmagomedov",
+    "underdog": "Song Yadong",
+    "favorite_prob": 0.751,
+    "confidence_label": "High Confidence",
+    "likely_method": "Decision"
+   },
+   "edges": [
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Song Yadong",
+     "odds_american": 277.35849056603774,
+     "model_prob": 0.093,
+     "book_fair_prob": 0.265,
+     "blended_prob": 0.2134,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Outcome: Ends In Finish",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": 203.03030303030306,
+     "model_prob": 0.467,
+     "book_fair_prob": 0.33,
+     "blended_prob": 0.3711,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Outcome: Goes The Distance",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": -203.03030303030306,
+     "model_prob": 0.533,
+     "book_fair_prob": 0.67,
+     "blended_prob": 0.6289,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 4.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": 198.50746268656718,
+     "model_prob": 0.4449,
+     "book_fair_prob": 0.335,
+     "blended_prob": 0.368,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 4.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": -198.50746268656718,
+     "model_prob": 0.5551,
+     "book_fair_prob": 0.665,
+     "blended_prob": 0.632,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 3.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": 222.58064516129028,
+     "model_prob": 0.4038,
+     "book_fair_prob": 0.31,
+     "blended_prob": 0.3381,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 3.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": -222.58064516129028,
+     "model_prob": 0.5962,
+     "book_fair_prob": 0.69,
+     "blended_prob": 0.6619,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: Not SUB",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": -270.3703703703704,
+     "model_prob": 0.804,
+     "book_fair_prob": 0.73,
+     "blended_prob": 0.7522,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: SUB",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": 270.3703703703704,
+     "model_prob": 0.196,
+     "book_fair_prob": 0.27,
+     "blended_prob": 0.2478,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 2.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": 263.6363636363636,
+     "model_prob": 0.3375,
+     "book_fair_prob": 0.275,
+     "blended_prob": 0.2938,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 2.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": -263.6363636363636,
+     "model_prob": 0.6625,
+     "book_fair_prob": 0.725,
+     "blended_prob": 0.7062,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Umar Nurmagomedov",
+     "odds_american": 292.156862745098,
+     "model_prob": 0.192,
+     "book_fair_prob": 0.255,
+     "blended_prob": 0.2361,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Song Yadong",
+     "odds_american": 387.8048780487805,
+     "model_prob": 0.249,
+     "book_fair_prob": 0.205,
+     "blended_prob": 0.2182,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Umar Nurmagomedov",
+     "odds_american": -387.80487804878055,
+     "model_prob": 0.751,
+     "book_fair_prob": 0.795,
+     "blended_prob": 0.7818,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 1.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": -270.3703703703704,
+     "model_prob": 0.7672,
+     "book_fair_prob": 0.73,
+     "blended_prob": 0.7412,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 1.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": 270.3703703703704,
+     "model_prob": 0.2328,
+     "book_fair_prob": 0.27,
+     "blended_prob": 0.2588,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 0.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": -852.3809523809525,
+     "model_prob": 0.915,
+     "book_fair_prob": 0.895,
+     "blended_prob": 0.901,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 0.5",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": 852.3809523809525,
+     "model_prob": 0.085,
+     "book_fair_prob": 0.105,
+     "blended_prob": 0.099,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: Not KO/TKO",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": -244.8275862068965,
+     "model_prob": 0.729,
+     "book_fair_prob": 0.71,
+     "blended_prob": 0.7157,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: KO/TKO",
+     "fighter": "Song Yadong vs Umar Nurmagomedov",
+     "odds_american": 244.82758620689657,
+     "model_prob": 0.271,
+     "book_fair_prob": 0.29,
+     "blended_prob": 0.2843,
+     "best_book": NaN,
+     "source": "Polymarket"
+    }
+   ]
+  },
+  {
+   "fighter_a": "Yan Xiaonan",
+   "fighter_b": "Denise Gomes",
+   "weight_class": "Women's Strawweight",
+   "card_position": "Co-Main Event",
+   "cancelled": false,
+   "is_lock_of_week": null,
+   "preview": {
+    "favorite": "Denise Gomes",
+    "underdog": "Yan Xiaonan",
+    "favorite_prob": 0.624,
+    "confidence_label": "Medium Confidence",
+    "likely_method": "Decision"
+   },
+   "edges": [
+    {
+     "market": "Fight Outcome: Ends In Finish",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": 257.1428571428571,
+     "model_prob": 0.53,
+     "book_fair_prob": 0.28,
+     "blended_prob": 0.355,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Outcome: Goes The Distance",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": -257.1428571428571,
+     "model_prob": 0.47,
+     "book_fair_prob": 0.72,
+     "blended_prob": 0.645,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Denise Gomes",
+     "odds_american": 153.1645569620253,
+     "model_prob": 0.624,
+     "book_fair_prob": 0.395,
+     "blended_prob": 0.4637,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Yan Xiaonan",
+     "odds_american": -153.1645569620253,
+     "model_prob": 0.376,
+     "book_fair_prob": 0.605,
+     "blended_prob": 0.5363,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 2.5",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": 250.8771929824561,
+     "model_prob": 0.3905,
+     "book_fair_prob": 0.285,
+     "blended_prob": 0.3166,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 2.5",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": -250.8771929824561,
+     "model_prob": 0.6095,
+     "book_fair_prob": 0.715,
+     "blended_prob": 0.6833,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Yan Xiaonan",
+     "odds_american": 277.35849056603774,
+     "model_prob": 0.076,
+     "book_fair_prob": 0.265,
+     "blended_prob": 0.2083,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 0.5",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": -263.6363636363636,
+     "model_prob": 0.8995,
+     "book_fair_prob": 0.725,
+     "blended_prob": 0.7773,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 0.5",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": 263.6363636363636,
+     "model_prob": 0.1005,
+     "book_fair_prob": 0.275,
+     "blended_prob": 0.2227,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: Not SUB",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": -270.3703703703704,
+     "model_prob": 0.866,
+     "book_fair_prob": 0.73,
+     "blended_prob": 0.7708,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: SUB",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": 270.3703703703704,
+     "model_prob": 0.134,
+     "book_fair_prob": 0.27,
+     "blended_prob": 0.2292,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: KO/TKO",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": 217.46031746031747,
+     "model_prob": 0.396,
+     "book_fair_prob": 0.315,
+     "blended_prob": 0.3393,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: Not KO/TKO",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": -217.4603174603175,
+     "model_prob": 0.604,
+     "book_fair_prob": 0.685,
+     "blended_prob": 0.6607,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 1.5",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": 244.8275862068965,
+     "model_prob": 0.2765,
+     "book_fair_prob": 0.29,
+     "blended_prob": 0.2859,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 1.5",
+     "fighter": "Yan Xiaonan vs Denise Gomes",
+     "odds_american": -244.8275862068965,
+     "model_prob": 0.7235,
+     "book_fair_prob": 0.71,
+     "blended_prob": 0.714,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Denise Gomes",
+     "odds_american": 277.35849056603774,
+     "model_prob": 0.225,
+     "book_fair_prob": 0.265,
+     "blended_prob": 0.253,
+     "best_book": NaN,
+     "source": "Polymarket"
+    }
+   ]
+  },
+  {
+   "fighter_a": "Aoriqileng",
+   "fighter_b": "Kai Asakura",
+   "weight_class": "Bantamweight",
+   "card_position": "Main Card",
+   "cancelled": false,
+   "is_lock_of_week": null,
+   "preview": {
+    "favorite": "Aoriqileng",
+    "underdog": "Kai Asakura",
+    "favorite_prob": 0.535,
+    "confidence_label": "Low Confidence",
+    "likely_method": "KO/TKO"
+   },
+   "edges": [
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Kai Asakura",
+     "odds_american": -135.29411764705878,
+     "model_prob": 0.151,
+     "book_fair_prob": 0.575,
+     "blended_prob": 0.4478,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Aoriqileng",
+     "odds_american": 387.8048780487805,
+     "model_prob": 0.535,
+     "book_fair_prob": 0.205,
+     "blended_prob": 0.304,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Kai Asakura",
+     "odds_american": -387.80487804878055,
+     "model_prob": 0.465,
+     "book_fair_prob": 0.795,
+     "blended_prob": 0.696,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: Not KO/TKO",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": 170.27027027027026,
+     "model_prob": 0.597,
+     "book_fair_prob": 0.37,
+     "blended_prob": 0.4381,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: KO/TKO",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": -170.27027027027026,
+     "model_prob": 0.403,
+     "book_fair_prob": 0.63,
+     "blended_prob": 0.5619,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 0.5",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": -217.4603174603175,
+     "model_prob": 0.8754,
+     "book_fair_prob": 0.685,
+     "blended_prob": 0.7421,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 0.5",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": 217.4603174603175,
+     "model_prob": 0.1246,
+     "book_fair_prob": 0.315,
+     "blended_prob": 0.2579,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Outcome: Goes The Distance",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": 263.6363636363636,
+     "model_prob": 0.451,
+     "book_fair_prob": 0.275,
+     "blended_prob": 0.3278,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Outcome: Ends In Finish",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": -263.6363636363636,
+     "model_prob": 0.549,
+     "book_fair_prob": 0.725,
+     "blended_prob": 0.6722,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 2.5",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": 181.69014084507043,
+     "model_prob": 0.5347,
+     "book_fair_prob": 0.355,
+     "blended_prob": 0.4089,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 2.5",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": -181.69014084507043,
+     "model_prob": 0.4653,
+     "book_fair_prob": 0.645,
+     "blended_prob": 0.5911,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: Not SUB",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": -270.3703703703704,
+     "model_prob": 0.854,
+     "book_fair_prob": 0.73,
+     "blended_prob": 0.7672,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: SUB",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": 270.3703703703704,
+     "model_prob": 0.146,
+     "book_fair_prob": 0.27,
+     "blended_prob": 0.2328,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 1.5",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": -117.3913043478261,
+     "model_prob": 0.6656,
+     "book_fair_prob": 0.54,
+     "blended_prob": 0.5777,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 1.5",
+     "fighter": "Kai Asakura vs Aoriqileng",
+     "odds_american": 117.3913043478261,
+     "model_prob": 0.3344,
+     "book_fair_prob": 0.46,
+     "blended_prob": 0.4223,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Aoriqileng",
+     "odds_american": 277.35849056603774,
+     "model_prob": 0.234,
+     "book_fair_prob": 0.265,
+     "blended_prob": 0.2557,
+     "best_book": NaN,
+     "source": "Polymarket"
+    }
+   ]
+  },
+  {
+   "fighter_a": "Rei Tsuruya",
+   "fighter_b": "Kevin Borjas",
+   "weight_class": "Flyweight",
+   "card_position": "Prelims",
+   "cancelled": false,
+   "is_lock_of_week": null,
+   "preview": {
+    "favorite": "Rei Tsuruya",
+    "underdog": "Kevin Borjas",
+    "favorite_prob": 0.785,
+    "confidence_label": "High Confidence",
+    "likely_method": "Decision"
+   },
+   "edges": [
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Kevin Borjas",
+     "odds_american": 263.6363636363636,
+     "model_prob": 0.047,
+     "book_fair_prob": 0.275,
+     "blended_prob": 0.2066,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: Not SUB",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": -177.77777777777777,
+     "model_prob": 0.804,
+     "book_fair_prob": 0.64,
+     "blended_prob": 0.6892,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: SUB",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": 177.77777777777777,
+     "model_prob": 0.196,
+     "book_fair_prob": 0.36,
+     "blended_prob": 0.3108,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 0.5",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": -244.8275862068965,
+     "model_prob": 0.8921,
+     "book_fair_prob": 0.71,
+     "blended_prob": 0.7646,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 0.5",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": 244.8275862068965,
+     "model_prob": 0.1079,
+     "book_fair_prob": 0.29,
+     "blended_prob": 0.2354,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: KO/TKO",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": 217.46031746031747,
+     "model_prob": 0.405,
+     "book_fair_prob": 0.315,
+     "blended_prob": 0.342,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: Not KO/TKO",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": -217.4603174603175,
+     "model_prob": 0.595,
+     "book_fair_prob": 0.685,
+     "blended_prob": 0.658,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Rei Tsuruya",
+     "odds_american": 257.1428571428571,
+     "model_prob": 0.209,
+     "book_fair_prob": 0.28,
+     "blended_prob": 0.2587,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Kevin Borjas",
+     "odds_american": 545.1612903225806,
+     "model_prob": 0.215,
+     "book_fair_prob": 0.155,
+     "blended_prob": 0.1731,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Rei Tsuruya",
+     "odds_american": -545.1612903225805,
+     "model_prob": 0.785,
+     "book_fair_prob": 0.845,
+     "blended_prob": 0.8269,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 1.5",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": 170.27027027027026,
+     "model_prob": 0.2921,
+     "book_fair_prob": 0.37,
+     "blended_prob": 0.3466,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 1.5",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": -170.27027027027026,
+     "model_prob": 0.7079,
+     "book_fair_prob": 0.63,
+     "blended_prob": 0.6534,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Outcome: Ends In Finish",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": -138.09523809523813,
+     "model_prob": 0.6,
+     "book_fair_prob": 0.58,
+     "blended_prob": 0.586,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Outcome: Goes The Distance",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": 138.09523809523813,
+     "model_prob": 0.4,
+     "book_fair_prob": 0.42,
+     "blended_prob": 0.414,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 2.5",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": 124.7191011235955,
+     "model_prob": 0.5928,
+     "book_fair_prob": 0.445,
+     "blended_prob": 0.4893,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 2.5",
+     "fighter": "Rei Tsuruya vs Kevin Borjas",
+     "odds_american": -124.71910112359548,
+     "model_prob": 0.4072,
+     "book_fair_prob": 0.555,
+     "blended_prob": 0.5107,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    }
+   ]
+  },
+  {
+   "fighter_a": "Ce Liu",
+   "fighter_b": "Junior Tafa",
+   "weight_class": "Light Heavyweight",
+   "card_position": "Main Card",
+   "cancelled": true,
+   "is_lock_of_week": null,
+   "preview": {
+    "favorite": "Ce Liu",
+    "underdog": "Junior Tafa",
+    "favorite_prob": 0.595,
+    "confidence_label": "Low Confidence",
+    "likely_method": "KO/TKO"
+   },
+   "edges": [
+    {
+     "market": "Fight Outcome: Ends In Finish",
+     "fighter": "Junior Tafa vs Ce Liu",
+     "odds_american": 146.91358024691357,
+     "model_prob": 0.76,
+     "book_fair_prob": 0.405,
+     "blended_prob": 0.5115,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Outcome: Goes The Distance",
+     "fighter": "Junior Tafa vs Ce Liu",
+     "odds_american": -146.91358024691357,
+     "model_prob": 0.24,
+     "book_fair_prob": 0.595,
+     "blended_prob": 0.4885,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Junior Tafa",
+     "odds_american": 150.0,
+     "model_prob": 0.199,
+     "book_fair_prob": 0.4,
+     "blended_prob": 0.3397,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: KO/TKO",
+     "fighter": "Junior Tafa vs Ce Liu",
+     "odds_american": -102.02020202020202,
+     "model_prob": 0.664,
+     "book_fair_prob": 0.505,
+     "blended_prob": 0.5527,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Fight Method: Not KO/TKO",
+     "fighter": "Junior Tafa vs Ce Liu",
+     "odds_american": 102.02020202020202,
+     "model_prob": 0.336,
+     "book_fair_prob": 0.495,
+     "blended_prob": 0.4473,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Method: KO/TKO",
+     "fighter": "Ce Liu",
+     "odds_american": 150.0,
+     "model_prob": 0.259,
+     "book_fair_prob": 0.4,
+     "blended_prob": 0.3577,
+     "best_book": NaN,
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Ce Liu",
+     "odds_american": -102.02020202020202,
+     "model_prob": 0.595,
+     "book_fair_prob": 0.505,
+     "blended_prob": 0.5319,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Moneyline",
+     "fighter": "Junior Tafa",
+     "odds_american": 102.02020202020202,
+     "model_prob": 0.405,
+     "book_fair_prob": 0.495,
+     "blended_prob": 0.4681,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Under 1.5",
+     "fighter": "Junior Tafa vs Ce Liu",
+     "odds_american": -100.0,
+     "model_prob": 0.4413,
+     "book_fair_prob": 0.5,
+     "blended_prob": 0.4824,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    },
+    {
+     "market": "Total Rounds Over 1.5",
+     "fighter": "Junior Tafa vs Ce Liu",
+     "odds_american": -100.0,
+     "model_prob": 0.5587,
+     "book_fair_prob": 0.5,
+     "blended_prob": 0.5176,
+     "best_book": "Polymarket",
+     "source": "Polymarket"
+    }
+   ]
+  }
+ ]
+}

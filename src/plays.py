@@ -81,7 +81,27 @@ AXIS_METHOD = "method"
 AXIS_DURATION = "duration"
 
 MAX_UNITS_PER_FIGHT = 12.0
-MAX_UNITS_PER_CARD = 40.0
+
+# A CARD IS ONE NIGHT. 40U was a backstop, not a risk limit -- it let a
+# thirteen-fight card stake 40% of a bankroll between the first prelim and the
+# main event, with every position live at once. Twenty is still a large night;
+# it is just a number a bankroll survives being wrong about.
+MAX_UNITS_PER_CARD = 20.0
+
+# THE CAP THAT IS NOT ABOUT ARITHMETIC. Over 2.5 rounds on six different
+# fights are six independent EVENTS and one shared ASSUMPTION: they all ride
+# on the model's finish-rate curve being calibrated. If that curve is off,
+# every one of them is wrong on the same night, and the per-fight cap -- which
+# only ever looks at one bout -- never sees it coming. Measured on
+# Nurmagomedov vs. Song, the unconstrained card put 13.5 of its 25 units on
+# duration alone.
+#
+# TEN, NOT EIGHT, AND THE REASON IS STRUCTURAL. This cap must never be able to
+# veto a single play that every other rule allows -- at 8 it silently made a
+# 10U Lock of the Week unplaceable, which is the one bet the whole product is
+# built around. Any axis ceiling below max(TIER_CAP_UNITS) is not a risk limit,
+# it is a bug that only shows up on the best card of the year.
+MAX_UNITS_PER_AXIS = 10.0
 
 
 def decimal_odds(american: float) -> float:
@@ -191,15 +211,24 @@ def select_card(candidates: list[dict]) -> dict:
     caller wants carried through. Assumes size_play has already run -- this
     layer is only about correlation and exposure.
 
-    Order matters and is by EV per unit risked, so when two plays collide on an
-    axis the better bet keeps the slot rather than whichever happened to be
-    listed first.
+    Order matters. Within a priority class it is by EV per unit risked, so
+    when two plays collide on an axis the better bet keeps the slot rather
+    than whichever happened to be listed first.
+
+    `priority` (default 0, higher goes first) exists because EV alone is the
+    wrong tiebreak when a cap binds. The caller knows things this layer does
+    not: which of these markets has a published record behind it and which is
+    a market we have never graded. Letting an ungraded round total crowd out
+    a moneyline pick would mean the card omits the very bet the site's whole
+    track record is made of, and the reader sees the pick on one screen and no
+    play on the next with no explanation that survives contact.
     """
-    ranked = sorted(candidates, key=lambda c: -c.get("ev_per_unit", 0.0))
+    ranked = sorted(candidates, key=lambda c: (-c.get("priority", 0), -c.get("ev_per_unit", 0.0)))
     taken: list[dict] = []
     dropped: list[dict] = []
     used_axis: set[tuple] = set()
     per_fight: dict = {}
+    per_axis: dict = {}
     card_total = 0.0
 
     for c in ranked:
@@ -211,12 +240,16 @@ def select_card(candidates: list[dict]) -> dict:
         if per_fight.get(fid, 0.0) + units > MAX_UNITS_PER_FIGHT:
             dropped.append({**c, "dropped": f"would exceed {MAX_UNITS_PER_FIGHT:.0f}U on one fight"})
             continue
+        if per_axis.get(axis, 0.0) + units > MAX_UNITS_PER_AXIS:
+            dropped.append({**c, "dropped": f"would exceed {MAX_UNITS_PER_AXIS:.0f}U on {axis} across the card"})
+            continue
         if card_total + units > MAX_UNITS_PER_CARD:
             dropped.append({**c, "dropped": f"would exceed {MAX_UNITS_PER_CARD:.0f}U on the card"})
             continue
 
         used_axis.add((fid, axis))
         per_fight[fid] = per_fight.get(fid, 0.0) + units
+        per_axis[axis] = per_axis.get(axis, 0.0) + units
         card_total += units
         taken.append(c)
 

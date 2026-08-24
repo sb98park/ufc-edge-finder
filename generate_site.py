@@ -406,6 +406,15 @@ def main(tier: str = "member", output_path: str | None = None):
     events, unmatched_df = group_edges_by_card(edges_df, cards_df, fighters_df, elo_ratings, weight_class_history_df, history_df)
     future_events, still_unmatched_df = group_edges_by_card(unmatched_df, future_cards_df, fighters_df, elo_ratings, weight_class_history_df, history_df)
 
+    # DEV ESCAPE HATCH. A full build is minutes of network and model work, and
+    # anything downstream of this line -- the plays selector, the templates --
+    # is a pure function of `events`. Set OCTANE_DUMP_EVENTS to a path to
+    # snapshot them and iterate against the snapshot instead of the pipeline.
+    if os.environ.get("OCTANE_DUMP_EVENTS"):
+        with open(os.environ["OCTANE_DUMP_EVENTS"], "w") as _f:
+            json.dump({"events": events, "future_events": future_events}, _f, default=str)
+        print(f"[dev] dumped events to {os.environ['OCTANE_DUMP_EVENTS']}")
+
     # Event display order must be chronological (soonest first), independent
     # of whatever order their rows happen to sit in the source CSV -- that
     # order reflects when each card was discovered or re-discovered (e.g.

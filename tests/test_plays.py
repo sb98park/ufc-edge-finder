@@ -12,7 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.plays import (  # noqa: E402
     decimal_odds, implied_prob, ev_per_unit, required_prob, kelly_fraction,
     size_play, select_card, HURDLE_MONEYLINE, HURDLE_PROP,
-    PROP_CAP_UNITS, MAX_UNITS_PER_FIGHT, MAX_UNITS_PER_CARD,
+    PROP_CAP_UNITS, MAX_UNITS_PER_FIGHT, MAX_UNITS_PER_CARD, MAX_UNITS_PER_AXIS,
+    TIER_CAP_UNITS,
     AXIS_OUTCOME, AXIS_METHOD, AXIS_DURATION,
 )
 
@@ -116,6 +117,25 @@ card = select_card([
     {"fight_id": "f1", "axis": AXIS_METHOD,   "units": 3.0,  "ev_per_unit": 0.20},
 ])
 check(f"one fight cannot exceed {MAX_UNITS_PER_FIGHT:.0f}U", card["total_units"], 10.0)
+
+print("\nthe axis cap, and the thing it must never do")
+# A maximum-stake Lock has to survive every rule. An axis ceiling below the
+# largest tier cap would silently forbid the product's headline bet, and only
+# on the card where it mattered most.
+check("no axis ceiling below the biggest single stake",
+      MAX_UNITS_PER_AXIS >= max(TIER_CAP_UNITS.values()), True)
+card = select_card([
+    {"fight_id": "f1", "axis": AXIS_OUTCOME, "units": 10.0, "ev_per_unit": 0.30},
+])
+check("  ...so a 10U lock still places on its own", card["total_units"], 10.0)
+# Six fights leaning the same way on the finish curve is one assumption, not six.
+spread = [{"fight_id": f"g{i}", "axis": AXIS_DURATION, "units": 3.0, "ev_per_unit": 0.3 - i * 0.01}
+          for i in range(6)]
+card = select_card(spread)
+check(f"one shared assumption cannot exceed {MAX_UNITS_PER_AXIS:.0f}U",
+      card["total_units"] <= MAX_UNITS_PER_AXIS, True)
+check("  ...and the ones it refused say so",
+      "across the card" in card["dropped"][0]["dropped"], True)
 big = [{"fight_id": f"f{i}", "axis": AXIS_OUTCOME, "units": 10.0, "ev_per_unit": 0.3 - i * 0.01}
        for i in range(8)]
 card = select_card(big)
