@@ -559,6 +559,68 @@ def main(tier: str = "member", output_path: str | None = None):
     fun_facts_by_fighter = {f["fighter"]: f for f in all_fun_facts}
     # compute_fun_facts returns rarity-sorted, so filtering preserves that order.
     fun_facts = [f for f in all_fun_facts if f["fighter"] in section_fighter_names]
+
+    # ---------------------------------------------------------------------
+    # THE LANDING PAGE'S FACT STRIP is picked from the WHOLE tracked roster,
+    # not from this week's card. The section it feeds is demonstrating the
+    # rarity ladder, and the ladder is only visible if the three cards are
+    # actually three different tiers -- the fighters booked on any one
+    # weekend rarely supply a legendary, so sampling the card would show the
+    # feature while hiding the idea. Every fact is still literally true and
+    # still appears in the app on that fighter's own card.
+    #
+    # RECENCY GUARD. "Riding an N-fight win streak" is present tense, and a
+    # fighter who has not competed in two years is not riding anything. The
+    # roster file is the model's tracked set rather than an all-time index so
+    # the risk is small, but a stale streak on the marketing page is the kind
+    # of error a reader who knows the sport spots instantly.
+    _hist_dates = pd.read_csv(f"{DATA_DIR}/fight_history.csv", usecols=["date", "fighter_a", "fighter_b"])
+    _last_bout = {}
+    for _col in ("fighter_a", "fighter_b"):
+        for _n, _d in _hist_dates.groupby(_col)["date"].max().items():
+            if _d and (_n not in _last_bout or _d > _last_bout[_n]):
+                _last_bout[_n] = _d
+    _cutoff = (dt.date.today() - dt.timedelta(days=730)).isoformat()
+    _active = [n for n in fighters_df["name"].dropna().unique().tolist()
+               if _last_bout.get(n, "") >= _cutoff]
+    _roster_facts = compute_fun_facts(_active, f"{DATA_DIR}/fight_history.csv", fighters_df)
+
+    def _fact_kind(f):
+        """What SHAPE of anomaly this is, so the strip is not three of one."""
+        t = f.get("text", "")
+        if t.startswith("Riding"):
+            return "streak"
+        if t.startswith("Has never won by decision"):
+            return "purity"
+        if t.startswith("All "):
+            return "purity-move"
+        if t.startswith("Has never been finished"):
+            return "chin"
+        if t.startswith("Last "):
+            return "recent"
+        return t[:16]
+
+    # SCARCEST TIER FIRST. Greedy in tier order picks the top legendary, which
+    # is usually the same shape as the top gold, and gold has by far the
+    # fewest distinct shapes to fall back on -- so it ends up repeating. Let
+    # the most constrained tier choose while it still has a free choice and
+    # the other two, which have alternatives, work around it.
+    _by_tier = {t: [f for f in _roster_facts if f.get("tier") == t]
+                for t in ("legendary", "gold", "hot")}
+    _order = sorted(_by_tier, key=lambda t: len({_fact_kind(f) for f in _by_tier[t]}))
+    landing_facts, _seen_kind = [], set()
+    for _tier in _order:
+        _pool = _by_tier[_tier]                       # already rarity-sorted
+        _pick = next((f for f in _pool if _fact_kind(f) not in _seen_kind), None)
+        # A tier with nothing new to say still beats an empty slot: better a
+        # repeated shape at a different rarity than a strip of two.
+        _pick = _pick or (_pool[0] if _pool else None)
+        if _pick:
+            landing_facts.append(_pick)
+            _seen_kind.add(_fact_kind(_pick))
+    landing_facts.sort(key=lambda f: {"legendary": 0, "gold": 1}.get(f.get("tier"), 2))
+    print("[landing] fight facts: " + (", ".join(
+        f"{f['tier']}/{_fact_kind(f)}/{f['fighter']}" for f in landing_facts) or "none"))
     favorite_picks = top_favorite_picks(tracked_edges, fighters_df, n=5)
 
     # CARRY THE NAMED RISK ONTO THE FIGHT so log_predictions can store it.
@@ -1504,7 +1566,7 @@ def main(tier: str = "member", output_path: str | None = None):
         try:
             _write_landing(env, track_record, units_timeseries_svg,
                            events, future_events, generated_at_short,
-                           countdown_target_iso)
+                           countdown_target_iso, landing_facts)
         except Exception as exc:                      # never break the main build
             print(f"[landing] skipped: {exc}")
 
@@ -1605,7 +1667,7 @@ def _write_legal(env, updated):
 
 
 def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short,
-                   countdown_target_iso=None):
+                   countdown_target_iso=None, landing_facts=None):
     """
     docs/welcome.html -- the marketing page.
 
@@ -1839,9 +1901,61 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         print("[landing] no graded fight with rows+radar+chart -- "
               "the market and scouting cards will render illustrations")
 
+    # ---------------------------------------------------------------------
+    # FORWARD COVERAGE. Every competitor's landing page is about this
+    # Saturday, because this Saturday is all most of them have. The model
+    # prices a fight the moment it is announced, so on any given day there are
+    # two months of cards already read -- and that is a capability claim no
+    # screenshot of a single event can make.
+    # Rendered as the ACTUAL SCHEDULE rather than a number in a sentence:
+    # "we cover 8 upcoming cards" is a claim, the list of eight named cards
+    # with their dates is evidence, and it costs the same space.
+    # ---------------------------------------------------------------------
+    coverage = None
+    _cards = []
+    for ev in sorted((future_events or []), key=lambda e: e.get("event_date") or "9999"):
+        _fights = ev.get("fights") or []
+        if not _fights:
+            continue                       # an announced card with no bouts read yet proves nothing
+        _name = (ev.get("event_name") or "").strip()
+        # "UFC 331: Van vs. Pantoja 2" -> badge "UFC 331", matchup the rest.
+        # A numbered PPV and a Fight Night are different things to a reader and
+        # the split is what makes the list scannable at a glance.
+        if ": " in _name:
+            _label, _match = _name.split(": ", 1)
+        else:
+            _label, _match = _name, ""
+        _label = _label.replace("UFC Fight Night", "Fight Night").replace("Noche UFC", "Noche")
+        try:
+            _d = dt.datetime.strptime(ev["event_date"], "%Y-%m-%d")
+            _date = f"{_d.strftime('%b')} {_d.day}"
+        except (KeyError, ValueError, TypeError):
+            continue                       # no parseable date, no row -- never guess one
+        _cards.append({"label": _label, "matchup": _match, "date": _date,
+                       "iso": ev["event_date"], "fights": len(_fights)})
+
+    if _cards:
+        _last = dt.datetime.strptime(_cards[-1]["iso"], "%Y-%m-%d").replace(
+            tzinfo=dt.timezone.utc)
+        coverage = {
+            "cards": _cards,
+            "card_count": len(_cards),
+            "fight_count": sum(c["fights"] for c in _cards),
+            "last": _cards[-1],
+            # Floor, so the headline number is never larger than the truth.
+            "weeks_out": max(1, (_last - dt.datetime.now(dt.timezone.utc)).days // 7),
+        }
+        print(f"[landing] forward coverage: {coverage['card_count']} cards, "
+              f"{coverage['fight_count']} fights, out to {_cards[-1]['date']} "
+              f"({coverage['weeks_out']}w)")
+    else:
+        print("[landing] no future cards with fights -- coverage section omitted")
+
     html = env.get_template("landing.html").render(
         preview=preview,
         tape=tape,
+        coverage=coverage,
+        landing_facts=landing_facts or [],
         best_clv=best_clv,
         clv_stats=track_record.get("clv_stats"),
         countdown_target_iso=countdown_target_iso or "",

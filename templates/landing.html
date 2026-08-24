@@ -147,6 +147,7 @@
   .recline{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
   .big{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:-.035em;
        line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;margin:0}
+  .big b{font-weight:inherit}
   .big span{font-size:.44em;color:var(--ink3);letter-spacing:0;margin-left:2px}
   .sub{font-size:12px;color:var(--ink3);margin:0;text-align:right}
   .sub b{color:var(--green);font-weight:600}
@@ -304,6 +305,137 @@
   .mrow em{font-style:normal;font-family:var(--mono);font-size:10.5px;width:32px;text-align:right;
            flex:none;font-variant-numeric:tabular-nums}
   .mrow.rr em{color:var(--gold)}
+
+  /* ===== FORWARD COVERAGE ============================================
+     A schedule, not a sentence. "We cover 8 upcoming cards" is a claim the
+     reader has to take on trust; the eight cards with their dates and bout
+     counts is the same information as evidence, in the same space.
+     Monospaced dates and counts so the right-hand columns line up down the
+     list -- a ragged right edge on numbers reads as an estimate. */
+  .sched{display:flex;flex-direction:column}
+  .srow{display:flex;align-items:baseline;gap:8px;padding:6.5px 0;
+        border-bottom:1px solid rgba(255,255,255,.05)}
+  .srow:last-child{border-bottom:0}
+  /* nowrap and sized for the longest label there is ("FIGHT NIGHT"). Wrapped
+     onto two lines it made those rows taller than the numbered-event rows,
+     and a schedule whose row height depends on the promotion's naming reads
+     as broken rather than as dense. */
+  .srow .sb{font-family:var(--mono);font-size:7.5px;letter-spacing:.05em;text-transform:uppercase;
+            color:#8b93a4;width:62px;flex:none;white-space:nowrap}
+  .srow .sm{flex:1;min-width:0;font-size:11.5px;color:#c8ccd6;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .srow .sd{font-family:var(--mono);font-size:9.5px;color:#6d7789;width:38px;text-align:right;
+            flex:none;font-variant-numeric:tabular-nums}
+  .srow .sn{font-family:var(--mono);font-size:9.5px;color:#6d7789;width:16px;text-align:right;
+            flex:none;font-variant-numeric:tabular-nums}
+  /* The furthest-out card IS the argument, so it is the one row that is
+     lit -- everything above it is context for how far the list reaches. */
+  .srow.last .sb{color:var(--gold)}
+  .srow.last .sm{color:#e8eaf0}
+  .srow.last .sd{color:var(--gold)}
+
+  /* ===== FIGHT FACTS =================================================
+     The app's rarity ladder, transplanted. Rarity is carried by the gold
+     ramp, weight and a hairline edge -- deliberately not by a glow or an
+     animated border, which is the loot-box treatment this palette threw out
+     once already and would sit badly next to probability estimates. */
+  .facts{display:flex;flex-direction:column;gap:9px;margin-top:15px}
+  .fact{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:14px;
+        position:relative;overflow:hidden;
+        background:linear-gradient(135deg,rgba(255,255,255,.05),var(--panel) 65%);
+        border:1px solid var(--line)}
+  .fact .fn{flex:none;min-width:50px;text-align:center;font-size:27px;font-weight:700;
+            line-height:1;color:var(--blue);font-variant-numeric:tabular-nums}
+  .fact .fb{flex:1;min-width:0}
+  .fact .ff{font-size:14px;font-weight:700;color:var(--ink);padding-right:62px}
+  .fact .ft2{font-size:11.5px;line-height:1.4;color:var(--ink2);margin-top:2px}
+  .fact .tier{position:absolute;top:12px;right:13px;font-family:var(--mono);font-size:7.5px;
+              letter-spacing:.12em;text-transform:uppercase;padding:2.5px 6px;border-radius:5px;
+              background:rgba(255,255,255,.07);color:var(--ink2)}
+  .fact.gold{background:linear-gradient(135deg,rgba(212,175,55,.12),var(--panel) 65%);
+             border-color:rgba(212,175,55,.45)}
+  .fact.gold .fn{color:var(--gold)}
+  .fact.gold .tier{background:rgba(212,175,55,.16);color:#e0bb45}
+  /* Gradient border via padding-box/border-box, so the 1.5px edge can carry
+     the ramp without a wrapper element.
+     THE INNER LAYER MUST BE FULLY OPAQUE. Started as a translucent gold wash
+     over the ramp, which is not what that stacking order does: the border-box
+     gradient is painted across the WHOLE element, not just the border, so any
+     transparency in the layer above it lets gold flood the entire card. It
+     rendered as a solid gold slab with the fighter's name barely legible on
+     it -- the exact loot-box treatment this palette threw out once already.
+     #1d1a12 is a gold-biased near-black: warm enough to belong to the ramp,
+     opaque enough to keep it confined to the 1.5px it is supposed to be. */
+  .fact.legendary{border:1.5px solid transparent;
+    background:linear-gradient(135deg,#1d1a12,var(--panel) 58%) padding-box,
+               linear-gradient(120deg,#e0bb45,var(--gold),#7a621b,#e0bb45) border-box}
+  .fact.legendary .fn{color:#e0bb45}
+  .fact.legendary .ft2{color:#c3c3cb}
+  .fact.legendary .tier{background:linear-gradient(120deg,#e0bb45,var(--gold));
+                        color:#17170f;font-weight:700}
+
+  /* ===== SCROLL-TRIGGERED REVEAL =====================================
+     NOTHING HERE MOVES UNTIL IT IS ON SCREEN. A chart that drew itself at
+     page load has already finished by the time the reader scrolls to it, so
+     the animation is spent on nobody -- and worse, several of them running
+     at once during the hero is exactly the jank the canvas above is
+     carefully avoiding.
+     Every rule below is keyed off .seen, which an IntersectionObserver adds
+     once, per block, on first entry. No exit rule: re-drawing a chart every
+     time it scrolls back into view is a fidget, not a reveal.
+
+     ALL OF IT DEGRADES TO THE FINISHED STATE. The drawn-in properties are
+     the ones JS sets (--len, --w) or that default to "shown", so with no JS
+     and no observer the page renders exactly as it does at the end of the
+     animation. */
+  /* The generated charts already ship a clip rect for this -- the app wipes
+     it open and the landing page simply never picked the rule up. Linear,
+     not eased: a constant-speed draw is what a line being drawn looks like,
+     and it keeps the endpoint delay below honest. */
+  /* EVERY HIDING RULE IS BEHIND .rv, WHICH THE SCRIPT ADDS TO <html> ONLY
+     ONCE IT HAS SUCCESSFULLY PRIMED AND IS ABOUT TO OBSERVE. The starting
+     state of a reveal is "invisible", so a script that dies between hiding
+     the content and wiring up the thing that un-hides it would blank half
+     the page. Gating on a class JS owns makes the no-JS and broken-JS paths
+     land on the finished page instead of on an empty one. */
+  .rv .chart-reveal-clip{transform:scaleX(0);transition:transform 1.5s linear}
+  .rv [data-reveal].seen .chart-reveal-clip{transform:scaleX(1)}
+  .rv .chart-draw-endpoint{opacity:0;transition:opacity .35s ease-out .1s}
+  .rv [data-reveal].seen .chart-draw-endpoint{opacity:1}
+
+  /* Hand-authored illustration paths: dash the stroke to its own length and
+     wind the offset back to zero. --len is set by JS from getTotalLength();
+     undefined, var(--len) is invalid and dashoffset falls back to 0, which
+     is the fully drawn line. */
+  .rv [data-reveal] [data-draw]{stroke-dashoffset:var(--len);
+                            transition:stroke-dashoffset 1.5s cubic-bezier(.25,.6,.35,1)}
+  .rv [data-reveal].seen [data-draw]{stroke-dashoffset:0}
+  /* Fills, dots and axis furniture follow the line in rather than racing it. */
+  .rv [data-reveal] [data-fade]{opacity:0;transition:opacity .8s ease-out .45s}
+  .rv [data-reveal].seen [data-fade]{opacity:1}
+  /* Bars grow from their own left edge. scaleX rather than width because the
+     authored width is an inline style and must stay the source of truth. */
+  .rv [data-reveal] .mrow i b{transform:scaleX(0);transform-origin:left center;
+                          transition:transform .85s cubic-bezier(.25,.6,.35,1)}
+  .rv [data-reveal].seen .mrow i b{transform:scaleX(1)}
+  .rv [data-reveal] .mrow:nth-child(3) i b{transition-delay:.09s}
+  .rv [data-reveal] .mrow:nth-child(4) i b{transition-delay:.18s}
+  .rv [data-reveal] .mrow:nth-child(5) i b{transition-delay:.27s}
+  /* Ledger rows and fact cards arrive in sequence; --fd is authored per row. */
+  .rv [data-reveal] .ltbl tr,.rv [data-reveal] .fact{opacity:0;transform:translateY(9px);
+    transition:opacity .45s ease-out var(--fd,0s),transform .45s ease-out var(--fd,0s)}
+  .rv [data-reveal].seen .ltbl tr,.rv [data-reveal].seen .fact{opacity:1;transform:none}
+
+  @media (prefers-reduced-motion:reduce){
+    /* Not "faster" -- off. Every one of these lands on the finished state
+       with no transition at all, which is the same page without the motion. */
+    .rv .chart-reveal-clip{transition:none;transform:scaleX(1)}
+    .rv .chart-draw-endpoint{transition:none;opacity:1}
+    .rv [data-reveal] [data-draw]{transition:none;stroke-dashoffset:0}
+    .rv [data-reveal] [data-fade]{transition:none;opacity:1}
+    .rv [data-reveal] .mrow i b{transition:none;transform:none}
+    .rv [data-reveal] .ltbl tr,.rv [data-reveal] .fact{transition:none;opacity:1;transform:none}
+  }
   .ltbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px;
         font-variant-numeric:tabular-nums}
   .ltbl th{text-align:left;color:#6d7789;font-size:8px;letter-spacing:.12em;text-transform:uppercase;
@@ -502,8 +634,34 @@
        considered and dropped -- every tout with a spreadsheet says it, so it
        cannot separate us from one. #}
     <h1>Fight intelligence, <span class="grad">before the market moves.</span></h1>
-    <p class="lede2">Systematic probability modeling for UFC markets. Every pick published
-       before the bell, then graded against the closing line &mdash; win or lose.</p>
+    {# THREE CAPABILITIES, THEN THE PROOF. The old lede spent both sentences on
+       provenance -- published before, graded after -- which is the guarantee,
+       not the product. A first-time reader needs to know what it DOES before
+       they care how honestly it is scored.
+
+       TWO WORDS FROM THE DRAFT ARE DELIBERATELY NOT HERE.
+
+       "Real-time line movement": the tape refreshes on a cadence, not a
+       stream. We just spent a revision removing "minute by minute" for
+       exactly this reason -- "open to bell" is the true and better claim,
+       because the span is the interesting part, not the tick rate.
+
+       "Verified public backtests": this is the one that would actually cost
+       us. A backtest is a model scored against fights that had already
+       happened, and it is what every losing tout publishes, because it is
+       trivial to fit. What is on this page is the opposite and strictly
+       stronger: a forward record, each pick timestamped before its fight.
+       Calling it a backtest would trade the single hardest-won claim we have
+       for the most common one on the internet.
+
+       "Systematic" over "quantitative": quantitative only says there is
+       arithmetic, which is true of a spreadsheet of hunches. Systematic says
+       the rules are fixed in advance and nobody's read of a matchup overrides
+       them on the night -- and that is the claim the ledger, the tier table
+       and the sealed card all exist to back up. #}
+    <p class="lede2">Systematic probability models for UFC markets. Surface pricing edges,
+       track every line from open to bell, and audit a public record that was published
+       before the fights, not after.</p>
     <div class="ctas">
       <button type="button" class="go" data-auth>Start 7 days free &rsaquo;</button>
       <button type="button" class="gh" data-scroll-record>See the record</button>
@@ -534,17 +692,19 @@
   {% endif %}
 
   <div class="eyebrow" id="record" style="margin-top:34px">Public track record &middot; updated {{ generated_at_short }}</div>
-  <div class="reccard">
+  <div class="reccard" data-reveal>
     <div class="recline">
-      <div class="big">{{ '%+.2f'|format(tr.units_stats.total_units) }}<span>U</span></div>
+      {# The figure is wrapped so the count-up can rewrite it without eating
+         the "U" beside it. #}
+      <div class="big"><b data-roll>{{ '%+.2f'|format(tr.units_stats.total_units) }}</b><span>U</span></div>
       <div class="sub">{{ tr.units_stats.eligible_count }} picks &middot; {{ tr.units_stats.event_count }} cards<br><b>ROI {{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b></div>
     </div>
     <div class="curve">{{ units_timeseries_svg | safe }}</div>
     <div class="rails">
-      <div><b>{{ tr.accuracy_pct }}%</b><span>Hit rate</span></div>
-      {% if tr.clv_stats %}<div><b class="up">{{ tr.clv_stats.beat_pct }}%</b><span>Beat the closing line</span></div>{% endif %}
-      <div><b class="up">{{ '%+.2f'|format(tr.units_stats.by_tier['Lock of the Week'].units) }}U</b><span>Lock of the Week {{ tr.lock_record.correct }}/{{ tr.lock_record.total }}</span></div>
-      <div><b>{{ tr.total }}</b><span>Fights graded</span></div>
+      <div><b data-roll>{{ tr.accuracy_pct }}%</b><span>Hit rate</span></div>
+      {% if tr.clv_stats %}<div><b class="up" data-roll>{{ tr.clv_stats.beat_pct }}%</b><span>Beat the closing line</span></div>{% endif %}
+      <div><b class="up" data-roll>{{ '%+.2f'|format(tr.units_stats.by_tier['Lock of the Week'].units) }}U</b><span>Lock of the Week {{ tr.lock_record.correct }}/{{ tr.lock_record.total }}</span></div>
+      <div><b data-roll>{{ tr.total }}</b><span>Fights graded</span></div>
     </div>
   </div>
 
@@ -576,7 +736,65 @@
      are true whether or not a specific fight is handy to illustrate them, so
      the cards always render and fall back to an illustration -- labelled as
      one, so it is never mistaken for a live reading. #}
-  <div class="pcard" data-card>
+
+  {% if coverage %}
+  {# ===== FORWARD COVERAGE =====
+     Every competing product's landing page is about this Saturday, because
+     this Saturday is all most of them have -- a weekly show has to produce a
+     take every week, so the take arrives with the card. A model has no such
+     cadence: pricing a fight ten weeks out costs exactly what pricing it on
+     the day costs, so on any given morning there are two months of read
+     cards already sitting there.
+     Placed FIRST in the section deliberately. "Which fights?" is the question
+     underneath every card below it, and "all of them, into November" is the
+     frame the other five sit inside. It is also the wrong card to put last,
+     next to "every graded card is free" -- the forward reads are the paid
+     thing, and the two claims must not touch. #}
+  <div class="pcard" data-card data-reveal>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      <div><span class="kick">Forward coverage</span>
+        <h3>Every announced fight, {{ coverage.weeks_out }} weeks out</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+    </div>
+    <div class="canvas">
+      <div class="shot">
+        <div class="sh-top"><span>Already priced</span><span>{{ coverage.fight_count }} fights</span></div>
+        <div class="sched">
+          {% for c in coverage.cards %}
+          <div class="srow{% if loop.last %} last{% endif %}">
+            <span class="sb">{{ c.label }}</span>
+            <span class="sm">{{ c.matchup or 'Card announced' }}</span>
+            <span class="sd">{{ c.date }}</span>
+            <span class="sn">{{ c.fights }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      <p>A fight gets a probability, a method distribution and a round <b>the day it is
+         announced</b> &mdash; not on fight week. {{ coverage.last.label }}{% if coverage.last.matchup %},
+         {{ coverage.last.matchup }},{% endif %} is {{ coverage.weeks_out }} weeks away and it is
+         already read, along with every card between here and there.</p>
+      <p>That is the difference between watching a price move for
+         <b>{{ coverage.weeks_out }} weeks</b> and meeting it for the first time on Saturday
+         morning. The opening number is the one the market has thought about least, and it is
+         the only window in which a booking-day mispricing is still on the board.</p>
+      <div class="mini">
+        <div class="r"><span>Cards read right now</span><b>{{ coverage.card_count }}</b></div>
+        <div class="r"><span>Fights priced</span><b>{{ coverage.fight_count }}</b></div>
+        <div class="r"><span>Furthest out</span><b>{{ coverage.last.date }}</b></div>
+      </div>
+      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else does this.</b> Handicapping
+        a card takes a person a week. The model just runs &mdash; so the November fights are
+        priced for the same reason this Saturday's are.</span></div>
+    </div></div>
+  </div>
+  {% endif %}
+
+  <div class="pcard" data-card data-reveal>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">Live market</span>
         <h3>Watch the market move, from open to bell</h3></div>
@@ -592,10 +810,10 @@
         <div class="sh-top"><span>Moneyline movement</span><span>Illustration</span></div>
         <svg class="clvchart" viewBox="0 0 300 104" preserveAspectRatio="none" role="img"
              aria-label="Two prices diverging over time">
-          <path d="M12 52 L58 46 L104 44 L150 38 L196 33 L242 27 L288 20"
+          <path data-draw d="M12 52 L58 46 L104 44 L150 38 L196 33 L242 27 L288 20"
                 fill="none" stroke="var(--red)" stroke-width="1.6" stroke-linejoin="round"
                 vector-effect="non-scaling-stroke"/>
-          <path d="M12 52 L58 58 L104 60 L150 66 L196 71 L242 77 L288 84"
+          <path data-draw d="M12 52 L58 58 L104 60 L150 66 L196 71 L242 77 L288 84"
                 fill="none" stroke="var(--blue)" stroke-width="1.6" stroke-linejoin="round"
                 vector-effect="non-scaling-stroke"/>
           <circle cx="288" cy="20" r="3.2" fill="var(--red)"/>
@@ -618,7 +836,7 @@
     </div></div>
   </div>
 
-  <div class="pcard" data-card>
+  <div class="pcard" data-card data-reveal>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">Scouting</span>
         <h3>Every fighter, ranked against the division</h3></div>
@@ -671,7 +889,7 @@
      that has to be re-argued every time a better or worse one lands. The
      aggregate is the durable form of the same argument -- and it still moves
      on its own as the ledger grows. #}
-  <div class="pcard" data-card data-open>
+  <div class="pcard" data-card data-open data-reveal>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="true">
       <div><span class="kick">Closing line value</span>
         <h3>We beat the closing line {{ clv_stats.beat_pct }}% of the time</h3></div>
@@ -698,15 +916,15 @@
           </defs>
           {# The shaded wedge between entry and close IS the edge -- the thing
              being measured, not decoration around it. #}
-          <path d="M14 30 L58 33 L104 40 L150 44 L196 56 L242 66 L286 74 L286 30 Z"
+          <path data-fade d="M14 30 L58 33 L104 40 L150 44 L196 56 L242 66 L286 74 L286 30 Z"
                 fill="url(#clvFill)"/>
-          <line x1="14" y1="30" x2="286" y2="30" stroke="rgba(255,255,255,.16)"
+          <line data-fade x1="14" y1="30" x2="286" y2="30" stroke="rgba(255,255,255,.16)"
                 stroke-width="1" stroke-dasharray="3 4"/>
-          <path d="M14 30 L58 33 L104 40 L150 44 L196 56 L242 66 L286 74"
+          <path data-draw d="M14 30 L58 33 L104 40 L150 44 L196 56 L242 66 L286 74"
                 fill="none" stroke="#3ddc84" stroke-width="1.6"
                 stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-          <circle cx="14" cy="30" r="3.4" fill="#3ddc84"/>
-          <circle cx="286" cy="74" r="3.4" fill="none" stroke="#e0bb45" stroke-width="1.6"/>
+          <circle data-fade cx="14" cy="30" r="3.4" fill="#3ddc84"/>
+          <circle data-fade cx="286" cy="74" r="3.4" fill="none" stroke="#e0bb45" stroke-width="1.6"/>
         </svg>
         <div class="clvlabels">
           <span><i class="dot g"></i>We publish</span>
@@ -735,7 +953,7 @@
   </div>
   {% endif %}
 
-  <div class="pcard" data-card>
+  <div class="pcard" data-card data-reveal>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">The ledger</span>
         <h3>Priced, not just picked &mdash; including what lost</h3></div>
@@ -749,7 +967,7 @@
         <table class="ltbl">
           <tr><th>Tier</th><th>N</th><th>Units</th></tr>
           {% for tier_name, st in tr.units_stats.by_tier.items() %}
-          <tr><td>{{ tier_name|replace(' Confidence','') }}</td><td>{{ st.count }}</td>
+          <tr style="--fd:{{ loop.index0 * 0.07 }}s"><td>{{ tier_name|replace(' Confidence','') }}</td><td>{{ st.count }}</td>
               <td class="{{ 'up' if st.units >= 0 else 'dn' }}">{{ '%+.2f'|format(st.units) }}</td></tr>
           {% endfor %}
         </table>
@@ -773,7 +991,7 @@
      the reader's reaction is "obviously", which spends a card to say nothing.
      Not editing your picks is the floor, not the product. This is a capability
      they actually get and most services do not offer at all. #}
-  <div class="pcard" data-card>
+  <div class="pcard" data-card data-reveal>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">Method &amp; round</span>
         <h3>Not just who wins &mdash; how, and when</h3></div>
@@ -804,8 +1022,41 @@
     </div></div>
   </div>
 
+  {% if landing_facts %}
+  {# ===== FIGHT FACTS =====
+     The one section on this page that is not an argument. Five analytical
+     cards is a lot of ledger, and this is the beat where the product is
+     simply fun -- which is also true of it, and is most of why anyone opens
+     it on a Tuesday.
+     ONE FACT PER RARITY TIER, chosen in the builder. Three facts that all
+     happened to be common would show the feature without showing the idea;
+     the ladder is the part worth demonstrating. #}
+  <div class="eyebrow" style="margin-top:34px">Fight facts</div>
+  <h2>The things you only notice with every fight in front of you.</h2>
+  <p class="lede2b">Every fighter's whole career is already in the model, so the anomalies fall
+     out of it on their own &mdash; a perfect finish rate, a streak nobody has mentioned, a chin
+     that has never once been cracked. The rarer it is, the rarer the card.</p>
+  <div class="facts" data-reveal>
+    {% for f in landing_facts %}
+    <div class="fact {{ f.tier }}" style="--fd:{{ loop.index0 * 0.11 }}s">
+      <div class="fn" data-roll>{{ f.number }}</div>
+      <div class="fb">
+        <div class="ff">{{ f.fighter }}</div>
+        <div class="ft2">{{ f.text }}</div>
+      </div>
+      {% if f.tier == 'legendary' %}<span class="tier">Legendary</span>
+      {% elif f.tier == 'gold' %}<span class="tier">Rare</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <div class="pv-free">
-    <b>All of the above is free.</b> A free account gets you every graded card &mdash; the tape,
+    {# NOT "all of the above" any more. The forward-coverage card at the top of
+       this section is the paid capability, so the blanket claim stopped being
+       true the moment that card was added. The enumeration below was always
+       the real content of this block; the headline now matches it. #}
+    <b>Every graded card is free.</b> A free account gets you every graded card &mdash; the tape,
     the rails, the radar, the movement, and what the model picked with whether it was right.
     No card required.
     <button type="button" class="cta" style="margin-top:12px" data-auth data-free-cta>Create a free account</button>
@@ -1000,6 +1251,132 @@
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
     });
   });
+
+  /* ===== SCROLL-TRIGGERED REVEAL =====
+     NOTHING ON THIS PAGE ANIMATES UNTIL IT IS ON SCREEN. A chart that drew
+     itself at page load has already finished by the time anyone scrolls to
+     it, so the motion is spent on an empty room -- and five of them running
+     at once during the hero is exactly the main-thread contention the canvas
+     above is built to avoid.
+
+     ONE SHOT, then unobserve. There is no exit rule and no re-play: a chart
+     that redraws every time it scrolls back past is a fidget, not a reveal,
+     and on a page people scroll up and down it becomes the only thing they
+     look at.
+
+     Its own top-level block, not a limb of the auth IIFE below, so a failure
+     in either one cannot take the other down with it. */
+  (function () {
+    var blocks = document.querySelectorAll("[data-reveal]");
+    if (!blocks.length) return;
+
+    /* Reduced motion is not "shorter" here, it is OFF -- and the cheapest
+       way to be off is to never prime anything, so every element simply
+       renders as authored. Same path when the browser has no observer:
+       without one there is no honest way to know the reader has arrived, and
+       showing the finished state beats animating to it blind. */
+    if ((window.matchMedia &&
+         window.matchMedia("(prefers-reduced-motion: reduce)").matches) ||
+        typeof IntersectionObserver !== "function") {
+      return;
+    }
+
+    /* --- numbers --------------------------------------------------------
+       The authored text is kept verbatim and restored on the final frame, so
+       the number that lands is the builder's, never a rounded reconstruction
+       of it. Splitting head/tail rather than replacing the whole string is
+       what preserves the leading "+" and the trailing "%" or "U". */
+    function prime(el) {
+      var text = el.textContent;
+      var m = text.match(/-?[\d.]+/);
+      if (!m) return;
+      el._rt = text;
+      el._rv = parseFloat(m[0]);
+      el._rd = (m[0].split(".")[1] || "").length;
+      el._rh = text.slice(0, m.index);
+      el._rl = text.slice(m.index + m[0].length);
+      // Start at a zero of the SAME WIDTH ("+0.00U", not "0"), so a rail in a
+      // grid cell does not visibly resize on the first frame of the count.
+      el.textContent = el._rh + (0).toFixed(el._rd) + el._rl;
+    }
+
+    function roll(root) {
+      root.querySelectorAll("[data-roll]").forEach(function (el) {
+        if (el._rt === undefined) return;
+        var t0 = 0, dur = 850;
+        // One loop per element. The observer unobserves on first entry so a
+        // second loop should be impossible, but the guard costs nothing and
+        // two interleaved loops on one number count visibly backwards.
+        if (el._raf) cancelAnimationFrame(el._raf);
+        function tick(now) {
+          if (!t0) t0 = now;
+          var t = Math.min(1, (now - t0) / dur);
+          if (t < 1) {
+            // ease-out cubic: the last few counts land slowly, which reads as
+            // arriving at a number rather than as a slot machine stopping.
+            var eased = 1 - Math.pow(1 - t, 3);
+            el.textContent = el._rh + (eased * el._rv).toFixed(el._rd) + el._rl;
+            el._raf = requestAnimationFrame(tick);
+          } else {
+            el.textContent = el._rt;
+            el._raf = 0;
+          }
+        }
+        el._raf = requestAnimationFrame(tick);
+      });
+    }
+
+    /* --- hand-authored strokes -----------------------------------------
+       Dash the stroke to exactly its own length so a full dashoffset hides
+       it and zero shows it whole. The length goes into a custom property
+       rather than an inline stroke-dashoffset, because an inline value would
+       outrank the .seen rule that has to unwind it. */
+    function primeDraw(root) {
+      root.querySelectorAll("[data-draw]").forEach(function (el) {
+        var len = 0;
+        try { len = el.getTotalLength(); } catch (e) { len = 0; }
+        if (!len) return;
+        el.style.strokeDasharray = len;
+        el.style.setProperty("--len", len);
+      });
+    }
+
+    try {
+      blocks.forEach(function (b) {
+        primeDraw(b);
+        b.querySelectorAll("[data-roll]").forEach(prime);
+      });
+
+      // ONLY NOW. .rv is what switches every "start hidden" rule on, so it
+      // goes up after priming has succeeded and one statement before the
+      // observer that will take it back down again.
+      document.documentElement.classList.add("rv");
+
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          io.unobserve(e.target);
+          e.target.classList.add("seen");
+          roll(e.target);
+        });
+      }, {
+        // Threshold 0 with a negative bottom margin, NOT a ratio: a ratio
+        // large enough to mean "properly in view" can never be reached by a
+        // block taller than the viewport, and the expanded cards get there.
+        // This fires when the top edge crosses 88% of the screen height,
+        // which is height-independent and is what "I have scrolled to it"
+        // actually means.
+        threshold: 0,
+        rootMargin: "0px 0px -12% 0px"
+      });
+      blocks.forEach(function (b) { io.observe(b); });
+    } catch (err) {
+      // Put the page back the way it renders with no script at all rather
+      // than leaving content primed-but-never-revealed.
+      document.documentElement.classList.remove("rv");
+      blocks.forEach(function (b) { b.classList.add("seen"); });
+    }
+  })();
 
   /* ===== THE HERO SURFACE =====
      A bivariate Gaussian mixture, wireframed, rotated, and coloured by height.
@@ -1400,11 +1777,28 @@
     }
   }
 
+  /* WAS THIS PAGE REACHED BY GOING BACK? Read synchronously at script start
+     rather than inside the pageshow handler, because pageshow fires after
+     load and the whoami request can resolve first -- which would leave the
+     flag still false at the one moment it is checked. The navigation entry
+     carries its type from the very beginning of the document, so asking now
+     removes the race entirely. */
+  var arrivedBackwards = (function () {
+    try {
+      var nav = performance.getEntriesByType &&
+                performance.getEntriesByType("navigation")[0];
+      if (nav && nav.type) return nav.type === "back_forward";
+      // Deprecated, but it is the only answer older Safari has.
+      return !!(performance.navigation && performance.navigation.type === 2);
+    } catch (e) { return false; }
+  })();
+
   async function refreshState() {
     try {
       var r = await fetch("/auth/whoami", { credentials: "same-origin" });
       state = await r.json();
     } catch (e) { state = { signedIn: false, member: false }; }
+    if (arrivedBackwards && state.signedIn) { location.replace("/"); return; }
     render();
   }
 
@@ -1515,7 +1909,13 @@
      signed-in reader who follows a link back here to read the track record
      is not bounced away from the page they asked for. */
   function goToApp() {
-    location.href = "/";
+    /* replace(), NOT href. A signed-out visitor only ever reaches /welcome by
+       a 302 off "/", so the pitch is the entire history stack; pushing "/" on
+       top of it meant the iOS back swipe out of the product landed straight
+       back on the sales page -- the one page a signed-in reader should never
+       be shown. Replacing drops /welcome at the moment it stops being true,
+       so back from the app goes wherever the reader actually came from. */
+    location.replace("/");
   }
 
   /* --- sign in ------------------------------------------------------ */
@@ -1712,7 +2112,7 @@
     var panel = $("[data-free-plan]");
     if (!panel) return;
     panel.addEventListener("click", function () {
-      if (state.signedIn) { location.href = "/"; return; }
+      if (state.signedIn) { location.replace("/"); return; }
       openSheet(true, "signin");
     });
   })();
@@ -1723,7 +2123,7 @@
       // session, so a signed-in visitor is not asked to sign in before
       // paying. Everything else opens the sheet, which picks its own panel.
       if (b === els.cta && state.signedIn) startCheckout(b);
-      else if (b === els.freeCta && state.signedIn) location.href = "/";
+      else if (b === els.freeCta && state.signedIn) location.replace("/");
       else openSheet(true);
     });
   });
@@ -1745,6 +2145,29 @@
         if (s && s.signedIn) goToApp();
       });
   }
+
+  /* THE SAME PAGE, REACHED BACKWARDS. goToApp() keeps /welcome out of the
+     history stack from the moment someone signs in, but a reader whose stack
+     already held an older entry can still swipe back into the pitch from
+     inside the product.
+     Only a BACK/FORWARD entry is bounced, never a forward one: arriving here
+     deliberately -- a link, a bookmark, someone re-reading the track record --
+     is a page they asked for, and bouncing that would be the bug in the other
+     direction.
+     Two arrival paths, handled in two places. iOS restores this page from
+     bfcache without re-running a line of script, so pageshow.persisted is the
+     only event that fires on the swipe -- that is this handler. A back
+     navigation that missed the cache re-runs everything instead, and is
+     caught by arrivedBackwards above. */
+  window.addEventListener("pageshow", function (e) {
+    // ONLY the bfcache path lives here. A back navigation that missed the
+    // cache re-ran the script, so arrivedBackwards is already set above and
+    // refreshState will act on it as soon as the session is known. A restore
+    // runs no script at all, which is exactly why it needs this event -- and
+    // it arrives with state still populated from before it was frozen, which
+    // is the right answer: someone signed in a moment ago is still signed in.
+    if (e.persisted && state.signedIn) location.replace("/");
+  });
 
   consumeAuthFragment().then(function (handled) { if (!handled) refreshState(); });
 })();

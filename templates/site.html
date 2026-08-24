@@ -1033,10 +1033,24 @@
      specular-to-body relationship the icons already use -- plus weight and a
      hairline edge. Still unmistakably the top tier; no longer a slot
      machine. */
+  /* THE INNER LAYER HAS TO BE OPAQUE, and #302e27 is the only reason this
+     rule does not use rgba(var(--accent-rgb), 0.07) like everything else in
+     the file.
+     padding-box/border-box does not clip the lower layer to the border --
+     the border-box gradient is painted across the WHOLE element and the
+     padding-box layer sits on top of it. So a 7%-alpha wash let the gold
+     ramp through the entire left half of the card: the --accent-hi number
+     all but vanished into it and the detail text became grey on gold. It was
+     the loot-box treatment the comment above says was deliberately removed,
+     arriving back through the stacking order rather than through a glow.
+     #302e27 is that same 7% accent composited over --panel2 by hand, the way
+     --border is the hairline composited over --panel -- identical colour,
+     no transparency for the ramp to climb through. Retune --accent or
+     --panel2 and this needs recomputing with them. */
   .fun-fact-card.legendary {
     border: 1.5px solid transparent;
     background:
-      linear-gradient(135deg, rgba(var(--accent-rgb), 0.07), var(--panel2) 55%) padding-box,
+      linear-gradient(135deg, #302e27, var(--panel2) 55%) padding-box,
       linear-gradient(120deg, var(--accent-hi), var(--accent), var(--accent2), var(--accent-hi)) border-box;
     background-size: 100% 100%, 300% 100%;
     animation: factReveal 0.35s ease-out forwards;
