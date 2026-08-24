@@ -788,6 +788,12 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
         # Tsuruya/Borjas (one jump, mean step 0.27, a clean 34-point climb)
         # exactly as harshly as two charts that were visibly noise.
         fight["moneyline_jumps"] = sum(1 for x in _steps if x >= 8.0)
+        # HOW MUCH OF THE TRAVEL ARRIVED IN JUMPS. This is the number that
+        # actually matters: if a 28-point move happens as one 30-point cliff,
+        # the cliff IS the move and there is nothing to watch it do. Net
+        # minus this is the part of the journey that happened gradually,
+        # which is the only part a "watch the market move" card can show.
+        fight["moneyline_jump_pp"] = round(sum(x for x in _steps if x >= 8.0), 1)
         # A REAL CHANGE OF MIND, not a graze. Testing _lo < 0.5 < _hi called
         # Xiaonan/Gomes a flip on a low of 0.4987 -- four thousandths under
         # even money, invisible on the chart and gone at the next quote. The

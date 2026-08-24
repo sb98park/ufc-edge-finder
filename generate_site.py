@@ -1917,23 +1917,38 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         _span = _f.get("moneyline_span_days") or 0
         _step  = _f.get("moneyline_max_step_pp") or 0
         _jumps = _f.get("moneyline_jumps") or 0
+        _jump_pp = _f.get("moneyline_jump_pp") or 0.0
         if _net < _MIN_NET_PP:
             continue
+        # RANK ON THE PART OF THE MOVE THAT HAPPENED GRADUALLY. Counting
+        # jumps and subtracting a fixed cost per jump was still the wrong
+        # shape: it let a chart win on a big net move that arrived entirely
+        # as one cliff. Production picked exactly that -- Keita/Naimov, +28pp
+        # net across 1.6 days, flat for half its width and then a single
+        # 30-point vertical step. Every number in the ranking said it was the
+        # best chart available and it was the one picture the card must not
+        # show, because a card headlined "watch the market move" needs a
+        # market that visibly moved rather than teleported.
+        # Net minus the travel spent in jumps is that quantity directly, and
+        # it needs no tuned constant to express.
+        # NOT clamped at zero. Flooring it made every jumpy chart tie at
+        # nothing, which handed the decision to span and the flip bonus --
+        # and the runner-up on a build where the good chart was missing was
+        # Xiong/Polastri, thirteen jumps totalling 373 points of travel. A
+        # clean three-point drift over eight days is a better picture than
+        # that, and only an unclamped cost says so.
+        _smooth = _net - _jump_pp
         _score = (
-            _net
-            # A flip is worth something -- the market changed its mind about
-            # who wins -- but not enough to outrank a big clean move. At 25 it
-            # put an 8-point wobble over 1.6 days ahead of a 34-point climb
-            # over 8.6, which is the opposite of the intended ranking.
-            + (12 if _f.get("moneyline_flipped") else 0)
-            # Span carries real weight: "open to bell" is the claim on the
-            # card, and a fortnight of history tells that story where a single
-            # evening cannot. Capped so age alone cannot win it.
+            _smooth * 1.5
+            # Span still carries real weight: "open to bell" is the claim on
+            # the card, and a fortnight tells that story where an evening
+            # cannot. Capped so age alone cannot win it.
             + min(_span, 21) * 2.0
-            # Count of jumps, not the size of the largest. See the note in
-            # line_movement.py: one big step is an event, several are a feed
-            # with gaps, and only the second should cost anything.
-            - _jumps * 5.0
+            + (8 if _f.get("moneyline_flipped") else 0)
+            # A whisper of raw net, purely to break ties on a bad week when
+            # every candidate is jumps and _smooth collapses to zero for all
+            # of them. Too small to reorder anything that is not already tied.
+            + _net * 0.15
         )
         _cands.append((_score, _net, _span, _step, _jumps, _f))
     _cands.sort(key=lambda c: -c[0])
@@ -1942,7 +1957,8 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         for _sc, _net, _span, _step, _jumps, _f in _cands[:5]:
             print(f"           {_sc:6.1f}  {_f.get('fighter_a','?')[:16]:16s} vs "
                   f"{_f.get('fighter_b','?')[:16]:16s} net {_net:5.1f}pp  "
-                  f"span {_span:5.1f}d  worst step {_step:4.1f}pp  jumps {_jumps}"
+                  f"span {_span:5.1f}d  smooth {_net - (_f.get('moneyline_jump_pp') or 0):6.1f}pp  "
+                  f"jumps {_jumps} ({_f.get('moneyline_jump_pp') or 0:.0f}pp)"
                   + ("  FLIP" if _f.get("moneyline_flipped") else ""))
     market_preview = None
     if _cands:
