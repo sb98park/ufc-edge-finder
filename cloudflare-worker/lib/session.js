@@ -19,7 +19,33 @@
  */
 
 const COOKIE = "octane_session";
-const TTL_SECONDS = 30 * 60;
+
+/*
+ * THIRTY MINUTES WITH NO RENEWAL SIGNED PEOPLE OUT EVERY THIRTY MINUTES.
+ * mintSession had exactly one call site -- the sign-in exchange -- so the
+ * clock ran from the moment you signed in and no amount of using the app
+ * extended it. On a home-screen PWA, which reloads when you return to it
+ * after a spell in the background, that surfaced as being logged out
+ * roughly every time you opened the thing. It read as deploy-related only
+ * because the refresh job runs on a similar cadence.
+ *
+ * The window is now a week, and it SLIDES: every whoami and every member
+ * page load re-checks entitlement and re-mints. See renewIfNeeded below for
+ * why a longer cookie does not weaken the guarantee the old TTL was buying.
+ */
+const TTL_SECONDS = 7 * 24 * 60 * 60;
+
+/*
+ * Re-mint once the cookie is past halfway. Renewing on literally every
+ * request would work too, but it puts a Set-Cookie on every response for no
+ * benefit; half-life means an active session is always refreshed well before
+ * it can lapse while most requests carry no cookie header at all.
+ */
+export function isPastHalfLife(session) {
+  if (!session || !session.expiry) return true;
+  const remaining = session.expiry - Date.now();
+  return remaining < (TTL_SECONDS * 1000) / 2;
+}
 
 function bytesToHex(buf) {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");

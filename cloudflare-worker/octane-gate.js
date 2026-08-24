@@ -25,7 +25,7 @@
  */
 
 import { verifySupabaseToken } from "./lib/jwt.js";
-import { mintSession, readSession, clearSession } from "./lib/session.js";
+import { mintSession, readSession, clearSession, isPastHalfLife } from "./lib/session.js";
 import { isMember, accountPlan, forgetEntitlement } from "./lib/entitlement.js";
 import { trialEndTimestamp, findOrCreateCustomer, createCheckoutSession,
          createPortalSession, verifyWebhook } from "./lib/stripe.js";
@@ -578,11 +578,28 @@ async function handleAuthMode(request, env, ctx, url, path, mode) {
   if (path === "/auth/whoami") {
     const session = await readSession(request, env.SESSION_SECRET);
     if (!session) return json({ signedIn: false });
-    // `member` is the gate and comes from the signed cookie. `plan` is the
-    // word the account panel prints and is looked up separately -- see
-    // accountPlan(). Never let the client gate on `plan`.
-    const plan = await accountPlan(session.userId, session.member, env, ctx);
-    return json({ signedIn: true, member: session.member, plan });
+
+    // THE RENEWAL POINT. The app calls this on every load, so re-minting here
+    // is what keeps an active session alive -- and re-asking isMember() while
+    // we do it is what stops a longer cookie weakening anything. Entitlement
+    // baked into a 30-minute cookie was stale for at most 30 minutes; asked
+    // again on every renewal it is stale for at most the 15-minute KV mirror
+    // behind isMember(), so the guarantee got TIGHTER, not looser.
+    // isMember() is KV-backed, so the usual cost here is a cache read.
+    let member = session.member;
+    const headers = new Headers({ "Content-Type": "application/json", "Cache-Control": "no-store" });
+    if (isPastHalfLife(session)) {
+      member = await isMember(session.userId, env, ctx);
+      headers.append("Set-Cookie",
+                     await mintSession({ userId: session.userId, member }, env.SESSION_SECRET));
+    }
+
+    // `member` is the gate. `plan` is the word the account panel prints and is
+    // looked up separately -- see accountPlan(). Never let the client gate on
+    // `plan`.
+    const plan = await accountPlan(session.userId, member, env, ctx);
+    return new Response(JSON.stringify({ signedIn: true, member, plan }),
+                        { status: 200, headers });
   }
 
   // Only once the wall is down. While it is up, /welcome is not yet meant to
@@ -639,16 +656,27 @@ async function handleAuthMode(request, env, ctx, url, path, mode) {
     return null;
   }
 
-  return new Response(object.body, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/html;charset=UTF-8",
-      // Private: this response is specific to one entitled user and must
-      // never be held by a shared cache.
-      "Cache-Control": "private, no-store",
-      "X-Octane-Tier": "member",
-    },
+  // RENEWED HERE AS WELL, not only on whoami. A page load reads the cookie
+  // directly and never consults whoami, so without this a reader who only
+  // ever opens the app -- and whose client never happens to call whoami --
+  // would still lapse mid-week. Re-checking entitlement on the way past is
+  // also what bounds a cancelled subscriber's remaining access to the KV
+  // mirror's fifteen minutes rather than to the cookie's lifetime.
+  const pageHeaders = new Headers({
+    "Content-Type": "text/html;charset=UTF-8",
+    // Private: this response is specific to one entitled user and must
+    // never be held by a shared cache.
+    "Cache-Control": "private, no-store",
+    "X-Octane-Tier": "member",
   });
+  if (isPastHalfLife(session)) {
+    const fresh = await isMember(session.userId, env, ctx);
+    pageHeaders.append("Set-Cookie",
+                       await mintSession({ userId: session.userId, member: fresh },
+                                         env.SESSION_SECRET));
+  }
+
+  return new Response(object.body, { status: 200, headers: pageHeaders });
 }
 
 function json(obj, status = 200) {
