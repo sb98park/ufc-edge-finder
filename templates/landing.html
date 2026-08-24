@@ -113,7 +113,7 @@
   .tick .pr{font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--ink);
             font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   .tick .dl{font-family:var(--mono);font-size:9.5px;font-variant-numeric:tabular-nums;
-            min-width:34px}
+            min-width:44px}
   .tick .dl.up{color:var(--green)}
   .tick .dl.dn{color:var(--red)}
   .tick .dl.fl{color:var(--ink3)}
@@ -242,10 +242,17 @@
     linear-gradient(146deg,#2fd47e 0%,#22a5a5 44%,#4b8dfb 100%);opacity:.72}
   /* the moneyline chart is dropped straight in, so it needs the shot treatment */
   .canvas .dual-chart,.canvas .ml-rail{background:none}
+  /* CENTRE THE PLOT WITHOUT MOVING THE CARD. The chart reserves 36 of its 300
+     viewBox units on the left for y-axis labels and only 10 on the right, so
+     the plot sits 27px further from the card's left edge than its right.
+     Translating the whole SVG fixed the plot and broke the card -- it ended up
+     jammed against the gradient's left edge, which is the same error moved one
+     level up. Padding the RIGHT instead shrinks the chart slightly and lets
+     both the card and the plot sit centred. */
   .canvas > .ml-rail{background:#0b0d12;border:1px solid rgba(255,255,255,.1);
     border-radius:13px 13px 0 0;margin:0;padding:11px 12px 4px;box-shadow:0 20px 44px rgba(0,0,0,.55)}
   .canvas > .dual-chart{background:#0b0d12;border:1px solid rgba(255,255,255,.1);border-top:0;
-    border-radius:0 0 13px 13px;padding:0 6px 8px;box-shadow:0 20px 44px rgba(0,0,0,.55);
+    border-radius:0 0 13px 13px;padding:0 33px 8px 6px;box-shadow:0 20px 44px rgba(0,0,0,.55);
     width:100%;display:block}
   .shot{background:#0b0d12;border:1px solid rgba(255,255,255,.1);border-radius:13px;
         box-shadow:0 20px 44px rgba(0,0,0,.55);color:#e8eaf0;padding:13px;font-size:12px}
@@ -257,6 +264,15 @@
   .rail .r{flex:1}
   .rail span{font-family:var(--mono);font-size:7px;letter-spacing:.1em;color:#6d7789;width:66px;
              text-align:center;flex:none;text-transform:uppercase}
+  .clvchart{display:block;width:100%;height:96px;margin-top:2px}
+  .clvlabels{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:7px;
+             font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;
+             color:#6d7789}
+  .clvlabels .mid{flex:1;text-align:center;color:#8792a2;text-transform:none;letter-spacing:.02em;
+                  font-size:8.5px}
+  .clvlabels .dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:5px}
+  .clvlabels .dot.g{background:var(--green)}
+  .clvlabels .dot.y{background:none;border:1.5px solid var(--gold)}
   .clv{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
   .clv .p{text-align:center;flex:1}
   .clv .p em{font-style:normal;display:block;font-family:var(--mono);font-size:7.5px;
@@ -494,9 +510,12 @@
       <div class="tick" data-t="{{ loop.index0 }}">
         <span class="nm">{{ t.name }}</span>
         <span class="pr">{{ '%+d'|format(t.odds) }}</span>
+        {# Percentage POINTS of implied probability -- see the note in
+           generate_site.py on why a percent change of the price itself is
+           not a quantity that means anything. #}
         {% if t.delta is none %}<span class="dl fl">&middot;&middot;</span>
-        {% elif t.delta > 0 %}<span class="dl up">&#9650;{{ t.delta }}</span>
-        {% elif t.delta < 0 %}<span class="dl dn">&#9660;{{ -t.delta }}</span>
+        {% elif t.delta >= 0.05 %}<span class="dl up">&#9650;{{ '%.1f'|format(t.delta) }}%</span>
+        {% elif t.delta <= -0.05 %}<span class="dl dn">&#9660;{{ '%.1f'|format(-t.delta) }}%</span>
         {% else %}<span class="dl fl">&middot;&middot;</span>{% endif %}
       </div>
       {% endfor %}{% endfor %}
@@ -609,12 +628,38 @@
           <path d="M8 3v10M3 8h10" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round"/></svg></span>
     </div>
     <div class="canvas green">
+      {# TWO WORDS IN BIG TYPE WAS NOT A DEMONSTRATION. "Longer odds" next to
+         "Shorter odds" is the claim restated, not shown -- and at 375px both
+         wrapped onto two lines, so it read as broken as well as abstract.
+         A price PATH shows the same thing in the site's own visual language:
+         it is the moneyline chart above, at illustration scale. Still no
+         fighter named, so nothing here ages. #}
       <div class="shot">
-        <div class="sh-top"><span>How a price moves</span><span>illustration</span></div>
-        <div class="clv">
-          <div class="p"><em>When we publish</em><b style="color:var(--green)">Longer odds</b></div>
-          <div class="arrow"><i></i>the market<br>catches up</div>
-          <div class="p"><em>At the bell</em><b>Shorter odds</b></div>
+        <div class="sh-top"><span>How a price moves</span><span>Illustration</span></div>
+        <svg class="clvchart" viewBox="0 0 300 108" preserveAspectRatio="none" role="img"
+             aria-label="A price drifting from our entry toward the closing line">
+          <defs>
+            <linearGradient id="clvFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#3ddc84" stop-opacity=".22"/>
+              <stop offset="1" stop-color="#3ddc84" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          {# The shaded wedge between entry and close IS the edge -- the thing
+             being measured, not decoration around it. #}
+          <path d="M14 30 L58 33 L104 40 L150 44 L196 56 L242 66 L286 74 L286 30 Z"
+                fill="url(#clvFill)"/>
+          <line x1="14" y1="30" x2="286" y2="30" stroke="rgba(255,255,255,.16)"
+                stroke-width="1" stroke-dasharray="3 4"/>
+          <path d="M14 30 L58 33 L104 40 L150 44 L196 56 L242 66 L286 74"
+                fill="none" stroke="#3ddc84" stroke-width="1.6"
+                stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+          <circle cx="14" cy="30" r="3.4" fill="#3ddc84"/>
+          <circle cx="286" cy="74" r="3.4" fill="none" stroke="#e0bb45" stroke-width="1.6"/>
+        </svg>
+        <div class="clvlabels">
+          <span><i class="dot g"></i>We publish</span>
+          <span class="mid">the market moves toward us</span>
+          <span><i class="dot y"></i>The close</span>
         </div>
         <div class="verdict">{{ clv_stats.beat }} of {{ clv_stats.total }} priced positions moved our way</div>
       </div>

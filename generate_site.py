@@ -1772,11 +1772,27 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
                     except (KeyError, TypeError, ValueError):
                         continue
                     _seen.add(name)
+                    # THE MOVE IS IN IMPLIED PROBABILITY, NOT IN THE NUMBER.
+                    # A percent change of the American price is not a real
+                    # quantity: +110 -> -110 is a 4.8-point move that reads as
+                    # -200%, and the sign flips arbitrarily as the price crosses
+                    # +/-100. Converting both ends to implied probability and
+                    # differencing gives percentage POINTS, which is what a line
+                    # move actually is and what every book quotes internally.
+                    def _implied(o):
+                        return (-o) / ((-o) + 100) if o < 0 else 100 / (o + 100)
+
+                    delta = None
+                    if len(hist) > 1:
+                        try:
+                            delta = round((_implied(now) - _implied(opened)) * 100, 1)
+                        except ZeroDivisionError:
+                            delta = None
                     tape.append({
                         "name": name.split()[-1],
                         "odds": int(round(now)),
                         # None renders as a neutral marker, not a fake zero move
-                        "delta": int(round(now - opened)) if len(hist) > 1 else None,
+                        "delta": delta,
                     })
                 if len(tape) >= 18:
                     break
