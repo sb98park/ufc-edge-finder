@@ -44,6 +44,7 @@ from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parla
 from src.parlay_ledger import record_slips
 from src.recommendations import build_recommendations
 from src.line_movement import (
+    build_snapshot_chart,
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
     load_token_cache, save_token_cache, update_token_cache,
 )
@@ -1566,7 +1567,7 @@ def main(tier: str = "member", output_path: str | None = None):
         try:
             _write_landing(env, track_record, units_timeseries_svg,
                            events, future_events, generated_at_short,
-                           countdown_target_iso, landing_facts)
+                           countdown_target_iso, landing_facts, updated_snapshot)
         except Exception as exc:                      # never break the main build
             print(f"[landing] skipped: {exc}")
 
@@ -1667,7 +1668,7 @@ def _write_legal(env, updated):
 
 
 def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short,
-                   countdown_target_iso=None, landing_facts=None):
+                   countdown_target_iso=None, landing_facts=None, odds_snapshot=None):
     """
     docs/welcome.html -- the marketing page.
 
@@ -1908,9 +1909,24 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
     # real chart still beats a drawing; only a genuinely flat line is
     # rejected, because that is the one case where the illustration is
     # honestly the better picture.
+    # FIGHTS THAT ARE ALREADY OVER ARE THE BETTER PICTURE, and they were not
+    # in the pool at all. An upcoming fight's chart stops at today, halfway
+    # through the story; a graded one runs the whole way to the bell, which is
+    # the arc this card's headline actually promises. Built from the snapshot
+    # alone -- see build_snapshot_chart -- so 89 extra candidates cost no
+    # network at all.
+    _past = []
+    for _r in (track_record.get("results") or []):
+        _c = build_snapshot_chart(_r.get("fighter_a", ""), _r.get("fighter_b", ""),
+                                  odds_snapshot or {})
+        if _c:
+            _c["_when"] = _r.get("date_added", "")
+            _c["_settled"] = True
+            _past.append(_c)
+
     _MIN_NET_PP = 3.0
     _cands = []
-    for _f in _all_fights:
+    for _f in _all_fights + _past:
         if not _f.get("moneyline_chart"):
             continue
         _net  = abs(_f.get("moneyline_net_pp") or 0)
@@ -1969,10 +1985,74 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
             "net": _f.get("moneyline_net_pp"),
             "span_days": _f.get("moneyline_span_days"),
             "flipped": _f.get("moneyline_flipped"),
+            "settled": bool(_f.get("_settled")),
+            "score": round(_cands[0][0], 1),
         }
-        print(f"[landing] market card picked: {market_preview['fighter_a']} vs "
+        print(f"[landing] market card best this build: {market_preview['fighter_a']} vs "
               f"{market_preview['fighter_b']}, net {market_preview['net']:+}pp over "
-              f"{market_preview['span_days']}d")
+              f"{market_preview['span_days']}d (score {market_preview['score']})")
+
+    # ------------------------------------------------------------------
+    # THE CHOSEN CHART IS REMEMBERED BETWEEN BUILDS.
+    #
+    # Re-deciding every 30 minutes is what put a bad chart in front of
+    # readers. The pool is not stable: CLOB history is available for some
+    # fights on some runs and not others, so one build sees a 13-day 1,241
+    # point series and the next sees the same fight with 30 snapshot points.
+    # Picking the best of whatever happens to be present means the page is
+    # only ever as good as its unluckiest build -- and the card that shipped
+    # was a 30-point vertical cliff chosen on a run where the good series
+    # simply was not there.
+    #
+    # A marketing illustration has no reason to churn at that cadence. The
+    # winner is written to disk with its score and only replaced when a new
+    # candidate is CLEARLY better, so a good chart survives every thin build
+    # after it. Two escape valves stop it fossilising: anything materially
+    # better takes the slot immediately, and the stored chart is retired once
+    # it is old enough that "recent" stops being true of it.
+    # ------------------------------------------------------------------
+    _held_path = f"{DATA_DIR}/landing_chart.json"
+    _today = dt.date.today().isoformat()
+    _held = None
+    try:
+        with open(_held_path) as _fh:
+            _held = json.load(_fh)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        _held = None
+
+    _HOLD_MARGIN = 1.15      # a challenger must be 15% better, not merely different
+    _HOLD_MAX_AGE_DAYS = 45  # after this the held chart is no longer "recent"
+
+    def _age_days(iso):
+        try:
+            return (dt.date.today() - dt.date.fromisoformat(iso)).days
+        except (TypeError, ValueError):
+            return 10**6
+
+    if _held and _age_days(_held.get("chosen_on", "")) > _HOLD_MAX_AGE_DAYS:
+        print(f"[landing] held chart retired at {_age_days(_held.get('chosen_on',''))}d old")
+        _held = None
+
+    if market_preview and _held:
+        if market_preview["score"] > _held.get("score", 0) * _HOLD_MARGIN:
+            print(f"[landing] new chart beats the held one "
+                  f"({market_preview['score']} vs {_held.get('score')}) -- replacing")
+            _held = None
+        else:
+            print(f"[landing] keeping the held chart: {_held.get('fighter_a')} vs "
+                  f"{_held.get('fighter_b')} (score {_held.get('score')}, "
+                  f"chosen {_held.get('chosen_on')}); this build's best was "
+                  f"{market_preview['score']}")
+
+    if _held:
+        market_preview = _held
+    elif market_preview:
+        market_preview["chosen_on"] = _today
+        try:
+            with open(_held_path, "w") as _fh:
+                json.dump(market_preview, _fh)
+        except OSError as _exc:
+            print(f"[landing] could not persist the chart choice: {_exc}")
     else:
         # Now genuinely says something: every chart on the page is flat.
         print(f"[landing] no chart moved {_MIN_NET_PP}pp or more across "

@@ -280,6 +280,16 @@
   .rail .r{flex:1}
   .rail span{font-family:var(--mono);font-size:7px;letter-spacing:.1em;color:#6d7789;width:66px;
              text-align:center;flex:none;text-transform:uppercase}
+  /* Sits under the chart rather than above it: the .ml-rail already owns the
+     top of that stack and carries its own rounded corners. */
+  /* Sits on the gradient, not on the dark card, so it cannot use the page's
+     grey ink -- --ink3 against the pink-to-violet band is barely legible.
+     White at low alpha holds up over every gradient the canvas uses. */
+  .mkcap{display:flex;justify-content:space-between;gap:10px;margin-top:9px;
+         font-family:var(--mono);font-size:8px;letter-spacing:.11em;
+         text-transform:uppercase;color:rgba(255,255,255,.72);
+         text-shadow:0 1px 2px rgba(0,0,0,.45)}
+  .mkcap span:last-child{color:rgba(255,255,255,.92);flex:none}
   .clvchart{display:block;width:100%;height:96px;margin-top:2px}
   .clvlabels{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:7px;
              font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;
@@ -840,6 +850,15 @@
          The landing CSS has styled that pair as one card since it was written
          -- this is simply the first build in which the data reaches it. #}
       {% if market_preview %}{{ market_preview.chart | safe }}
+      {# NAME THE FIGHT UNDER THE CHART. The rail above it carries surnames
+         and prices, which reads as live -- and once a finished fight can win
+         the slot, "live" is sometimes wrong. The chart's own axis already
+         shows real dates; this says out loud which fight they belong to and
+         whether it has happened, so neither reading is left to inference. #}
+      <div class="mkcap">
+        <span>{{ market_preview.fighter_a }} vs {{ market_preview.fighter_b }}</span>
+        <span>{% if market_preview.settled %}open to bell, complete{% else %}open to now{% endif %}</span>
+      </div>
       {% else %}
       <div class="shot">
         <div class="sh-top"><span>Moneyline movement</span><span>Illustration</span></div>

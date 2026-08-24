@@ -639,60 +639,45 @@ def build_dual_line_chart_svg(
     )
 
 
-def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict | None = None) -> None:
+def build_snapshot_chart(name_a: str, name_b: str, full_snapshot: dict) -> dict | None:
     """
-    Attaches a dual-line moneyline chart (always shown, using REAL CLOB
-    history when a token ID is available, falling back to our own
-    accumulated snapshot otherwise) and a list of other-market charts
-    (method/rounds/distance, shown behind a toggle).
+    A moneyline chart for one fight, from the accumulated snapshot alone.
 
-    token_cache: a persisted {normalized_fighter_name: clob_token_id} map
-    from PAST runs, used when this run's live discovery didn't happen to
-    surface a fight -- Polymarket's volume-based discovery doesn't find
-    every fight every run (confirmed live: even a card's main event can
-    miss the cut against the whole platform's volume ranking), so without
-    this, a fight's chart would silently regress to sparse data any time
-    discovery has an off run, even after previously having full history.
+    NO NETWORK. attach_charts_to_fight reaches for CLOB history first, which
+    is right for the ~65 fights on the live cards and wrong for the ~90 in
+    the graded record -- that would be 180 requests for a marketing preview.
+    The snapshot already holds what those fights traded at, right up to the
+    bell, which is the whole reason a finished fight makes the better
+    picture: its arc is complete.
+
+    Returns a fight-shaped dict carrying moneyline_chart and its metrics, or
+    None when neither side has enough recorded price to draw.
+    """
+    entry_a = full_snapshot.get(f"{name_a}|Moneyline")
+    entry_b = full_snapshot.get(f"{name_b}|Moneyline")
+    points_a = _snapshot_points(entry_a.get("history") or []) if entry_a else []
+    points_b = _snapshot_points(entry_b.get("history") or []) if entry_b else []
+    if len(points_a) < 2 and len(points_b) < 2:
+        return None
+    fight = {"fighter_a": name_a, "fighter_b": name_b}
+    _finish_moneyline_chart(fight, points_a, points_b, quiet=True)
+    return fight if fight.get("moneyline_chart") else None
+
+
+def _finish_moneyline_chart(fight: dict, points_a: list, points_b: list,
+                            quiet: bool = False) -> None:
+    """
+    Reconcile two price series into one chart, and record what shape it is.
+
+    Split out of attach_charts_to_fight so the landing page can build a
+    chart for a fight that is already over -- those carry the complete
+    arc from open to bell, which is the picture the marketing card claims
+    and the one an in-progress fight cannot supply. Everything delicate
+    about a two-way market lives here (vig, complement derivation, which
+    side to trust when they disagree), so it stays in exactly one place.
     """
     fighter_a, fighter_b = fight["fighter_a"], fight["fighter_b"]
-    token_cache = token_cache if token_cache is not None else {}
-
-    ml_edges = [e for e in fight.get("edges", []) if e.get("market") == "Moneyline"]
-    # Normalized matching, not exact string equality -- Polymarket's raw
-    # fighter name can differ from our canonical name in accents/hyphenation
-    # (confirmed live: "Benoît Saint Denis" vs our "Benoit Saint-Denis"),
-    # which silently broke token lookup even though the token was right there.
-    norm_a, norm_b = _normalize_name(fighter_a), _normalize_name(fighter_b)
-    token_a = next((e.get("clob_token_id") for e in ml_edges if _normalize_name(e.get("fighter", "")) == norm_a), None)
-    token_b = next((e.get("clob_token_id") for e in ml_edges if _normalize_name(e.get("fighter", "")) == norm_b), None)
-
-    # Fall back to the persisted cache if this run's live discovery didn't
-    # find a token for one or both sides.
-    if not token_a:
-        token_a = token_cache.get(norm_a)
-    if not token_b:
-        token_b = token_cache.get(norm_b)
-
-    if ml_edges and not (token_a and token_b):
-        debug_rows = [(e.get("fighter"), bool(e.get("clob_token_id"))) for e in ml_edges]
-        print(f"[charts] token lookup failed for {fighter_a!r} vs {fighter_b!r} -- "
-              f"ml_edges fighter/has_token pairs: {debug_rows}")
-
-    points_a = _clob_points(fetch_price_history(token_a)) if token_a else []
-    points_b = _clob_points(fetch_price_history(token_b)) if token_b else []
-
-    if len(points_a) < 2 and len(points_b) < 2:
-        # no real CLOB history available -- fall back to our own accumulated snapshot
-        entry_a = full_snapshot.get(f"{fighter_a}|Moneyline")
-        points_a = _snapshot_points(entry_a["history"]) if entry_a else []
-        entry_b = full_snapshot.get(f"{fighter_b}|Moneyline")
-        points_b = _snapshot_points(entry_b["history"]) if entry_b else []
-        print(f"[charts] {fighter_a} vs {fighter_b}: using OWN SNAPSHOT data "
-              f"({len(points_a)} + {len(points_b)} points) -- no usable CLOB history")
-    else:
-        print(f"[charts] {fighter_a} vs {fighter_b}: using REAL CLOB data "
-              f"({len(points_a)} + {len(points_b)} points)")
-
+    _say = (lambda *a, **k: None) if quiet else print
     # If exactly one side has real history, derive the other as its
     # complement (1 - p at each timestamp) instead of leaving it blank --
     # a two-way moneyline's two probabilities are genuinely complementary
@@ -703,11 +688,11 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
     if len(points_a) >= 2 and len(points_b) < 2:
         points_b = [(t, 1 - p) for t, p in points_a]
         implied_b = True
-        print(f"[charts] {fighter_b}: derived as inverse of {fighter_a}'s real line (no independent data)")
+        _say(f"[charts] {fighter_b}: derived as inverse of {fighter_a}'s real line (no independent data)")
     elif len(points_b) >= 2 and len(points_a) < 2:
         points_a = [(t, 1 - p) for t, p in points_b]
         implied_a = True
-        print(f"[charts] {fighter_a}: derived as inverse of {fighter_b}'s real line (no independent data)")
+        _say(f"[charts] {fighter_a}: derived as inverse of {fighter_b}'s real line (no independent data)")
     elif len(points_a) >= 2 and len(points_b) >= 2:
         # Both sides have independently-sourced real data. A genuine
         # two-way market's two prices are complementary (ignoring vig),
@@ -736,7 +721,7 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
             if latest_ts_a >= latest_ts_b:
                 points_b = [(t, 1 - p) for t, p in points_a]
                 implied_b = True
-                print(f"[charts] {fighter_a} vs {fighter_b}: independent sides didn't sum to 100% "
+                _say(f"[charts] {fighter_a} vs {fighter_b}: independent sides didn't sum to 100% "
                       f"({latest_a*100:.0f}% + {latest_b*100:.0f}%) -- trusting {fighter_a}'s more "
                       f"recent point ({len(points_a)} pts, latest at {latest_ts_a:.0f}) over "
                       f"{fighter_b}'s ({len(points_b)} pts, latest at {latest_ts_b:.0f}), "
@@ -744,7 +729,7 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
             else:
                 points_a = [(t, 1 - p) for t, p in points_b]
                 implied_a = True
-                print(f"[charts] {fighter_a} vs {fighter_b}: independent sides didn't sum to 100% "
+                _say(f"[charts] {fighter_a} vs {fighter_b}: independent sides didn't sum to 100% "
                       f"({latest_a*100:.0f}% + {latest_b*100:.0f}%) -- trusting {fighter_b}'s more "
                       f"recent point ({len(points_b)} pts, latest at {latest_ts_b:.0f}) over "
                       f"{fighter_a}'s ({len(points_a)} pts, latest at {latest_ts_a:.0f}), "
@@ -802,8 +787,65 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
     if points_a and points_b:
         final_a = sorted(points_a, key=lambda p: p[0])[-1][1]
         final_b = sorted(points_b, key=lambda p: p[0])[-1][1]
-        print(f"[charts] {fighter_a} vs {fighter_b}: final displayed values -- "
+        _say(f"[charts] {fighter_a} vs {fighter_b}: final displayed values -- "
               f"{fighter_a}={final_a*100:.1f}% {fighter_b}={final_b*100:.1f}% (sum={round((final_a+final_b)*100)}%)")
+
+
+def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict | None = None) -> None:
+    """
+    Attaches a dual-line moneyline chart (always shown, using REAL CLOB
+    history when a token ID is available, falling back to our own
+    accumulated snapshot otherwise) and a list of other-market charts
+    (method/rounds/distance, shown behind a toggle).
+
+    token_cache: a persisted {normalized_fighter_name: clob_token_id} map
+    from PAST runs, used when this run's live discovery didn't happen to
+    surface a fight -- Polymarket's volume-based discovery doesn't find
+    every fight every run (confirmed live: even a card's main event can
+    miss the cut against the whole platform's volume ranking), so without
+    this, a fight's chart would silently regress to sparse data any time
+    discovery has an off run, even after previously having full history.
+    """
+    fighter_a, fighter_b = fight["fighter_a"], fight["fighter_b"]
+    token_cache = token_cache if token_cache is not None else {}
+
+    ml_edges = [e for e in fight.get("edges", []) if e.get("market") == "Moneyline"]
+    # Normalized matching, not exact string equality -- Polymarket's raw
+    # fighter name can differ from our canonical name in accents/hyphenation
+    # (confirmed live: "Benoît Saint Denis" vs our "Benoit Saint-Denis"),
+    # which silently broke token lookup even though the token was right there.
+    norm_a, norm_b = _normalize_name(fighter_a), _normalize_name(fighter_b)
+    token_a = next((e.get("clob_token_id") for e in ml_edges if _normalize_name(e.get("fighter", "")) == norm_a), None)
+    token_b = next((e.get("clob_token_id") for e in ml_edges if _normalize_name(e.get("fighter", "")) == norm_b), None)
+
+    # Fall back to the persisted cache if this run's live discovery didn't
+    # find a token for one or both sides.
+    if not token_a:
+        token_a = token_cache.get(norm_a)
+    if not token_b:
+        token_b = token_cache.get(norm_b)
+
+    if ml_edges and not (token_a and token_b):
+        debug_rows = [(e.get("fighter"), bool(e.get("clob_token_id"))) for e in ml_edges]
+        print(f"[charts] token lookup failed for {fighter_a!r} vs {fighter_b!r} -- "
+              f"ml_edges fighter/has_token pairs: {debug_rows}")
+
+    points_a = _clob_points(fetch_price_history(token_a)) if token_a else []
+    points_b = _clob_points(fetch_price_history(token_b)) if token_b else []
+
+    if len(points_a) < 2 and len(points_b) < 2:
+        # no real CLOB history available -- fall back to our own accumulated snapshot
+        entry_a = full_snapshot.get(f"{fighter_a}|Moneyline")
+        points_a = _snapshot_points(entry_a["history"]) if entry_a else []
+        entry_b = full_snapshot.get(f"{fighter_b}|Moneyline")
+        points_b = _snapshot_points(entry_b["history"]) if entry_b else []
+        print(f"[charts] {fighter_a} vs {fighter_b}: using OWN SNAPSHOT data "
+              f"({len(points_a)} + {len(points_b)} points) -- no usable CLOB history")
+    else:
+        print(f"[charts] {fighter_a} vs {fighter_b}: using REAL CLOB data "
+              f"({len(points_a)} + {len(points_b)} points)")
+
+    _finish_moneyline_chart(fight, points_a, points_b)
 
     has_live_ml = bool(ml_edges)
     fight["chart_building"] = has_live_ml and not fight["moneyline_chart"]
