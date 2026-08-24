@@ -169,6 +169,19 @@
   .rails b{display:block;font-family:var(--mono);font-size:19px;letter-spacing:-.03em;
            font-weight:600;font-variant-numeric:tabular-nums}
   .rails span{font-size:10.5px;letter-spacing:0;color:var(--ink3);text-transform:none}
+  /* --- the mid-page CTA --- */
+  .actband{margin:22px 0 4px;padding:17px 15px;border-radius:16px;
+    background:linear-gradient(135deg,rgba(212,175,55,.13),rgba(212,175,55,.03) 60%,transparent);
+    border:1px solid rgba(212,175,55,.3)}
+  .ab-rail{display:flex;margin:0 0 13px;border:1px solid var(--line);border-radius:11px;
+           overflow:hidden}
+  .ab-rail div{flex:1;min-width:0;padding:9px 8px;background:rgba(255,255,255,.02)}
+  .ab-rail div+div{border-left:1px solid var(--line)}
+  .ab-rail b{display:block;font-family:var(--mono);font-size:14px;font-weight:600;
+             letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .ab-rail span{font-size:9px;color:var(--ink3)}
+  .ab-l{font-size:14.5px;font-weight:700;letter-spacing:-.015em;margin:0 0 13px}
+
   /* --- record footnote --- */
   .rec-note{margin:15px 0 0;padding-top:13px;border-top:1px solid var(--line);
             font-size:11.5px;line-height:1.55;color:var(--ink3)}
@@ -1066,6 +1079,30 @@
     </div></div>
   </div>
   {% endif %}
+
+  {# THE ONLY PLACE TO ACT BETWEEN THE HERO AND THE PRICES.
+     The hero button sits at ~490px and the next one was the Pro plan at
+     ~5,230px: 5.8 screens holding the record, the closing-line proof and the
+     ledger, with nothing to press. A reader convinced here had to scroll
+     three more screens to do anything about it.
+     HERE, specifically. The three cards above this are what the model
+     produces; this is the first one arguing it is any good, and it closes on
+     why nobody else can show it -- which is where interested turns into
+     convinced. Early enough that three screens remain, 1,900px clear of the
+     pricing section so it is not the same ask twice, and it lands at card
+     four of six, which is exactly where the eye starts skimming a stack of
+     identically-shaped cards.
+     ONE LINE, NOT TWO. The card above is the longest read on the page; coming
+     out of it this should be an exhale, not another paragraph. #}
+  <div class="actband">
+    <div class="ab-rail">
+      <div><b class="up">{{ '%+.2f'|format(tr.units_stats.total_units) }}U</b><span>{{ tr.units_stats.eligible_count }} picks</span></div>
+      {% if tr.clv_stats %}<div><b class="up">{{ tr.clv_stats.beat_pct }}%</b><span>beat the close</span></div>{% endif %}
+      <div><b>{{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b><span>ROI</span></div>
+    </div>
+    <p class="ab-l">That is the whole argument, in three numbers.</p>
+    <button type="button" class="cta" data-auth>Start 7 days free</button>
+  </div>
 
   <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
