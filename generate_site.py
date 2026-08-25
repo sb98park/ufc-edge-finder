@@ -801,11 +801,18 @@ def main(tier: str = "member", output_path: str | None = None):
     calibration_svg = None
     units_sparkline_svg = None
     units_timeseries_svg = None
+    units_shortlist_svg = None
     if track_record and track_record.get("calibration", {}).get("ready"):
         calibration_svg = build_calibration_svg(track_record["calibration"]["points"])
     if track_record and track_record.get("units_stats") and len(track_record["units_stats"]["running_total"]) >= 2:
         units_sparkline_svg = build_sparkline_svg(track_record["units_stats"]["running_total"])
         units_timeseries_svg = build_units_timeseries_svg(track_record["units_stats"]["running_total"])
+        # A SECOND CURVE FOR THE LANDING PAGE, plotting only the two tiers a
+        # reader would actually back. See track_record for why the all-picks
+        # line was the wrong evidence to put under the shortlist table.
+        _sl = track_record["units_stats"].get("shortlist_running") or []
+        if len(_sl) >= 2:
+            units_shortlist_svg = build_units_timeseries_svg(_sl)
 
     event_short_name = (
         analytics_source_event.split(":")[0].strip() if analytics_source_event
@@ -1653,7 +1660,7 @@ def main(tier: str = "member", output_path: str | None = None):
     # ---------------------------------------------------------------------
     if tier != "free" and track_record:
         try:
-            _write_landing(env, track_record, units_timeseries_svg,
+            _write_landing(env, track_record, units_shortlist_svg or units_timeseries_svg,
                            events, future_events, generated_at_short,
                            countdown_target_iso, landing_facts, updated_snapshot,
                            countdown_series, countdown_matchup)

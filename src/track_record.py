@@ -1342,7 +1342,35 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
                 "won": bool(m.get("correct")),
                 "tier": m.get("confidence_label") or "",
             })
+        # THE SHORTLIST CURVE: locks and high confidence only.
+        #
+        # The all-picks curve answers "what if you backed all 88", and nobody
+        # bets that way -- the landing page's own copy has argued for months
+        # that a real bettor takes the locks, or the locks plus high
+        # confidence, and stops. A curve that plots something nobody would do
+        # is not evidence for the two rows printed directly above it.
+        #
+        # Not a restatement and not a filter applied after the fact: these are
+        # the same graded picks at the same published stakes, with the tiers
+        # below them left out of the line rather than out of the record. The
+        # ledger card still carries every tier, Medium's losses included.
+        _short = [m for m in units_eligible
+                  if m["is_lock_of_week"] or m["confidence_label"] == "High Confidence"]
+        short_running = [0.0]
+        _short_cum = 0.0
+        for m in reversed(_short):
+            _short_cum += m["units_result"]
+            short_running.append(round(_short_cum, 2))
+        _short_staked = sum(m["unit_size"] for m in _short if m["unit_size"] is not None)
+
         units_stats = {
+            "shortlist_running": short_running,
+            "shortlist_count": len(_short),
+            "shortlist_units": round(_short_cum, 2),
+            "shortlist_staked": round(_short_staked, 2),
+            "shortlist_roi_pct": (round(_short_cum / _short_staked * 100, 1)
+                                  if _short_staked else None),
+            "shortlist_events": len({m["event_name"] for m in _short}),
             "total_units": total_units,
             "total_staked": total_staked,
             "roi_pct": round(total_units / total_staked * 100, 1) if total_staked else None,

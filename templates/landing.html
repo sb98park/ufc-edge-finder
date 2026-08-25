@@ -212,7 +212,7 @@
   .g2{font-size:12.5px;color:var(--ink3);margin-top:5px}
 
   /* --- the mid-page CTA --- */
-  .actband{margin:22px 0 4px;padding:17px 15px;border-radius:16px;
+  .actband{margin:26px 0 24px;padding:17px 15px 18px;border-radius:16px;
     background:linear-gradient(135deg,rgba(212,175,55,.13),rgba(212,175,55,.03) 60%,transparent);
     border:1px solid rgba(212,175,55,.3)}
   .ab-rail{display:flex;margin:0 0 13px;border:1px solid var(--line);border-radius:11px;
@@ -222,9 +222,14 @@
   .ab-rail b{display:block;font-family:var(--mono);font-size:14px;font-weight:600;
              letter-spacing:-.03em;font-variant-numeric:tabular-nums}
   .ab-rail span{font-size:9px;color:var(--ink3)}
-  .ab-l{font-size:14.5px;font-weight:700;letter-spacing:-.015em;margin:0 0 13px}
+  .ab-l{font-size:14.5px;font-weight:700;letter-spacing:-.015em;margin:0 0 13px;
+        /* Matches .ab-rail's cell padding plus its border, so the sentence
+           starts under the "+63.44U" rather than a hair to its left. */
+        padding-left:9px}
 
   /* --- record footnote --- */
+  .curve-cap{margin:0 0 6px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+             text-transform:uppercase;color:var(--ink3);line-height:1.5}
   .rec-note{margin:15px 0 0;padding-top:13px;border-top:1px solid var(--line);
             font-size:11.5px;line-height:1.55;color:var(--ink3)}
   .rec-note em{color:var(--ink2);font-style:italic}
@@ -364,12 +369,22 @@
          text-transform:uppercase;color:rgba(255,255,255,.72);
          text-shadow:0 1px 2px rgba(0,0,0,.45)}
   .mkcap span:last-child{color:rgba(255,255,255,.92);flex:none}
-  .clvchart{display:block;width:100%;height:96px;margin-top:2px}
+  .clvchart{display:block;width:100%;height:106px;margin-top:2px;overflow:visible}
+  /* The axis title and the two end prices live INSIDE the svg, so they scale
+     with it and cannot drift away from the points they label. */
+  .clv-ax{font-family:var(--mono);font-size:7.5px;letter-spacing:.11em;
+          text-transform:uppercase;fill:#6d7789}
+  .clv-pt{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:-.02em}
+  .clv-pt.sm{font-size:7.5px;font-weight:400;letter-spacing:.08em;fill:#6d7789}
+  .clv-pt.g{fill:var(--green)}
+  .clv-pt.y{fill:var(--gold)}
+  .clv-pt.g.sm, .clv-pt.y.sm{fill:#6d7789}
   .clvlabels{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:7px;
              font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;
              color:#6d7789}
   .clvlabels .mid{flex:1;text-align:center;color:#8792a2;text-transform:none;letter-spacing:.02em;
                   font-size:8.5px}
+  .clvlabels span:last-child{text-align:right}
   .clvlabels .dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:5px}
   .clvlabels .dot.g{background:var(--green)}
   .clvlabels .dot.y{background:none;border:1.5px solid var(--gold)}
@@ -877,15 +892,23 @@
     <div class="recline">
       {# The figure is wrapped so the count-up can rewrite it without eating
          the "U" beside it. #}
-      <div class="big"><b data-roll>{{ '%+.2f'|format(tr.units_stats.total_units) }}</b><span>U</span></div>
-      <div class="sub">{{ tr.units_stats.eligible_count }} picks &middot; {{ tr.units_stats.event_count }} cards<br><b>ROI {{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b></div>
+      {# THE FIGURE DESCRIBES THE CURVE BELOW IT, and the curve now plots the
+         two tiers the table above is about. A +63.44U headline over a line
+         ending at +58.76U is two different claims stacked on top of each
+         other, and the reader has no way to tell which one they are looking
+         at. Every tier, Medium's losses included, is still in the ledger
+         card. #}
+      <div class="big"><b data-roll>{{ '%+.2f'|format(tr.units_stats.shortlist_units) }}</b><span>U</span></div>
+      <div class="sub">{{ tr.units_stats.shortlist_count }} picks &middot; {{ tr.units_stats.shortlist_events }} cards<br><b>ROI {{ '%+.1f'|format(tr.units_stats.shortlist_roi_pct) }}%</b></div>
     </div>
+    <p class="curve-cap">Locks and high confidence only, at the stakes above &mdash;
+       {{ tr.units_stats.shortlist_count }} picks, {{ '%.0f'|format(tr.units_stats.shortlist_staked) }}U risked</p>
     <div class="curve">{{ units_timeseries_svg | safe }}</div>
     <div class="rails">
       <div><b data-roll>{{ tr.accuracy_pct }}%</b><span>Hit rate</span></div>
       {% if tr.clv_stats %}<div><b class="up" data-roll>{{ tr.clv_stats.beat_pct }}%</b><span>Beat the closing line</span></div>{% endif %}
       <div><b class="up" data-roll>{{ '%+.2f'|format(tr.units_stats.by_tier['Lock of the Week'].units) }}U</b><span>Lock of the Week {{ tr.lock_record.correct }}/{{ tr.lock_record.total }}</span></div>
-      <div><b data-roll>{{ tr.total }}</b><span>Fights graded</span></div>
+      <div><b data-roll>{{ tr.total }}</b><span>Fights graded, all tiers</span></div>
     </div>
     {# THIS WAS A SEPARATE BOX WITH A GOLD BAR DOWN ITS LEFT EDGE, floating
        between the record and the section below it. The bar was the only thing
@@ -926,7 +949,12 @@
      would get blurred by accident. #}
   <div class="howto" data-reveal>
     <div class="g1">How you'd use it</div>
-    <h2 style="margin-top:6px">Four days before the bell.</h2>
+    {# THIS SAID "Four days before the bell" AND THE FOUR WAS HARDCODED. It
+       happened to be true on the day it was written and is wrong on six days
+       out of seven -- and even when true it named an arbitrary moment, when
+       the actual claim is that the card is up the day the fight is announced,
+       months out. The booking is the moment; Saturday morning is the contrast. #}
+    <h2 style="margin-top:6px">The day the fight is booked.</h2>
     <p class="lede">Not Saturday morning, when the price has already moved.</p>
     <div class="steps">
       <div class="step" style="--fd:0s"><span class="sn">1</span><div>
@@ -1200,30 +1228,44 @@
          fighter named, so nothing here ages. #}
       <div class="shot">
         <div class="sh-top"><span>How a price moves</span><span>Illustration</span></div>
-        <svg class="clvchart" viewBox="0 0 300 108" preserveAspectRatio="none" role="img"
-             aria-label="A price drifting from our entry toward the closing line">
+        {# THE LINE USED TO GO DOWN, AND IT PLOTTED NOTHING.
+           Y was unlabelled and the curve fell left to right, which reads as
+           decline no matter what the caption says -- so the picture argued
+           against the sentence beside it. It also never showed a price, which
+           is the one thing that makes the idea concrete.
+           Y is now the market's own chance our pick wins, so the market
+           agreeing with us moves the line UP, and both ends carry the price
+           they correspond to: +200 on the way in, -150 at the bell. The shaded
+           wedge between the entry level and the curve IS the edge -- the thing
+           being measured, not decoration around it.
+           preserveAspectRatio is gone: the text inside would have been
+           stretched with the box. #}
+        <svg class="clvchart" viewBox="0 0 300 118" role="img"
+             aria-label="The market's implied chance of our pick rising from 33 percent at plus 200 when we published to 60 percent at minus 150 at the close">
           <defs>
             <linearGradient id="clvFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#3ddc84" stop-opacity=".22"/>
+              <stop offset="0" stop-color="#3ddc84" stop-opacity=".26"/>
               <stop offset="1" stop-color="#3ddc84" stop-opacity="0"/>
             </linearGradient>
           </defs>
-          {# The shaded wedge between entry and close IS the edge -- the thing
-             being measured, not decoration around it. #}
-          <path data-fade d="M14 30 L58 33 L104 40 L150 44 L196 56 L242 66 L286 74 L286 30 Z"
+          <text class="clv-ax" x="4" y="20">Market&#8217;s chance our pick wins</text>
+          <path data-fade d="M40 88 L82 84 L124 74 L166 66 L208 54 L250 44 L288 36 L288 88 Z"
                 fill="url(#clvFill)"/>
-          <line data-fade x1="14" y1="30" x2="286" y2="30" stroke="rgba(255,255,255,.16)"
+          <line data-fade x1="40" y1="88" x2="288" y2="88" stroke="rgba(255,255,255,.18)"
                 stroke-width="1" stroke-dasharray="3 4"/>
-          <path data-draw d="M14 30 L58 33 L104 40 L150 44 L196 56 L242 66 L286 74"
-                fill="none" stroke="#3ddc84" stroke-width="1.6"
+          <path data-draw d="M40 88 L82 84 L124 74 L166 66 L208 54 L250 44 L288 36"
+                fill="none" stroke="#3ddc84" stroke-width="1.8"
                 stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-          <circle data-fade cx="14" cy="30" r="3.4" fill="#3ddc84"/>
-          <circle data-fade cx="286" cy="74" r="3.4" fill="none" stroke="#e0bb45" stroke-width="1.6"/>
+          <circle data-fade cx="40" cy="88" r="3.6" fill="#3ddc84"/>
+          <circle data-fade cx="288" cy="36" r="3.6" fill="none" stroke="#e0bb45" stroke-width="1.8"/>
+          <text class="clv-pt g" data-fade x="40" y="105">+200</text>
+          <text class="clv-pt g sm" data-fade x="40" y="114">33%</text>
+          <text class="clv-pt y" data-fade x="288" y="24" text-anchor="end">&#8722;150</text>
+          <text class="clv-pt y sm" data-fade x="288" y="50" text-anchor="end">60%</text>
         </svg>
         <div class="clvlabels">
-          <span><i class="dot g"></i>We publish</span>
-          <span class="mid">the market moves toward us</span>
-          <span><i class="dot y"></i>The close</span>
+          <span><i class="dot g"></i>When we published</span>
+          <span><i class="dot y"></i>At the bell</span>
         </div>
         <div class="verdict">{{ clv_stats.beat }} of {{ clv_stats.total }} priced positions moved our way</div>
       </div>
@@ -1266,7 +1308,7 @@
      out of it this should be an exhale, not another paragraph. #}
   <div class="actband">
     <div class="ab-rail">
-      <div><b class="up">{{ '%+.2f'|format(tr.units_stats.total_units) }}U</b><span>{{ tr.units_stats.eligible_count }} picks</span></div>
+      <div><b class="up">{{ '%+.2f'|format(tr.units_stats.total_units) }}U</b><span>all {{ tr.units_stats.eligible_count }} picks</span></div>
       {% if tr.clv_stats %}<div><b class="up">{{ tr.clv_stats.beat_pct }}%</b><span>beat the close</span></div>{% endif %}
       <div><b>{{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b><span>ROI</span></div>
     </div>
