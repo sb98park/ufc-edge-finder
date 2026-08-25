@@ -97,6 +97,24 @@ def label_for(market: str, fighter: str | None, matchup: str) -> str:
     return m
 
 
+def _venue(edge: dict) -> str:
+    """
+    Where the price was quoted, or "" when nothing said.
+
+    best_book arrives from pandas as a float NaN on any row no book quoted --
+    and NaN is TRUTHY, so `best_book or source` handed it straight through and
+    every fight-level prop rendered "Polymarket" as the word "nan".
+    """
+    for key in ("best_book", "source"):
+        value = edge.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text and text.lower() != "nan":
+            return text
+    return ""
+
+
 def _fight_key(fight: dict) -> str:
     return f"{fight.get('fighter_a')}|{fight.get('fighter_b')}"
 
@@ -157,7 +175,7 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
             "selection": edge.get("fighter"),
             "label": label_for(market, edge.get("fighter"), matchup),
             "odds_american": round(price),
-            "venue": edge.get("best_book") or edge.get("source") or "",
+            "venue": _venue(edge),
             # THE TIER BELONGS TO THE PICK, NOT TO EVERY BET ON THE FIGHT.
             # "Over 2.5 rounds -- Low Confidence" is a category error: the
             # tier describes how sure the model is about WHO WINS, which a
@@ -186,15 +204,20 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
     return taken, refused
 
 
-def build_card_plays(event: dict | None) -> dict:
+def build_card_plays(event: dict | None, committed: list[dict] | None = None) -> dict:
     """
     The staked card. One event -- the one the reader can actually bet.
+
+    `committed` is what the ledger has already published for this card. Those
+    plays are real money at a real price and are never restated; they are
+    passed to select_card so they keep spending the card's budget, and the
+    only thing this call decides is what to ADD. See src/plays_ledger.
 
     Returns plays, the moneyline picks that did NOT make it (with reasons, so
     a tiered pick never vanishes unexplained), and the totals.
     """
     empty = {"event_name": None, "plays": [], "passed": [], "dropped": [],
-             "total_units": 0.0, "fights_considered": 0}
+             "total_units": 0.0, "new_units": 0.0, "fights_considered": 0}
     if not event or not event.get("fights"):
         return empty
 
@@ -209,7 +232,7 @@ def build_card_plays(event: dict | None) -> dict:
         candidates.extend(t)
         refused.extend(r)
 
-    card = select_card(candidates)
+    card = select_card(candidates, committed=committed)
 
     # THE PICKS THAT DID NOT MAKE IT, moneyline only. A reader following the
     # confidence tiers needs to see that the model still likes Umar and the
@@ -231,5 +254,6 @@ def build_card_plays(event: dict | None) -> dict:
         "passed": passed,
         "dropped": card["dropped"],
         "total_units": card["total_units"],
+        "new_units": card["new_units"],
         "fights_considered": considered,
     }

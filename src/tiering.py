@@ -78,6 +78,13 @@ MODEL_ROW_FIELDS = frozenset({
 # `| length` calls keep working and simply render nothing.
 MEMBER_ONLY_CONTEXT = (
     "lock_picks",
+    # THE PLAYS THEMSELVES ARE THE PRODUCT. plays_card and plays_rows are
+    # this weekend's staked bets -- the single most valuable model output on
+    # the site, and the reason to pay for it. plays_record is deliberately NOT
+    # here: it is the settled record of bets already made and belongs with
+    # track_record among the things a free reader gets to audit before paying.
+    "plays_card",
+    "plays_rows",
     "bankroll_parlays",
     "lotto_parlays",
     "model_legs",
@@ -92,6 +99,7 @@ MEMBER_ONLY_CONTEXT = (
 #   notable_movements*        market data, not model output
 #   countdown_confidence_*    aggregate only, no individual pick (see above)
 #   moneyline_chart           book prices; the best free teaser on the page
+#   plays_record              settled bets only -- the record, not the picks
 
 
 def _collect(value, sink: set) -> None:

@@ -66,7 +66,14 @@ TIER_CAP_UNITS = {
     "Medium Confidence": 2.0,
     "Low Confidence": 1.0,
 }
-PROP_CAP_UNITS = 3.0        # below every moneyline tier, deliberately
+# BELOW EVERY TIER WITH REAL EVIDENCE BEHIND IT. At 3.0 this claimed to sit
+# "below every moneyline tier" and did not: Medium is 2 and Low is 1, so the
+# largest stake on a card was routinely a round total on a fight the model was
+# barely confident about. The prop board has no graded record and already
+# faces double the hurdle; it should not also be able to outstake the market
+# that does. Two is Medium's ceiling -- level with a moneyline we have some
+# evidence for, under the two we have the most.
+PROP_CAP_UNITS = 2.0
 MIN_STAKE_UNITS = 1.0       # under this it is not worth publishing
 STAKE_INCREMENT = 0.5       # so a card stays legible
 
@@ -178,7 +185,10 @@ def size_play(p: float, american: float, tier: str, is_prop: bool = False,
         out["reason"] = f"no stake ladder for tier {tier!r}"
         return out
     if p < need:
-        out["reason"] = (f"model {p:.1%} below the {need:.1%} this price needs "
+        # NOT "model X%". The caller stakes the BLENDED probability (see
+        # src/card_plays), and printing it under the model's name in
+        # reader-facing copy would attribute the market's opinion to us.
+        out["reason"] = (f"{p:.1%}, below the {need:.1%} this price needs "
                          f"at a {hurdle:.0%} hurdle")
         return out
 
@@ -203,13 +213,20 @@ def size_play(p: float, american: float, tier: str, is_prop: bool = False,
     return out
 
 
-def select_card(candidates: list[dict]) -> dict:
+def select_card(candidates: list[dict], committed: list[dict] | None = None) -> dict:
     """
     Turn a card's worth of qualifying plays into the ones actually staked.
 
     Each candidate needs: fight_id, axis, units, ev_per_unit, and whatever the
     caller wants carried through. Assumes size_play has already run -- this
     layer is only about correlation and exposure.
+
+    `committed` is money already on the card from an earlier publication. It
+    spends the same budget and occupies the same (fight, axis) slots, but is
+    not re-emitted -- the caller already has those rows and must not restate
+    them at today's prices. This is what makes the caps mean anything across a
+    fight week: without it, a card republished every five minutes gets a fresh
+    20U of room on every render, and "20 units on a card" describes nothing.
 
     Order matters. Within a priority class it is by EV per unit risked, so
     when two plays collide on an axis the better bet keeps the slot rather
@@ -230,6 +247,13 @@ def select_card(candidates: list[dict]) -> dict:
     per_fight: dict = {}
     per_axis: dict = {}
     card_total = 0.0
+
+    for c in (committed or []):
+        fid, axis, units = c.get("fight_id"), c.get("axis"), float(c.get("units", 0.0))
+        used_axis.add((fid, axis))
+        per_fight[fid] = per_fight.get(fid, 0.0) + units
+        per_axis[axis] = per_axis.get(axis, 0.0) + units
+        card_total += units
 
     for c in ranked:
         fid, axis, units = c.get("fight_id"), c.get("axis"), float(c.get("units", 0.0))
@@ -253,4 +277,5 @@ def select_card(candidates: list[dict]) -> dict:
         card_total += units
         taken.append(c)
 
-    return {"plays": taken, "dropped": dropped, "total_units": round(card_total, 2)}
+    return {"plays": taken, "dropped": dropped, "total_units": round(card_total, 2),
+            "new_units": round(sum(float(t.get("units", 0.0)) for t in taken), 2)}

@@ -388,6 +388,18 @@ jobs:
         if: steps.cadence.outputs.build == 'yes'
         run: python scripts/check_stake_schedule.py
 
+      - name: Check no published play has been restated
+        # THE SAME ARGUMENT ONE LAYER ALONG. check_stake_schedule refuses to
+        # let a stake edit rewrite the published moneyline record; this
+        # refuses to let a price move rewrite a published BET. The plays
+        # ledger records what the model said it was staking at the moment it
+        # said it, and a card is republished every few minutes for a week --
+        # so "the row already exists, leave it alone" is not a nicety, it is
+        # the only thing standing between a record of bets and a record of
+        # hindsight. Hard gate, same as the two above.
+        if: steps.cadence.outputs.build == 'yes'
+        run: python scripts/check_plays_ledger.py
+
       - name: Publish member payload to R2, then swap free in for Pages
         # ONE STEP, NOT TWO, AND THE SWAP IS UNCONDITIONAL.
         #

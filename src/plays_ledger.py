@@ -91,6 +91,12 @@ def _is_settled_price(american) -> bool:
     return p is None or p >= _SETTLED_PROB or p <= (1.0 - _SETTLED_PROB)
 
 
+def fight_key(fighter_a, fighter_b) -> frozenset:
+    """The pipeline's fight key: order-insensitive, case-folded."""
+    return frozenset({str(fighter_a or "").strip().lower(),
+                      str(fighter_b or "").strip().lower()})
+
+
 def play_id(event_name: str, fighter_a: str, fighter_b: str,
             market: str, selection: str | None) -> str:
     """
@@ -237,8 +243,10 @@ def grade_rows(rows: list[dict], results_by_fight: dict, now: str) -> int:
     Settle every ungraded play we now have a result for. Returns how many
     changed.
 
-    `results_by_fight` is keyed on "fighter_a|fighter_b" and carries winner,
-    method, end_round, end_time.
+    `results_by_fight` is keyed on frozenset({fighter_a.lower(),
+    fighter_b.lower()}) -- the convention the rest of the pipeline already
+    uses, and order-insensitive, which matters because a card can be
+    re-scraped with the corners the other way round.
 
     A play this cannot settle stays ungraded rather than being guessed at, and
     a cancelled fight voids at zero rather than losing -- money that was never
@@ -248,7 +256,7 @@ def grade_rows(rows: list[dict], results_by_fight: dict, now: str) -> int:
     for r in rows:
         if r.get("result"):
             continue
-        res = results_by_fight.get(f"{r.get('fighter_a')}|{r.get('fighter_b')}")
+        res = results_by_fight.get(fight_key(r.get("fighter_a"), r.get("fighter_b")))
         if not res:
             continue
         if res.get("cancelled"):
@@ -269,6 +277,23 @@ def grade_rows(rows: list[dict], results_by_fight: dict, now: str) -> int:
         r["graded_at"] = now
         changed += 1
     return changed
+
+
+def write_graded(rows: list[dict], path: str = LEDGER_PATH) -> None:
+    """
+    Persist rows that grading has just changed.
+
+    Separate from record_plays on purpose: that function is the RENDER path
+    and must never be able to write a result, and this one is the grading path
+    and must never be able to write a price. Two doors, so neither can do the
+    other's job by accident.
+    """
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=FIELDNAMES, extrasaction="ignore")
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: ("" if r.get(k) is None else r.get(k)) for k in FIELDNAMES})
 
 
 def summarise(rows: list[dict]) -> dict:

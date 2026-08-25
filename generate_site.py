@@ -43,6 +43,12 @@ from src.odds_utils import implied_prob_to_american, format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
 from src.parlay_ledger import record_slips
 from src.recommendations import build_recommendations
+from src.card_plays import build_card_plays
+from src.plays_ledger import (
+    load as plays_load, record_plays, committed_for, play_id,
+    grade_rows as grade_plays, summarise as summarise_plays, write_graded,
+    FIELDNAMES as PLAYS_FIELDNAMES, LEDGER_PATH as PLAYS_LEDGER_PATH,
+)
 from src.line_movement import (
     build_snapshot_chart,
     load_snapshot, save_snapshot, annotate_movement, attach_charts_to_fight,
@@ -1075,6 +1081,61 @@ def main(tier: str = "member", output_path: str | None = None):
         if fight.get("is_lock_of_week") and fight.get("preview")
     ]
 
+    # ---- THE PLAYS CARD -------------------------------------------------
+    # Sits here because it needs is_lock_of_week, which the block above just
+    # read back off predictions_log, and because it must see the SAME fight
+    # objects the rest of the page renders -- a plays section computed from a
+    # different snapshot than the card beside it is worse than no plays
+    # section.
+    #
+    # Committed plays go in first. A play published on Tuesday is money down;
+    # this render may only decide what to ADD to it. See src/plays_ledger for
+    # why the card budget has to be spent as it is committed rather than
+    # granted afresh on every one of a week's worth of renders.
+    plays_card = {"event_name": None, "plays": [], "passed": [], "dropped": [],
+                  "total_units": 0.0, "new_units": 0.0, "fights_considered": 0}
+    plays_rows, plays_record = [], None
+    try:
+        _plays_event = events_for_model_only[0] if events_for_model_only else None
+        _ledger = plays_load()
+        plays_card = build_card_plays(
+            _plays_event,
+            committed=committed_for(_plays_event.get("event_name") if _plays_event else None,
+                                    _ledger),
+        )
+
+        # The closing line for everything already on the board, including
+        # plays this render is no longer selecting: a bet placed on Tuesday
+        # still has a closing price, and CLV is the one number on this site
+        # that claims to show edge independently of results.
+        _live = {}
+        for _f in (_plays_event or {}).get("fights", []):
+            for _e in _f.get("edges") or []:
+                _live[play_id(_plays_event.get("event_name"), _f["fighter_a"], _f["fighter_b"],
+                              _e.get("market"), _e.get("fighter"))] = _e.get("odds_american")
+
+        plays_rows = record_plays(plays_card, generated_at_str, live_prices=_live)
+
+        # GRADED FROM RESULTS, NEVER FROM THE RENDER. finished_results is the
+        # same map the rest of this build settles picks from, so the plays
+        # ledger cannot drift into a different opinion about one night.
+        _all = plays_load()
+        _cancelled = {frozenset({f["fighter_a"].strip().lower(), f["fighter_b"].strip().lower()}): {"cancelled": True}
+                      for _ev in events for f in _ev["fights"] if f.get("cancelled")}
+        _n = grade_plays(_all, {**_cancelled, **finished_results}, generated_at_str)
+        if _n:
+            write_graded(_all)
+            plays_rows = [r for r in plays_load()
+                          if r.get("event_name") == plays_card.get("event_name")]
+        plays_record = summarise_plays(plays_load())
+        print(f"[plays] {len(plays_card['plays'])} new, {len(plays_rows)} on the card, "
+              f"{plays_card['total_units']}U committed; record "
+              f"{plays_record['won']}-{plays_record['lost']} ({plays_record['units']:+.2f}U)")
+    except Exception as e:
+        # A broken plays section must not take the site down with it. Every
+        # other section on this page is older and has a record behind it.
+        print(f"[plays] failed, section will be empty: {e}")
+
     # Results coverage, for This Weekend's card specifically -- surfaced
     # both as a step summary (visible directly in the GitHub Actions run
     # UI, not buried in console logs someone has to think to check) and
@@ -1515,6 +1576,7 @@ def main(tier: str = "member", output_path: str | None = None):
         fun_facts_by_fighter=fun_facts_by_fighter,
         favorite_picks=favorite_picks,
         lock_picks=lock_picks,
+        plays_card=plays_card, plays_rows=plays_rows, plays_record=plays_record,
         event_short_name=event_short_name,
         event_full_name=event_full_name,
         event_matchup=event_matchup,

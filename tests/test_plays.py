@@ -79,6 +79,15 @@ check("45% at +160 plays", r["play"], True)
 check("  ...at 2.5U, well under the 10U cap", r["units"], 2.5)
 check("  ...so the cap is not binding", r.get("capped"), False)
 
+print("\na prop never outstakes a moneyline we have evidence for")
+# At 3.0 this claimed to sit "below every moneyline tier" and did not -- Medium
+# is 2 and Low is 1, so the biggest stake on a card was routinely a round total
+# on a fight the model was barely sure about.
+check("the prop ceiling is at or under every tier but Low",
+      PROP_CAP_UNITS <= TIER_CAP_UNITS["Medium Confidence"], True)
+check("  ...and well under the two with a record",
+      PROP_CAP_UNITS < TIER_CAP_UNITS["High Confidence"], True)
+
 print("\nfloors and rejections")
 # +160 needs 40.4%; 41% clears it by 0.6pt and Kelly sizes it at 1.03U, so it
 # plays at the floor. 27% at +300 clears its hurdle too but Kelly only wants

@@ -2417,6 +2417,62 @@
      combination of them does too. That is what lets the reader build a
      two-leg or an eight-leg slip off the same list without the site
      having to guess which they wanted. */
+  /* --- this week's plays ------------------------------------------------
+     THE STAKE IS THE LOUDEST THING ON THE ROW. Everything else here -- the
+     price, the EV, the matchup -- is why the stake is what it is. A reader
+     with the card open and a book in the other hand is looking for one
+     number, and it is how much to put on. */
+  .plays-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 0 2px 10px; border-bottom: 1px solid var(--hairline); margin-bottom: 10px;
+  }
+  .plays-total { font-size: var(--t-body); color: var(--muted); }
+  .plays-total b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .plays-unit { font-size: var(--t-micro); color: var(--muted); white-space: nowrap; }
+  .plays-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .play {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: var(--r-lg); padding: 10px 14px; box-shadow: var(--e1);
+  }
+  .play-stake {
+    flex-shrink: 0; min-width: 46px; text-align: center;
+    font-size: 19px; font-weight: 700; color: var(--accent-hi);
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .play-stake span { font-size: 11px; font-weight: 600; opacity: .72; margin-left: 1px; }
+  /* A prop is staked from a market with no graded record behind it, and the
+     row should say so without a badge shouting it. A quieter stake colour is
+     the whole treatment. */
+  .play.is-prop .play-stake { color: var(--muted); }
+  .play-main { min-width: 0; flex: 1; }
+  .play-label { font-size: var(--t-body); font-weight: 600; color: var(--text); line-height: 1.35; }
+  .play-meta { font-size: var(--t-micro); color: var(--muted); margin-top: 2px; line-height: 1.4; }
+  .play-right { text-align: right; flex-shrink: 0; }
+  .play-price { font-size: var(--t-lead); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .play-ev { font-size: var(--t-micro); color: var(--pos, #3ddc84); white-space: nowrap; margin-top: 1px; }
+  /* PICKED, NOT PLAYED. Without this the plays tab and the fight card look
+     like they disagree about the same fight -- the model likes Umar, and
+     there is no play on him, and nothing on screen says the price is the
+     reason. */
+  .plays-passed { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--hairline); }
+  .plays-passed-title { font-size: var(--t-micro); font-weight: 700; letter-spacing: .06em;
+                        text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .plays-passed ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .plays-passed li { display: flex; gap: 10px; align-items: baseline; font-size: var(--t-micro); }
+  .plays-passed .pp-name { color: var(--text); font-weight: 600; flex-shrink: 0; }
+  .plays-passed .pp-why { color: var(--muted); line-height: 1.45; }
+  .plays-record {
+    display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline;
+    margin: 0 0 14px; padding: 11px 14px;
+    background: var(--sunken); border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  }
+  .plays-record .pr-k { font-size: var(--t-micro); color: var(--muted); display: block; }
+  .plays-record .pr-v { font-size: var(--t-lead); font-weight: 700; color: var(--text);
+                        font-variant-numeric: tabular-nums; }
+  .plays-record .pr-v.up { color: var(--pos, #3ddc84); }
+  .plays-record .pr-v.down { color: var(--neg, #ff7a7a); }
+
   .ml-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .ml-leg {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -4306,11 +4362,13 @@
     body[data-section="coming"] #back-btn,
     body[data-section="howitworks"] #back-btn,
     body[data-section="disclaimer"] #back-btn { display: flex; }
-    /* "More" should hold what the tabs DON'T -- showing Card/Edges/Locks/
-       Record again just duplicates the bar directly above it. */
+    /* "More" should hold what the tabs DON'T -- showing Card/Reads/Plays/
+       Record again just duplicates the bar directly above it. Locks came OFF
+       this list when Plays took its slot on the bar: it is no longer a tab,
+       so More is now the only way to reach it. */
     .hub-card[data-section-nav="thisweekend"],
     .hub-card[data-section-nav="standout"],
-    .hub-card[data-section-nav="locks"],
+    .hub-card[data-section-nav="plays"],
     .hub-card[data-section-nav="track"] { display: none; }
   }
   @media (max-width: 1023px) {
@@ -5914,6 +5972,21 @@
         </div>
         <span class="hub-card-arrow">→</span>
       </div>
+      <div class="hub-card" onclick="showSection('plays')" data-section-nav="plays" role="button" tabindex="0">
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Chips">
+            <defs><linearGradient id="icon-plays" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f5d97a"/><stop offset="100%" stop-color="#d4af37"/></linearGradient></defs>
+            <circle cx="13" cy="13" r="8.2" fill="url(#icon-plays)" opacity="0.15" stroke="url(#icon-plays)" stroke-width="1.6"/>
+            <circle cx="13" cy="13" r="3.4" stroke="url(#icon-plays)" stroke-width="1.6"/>
+            <path d="M13 4.8v2.4M13 18.8v2.4M4.8 13h2.4M18.8 13h2.4" stroke="url(#icon-plays)" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="hub-card-text">
+          <div class="hub-card-title">This Week&rsquo;s Plays <span class="count-badge">{{ plays_rows|length }}</span></div>
+          <div class="hub-card-sub">the bets the model is placing, and what it is staking</div>
+        </div>
+        <span class="hub-card-arrow">&rarr;</span>
+      </div>
       <div class="hub-card" onclick="showSection('locks')" data-section-nav="locks" role="button" tabindex="0">
         <div class="hub-card-icon">
           <svg viewBox="0 0 26 26" fill="none" role="img" aria-label="Padlock">
@@ -7492,6 +7565,80 @@
   </div>
   {% else %}
   {{ empty_state(icon_diamond(), "No favorite picks right now", "Nothing in the realistic straight-bet range at the moment — check back as odds update, or the model just doesn't see a clean high-probability edge on this card yet.") }}
+  {% endif %}
+  </div>
+
+  {#
+    THIS WEEK'S PLAYS. The tiers answer "how sure is the model"; this answers
+    "what would I actually bet", and they are different questions -- a 90%
+    read at -1000 is a confident pick and a terrible bet. See src/plays.py for
+    the rule and src/plays_ledger.py for why nothing here is ever restated.
+  #}
+  <div class="detail-section" data-section="plays">
+  <div class="standout-title" id="section-plays">{{ icon_coins() }} This Week's Plays</div>
+
+  {% if plays_record and plays_record.settled %}
+  <div class="plays-record">
+    <div><span class="pr-k">Record</span>
+      <span class="pr-v">{{ plays_record.won }}&ndash;{{ plays_record.lost }}</span></div>
+    <div><span class="pr-k">Returned</span>
+      <span class="pr-v {{ 'up' if plays_record.units > 0 else 'down' }}">{{ '%+.2f'|format(plays_record.units) }}U</span></div>
+    <div><span class="pr-k">On {{ '%.1f'|format(plays_record.staked) }}U staked</span>
+      <span class="pr-v {{ 'up' if plays_record.units > 0 else 'down' }}">{{ '%+.1f'|format(plays_record.roi_pct) }}%</span></div>
+  </div>
+  {% endif %}
+
+  {% if plays_rows %}
+  <div class="parlay-subtitle">Every bet the model is placing on {{ plays_card.event_name }}, at the price it was placed at. A pick has to beat its own price by a clear margin to become a play &mdash; conviction alone never puts money down, which is why some of the week's strongest reads are in the list below this one rather than in this one.</div>
+  <div class="plays-head">
+    <div class="plays-total"><b>{{ plays_rows|length }}</b> play{{ '' if plays_rows|length == 1 else 's' }} &middot;
+      <b>{{ '%g'|format(plays_card.total_units) }}U</b> at risk</div>
+    <div class="plays-unit">1U = 1% of bankroll</div>
+  </div>
+  <ul class="plays-list">
+    {% for p in plays_rows %}
+    <li class="play{{ ' is-prop' if p.is_prop }}">
+      <div class="play-stake">{{ '%g'|format(p.units) }}<span>U</span></div>
+      <div class="play-main">
+        <div class="play-label">{{ p.label }}</div>
+        <div class="play-meta">{{ p.fighter_a }} vs. {{ p.fighter_b }}{% if p.venue %} &middot; {{ p.venue }}{% endif %}</div>
+      </div>
+      <div class="play-right">
+        <div class="play-price">{{ p.odds_american | american }}</div>
+        {% if p.ev_per_unit %}<div class="play-ev">+{{ (p.ev_per_unit * 100) | round | int }}% EV</div>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% elif tier == 'free' %}
+  {# TIER, NOT EMPTINESS. plays_rows is emptied by redaction on the free
+     build, so the "nothing cleared the bar" copy below would be a flat lie
+     there -- the card is full of plays and this reader simply is not being
+     shown them. Guarded on tier rather than hidden with CSS so the claim
+     cannot leak into the wrong payload. #}
+  <div class="oa-upsell" data-oa-upsell>
+    <div class="oa-upsell-head">The plays are for members</div>
+    <p>Every bet the model is placing this weekend, the price it went in at,
+       and the stake &mdash; sized from the edge rather than from a hunch. The
+       record they build is public either way; the bets themselves are not.</p>
+    <button type="button" class="oa-upsell-cta" data-oa-subscribe="year">Start 7 days free</button>
+    <div class="oa-upsell-fine">$190/yr, or $19/mo &middot; cancel in one tap &middot;
+      <a href="/welcome">see the track record</a></div>
+  </div>
+  {% else %}
+  {{ empty_state(icon_coins(), "No plays this week", "Nothing on this card beats its own price by enough to be worth staking. That is the rule working, not a gap \u2014 a week with no bet is the whole reason the rule exists.") }}
+  {% endif %}
+
+  {% if plays_card and plays_card.passed %}
+  <div class="plays-passed">
+    <div class="plays-passed-title">Picked, not played</div>
+    <ul>
+      {% for p in plays_card.passed %}
+      <li><span class="pp-name">{{ p.selection }} {{ p.odds_american | american }}</span>
+          <span class="pp-why">{{ p.reason }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
   {% endif %}
   </div>
 
@@ -13406,7 +13553,11 @@
         five-character nav label undercutting the most careful writing in the
         product. -#}
     <button class="tabbar-btn" data-tab="standout">{{ icon_target() }}<span>Reads</span></button>
-    <button class="tabbar-btn" data-tab="locks">{{ icon_lock() }}<span>Locks</span></button>
+    {#- PLAYS TOOK THE LOCKS SLOT. A lock is a statement about the model's
+        conviction; a play is a statement about money, and money is what the
+        reader came for. Locks of the Week are still a section, still linked
+        from More, and still badged on the fight cards they belong to. -#}
+    <button class="tabbar-btn" data-tab="plays">{{ icon_coins() }}<span>Plays</span></button>
     <button class="tabbar-btn" data-tab="track">{{ icon_barchart() }}<span>Record</span></button>
     <button class="tabbar-btn" data-tab="__hub">{{ icon_list() }}<span>More</span></button>
   </nav>

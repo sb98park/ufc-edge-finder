@@ -11,7 +11,7 @@ import sys, os, csv, tempfile, json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.plays_ledger import (  # noqa: E402
-    record_plays, load, committed_for, grade_rows, summarise, play_id,
+    record_plays, load, committed_for, grade_rows, summarise, play_id, fight_key,
 )
 from src.card_plays import build_card_plays  # noqa: E402
 
@@ -85,7 +85,7 @@ check("  ...and the total still counts what is already down",
 print("\ngrading")
 ledger = load(tmp)
 ml = [r for r in ledger if r["market"] == "Moneyline"][0]
-results = {f"{ml['fighter_a']}|{ml['fighter_b']}":
+results = {fight_key(ml["fighter_a"], ml["fighter_b"]):
            {"winner": ml["selection"], "method": "KO/TKO", "end_round": 2, "end_time": "1:30"}}
 n = grade_rows(ledger, results, "2026-08-31T04:00:00+00:00")
 check("only the fights we have results for settle", n > 0, True)
@@ -98,13 +98,23 @@ check("ungraded rows stay ungraded",
 print("\na cancelled fight voids at zero, it does not lose")
 ledger2 = load(tmp)
 target = ledger2[0]
-grade_rows(ledger2, {f"{target['fighter_a']}|{target['fighter_b']}": {"cancelled": True}},
+grade_rows(ledger2, {fight_key(target["fighter_a"], target["fighter_b"]): {"cancelled": True}},
            "2026-08-31T04:00:00+00:00")
 voided = [r for r in ledger2 if r["result"] == "void"]
 check("it is marked void", len(voided) > 0, True)
 check("  ...at zero units", float(voided[0]["units_result"]), 0.0)
 check("  ...and stops spending the card's budget",
       len(committed_for(card["event_name"], ledger2)) < len(ledger2), True)
+
+print("\nthe fight key does not care which corner is which")
+ledger3 = load(tmp)
+t3 = [r for r in ledger3 if r["market"] == "Moneyline"][0]
+grade_rows(ledger3, {fight_key(t3["fighter_b"], t3["fighter_a"]):
+                     {"winner": t3["selection"], "method": "Decision - Unanimous",
+                      "end_round": 3, "end_time": "5:00"}},
+           "2026-08-31T04:00:00+00:00")
+check("a re-scraped card with swapped corners still settles",
+      bool([r for r in ledger3 if r["play_id"] == t3["play_id"]][0]["result"]), True)
 
 print("\nthe record counts settled rows only")
 s = summarise(ledger)
