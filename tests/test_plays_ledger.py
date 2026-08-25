@@ -162,6 +162,26 @@ check("  ...so no open label can ride along",
 check("  ...with the staked total counting the settled play only",
       _sum["Card A"]["staked"], 10.0)
 
+print("\nA PLAY THAT NEVER GRADES IS VOIDED, NOT LEFT OPEN FOREVER")
+# Measured across every graded card in predictions_log: nine fights never
+# joined to a result, and six had ONE fighter present under a different
+# pairing -- a late replacement, which in the UFC is routine. A book voids the
+# whole market when that happens, the moneyline included, because the bet was
+# on a matchup that no longer exists.
+from src.plays_ledger import void_stale, VOID_AFTER_DAYS  # noqa: E402
+_stale = [{"play_id": "old", "result": "", "event_date": "2026-08-01", "units": 5.0},
+          {"play_id": "fresh", "result": "", "event_date": "2026-08-30", "units": 5.0},
+          {"play_id": "done", "result": "won", "event_date": "2026-08-01",
+           "units": 5.0, "units_result": 3.0}]
+_hit = void_stale(_stale, "2026-08-31T00:00:00+00:00")
+check("a play stuck open past its card is voided", [r["play_id"] for r in _hit], ["old"])
+check("  ...at zero units, so the bankroll never moves", _stale[0]["units_result"], "0.0")
+check("  ...and says why, rather than just going quiet",
+      "opponent change" in _stale[0]["void_reason"], True)
+check("a card that has only just happened is left alone", _stale[1]["result"], "")
+check("and a settled play is never re-touched", _stale[2]["result"], "won")
+check("  ...keeping its result", _stale[2]["units_result"], 3.0)
+
 print("\nthe record counts settled rows only")
 s = summarise(ledger)
 check("wins and losses add up to settled", s["won"] + s["lost"], s["settled"])

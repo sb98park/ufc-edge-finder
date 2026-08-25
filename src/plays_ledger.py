@@ -51,6 +51,7 @@ outcome.
 from __future__ import annotations
 
 import csv
+import datetime as dt
 import os
 
 from src.odds_utils import american_to_implied_prob, american_to_decimal
@@ -65,8 +66,21 @@ FIELDNAMES = [
     "odds_american", "venue", "units", "to_win",
     "model_prob", "fair_prob", "blended_prob", "ev_per_unit", "required_prob",
     "published_at", "last_seen", "closing_odds",
-    "result", "units_result", "graded_at",
+    "result", "units_result", "graded_at", "void_reason",
 ]
+
+# HOW LONG A PLAY MAY STAY OPEN AFTER ITS CARD.
+#
+# A card grades over about four hours, and results land as the fetcher picks
+# them up, so "the event has some results" is not evidence that a particular
+# fight has happened. Two days is well past the last prelim and well short of
+# anything a human would call slow.
+#
+# Past this line an open play is not waiting, it is stuck -- and a stuck play
+# is worse than a lost one, because it never settles, never reaches the
+# bankroll, and (since summarise_by_event is settled-only) silently vanishes
+# from the card instead of showing as a hole.
+VOID_AFTER_DAYS = 2
 
 # Set on first publication and never rewritten. Everything not in here is
 # either advanced by later renders (last_seen, closing_odds) or filled in by
@@ -264,6 +278,49 @@ def record_plays(card: dict, now: str, live_prices: dict | None = None,
             if by_id[pid].get("event_name") == event_name]
 
 
+def void_stale(rows: list[dict], now: str, days: int = VOID_AFTER_DAYS) -> list[dict]:
+    """
+    Void every play still open more than `days` after its card, and say why.
+
+    WHAT THIS IS ACTUALLY CATCHING: opponent changes. Measured across every
+    graded card in predictions_log, nine fights never joined to a result and
+    six of them had ONE fighter present under a different pairing -- a late
+    replacement, which in the UFC is routine rather than exceptional.
+
+    A book voids the whole market when that happens. Not just the props: the
+    moneyline too, because the bet was on a matchup and the matchup no longer
+    exists. New opponent, new lines, old tickets refunded. So this does not
+    try to be clever about settling the fighter we backed against whoever
+    turned up -- there was no bet to settle.
+
+    Also catches a fight scrapped outright, which resolves the same way.
+
+    Returns the rows it changed, so the caller can report them rather than
+    letting a silent void look like a clean card.
+    """
+    changed = []
+    for r in rows:
+        if (r.get("result") or "").strip():
+            continue
+        try:
+            when = dt.date.fromisoformat(str(r.get("event_date"))[:10])
+        except (TypeError, ValueError):
+            continue
+        try:
+            today = dt.date.fromisoformat(str(now)[:10])
+        except (TypeError, ValueError):
+            continue
+        if (today - when).days <= days:
+            continue
+        r["result"] = "void"
+        r["units_result"] = "0.0"
+        r["graded_at"] = now
+        r["void_reason"] = ("no result for this pairing " + str(days + 1) + "+ days after the card "
+                            "-- opponent change or scratched fight, which voids the market")
+        changed.append(r)
+    return changed
+
+
 def grade_rows(rows: list[dict], results_by_fight: dict, now: str) -> int:
     """
     Settle every ungraded play we now have a result for. Returns how many
@@ -287,6 +344,7 @@ def grade_rows(rows: list[dict], results_by_fight: dict, now: str) -> int:
             continue
         if res.get("cancelled"):
             r["result"], r["units_result"], r["graded_at"] = "void", "0.0", now
+            r["void_reason"] = "fight cancelled"
             changed += 1
             continue
         outcome = settle_play(r.get("market"), r.get("selection"), res)

@@ -47,7 +47,7 @@ from src.card_plays import build_card_plays
 from src import bankroll as bankroll_state
 from src.plays_ledger import (
     load as plays_load, record_plays, committed_for, play_id,
-    grade_rows as grade_plays, summarise as summarise_plays, write_graded,
+    grade_rows as grade_plays, summarise as summarise_plays, write_graded, void_stale,
     summarise_by_event as plays_by_event,
     FIELDNAMES as PLAYS_FIELDNAMES, LEDGER_PATH as PLAYS_LEDGER_PATH,
 )
@@ -1133,6 +1133,18 @@ def main(tier: str = "member", output_path: str | None = None):
         _cancelled = {frozenset({f["fighter_a"].strip().lower(), f["fighter_b"].strip().lower()}): {"cancelled": True}
                       for _ev in events for f in _ev["fights"] if f.get("cancelled")}
         _n = grade_plays(_all, {**_cancelled, **finished_results}, generated_at_str)
+
+        # A PLAY THAT NEVER GRADES IS WORSE THAN ONE THAT LOSES. It stays open
+        # forever, never reaches the bankroll, and -- since summarise_by_event
+        # is settled-only -- vanishes from the card rather than showing as a
+        # hole. The cause is almost always a late opponent change, which a book
+        # settles by voiding the whole market, moneyline included: the bet was
+        # on a matchup and the matchup no longer exists.
+        _voided = void_stale(_all, generated_at_str)
+        for _v in _voided:
+            print(f"[plays] VOID {_v['units']}U {_v['label']!r} on "
+                  f"{_v['fighter_a']} vs {_v['fighter_b']} -- {_v['void_reason']}")
+        _n += len(_voided)
         if _n:
             write_graded(_all)
             plays_rows = [r for r in plays_load()
