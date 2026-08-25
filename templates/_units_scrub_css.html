@@ -1,0 +1,51 @@
+{# Shared Units-curve styling: the Ion accents, the past/future dimming, the
+   odometer digits and the readout. Included by both the app's Record tab and
+   the landing page, because the two charts are now the same chart and any
+   divergence here would show up as the product looking unlike its own
+   marketing. Depends on nothing else on the page. #}
+  /* ===== Units chart scrubbing ===== */
+  /* Same dimming contract as the moneyline charts: what is AFTER the finger
+     fades, so a held point reads as "the record as it stood then" rather than
+     as a cursor parked on a finished line. */
+  .ut-future { opacity: 0; transition: opacity 0.12s ease; }
+  .units-chart-wrap.scrubbing .ut-future { opacity: 0.22; }
+  .ut-spot { transition: opacity 0.12s ease; }
+  @media (prefers-reduced-motion: reduce) {
+    .ut-future, .ut-spot { transition: none; }
+  }
+  .units-chart-wrap { position: relative; touch-action: pan-y; }
+  .units-chart-wrap svg { display: block; }
+  /* NO CURSOR LINE. A vertical rule at the finger is the conventional answer
+     and it was rejected on sight: it puts a hard edge straight through the
+     part of the chart the eye is trying to read. The dot marks the point and
+     the spotlight in the svg carries "here"; between them nothing is drawn
+     across the curve. */
+  .scrub-dot { pointer-events: none; }
+
+  /* ===== Odometer digits =====
+     The scrubbed total animates per digit, and the reason it can is that this
+     DOM is built ONCE and never rebuilt. The previous attempt routed scrub
+     values through the site's rollTo() helper, which wipes its element and
+     rebuilds a span per changed character, then defers a class to the next
+     frame; at scrub rates (~60-120Hz) each rebuild was destroyed before that
+     frame arrived and the biggest number on the site rendered as old and new
+     digits superimposed for the whole gesture.
+     Here every digit position is a fixed 0-9 column and a change is a CSS
+     transform on it. Transforms are interruptible by nature, so the newest
+     value always wins and there is no queue to fall behind. */
+  .od-cell {
+    display: inline-block; overflow: hidden; vertical-align: top;
+    height: var(--od-h, 1.06em);
+    /* NO INHERITED GLOW. text-shadow on the headline would be clipped by this
+       element's own overflow, slicing the glow into one hard-edged rectangle
+       per digit -- the flashing box that killed the first attempt. The glow is
+       re-applied behind the whole figure instead, where nothing clips it. */
+    text-shadow: none;
+  }
+  .od-col { display: block; transition: transform 0.11s cubic-bezier(.3,.9,.35,1); }
+  .od-cell .od-d { display: block; height: var(--od-h, 1.06em); line-height: var(--od-h, 1.06em); }
+  .od-lit {
+    display: inline-block; vertical-align: top;
+    height: var(--od-h, 1.06em); line-height: var(--od-h, 1.06em);
+  }
+  @media (prefers-reduced-motion: reduce) { .od-col { transition: none; } }

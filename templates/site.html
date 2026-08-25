@@ -129,6 +129,12 @@
      2-point blue lift, well below the threshold where it reads as a hue). */
     --text: #eef0f2; --text-soft: #b9bec9; --muted: #9ba1ad; --green: #3ddc84;
     --red: #ff5c5c; --accent: #d4af37; --accent2: #e8c766;
+    /* ION -- the Units curve palette, shared with the landing page. Violet
+       into cyan into ice along the line's own length, so the colour carries
+       the direction of travel. Declared here rather than as literals because
+       the same three values are used by the svg builder, the headline glow
+       and the scrub readout, and a fourth copy is how palettes drift. */
+    --ion-violet: #7c5cff; --ion-cyan: #22d3ee; --ion-ice: #e6fbff;
     --accent-cool: #5fb8c9;
     /* THE THIRD GOLD, which was carrying 37 uses without a name. --accent is
        the body gold and --accent2 the mid-tier one; this is the specular
@@ -1918,8 +1924,32 @@
     font-family: var(--font-display); font-size: var(--t-hero); font-weight: 700; line-height: 1;
     letter-spacing: -0.5px;
   }
-  .units-headline.positive { color: var(--green); text-shadow: 0 0 22px rgba(61,220,132,0.45); }
-  .units-headline.negative { color: var(--red); text-shadow: 0 0 22px rgba(255,92,92,0.4); }
+  /* THE GLOW IS A LAYER, NOT A text-shadow. The figure is a row of odometer
+     cells while a scrub is running, and each cell clips its own overflow --
+     which would slice a text-shadow into one hard-edged rectangle per digit.
+     A blurred radial behind the whole element is clipped by nothing, and at
+     this size reads the same. */
+  .units-headline { position: relative; --od-h: 1.06em; }
+  /* ::after with a SCREEN blend, not ::before with z-index:-1. A negative
+     z-index paints into the nearest stacking context's bottom layer, so the
+     glow's visibility would depend on whether an ancestor happens to make one
+     -- true today, one `transform` away from silently vanishing. Screen is
+     additive: it paints over the digits and can only brighten them, which is
+     what a glow is. */
+  .units-headline::after {
+    content: ""; position: absolute; inset: -18% -8%;
+    border-radius: 50%; pointer-events: none;
+    mix-blend-mode: screen; filter: blur(14px); opacity: 0.55;
+  }
+  /* ION. Positive totals take the same ice the curve's endpoint does, so the
+     number and the line it describes are visibly one object. A NEGATIVE total
+     keeps its red: Ion is a palette for a figure going up, and dressing a loss
+     in it would be the one place here where the styling argued with the
+     number. */
+  .units-headline.positive { color: var(--ion-ice); }
+  .units-headline.positive::after { background: radial-gradient(closest-side, rgba(34,211,238,0.55), transparent); }
+  .units-headline.negative { color: var(--red); }
+  .units-headline.negative::after { background: radial-gradient(closest-side, rgba(255,92,92,0.5), transparent); }
   .units-suffix { font-size: var(--t-h2); opacity: 0.7; margin-left: 1px; }
   .units-sub { font-size: var(--t-small); color: var(--muted); margin-top: 2px; }
   .units-roi.positive { color: var(--green); font-weight: 600; }
@@ -4954,15 +4984,10 @@
      equivalent is what lands -- but it stops shouting. */
   .units-dollars strong { color: var(--text-soft); font-weight: 600; font-family: var(--font-display); }
 
-  /* ===== Units chart scrubbing ===== */
-  /* Same dimming contract as the moneyline charts above: what is AFTER the
-     finger fades, so a held point reads as "the record as it stood then"
-     rather than as a cursor parked on a finished line. */
-  .ut-future { opacity: 0; transition: opacity 0.12s ease; }
-  .units-chart-wrap.scrubbing .ut-future { opacity: 0.22; }
-  @media (prefers-reduced-motion: reduce) { .ut-future { transition: none; } }
-  .units-chart-wrap { position: relative; touch-action: pan-y; }
-  .units-chart-wrap svg { display: block; }
+{% include "_units_scrub_css.html" %}
+  /* Readout placement is per-page: here it sits ABOVE the chart, where the
+     eye already is after reading the big number. Robinhood puts it there for
+     the same reason. */
   .scrub-readout {
     position: absolute; top: -2px; left: 0; right: 0;
     text-align: center; font-size: var(--t-small); color: var(--muted);
@@ -4978,13 +5003,12 @@
      on the one readout whose job is looking trustworthy about money. --bad's
      literal happened to equal --red, so it was wrong only by luck.
      A var() fallback on an undeclared name never errors, which is what let
-     this sit; grep every var(--x, y) in this file before adding another. */
-  .scrub-readout .sr-win { color: var(--green); }
+     this sit; grep every var(--x, y) in this file before adding another.
+     A WIN IS NOW CYAN, not green: this readout sits directly under an Ion
+     curve and was the last green thing left inside it. Losses stay red --
+     that is a warning colour, and Ion has no business restyling one. */
+  .scrub-readout .sr-win { color: var(--ion-cyan); }
   .scrub-readout .sr-loss { color: var(--red); }
-  /* The cursor line and dot are injected into the SVG so they scale with it
-     rather than needing separate positioning maths. */
-  .scrub-line { stroke: rgba(255,255,255,0.35); stroke-width: 1; pointer-events: none; }
-  .scrub-dot { pointer-events: none; }
 
   /* ===== Focus states =====
      There were NONE anywhere in the stylesheet -- keyboard users had no way
@@ -9135,208 +9159,27 @@
 
     {% include "_ml_chart_js.html" %}
 
-    // ===== Units chart scrubbing =====
-    // Drag (or hover on desktop) along the chart to read the cumulative
-    // figure at any pick. The big number rolls with the same odometer helper
-    // the live prices use, so the two behave identically.
-    //
-    // On release it SNAPS BACK to the current total: the headline is a
-    // statement of where things stand, and leaving it parked on an old value
-    // would misreport that to anyone glancing at the page afterwards.
-    function initUnitsScrub() {
-      // ?scrubdebug=1 prints why the scrub bailed, ON THE PAGE. Mobile Chrome
-      // has no console, and every guard below returns silently -- so a
-      // missing data attribute and a broken listener look identical from the
-      // outside. This makes the failing step name itself.
-      const DEBUG = location.search.indexOf('scrubdebug') !== -1;
-      const notes = [];
-      function bail(why) {
-        if (!DEBUG) return;
-        const box = document.createElement('div');
-        box.style.cssText = 'position:fixed;bottom:90px;left:10px;right:10px;z-index:9999;' +
-          'background:#161618;border:1px solid var(--accent);border-radius:8px;padding:12px;' +
-          'font:11px/1.5 monospace;color:#e6e9ef;white-space:pre-wrap;max-height:45vh;overflow:auto';
-        box.textContent = 'SCRUB DIAGNOSTIC\n' + notes.join('\n') + '\n\nBAILED AT: ' + why;
-        document.body.appendChild(box);
-      }
-
+{% include "_units_scrub_js.html" %}
+    // The Record tab's Units Tracker. Same chart, same behaviour and the same
+    // Ion palette as the curve on the landing page -- they are one component
+    // rendered twice, so the wiring is one function called twice.
+    function wireUnitsTracker() {
       const wrap = document.querySelector('.units-chart-wrap');
-      notes.push('1 wrap element      : ' + !!wrap);
-      if (!wrap) { bail('no .units-chart-wrap on the page'); return; }
-      const svg = wrap.querySelector('svg');
-      const figure = document.getElementById('units-figure');
-      const dollars = document.getElementById('units-dollar-figure');
-      const readout = document.getElementById('scrub-readout');
+      if (!wrap) return;
       const headline = document.getElementById('units-headline');
-      notes.push('2 svg inside wrap   : ' + !!svg);
-      notes.push('3 #units-figure     : ' + !!figure);
-      notes.push('4 #scrub-readout    : ' + !!readout);
-      if (!svg || !figure || !readout) { bail('a required element is missing'); return; }
-
-      let points = [];
-      const payload = document.getElementById('units-scrub-points');
-      const raw = payload ? payload.textContent : '';
-      notes.push('5 payload chars     : ' + raw.length + (payload ? '' : '  (SCRIPT TAG MISSING)'));
-      notes.push('   first 90         : ' + raw.slice(0, 90));
-      try { points = JSON.parse(raw || '[]'); }
-      catch (e) { notes.push('   JSON parse ERROR : ' + e.message); bail('data-points is not valid JSON'); return; }
-      notes.push('6 points parsed     : ' + points.length);
-      const xs = (svg.dataset.scrubXs || '').split(',').map(Number);
-      const ys = (svg.dataset.scrubYs || '').split(',').map(Number);
-      notes.push('7 scrub-xs count    : ' + xs.length + '  (raw: ' + (svg.dataset.scrubXs || 'MISSING').slice(0, 40) + ')');
-      if (xs.length < 2 || xs.length !== ys.length) { bail('svg is missing data-scrub-xs / data-scrub-ys'); return; }
-      if (points.length !== xs.length) { notes.push('   MISMATCH: points ' + points.length + ' vs xs ' + xs.length); }
-
-      const vb = svg.viewBox.baseVal;
-      const total = parseFloat(headline?.dataset.total ?? '0');
-
-      // Cursor line + dot live INSIDE the svg so they scale with it -- no
-      // second coordinate system to keep in sync.
-      const ns = 'http://www.w3.org/2000/svg';
-      const line = document.createElementNS(ns, 'line');
-      line.setAttribute('class', 'scrub-line');
-      line.setAttribute('y1', vb.y);
-      line.setAttribute('y2', vb.y + vb.height);
-      const dot = document.createElementNS(ns, 'circle');
-      dot.setAttribute('class', 'scrub-dot');
-      dot.setAttribute('r', '4.5');
-      line.style.display = dot.style.display = 'none';
-      svg.appendChild(line);
-      svg.appendChild(dot);
-
-      // The two clip rects that split the line at the finger. Both are
-      // full-width in the markup, so if either is missing the chart still
-      // draws whole and only the dimming is lost.
-      const clipPast = svg.querySelector('.ut-clip-past');
-      const clipFuture = svg.querySelector('.ut-clip-future');
-      const plotLeft = clipPast ? parseFloat(clipPast.getAttribute('x')) : 0;
-      const plotW = clipPast ? parseFloat(clipPast.getAttribute('width')) : 0;
-      function split(x) {
-        if (!clipPast || !clipFuture) return;
-        // Clamp: a finger past either end must not give a rect a negative
-        // width, which Safari treats as an error and drops the whole clip --
-        // taking the series with it.
-        const cx = Math.max(plotLeft, Math.min(x, plotLeft + plotW));
-        clipPast.setAttribute('width', (cx - plotLeft).toFixed(1));
-        clipFuture.setAttribute('x', cx.toFixed(1));
-        clipFuture.setAttribute('width', (plotLeft + plotW - cx).toFixed(1));
-      }
-      function unsplit() {
-        if (!clipPast || !clipFuture) return;
-        clipPast.setAttribute('width', plotW.toFixed(1));
-        clipFuture.setAttribute('x', plotLeft.toFixed(1));
-        clipFuture.setAttribute('width', plotW.toFixed(1));
-      }
-
-      const fmtU = v => (v >= 0 ? '+' : '') + v.toFixed(2);
-      const fmtD = v => (v >= 0 ? '+' : '-') + '$' + Math.abs(v * 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
-
-      function nearestIndex(clientX) {
-        const r = svg.getBoundingClientRect();
-        // Map screen x into the svg's own coordinate space, so this stays
-        // correct whatever width the svg is rendered at.
-        const sx = ((clientX - r.left) / r.width) * vb.width + vb.x;
-        let best = 0, bestD = Infinity;
-        for (let i = 0; i < xs.length; i++) {
-          const d = Math.abs(xs[i] - sx);
-          if (d < bestD) { bestD = d; best = i; }
-        }
-        return best;
-      }
-
-      function show(i) {
-        const p = points[i];
-        line.setAttribute('x1', xs[i]);
-        line.setAttribute('x2', xs[i]);
-        dot.setAttribute('cx', xs[i]);
-        dot.setAttribute('cy', ys[i]);
-        const won = p && p.won;
-        dot.setAttribute('fill', p ? (won ? 'var(--green)' : '#ff5c5c') : '#8b93a3');
-        line.style.display = dot.style.display = '';
-        split(xs[i]);
-        wrap.classList.add('scrubbing');
-
-        // Cumulative value at this index comes from the points payload's
-        // running figure, reconstructed by summing -- the svg only knows
-        // pixel coordinates, and inverting y_at() here would duplicate the
-        // server's scale maths.
-        let cumUnits = 0;
-        for (let k = 1; k <= i; k++) { if (points[k]) cumUnits += points[k].units; }
-        // WRITTEN DIRECTLY, not rolled. A scrub is direct manipulation: the
-        // number is being driven 1:1 by the finger, so routing it through a
-        // 350ms odometer is both wrong in principle and visibly broken in
-        // practice. show() runs on every mousemove/touchmove (~60-120Hz)
-        // while rollTo() is built for a 90-second price tick -- it wipes the
-        // element, rebuilds a span per changed character, and defers the
-        // .rolling class to the next frame. At scrub rates each rebuild was
-        // destroyed before that frame arrived, so the site's biggest number
-        // rendered as old-and-new digits superimposed (.roll-old is
-        // absolutely positioned over .roll-new until .rolling lands) for the
-        // whole gesture. rollValue is kept in sync so reset()'s odometer --
-        // which IS unattended motion, and appropriate -- still diffs right.
-        figure.textContent = fmtU(cumUnits);
-        figure.dataset.rollValue = fmtU(cumUnits);
-        if (dollars) dollars.textContent = fmtD(cumUnits);
-
-        if (p) {
-          const cls = won ? 'sr-win' : 'sr-loss';
-          readout.innerHTML = p.fight + ' · <span class="' + cls + ' sr-units">' +
-                              fmtU(p.units) + 'U</span>';
-        } else {
-          readout.textContent = 'Before the first pick';
-        }
-      }
-
-      function reset() {
-        line.style.display = dot.style.display = 'none';
-        wrap.classList.remove('scrubbing');
-        unsplit();
-        // DIRECTLY, exactly as show() writes it. Rolling swaps the figure for
-        // a row of .scroll-digit spans, and those clip overflow -- which
-        // slices the figure's green glow into one hard-edged rectangle per
-        // digit. That is the green box that flashed on every release.
-        // The odometer is for a value that changed on its own; releasing a
-        // scrub is just putting back what was already there.
-        figure.textContent = fmtU(total);
-        if (dollars) dollars.textContent = fmtD(total);
-      }
-
-      // --- touch ---
-      let axis = null, x0 = 0, y0 = 0;
-      wrap.addEventListener('touchstart', e => {
-        const t = e.touches[0];
-        x0 = t.clientX; y0 = t.clientY; axis = null;
-      }, { passive: true });
-      wrap.addEventListener('touchmove', e => {
-        const t = e.touches[0];
-        const dx = t.clientX - x0, dy = t.clientY - y0;
-        if (axis === null) {
-          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-          // Lock ONCE. A vertical drag starting on the chart must still
-          // scroll the page rather than being captured as a scrub.
-          axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-        }
-        if (axis !== 'x') return;
-        if (e.cancelable) e.preventDefault();
-        show(nearestIndex(t.clientX));
-      }, { passive: false });
-      wrap.addEventListener('touchend', () => { if (axis === 'x') reset(); axis = null; }, { passive: true });
-      wrap.addEventListener('touchcancel', () => { if (axis === 'x') reset(); axis = null; }, { passive: true });
-
-      // --- desktop: no click needed, the cursor is the finger ---
-      wrap.addEventListener('mousemove', e => show(nearestIndex(e.clientX)));
-      wrap.addEventListener('mouseleave', reset);
-
-      if (DEBUG) {
-        notes.push('8 listeners attached: yes');
-        notes.push('9 touch-action      : ' + getComputedStyle(wrap).touchAction);
-        bail('(nothing -- wiring completed)');
-      }
+      initUnitsScrub({
+        wrap: wrap,
+        figure: document.getElementById('units-figure'),
+        points: document.getElementById('units-scrub-points'),
+        dollars: document.getElementById('units-dollar-figure'),
+        readout: document.getElementById('scrub-readout'),
+        total: parseFloat(headline?.dataset.total ?? '0'),
+      });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initUnitsScrub);
+      document.addEventListener('DOMContentLoaded', wireUnitsTracker);
     } else {
-      initUnitsScrub();
+      wireUnitsTracker();
     }
 
 

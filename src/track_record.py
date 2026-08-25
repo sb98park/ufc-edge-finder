@@ -1357,14 +1357,28 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         _short = [m for m in units_eligible
                   if m["is_lock_of_week"] or m["confidence_label"] == "High Confidence"]
         short_running = [0.0]
+        # Same per-point metadata running_points carries, for the same reason:
+        # the landing page's curve is now scrubbable too, and a held point
+        # that can only say "you were up 34U here" is strictly less useful
+        # than one that also names the pick that moved it. Index 0 is the
+        # synthetic origin and gets a null entry to stay aligned.
+        short_points = [None]
         _short_cum = 0.0
         for m in reversed(_short):
             _short_cum += m["units_result"]
             short_running.append(round(_short_cum, 2))
+            short_points.append({
+                "fight": f'{m["predicted_favorite"]} vs {m["fighter_b"] if m["predicted_favorite"] == m["fighter_a"] else m["fighter_a"]}',
+                "pick": m["predicted_favorite"],
+                "units": round(m["units_result"], 2),
+                "won": bool(m.get("correct")),
+                "tier": m.get("confidence_label") or "",
+            })
         _short_staked = sum(m["unit_size"] for m in _short if m["unit_size"] is not None)
 
         units_stats = {
             "shortlist_running": short_running,
+            "shortlist_points": short_points,
             "shortlist_count": len(_short),
             "shortlist_units": round(_short_cum, 2),
             "shortlist_staked": round(_short_staked, 2),

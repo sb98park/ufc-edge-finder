@@ -90,7 +90,21 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     poly_points = " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
     last_x, last_y = points[-1]
     final_value = running_total[-1]
-    trend_color = "#3ddc84" if final_value >= 0 else "#ff5c5c"
+
+    # ION. The line runs violet -> cyan -> ice along its own length, so the
+    # colour itself carries the direction of travel: the oldest picks are the
+    # coolest and the endpoint is the brightest thing on the chart. A flat
+    # green line said "this is a profit" and nothing else; this says where it
+    # came from, which is the only claim the curve is actually making.
+    #
+    # SIGN STILL OVERRIDES IT. A curve that ends below zero gets the flat red
+    # it has always had. Ion is a palette for a number going up, and dressing
+    # a loss in it would be the one place on this page where the styling
+    # argued with the figure.
+    ION_VIOLET, ION_CYAN, ION_ICE = "#7c5cff", "#22d3ee", "#e6fbff"
+    positive = final_value >= 0
+    trend_color = ION_ICE if positive else "#ff5c5c"
+    line_paint = "url(#units-ts-line)" if positive else "#ff5c5c"
 
     fill_path = (
         f"M{points[0][0]:.1f},{y_at(0):.1f} "
@@ -130,8 +144,8 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     # from a single string keeps the two copies from drifting.
     _series_svg = (
         f'<path d="{fill_path}" fill="url(#units-ts-fill)" stroke="none"/>'
-        f'<polyline points="{poly_points}" fill="none" stroke="{trend_color}" '
-        f'stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>'
+        f'<polyline points="{poly_points}" fill="none" stroke="{line_paint}" '
+        f'stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>'
         # INSIDE the clip. The dot was outside it, hidden only by an opacity
         # delay -- which works right up until the block was revealed earlier
         # than the reader scrolled to it, and then the dot simply sat there
@@ -147,6 +161,42 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
         f'style="transform-box: fill-box; transform-origin: center;"/>'
     )
 
+    # Both ramps are emitted here rather than inline in the return string so
+    # the positive and negative cases stay side by side and can't drift.
+    if positive:
+        fill_gradient_svg = (
+            f'<linearGradient id="units-ts-line" x1="0" y1="0" x2="1" y2="0">'
+            f'<stop offset="0%" stop-color="{ION_VIOLET}"/>'
+            f'<stop offset="55%" stop-color="{ION_CYAN}"/>'
+            f'<stop offset="100%" stop-color="{ION_ICE}"/></linearGradient>'
+            f'<linearGradient id="units-ts-fill" x1="0" y1="0" x2="0" y2="1">'
+            f'<stop offset="0%" stop-color="{ION_CYAN}" stop-opacity="0.30"/>'
+            f'<stop offset="70%" stop-color="{ION_VIOLET}" stop-opacity="0.07"/>'
+            f'<stop offset="100%" stop-color="{ION_VIOLET}" stop-opacity="0"/>'
+            f'</linearGradient>'
+        )
+    else:
+        fill_gradient_svg = (
+            f'<linearGradient id="units-ts-fill" x1="0" y1="0" x2="0" y2="1">'
+            f'<stop offset="0%" stop-color="{trend_color}" stop-opacity="0.30"/>'
+            f'<stop offset="100%" stop-color="{trend_color}" stop-opacity="0"/>'
+            f'</linearGradient>'
+        )
+    # THE SPOTLIGHT REPLACES THE CURSOR LINE. A vertical rule spanning the
+    # plot is the conventional answer and it was rejected on sight: it draws a
+    # hard edge through the one part of the chart the eye is trying to read.
+    # A soft radial lift centred on the held point says "here" without drawing
+    # anything, and it is clipped to the area under the curve so it can never
+    # bleed into the whitespace above the line and look like a smudge.
+    # Parked off-canvas at zero opacity until a scrub moves it.
+    spotlight_svg = (
+        f'<radialGradient id="units-ts-spot">'
+        f'<stop offset="0%" stop-color="{trend_color}" stop-opacity="0.34"/>'
+        f'<stop offset="100%" stop-color="{trend_color}" stop-opacity="0"/>'
+        f'</radialGradient>'
+        f'<clipPath id="units-area"><path d="{fill_path}"/></clipPath>'
+    )
+
     # Expose the plotted coordinates so the client can map a finger or cursor
     # position to a point WITHOUT re-deriving the geometry. Re-deriving it in
     # JS would mean two copies of the same maths that could drift apart the
@@ -159,13 +209,13 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
   {grid_svg}
   {x_labels_svg}
   <defs>
-    <linearGradient id="units-ts-fill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="{trend_color}" stop-opacity="0.30"/>
-      <stop offset="100%" stop-color="{trend_color}" stop-opacity="0"/>
-    </linearGradient>
+    {fill_gradient_svg}
+    {spotlight_svg}
   </defs>
   {mask_svg}
   <g clip-path="url(#units-reveal)">
+    <g clip-path="url(#units-area)"><circle class="ut-spot" r="42" cx="-999" cy="0"
+       fill="url(#units-ts-spot)" opacity="0"/></g>
     <g class="ut-past" clip-path="url(#units-past)">{_series_svg}</g>
     <g class="ut-future" clip-path="url(#units-future)">{_series_svg}</g>
   </g>

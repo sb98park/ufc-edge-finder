@@ -19,6 +19,12 @@
     --ink:#e9e9ec; --ink2:#9a9aa4; --ink3:#6f6f79;
     --bg:#000; --panel:#141416; --sunken:#0e0e10; --line:rgba(255,255,255,.09);
     --gold:#d4af37; --red:#e53935; --blue:#3b82f6; --green:#3ddc84;
+    /* ION -- the Units curve palette, shared with the landing page. Violet
+       into cyan into ice along the line's own length, so the colour carries
+       the direction of travel. Declared here rather than as literals because
+       the same three values are used by the svg builder, the headline glow
+       and the scrub readout, and a fourth copy is how palettes drift. */
+    --ion-violet: #7c5cff; --ion-cyan: #22d3ee; --ion-ice: #e6fbff;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     color-scheme:dark;
@@ -178,11 +184,31 @@
   .big{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:-.035em;
        line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;margin:0}
   .big b{font-weight:inherit}
-  .big span{font-size:.44em;color:var(--ink3);letter-spacing:0;margin-left:2px}
+  /* DIRECT CHILD. This is the "U" beside the figure and nothing else, but as
+     a descendant selector it also caught every span the odometer builds
+     inside <b> -- and .44em compounds per nesting level, so the digits came
+     out at 32px * .44^3, under three pixels tall. */
+  .big > span{font-size:.44em;color:var(--ink3);letter-spacing:0;margin-left:2px}
   .sub{font-size:12px;color:var(--ink3);margin:0;text-align:right}
   .sub b{color:var(--green);font-weight:600}
   .curve{margin:12px 0 0}
   .curve svg{display:block;width:100%;height:auto}
+  .cap-slot{position:relative}
+  .cap-slot .curve-cap{transition:opacity .18s ease}
+  .units-chart-wrap.scrubbing .curve-cap{opacity:0}
+  .scrub-readout{position:absolute;inset:0;margin:0;opacity:0;pointer-events:none;
+    transition:opacity .18s ease;font-family:var(--mono);font-size:9px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .units-chart-wrap.scrubbing .scrub-readout{opacity:1}
+  .scrub-readout .sr-units{color:var(--ink);letter-spacing:.05em}
+  .scrub-readout .sr-win{color:var(--ion-cyan)}
+  .scrub-readout .sr-loss{color:var(--red)}
+  /* ION on the headline too, so the number and the line it describes read as
+     one object. The card's own --ink is close enough to ice that only the
+     glow really changes, which is the point: this is a tint, not a repaint. */
+  .big{--od-h:1.06em;position:relative}
+  .recline .big b{color:var(--ion-ice)}
   .rails{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
          border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-top:16px}
   .rails div{background:var(--panel);padding:12px 13px;text-align:left}
@@ -613,6 +639,7 @@
   .pv-radar{display:flex;justify-content:center}
   .pv-radar svg{max-width:100%;height:auto}
   {% include "_ml_chart_css.html" %}
+  {% include "_units_scrub_css.html" %}
   .seg{display:flex;background:var(--sunken);border:1px solid var(--line);border-radius:10px;
        padding:3px;margin:16px 0 14px}
   .seg button{flex:1;font:inherit;font-size:12px;padding:8px 4px;border:0;border-radius:8px;
@@ -901,9 +928,28 @@
       <div class="big"><b data-roll>{{ '%+.2f'|format(tr.units_stats.shortlist_units) }}</b><span>U</span></div>
       <div class="sub">{{ tr.units_stats.shortlist_count }} picks &middot; {{ tr.units_stats.shortlist_events }} cards<br><b>ROI {{ '%+.1f'|format(tr.units_stats.shortlist_roi_pct) }}%</b></div>
     </div>
-    <p class="curve-cap">Locks and high confidence only, at the stakes above &mdash;
-       {{ tr.units_stats.shortlist_count }} picks, {{ '%.0f'|format(tr.units_stats.shortlist_staked) }}U risked</p>
-    <div class="curve">{{ units_timeseries_svg | safe }}</div>
+    {# THE CURVE IS HELD, NOT JUST LOOKED AT. Same component, same behaviour
+       and same palette as the Units Tracker inside the app -- a reader who
+       subscribes should meet the thing they already played with, not a
+       lookalike.
+       Payload in a SCRIPT TAG, not an attribute: it was in data-points='...'
+       with single quotes on the app, so the first fighter with an apostrophe
+       in their name closed the attribute early and JSON.parse threw. A script
+       tag has no attribute quoting to escape. #}
+    <div class="units-chart-wrap" data-total="{{ tr.units_stats.shortlist_units }}">
+      {# The readout REPLACES the caption rather than sitting above it. Both
+         occupy the same slot, so a scrub costs no layout and the card does not
+         grow a permanently empty line to hold a label that is usually blank. #}
+      <div class="cap-slot">
+        <p class="curve-cap">Locks and high confidence only, at the stakes above &mdash;
+           {{ tr.units_stats.shortlist_count }} picks, {{ '%.0f'|format(tr.units_stats.shortlist_staked) }}U risked</p>
+        <p class="scrub-readout" id="landing-scrub-readout" aria-hidden="true"></p>
+      </div>
+      <div class="curve">{{ units_timeseries_svg | safe }}</div>
+      {% if tr.units_stats.shortlist_points %}
+      <script type="application/json" id="landing-scrub-points">{{ tr.units_stats.shortlist_points | tojson }}</script>
+      {% endif %}
+    </div>
     <div class="rails">
       <div><b data-roll>{{ tr.accuracy_pct }}%</b><span>Hit rate</span></div>
       {% if tr.clv_stats %}<div><b class="up" data-roll>{{ tr.clv_stats.beat_pct }}%</b><span>Beat the closing line</span></div>{% endif %}
@@ -2726,6 +2772,24 @@
 // same source.
 (function () {
     {% include "_ml_chart_js.html" %}
+})();
+
+// The record curve gets the app's own scrub, from the app's own source.
+(function () {
+    {% include "_units_scrub_js.html" %}
+    var wrap = document.querySelector(".units-chart-wrap");
+    var points = document.getElementById("landing-scrub-points");
+    if (!wrap || !points) return;
+    initUnitsScrub({
+      wrap: wrap,
+      figure: wrap.closest(".reccard").querySelector(".big b"),
+      points: points,
+      readout: document.getElementById("landing-scrub-readout"),
+      // From the markup, not interpolated into this script: the script
+      // block sits outside the {% raw %}{% if tr %}{% endraw %} that guards the card, so a render
+      // with no track record would have put "total: " and nothing after it.
+      total: parseFloat(wrap.dataset.total || "0"),
+    });
 })();
 </script>
 </body>
