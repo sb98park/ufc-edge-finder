@@ -1451,6 +1451,30 @@
   .event-summary-value.positive { color: var(--green); }
   .event-summary-value.negative { color: var(--red); }
   .event-summary-value.gold { color: var(--accent-hi); font-size: var(--t-h3); }
+  /* --- two records on one card ------------------------------------------
+     The label carries its own headline, so the tap only ever hides DETAIL.
+     Both records are legible without pressing anything. */
+  .card-tabs { display: flex; gap: 3px; padding: 3px; background: var(--sunken);
+               border-radius: 10px; margin-bottom: 11px; }
+  .ct { flex: 1; font: inherit; font-size: var(--t-small); font-weight: 600;
+        padding: 7px 4px; border: 0; border-radius: 8px; cursor: pointer;
+        background: none; color: var(--muted); white-space: nowrap; }
+  .ct b { font-family: var(--font-mono, ui-monospace, monospace); font-weight: 700;
+          font-variant-numeric: tabular-nums; margin-left: 4px; }
+  .ct.on { background: var(--panel2); color: var(--text); box-shadow: var(--e1); }
+  .card-bets { list-style: none; margin: 11px 0 0; padding: 0; }
+  .cb-row { display: flex; align-items: center; gap: 10px; padding: 8px 0;
+            border-bottom: 1px solid var(--hairline); }
+  .cb-row:last-child { border-bottom: 0; }
+  .cb-main { flex: 1; min-width: 0; }
+  .cb-label { font-size: var(--t-body); font-weight: 600; line-height: 1.3; }
+  .cb-meta { font-size: var(--t-micro); color: var(--muted); margin-top: 1px;
+             font-variant-numeric: tabular-nums; }
+  .cb-num { flex: none; font-family: var(--font-mono, ui-monospace, monospace);
+            font-size: var(--t-lead); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cb-num.up { color: var(--pos, #3ddc84); }
+  .cb-num.down { color: var(--neg, #ff7a7a); }
+  .cb-num.muted { color: var(--muted); }
   .event-summary-label { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
   .track-record-headline { font-size: var(--t-h1); font-weight: 700; font-family: var(--font-display); margin-bottom: 6px; }
   .track-record-headline span { font-size: var(--t-lead); color: var(--muted); font-weight: 600; }
@@ -2448,12 +2472,12 @@
   .plays-unit { font-size: var(--t-micro); color: var(--muted); white-space: nowrap; }
   .plays-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .play {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 9px;
     background: var(--panel2); border: 1px solid var(--border);
-    border-radius: var(--r-lg); padding: 10px 14px; box-shadow: var(--e1);
+    border-radius: var(--r-lg); padding: 10px 12px; box-shadow: var(--e1);
   }
   .play-stake {
-    flex-shrink: 0; min-width: 62px; text-align: center;
+    flex-shrink: 0; min-width: 56px; text-align: center;
     font-size: 19px; font-weight: 700; color: var(--accent-hi);
     font-variant-numeric: tabular-nums; line-height: 1.1;
   }
@@ -2469,11 +2493,43 @@
      the whole treatment. */
   .play.is-prop .play-stake { color: var(--muted); }
   .play-main { min-width: 0; flex: 1; }
-  .play-label { font-size: var(--t-body); font-weight: 600; color: var(--text); line-height: 1.35; }
+  /* Fluid for the same reason .standout-main is: the marker and the stake
+     column take fixed room, and a long selection name wrapped to two lines on
+     every row at 375px. */
+  .play-label { font-size: clamp(0.6875rem, 2.6vw + 0.15rem, var(--t-body));
+                font-weight: 600; color: var(--text); line-height: 1.35; }
   .play-meta { font-size: var(--t-micro); color: var(--muted); margin-top: 2px; line-height: 1.4; }
   .play-right { text-align: right; flex-shrink: 0; }
   .play-price { font-size: var(--t-lead); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
   .play-ev { font-size: var(--t-micro); color: var(--pos, #3ddc84); white-space: nowrap; margin-top: 1px; }
+  .play-ev.muted { color: var(--muted); }
+  .play-price.muted { color: var(--muted); }
+  .play-price.returned.up { color: var(--pos, #3ddc84); }
+  .play-price.returned.down { color: var(--neg, #ff7a7a); }
+  /* THE MARKER, and it is the only thing on the row that moves during a card.
+     A settled play keeps the seat it had at the first bell. */
+  .play-mark {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 11px; font-weight: 700;
+    background: rgba(255,255,255,.05); color: var(--muted);
+  }
+  .play.pl-won .play-mark { background: rgba(61,220,132,.16); color: var(--pos, #3ddc84); }
+  .play.pl-lost .play-mark { background: rgba(255,122,122,.14); color: var(--neg, #ff7a7a); }
+  .play.pl-open { opacity: .82; }
+  .play.pl-void { opacity: .5; }
+  .runner {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 0 0 10px; padding: 12px 14px; border-radius: var(--r-lg);
+    background: var(--sunken); border: 1px solid var(--hairline);
+  }
+  .runner .run-k { font-size: var(--t-micro); color: var(--muted); display: block; }
+  .runner .run-v { font-size: 26px; font-weight: 700; font-family: var(--font-display);
+                   font-variant-numeric: tabular-nums; letter-spacing: -.02em; line-height: 1.1; }
+  .runner .run-v.up { color: var(--pos, #3ddc84); }
+  .runner .run-v.down { color: var(--neg, #ff7a7a); }
+  .runner .run-side { text-align: right; }
+  .runner .run-open { display: block; font-family: var(--font-mono, ui-monospace, monospace);
+                      font-size: var(--t-micro); color: var(--accent-hi); margin-top: 2px; }
   /* PICKED, NOT PLAYED. Without this the plays tab and the fight card look
      like they disagree about the same fight -- the model likes Umar, and
      there is no play on him, and nothing on screen says the price is the
@@ -6392,8 +6448,68 @@
     </div>
     {% for group in track_record.results_by_event %}
     <div class="seg-pane" id="tr-event-{{ loop.index0 }}">
-      <div class="event-summary-card">
+      {%- set bets = (plays_events or {}).get(group.event_name) -%}
+      <div class="event-summary-card{{ ' has-bets' if bets }}"{% if bets %} data-card-tabs{% endif %}>
         <div class="event-summary-name">{{ group.event_name }}</div>
+        {% if bets %}
+        {#- TWO RECORDS, TWO TABS, AND BOTH HEADLINE FIGURES ARE ON THE LABELS.
+            A card now answers two different questions -- did we make money,
+            and was the model right -- and they must not be read as one number.
+            Tabbing hides a record behind a tap, so the tap only ever hides the
+            DETAIL: "All calls 11-3" is legible without pressing anything.
+            Only cards present in the plays ledger get this. A card graded
+            before the ledger existed is simply absent from it and keeps the
+            banner it was published with, which is the whole changeover rule --
+            no date to hardcode and get wrong. -#}
+        <div class="card-tabs" role="tablist">
+          <button type="button" class="ct on" role="tab" aria-selected="true" data-ct="bets">
+            Bets <b>{{ bets.won }}&ndash;{{ bets.lost }}</b></button>
+          <button type="button" class="ct" role="tab" aria-selected="false" data-ct="calls">
+            All calls <b>{{ group.summary.correct }}&ndash;{{ group.summary.incorrect }}</b></button>
+        </div>
+        <div data-ct-panel="bets">
+          <div class="event-summary-grid">
+            <div class="event-summary-stat">
+              <div class="event-summary-value">{{ bets.won }}&ndash;{{ bets.lost }}</div>
+              <div class="event-summary-label">Record</div>
+            </div>
+            <div class="event-summary-stat">
+              <div class="event-summary-value {{ 'positive' if bets.units >= 0 else 'negative' }}">{{ '%+.2f'|format(bets.units) }}U</div>
+              <div class="event-summary-label">Returned</div>
+            </div>
+            {% if bets.roi_pct is not none %}
+            <div class="event-summary-stat">
+              <div class="event-summary-value {{ 'positive' if bets.roi_pct >= 0 else 'negative' }}">{{ '%+.0f'|format(bets.roi_pct) }}%</div>
+              <div class="event-summary-label">On {{ '%g'|format(bets.staked) }}U</div>
+            </div>
+            {% endif %}
+            <div class="event-summary-stat">
+              <div class="event-summary-value gold">{{ bets.plays|length }}</div>
+              <div class="event-summary-label">Plays</div>
+            </div>
+          </div>
+          <ul class="card-bets">
+            {% for b in bets.plays %}
+            {%- set st = (b.result or '')|lower -%}
+            <li class="cb-row pl-{{ st or 'open' }}">
+              <div class="play-mark" aria-hidden="true">
+                {%- if st == 'won' %}&#10003;{% elif st == 'lost' %}&#10007;
+                {%- elif st == 'void' %}&ndash;{% else %}&#8226;{% endif -%}
+              </div>
+              <div class="cb-main">
+                <div class="cb-label">{{ b.label }}</div>
+                <div class="cb-meta">{{ b.odds_american | american }} &middot; {{ '%g'|format(b.units) }}U</div>
+              </div>
+              <div class="cb-num {{ 'up' if st == 'won' else ('down' if st == 'lost' else 'muted') }}">
+                {%- if st in ('won', 'lost') %}{{ '%+.2f'|format(b.units_result) }}
+                {%- elif st == 'void' %}&mdash;{% else %}&#8226;{% endif -%}
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div data-ct-panel="calls" hidden>
+        {% endif %}
         {% if group.summary.brag_headline %}
         <div class="brag-headline {{ group.summary.brag_headline.tier }}">{{ icon_flame() if group.summary.brag_headline.tier == 'gold' else icon_trophy() }} {{ group.summary.brag_headline.text }}</div>
         {% endif %}
@@ -6417,6 +6533,7 @@
             <div class="event-summary-label">Perfect Props</div>
           </div>
         </div>
+        {% if bets %}</div>{% endif %}
       </div>
       {% if group.summary.lock_picks %}
       <div class="lock-of-week-block">
@@ -6475,7 +6592,14 @@
                 record. #}
             {% if r.falsifier_note or r.band_note %}<div class="track-result-band">{% if r.falsifier_note %}{{ r.falsifier_note }}{% if r.band_note %} · {% endif %}{% endif %}{{ r.band_note or '' }}</div>{% endif %}
           </div>
-          {% if r.units_result is not none %}
+          {#- THE PILL DESCRIBES A BET WE NO LONGER PLACE. A per-pick +2.4U on
+              a Low Confidence fight was the published ladder applied to every
+              call; from the plays ledger onward we stake a subset, so leaving
+              it here would put a units column and a bankroll figure on the
+              same screen disagreeing every week -- and the wrong one would be
+              the louder one. Dropped only on cards the ledger covers; every
+              card graded before it keeps its pills exactly as published. -#}
+          {% if r.units_result is not none and not bets %}
           <div class="units-pick-badge {{ 'positive' if r.units_result >= 0 else 'negative' }}">{{ '+' if r.units_result >= 0 else '' }}{{ r.units_result }}U</div>
           {% endif %}
         </div>
@@ -7690,6 +7814,22 @@
 
   {% if plays_rows %}
   <div class="parlay-subtitle">Every bet the model is placing on {{ plays_card.event_name }}, at the price it was placed at. A pick has to beat its own price by a clear margin to become a play &mdash; conviction alone never puts money down, which is why some of the week's strongest reads are in the list below this one rather than in this one.</div>
+  {%- set settled = plays_rows | selectattr('result', 'in', ['won', 'lost']) | list -%}
+  {%- set net = settled | sum(attribute='units_result') -%}
+  {%- set open_rows = plays_rows | rejectattr('result', 'in', ['won', 'lost', 'void']) | list -%}
+  {% if settled %}
+  {#- THE RUNNING NET, once anything has resolved. It is the biggest thing on
+      the section for four hours a week because it is the only question being
+      asked: how am I doing. Nothing here is computed in the browser -- the
+      figure is the sum of graded rows in the ledger, so a reload during a
+      card cannot disagree with a reload after it. -#}
+  <div class="runner">
+    <div><span class="run-k">Card so far</span>
+      <span class="run-v {{ 'up' if net > 0 else ('down' if net < 0 else '') }}">{{ '%+.2f'|format(net) }}U</span></div>
+    <div class="run-side"><span class="run-k">{{ settled|length }} of {{ plays_rows|length }} settled</span>
+      {% if open_rows %}<span class="run-open">{{ '%g'|format(open_rows | sum(attribute='units')) }}U still live</span>{% endif %}</div>
+  </div>
+  {% endif %}
   <div class="plays-head">
     <div class="plays-total"><b>{{ plays_rows|length }}</b> play{{ '' if plays_rows|length == 1 else 's' }} &middot;
       <b>{{ '%g'|format(plays_card.total_units) }}U</b> at risk</div>
@@ -7697,7 +7837,16 @@
   </div>
   <ul class="plays-list">
     {% for p in plays_rows %}
-    <li class="play{{ ' is-prop' if p.is_prop }}">
+    {%- set state = (p.result or '')|lower -%}
+    <li class="play{{ ' is-prop' if p.is_prop }} pl-{{ state or 'open' }}">
+      {#- ROWS RESOLVE IN PLACE. The order never changes across a card: a play
+          that has settled keeps the seat it had at the first bell, so the
+          thing a reader was looking at does not move while they look at it.
+          Only the marker and the right-hand figure change. -#}
+      <div class="play-mark" aria-hidden="true">
+        {%- if state == 'won' %}&#10003;{% elif state == 'lost' %}&#10007;
+        {%- elif state == 'void' %}&ndash;{% else %}&#8226;{% endif -%}
+      </div>
       <div class="play-stake">{{ '%g'|format(p.units) }}<span>U</span>
         {%- if p.to_win %}<em>to win {{ '%g'|format(p.to_win) }}</em>{% endif %}</div>
       <div class="play-main">
@@ -7705,8 +7854,16 @@
         <div class="play-meta">{{ p.fighter_a }} vs. {{ p.fighter_b }}{% if p.venue %} &middot; {{ p.venue }}{% endif %}</div>
       </div>
       <div class="play-right">
+        {% if state in ('won', 'lost') %}
+        <div class="play-price returned {{ 'up' if state == 'won' else 'down' }}">{{ '%+.2f'|format(p.units_result) }}</div>
+        <div class="play-ev muted">units</div>
+        {% elif state == 'void' %}
+        <div class="play-price muted">&mdash;</div>
+        <div class="play-ev muted">void</div>
+        {% else %}
         <div class="play-price">{{ p.odds_american | american }}</div>
         {% if p.ev_per_unit %}<div class="play-ev">+{{ (p.ev_per_unit * 100) | round | int }}% EV</div>{% endif %}
+        {% endif %}
       </div>
     </li>
     {% endfor %}
@@ -8319,6 +8476,29 @@
     function isDesktopLayout() {
       return window.matchMedia('(min-width: 1024px)').matches;
     }
+
+    /* THE PER-CARD TABS. Delegated from the document rather than bound per
+       card: the track record renders every past event, the list grows every
+       week, and binding N listeners to N cards that mostly sit collapsed is
+       work done for nothing. One listener, and it keeps working for cards
+       rendered after it ran.
+       aria-selected moves with the class, because a tab that only LOOKS
+       selected is not selected to anyone using a screen reader. */
+    document.addEventListener('click', function (e) {
+      const tab = e.target.closest && e.target.closest('.ct');
+      if (!tab) return;
+      const card = tab.closest('[data-card-tabs]');
+      if (!card) return;
+      const want = tab.dataset.ct;
+      card.querySelectorAll('.ct').forEach(function (t) {
+        const on = t === tab;
+        t.classList.toggle('on', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      card.querySelectorAll('[data-ct-panel]').forEach(function (p) {
+        p.hidden = p.dataset.ctPanel !== want;
+      });
+    });
 
     function showSection(id) {
       if (window.__syncTabBar) window.__syncTabBar(id);      document.body.dataset.section = id;

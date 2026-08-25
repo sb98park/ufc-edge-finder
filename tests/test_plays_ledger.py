@@ -143,6 +143,25 @@ grade_rows(ledger3, {fight_key(t3["fighter_b"], t3["fighter_a"]):
 check("a re-scraped card with swapped corners still settles",
       bool([r for r in ledger3 if r["play_id"] == t3["play_id"]][0]["result"]), True)
 
+print("\nAN UNGRADED CARD NEVER REACHES THE PER-EVENT SUMMARY")
+# summarise_by_event feeds `plays_events`, which src/tiering classifies FREE.
+# That is only safe because ungraded rows are dropped here: a play on a fight
+# that has not happened is label, price and stake -- the model layer exactly.
+from src.plays_ledger import summarise_by_event  # noqa: E402
+_open_only = [{"event_name": "Card A", "result": "", "units": 5.0,
+               "odds_american": -190, "units_result": None, "label": "X Moneyline"}]
+check("a card with only open plays is absent entirely",
+      summarise_by_event(_open_only), {})
+_mixed = _open_only + [{"event_name": "Card A", "result": "won", "units": 10.0,
+                        "odds_american": 100, "units_result": 10.0, "label": "Y Moneyline"}]
+_sum = summarise_by_event(_mixed)
+check("  ...and a part-graded card shows only what has settled",
+      len(_sum["Card A"]["plays"]), 1)
+check("  ...so no open label can ride along",
+      any(p.get("label") == "X Moneyline" for p in _sum["Card A"]["plays"]), False)
+check("  ...with the staked total counting the settled play only",
+      _sum["Card A"]["staked"], 10.0)
+
 print("\nthe record counts settled rows only")
 s = summarise(ledger)
 check("wins and losses add up to settled", s["won"] + s["lost"], s["settled"])

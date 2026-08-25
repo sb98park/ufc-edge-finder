@@ -48,6 +48,7 @@ from src import bankroll as bankroll_state
 from src.plays_ledger import (
     load as plays_load, record_plays, committed_for, play_id,
     grade_rows as grade_plays, summarise as summarise_plays, write_graded,
+    summarise_by_event as plays_by_event,
     FIELDNAMES as PLAYS_FIELDNAMES, LEDGER_PATH as PLAYS_LEDGER_PATH,
 )
 from src.line_movement import (
@@ -1103,6 +1104,7 @@ def main(tier: str = "member", output_path: str | None = None):
     plays_card = {"event_name": None, "plays": [], "passed": [], "dropped": [],
                   "total_units": 0.0, "new_units": 0.0, "fights_considered": 0}
     plays_rows, plays_record, bankroll = [], None, None
+    plays_events = {}
     try:
         _plays_event = events_for_model_only[0] if events_for_model_only else None
         _ledger = plays_load()
@@ -1142,6 +1144,9 @@ def main(tier: str = "member", output_path: str | None = None):
         bankroll_state.save(_bank)
         bankroll = bankroll_state.summarise(_bank)
         plays_record = summarise_plays(_all_now)
+        # Per-card, for the track record's Bets tab. A card missing from this
+        # dict was graded before the ledger existed and keeps its old view.
+        plays_events = plays_by_event(_all_now)
         _shelved = len(plays_card.get("shelved") or [])
         _note = "" if plays_card["discretionary_on"] else f", {_shelved} shelved"
         print(f"[plays] {len(plays_card['plays'])} new, {len(plays_rows)} on the card, "
@@ -1594,7 +1599,7 @@ def main(tier: str = "member", output_path: str | None = None):
         favorite_picks=favorite_picks,
         lock_picks=lock_picks,
         plays_card=plays_card, plays_rows=plays_rows, plays_record=plays_record,
-        bankroll=bankroll,
+        bankroll=bankroll, plays_events=plays_events,
         event_short_name=event_short_name,
         event_full_name=event_full_name,
         event_matchup=event_matchup,

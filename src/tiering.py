@@ -151,6 +151,13 @@ FREE_CONTEXT = (
     # carries no pick and no currency -- see src/bankroll for why it is a
     # ratio rather than a sum.
     "bankroll",
+    # SETTLED PLAYS ONLY, and summarise_by_event is what enforces it -- it
+    # drops every ungraded row before this key is built. A graded card's bets
+    # are the public record; an ungraded card's rows are label, price and
+    # stake on fights that have not happened, which is the model layer. This
+    # comment previously claimed "the tier check below", and there was no such
+    # check; the filter is now in the function and there is a test on it.
+    "plays_events",
 
     # MARKET DATA. Prices and how they moved. Not model output -- these come
     # from the books and the exchange, and are the best free teaser we have.

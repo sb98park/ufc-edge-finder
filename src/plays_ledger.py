@@ -322,6 +322,59 @@ def write_graded(rows: list[dict], path: str = LEDGER_PATH) -> None:
             w.writerow(_serialise(r))
 
 
+def summarise_by_event(rows: list[dict]) -> dict:
+    """
+    Per-card totals, for the track record's Bets tab. SETTLED PLAYS ONLY.
+
+    Keyed on event_name because that is what the results grouping uses. A card
+    with no rows here simply is not in the dict, which is how the template
+    tells a card graded before the plays ledger existed from one graded after
+    -- no changeover date to hardcode and get wrong.
+
+    THE SETTLED FILTER IS A PAYWALL BOUNDARY, NOT A TIDINESS ONE. This output
+    is classified free in src/tiering, because a graded card's bets are the
+    public record. An UNGRADED card's rows are the opposite: label, price and
+    stake on fights that have not happened, which is the model layer exactly.
+    Filtering here is what makes the free classification true, rather than
+    true-for-now-because-no-template-renders-it. An earlier version of this
+    function returned open rows and carried a comment claiming a tier check
+    that was never written; the check is this line.
+    """
+    out: dict = {}
+    for r in rows:
+        name = r.get("event_name")
+        if not name:
+            continue
+        if (r.get("result") or "").strip() == "":
+            continue
+        e = out.setdefault(name, {"plays": [], "won": 0, "lost": 0, "void": 0,
+                                  "units": 0.0, "staked": 0.0, "settled": 0})
+        e["plays"].append(r)
+        result = (r.get("result") or "").lower()
+        try:
+            units = float(r.get("units") or 0)
+        except (TypeError, ValueError):
+            units = 0.0
+        if result == "void":
+            e["void"] += 1
+            continue
+        e["settled"] += 1
+        e["staked"] += units
+        try:
+            e["units"] += float(r.get("units_result") or 0)
+        except (TypeError, ValueError):
+            pass
+        e["won" if result == "won" else "lost"] += 1
+    for e in out.values():
+        e["units"] = round(e["units"], 2)
+        e["staked"] = round(e["staked"], 1)
+        e["roi_pct"] = round(e["units"] / e["staked"] * 100, 1) if e["staked"] else None
+        # Biggest stake first, the way a slip reads, then by what it returned.
+        e["plays"].sort(key=lambda p: (-(p.get("units") or 0),
+                                       -(p.get("units_result") or 0)))
+    return out
+
+
 def summarise(rows: list[dict]) -> dict:
     """
     The record, and only from settled rows. Void plays count in neither the
