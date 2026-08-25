@@ -2153,7 +2153,24 @@
   /* The matchup and the pick -- what the card is ABOUT. It was 15px/600, the
      same as the section title above it and half the size of an EV number the
      card's own subtitle describes as not a reason to act. */
-  .standout-main { font-size: var(--t-h2); font-weight: 700; }
+  /* FLUID, BECAUSE THE CONSTRAINT IS THE MATCHUP, NOT THE HEADING.
+     At a flat 20px "Song Yadong vs Umar Nurmagomedov" needs 370px inside a
+     309px card and wrapped onto two lines, orphaning a surname; the longest
+     names on a real card ("Shavkat Rakhmonov vs Michael Morales") need 385px.
+     A flat drop to 15px would fit and would also undo the deliberate raise
+     above -- so the size scales with the card instead, and only on the
+     screens where it has to. At 375px it resolves to 15.2px, which leaves the
+     worst case 17px of room; by ~476px it has climbed back to the full 20px
+     and stays there.
+     3.2vw + 0.2rem rather than plain vw: a viewport unit alone ignores the
+     reader's own text-size setting, which is the whole reason this scale is
+     in rem. The rem term keeps some of that, and both bounds are rem. */
+  .standout-main {
+    font-size: clamp(0.9375rem, 3.2vw + 0.2rem, var(--t-h2)); font-weight: 700;
+    /* If it ever does wrap -- a longer pairing, or a reader running large
+       text -- break it evenly rather than leaving one name alone on line two. */
+    text-wrap: balance;
+  }
   .standout-vs { font-size: var(--t-body); font-weight: 400; color: var(--muted); }
   .dog-badge {
     display: inline-block; font-size: var(--t-micro); font-weight: 600; border-radius: var(--r-lg);
