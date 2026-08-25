@@ -1248,7 +1248,13 @@
               <stop offset="1" stop-color="#3ddc84" stop-opacity="0"/>
             </linearGradient>
           </defs>
-          <text class="clv-ax" x="4" y="20">Market&#8217;s chance our pick wins</text>
+          {# A LABEL, NOT A SENTENCE. "Market's chance our pick wins" carries a
+             verb, so it scans as a clause with a missing "that" -- the eye
+             tries to read it as prose and stalls. Drop the verb and it can
+             only be read as the name of an axis. Whose chance is answered by
+             the two points on the line, which carry both the price and the
+             percentage. #}
+          <text class="clv-ax" x="4" y="20">Our pick&#8217;s implied chance</text>
           <path data-fade d="M40 88 L82 84 L124 74 L166 66 L208 54 L250 44 L288 36 L288 88 Z"
                 fill="url(#clvFill)"/>
           <line data-fade x1="40" y1="88" x2="288" y2="88" stroke="rgba(255,255,255,.18)"
