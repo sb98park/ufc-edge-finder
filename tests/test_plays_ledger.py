@@ -58,6 +58,33 @@ check("the probability survives",
 check("published_at survives", sample["published_at"], "2026-08-25T12:00:00+00:00")
 check("  ...but last_seen advances", sample["last_seen"], "2026-08-27T09:00:00+00:00")
 
+print("\nTHE ROUND TRIP, which is the property the gate actually enforces")
+# This is the test that was missing, and its absence froze the live site.
+# load() coerces to Python types; the writer wrote those straight back, so
+# is_prop went "1" -> "True" and an empty closing_odds went "" -> "None" on
+# the SECOND render. Every row rewritten and no longer equal to itself, which
+# check_plays_ledger.py correctly calls a restated play -- so the gate failed
+# every build from then on. A single write-and-read proves nothing here; only
+# repeated ones do.
+import shutil
+rt = tmp + ".roundtrip"
+shutil.copy(tmp, rt)
+_immutable = [k for k in load(rt)[0]
+              if k not in ("last_seen", "closing_odds", "result", "units_result", "graded_at")]
+_before = {r["play_id"]: {k: r[k] for k in _immutable} for r in load(rt)}
+for _i in range(3):
+    _rows = load(rt)
+    record_plays({"event_name": _rows[0]["event_name"], "event_date": _rows[0]["event_date"],
+                  "plays": []}, f"2026-08-2{_i + 5}T00:00:00+00:00", path=rt)
+_after = {r["play_id"]: {k: r[k] for k in _immutable} for r in load(rt)}
+_drift = [(pid, k) for pid, was in _before.items()
+          for k, v in was.items() if _after.get(pid, {}).get(k) != v]
+check("three renders change nothing that was set once", len(_drift), 0)
+with open(rt, encoding="utf-8") as _fh:
+    _text = _fh.read()
+check("  ...and no Python repr leaks into the file",
+      ("True" in _text) or ("None" in _text) or ("False" in _text), False)
+
 print("\nclosing price is recorded, and the settled tick is refused")
 pid = rows[0]["play_id"]
 record_plays(card, "2026-08-30T22:00:00+00:00",

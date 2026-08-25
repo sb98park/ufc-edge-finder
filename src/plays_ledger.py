@@ -138,6 +138,28 @@ def _coerce(row: dict) -> dict:
     return out
 
 
+def _serialise(row: dict) -> dict:
+    """
+    The inverse of _coerce, and it MUST exist.
+
+    Without it this file quietly destroyed itself on the second render.
+    _coerce turns is_prop into a Python bool and an empty closing_odds into
+    None; the writer then wrote those straight back, so "1" became "True" and
+    "" became "None". Every row read, rewritten, and no longer equal to itself
+    -- which is precisely what check_plays_ledger.py calls a restated play, so
+    the gate failed the build and the site froze on the last good payload.
+
+    The gate was right. One door in, one door out, and this is the way out.
+    """
+    out = dict(row)
+    for k in _BOOLEAN:
+        out[k] = "1" if out.get(k) in (True, 1, "1") else "0"
+    for k in FIELDNAMES:
+        if out.get(k) is None:
+            out[k] = ""
+    return {k: out.get(k, "") for k in FIELDNAMES}
+
+
 def load(path: str = LEDGER_PATH) -> list[dict]:
     if not os.path.exists(path):
         return []
@@ -232,7 +254,7 @@ def record_plays(card: dict, now: str, live_prices: dict | None = None,
         w = csv.DictWriter(fh, fieldnames=FIELDNAMES, extrasaction="ignore")
         w.writeheader()
         for pid in order:
-            w.writerow(by_id[pid])
+            w.writerow(_serialise(by_id[pid]))
 
     return [_coerce(by_id[pid]) for pid in order
             if by_id[pid].get("event_name") == event_name]
@@ -293,7 +315,7 @@ def write_graded(rows: list[dict], path: str = LEDGER_PATH) -> None:
         w = csv.DictWriter(fh, fieldnames=FIELDNAMES, extrasaction="ignore")
         w.writeheader()
         for r in rows:
-            w.writerow({k: ("" if r.get(k) is None else r.get(k)) for k in FIELDNAMES})
+            w.writerow(_serialise(r))
 
 
 def summarise(rows: list[dict]) -> dict:
