@@ -62,7 +62,7 @@ FIELDNAMES = [
     "play_id", "event_name", "event_date", "fighter_a", "fighter_b",
     "card_position", "weight_class",
     "axis", "market", "selection", "label", "tier", "is_lock", "is_prop",
-    "odds_american", "venue", "units",
+    "odds_american", "venue", "units", "to_win",
     "model_prob", "fair_prob", "blended_prob", "ev_per_unit", "required_prob",
     "published_at", "last_seen", "closing_odds",
     "result", "units_result", "graded_at",
@@ -72,7 +72,7 @@ FIELDNAMES = [
 # either advanced by later renders (last_seen, closing_odds) or filled in by
 # grading, and everything in here is a claim about a moment that has passed.
 _SET_ONCE = (
-    "odds_american", "venue", "units", "model_prob", "fair_prob",
+    "odds_american", "venue", "units", "to_win", "model_prob", "fair_prob",
     "blended_prob", "ev_per_unit", "required_prob", "published_at",
     "event_name", "event_date", "fighter_a", "fighter_b", "card_position",
     "weight_class", "axis", "market", "selection", "label", "tier",
@@ -116,7 +116,7 @@ def play_id(event_name: str, fighter_a: str, fighter_b: str,
 # happens once, here, at the only door into this file. A blank stays None
 # rather than becoming 0.0 -- an ungraded play has no result, and zero is a
 # result.
-_NUMERIC = ("odds_american", "closing_odds", "units", "model_prob", "fair_prob",
+_NUMERIC = ("odds_american", "closing_odds", "units", "to_win", "model_prob", "fair_prob",
             "blended_prob", "ev_per_unit", "required_prob", "units_result")
 _INTEGER = ("odds_american", "closing_odds")
 _BOOLEAN = ("is_lock", "is_prop")
@@ -204,6 +204,10 @@ def _row_from_play(play: dict, event_name: str | None, event_date, now: str) -> 
         "is_prop": "1" if play.get("is_prop") else "0",
         "odds_american": play.get("odds_american"),
         "venue": play.get("venue") or "", "units": play.get("units"),
+        # Stored rather than derived at render time: both inputs are set once,
+        # so this cannot drift from them, and it makes the file readable by a
+        # person auditing what was risked and what it returned.
+        "to_win": play.get("to_win"),
         "model_prob": play.get("model_prob"), "fair_prob": play.get("fair_prob"),
         "blended_prob": play.get("blended_prob"),
         "ev_per_unit": play.get("ev_per_unit"),

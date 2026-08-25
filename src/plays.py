@@ -66,14 +66,19 @@ TIER_CAP_UNITS = {
     "Medium Confidence": 2.0,
     "Low Confidence": 1.0,
 }
-# BELOW EVERY TIER WITH REAL EVIDENCE BEHIND IT. At 3.0 this claimed to sit
-# "below every moneyline tier" and did not: Medium is 2 and Low is 1, so the
-# largest stake on a card was routinely a round total on a fight the model was
-# barely confident about. The prop board has no graded record and already
-# faces double the hurdle; it should not also be able to outstake the market
-# that does. Two is Medium's ceiling -- level with a moneyline we have some
-# evidence for, under the two we have the most.
-PROP_CAP_UNITS = 2.0
+# BELOW THE TWO TIERS WE HAVE EVIDENCE FOR, and that is the right comparison.
+#
+# This was briefly 2.0, to sit under Medium as well. That was the wrong fix to
+# a real problem: at 2.0 the cap bound on essentially every prop, nine of
+# eleven rows printed the identical stake, and the number stopped carrying any
+# information about how good the bet was. The variation IS the product.
+#
+# And Medium was never the right yardstick anyway. A confidence tier says how
+# sure the model is about WHO WINS; a round total does not ask that question,
+# so "a prop must not outstake a Medium moneyline" was comparing two different
+# measurements. What the cap is actually for is bounding a market with no
+# graded record below the two that have one -- Lock at 10 and High at 5.
+PROP_CAP_UNITS = 3.0
 MIN_STAKE_UNITS = 1.0       # under this it is not worth publishing
 STAKE_INCREMENT = 0.5       # so a card stays legible
 
@@ -83,9 +88,18 @@ STAKE_INCREMENT = 0.5       # so a card stays legible
 # 3U each claims 9U of independent exposure while carrying nearer 4U of real
 # risk, and one bad read loses all three. A units total that lies about risk is
 # the one thing this product cannot afford.
+# TWO AXES, NOT THREE, AND THE THIRD WAS A BUG.
+#
+# Method and duration were separate, and the card published BOTH "Fight goes
+# the distance" and "Does not end by KO/TKO" on Aoriqileng vs Asakura -- two
+# rows, 4 units, and one thing happening. They are not two opinions about a
+# fight; they are the same opinion about how it ends, phrased twice. On a
+# single bout there is exactly one independent risk beyond who wins, and that
+# is the MANNER of the ending. Splitting it let one fight claim two units of
+# independent exposure for one unit of real risk, which is precisely what the
+# axis rule exists to stop.
 AXIS_OUTCOME = "outcome"
-AXIS_METHOD = "method"
-AXIS_DURATION = "duration"
+AXIS_MANNER = "manner"
 
 MAX_UNITS_PER_FIGHT = 12.0
 

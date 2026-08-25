@@ -13,8 +13,9 @@ from src.plays import (  # noqa: E402
     decimal_odds, implied_prob, ev_per_unit, required_prob, kelly_fraction,
     size_play, select_card, HURDLE_MONEYLINE, HURDLE_PROP,
     PROP_CAP_UNITS, MAX_UNITS_PER_FIGHT, MAX_UNITS_PER_CARD, MAX_UNITS_PER_AXIS,
+    MIN_STAKE_UNITS,
     TIER_CAP_UNITS,
-    AXIS_OUTCOME, AXIS_METHOD, AXIS_DURATION,
+    AXIS_OUTCOME, AXIS_MANNER,
 )
 
 FAILURES = []
@@ -79,14 +80,17 @@ check("45% at +160 plays", r["play"], True)
 check("  ...at 2.5U, well under the 10U cap", r["units"], 2.5)
 check("  ...so the cap is not binding", r.get("capped"), False)
 
-print("\na prop never outstakes a moneyline we have evidence for")
+print("\nthe prop ceiling leaves room for the stake to mean something")
 # At 3.0 this claimed to sit "below every moneyline tier" and did not -- Medium
 # is 2 and Low is 1, so the biggest stake on a card was routinely a round total
 # on a fight the model was barely sure about.
-check("the prop ceiling is at or under every tier but Low",
-      PROP_CAP_UNITS <= TIER_CAP_UNITS["Medium Confidence"], True)
-check("  ...and well under the two with a record",
+check("the prop ceiling sits under both tiers with a graded record",
       PROP_CAP_UNITS < TIER_CAP_UNITS["High Confidence"], True)
+# And ABOVE the floor by enough that Kelly can still move it. At 2.0 the cap
+# bound on nearly every prop and the stake stopped saying anything about how
+# good the bet was; the variation is the product.
+check("  ...with room for the stake to vary underneath it",
+      PROP_CAP_UNITS >= 3 * MIN_STAKE_UNITS, True)
 
 print("\nfloors and rejections")
 # +160 needs 40.4%; 41% clears it by 0.6pt and Kelly sizes it at 1.03U, so it
@@ -112,18 +116,18 @@ check("prop hurdle is double the moneyline one", HURDLE_PROP, 2 * HURDLE_MONEYLI
 
 print("\ncorrelation: one play per fight per axis")
 card = select_card([
-    {"fight_id": "f1", "axis": AXIS_DURATION, "units": 3.0, "ev_per_unit": 0.20, "sel": "Over 2.5"},
-    {"fight_id": "f1", "axis": AXIS_DURATION, "units": 3.0, "ev_per_unit": 0.09, "sel": "Decision"},
+    {"fight_id": "f1", "axis": AXIS_MANNER, "units": 3.0, "ev_per_unit": 0.20, "sel": "Over 2.5"},
+    {"fight_id": "f1", "axis": AXIS_MANNER, "units": 3.0, "ev_per_unit": 0.09, "sel": "Decision"},
     {"fight_id": "f1", "axis": AXIS_OUTCOME,  "units": 5.0, "ev_per_unit": 0.15, "sel": "ML"},
 ])
-check("the duplicate duration play is dropped", len(card["plays"]), 2)
+check("the duplicate manner play is dropped", len(card["plays"]), 2)
 check("  ...and the better EV kept the slot", card["plays"][0]["sel"], "Over 2.5")
-check("  ...with a reason recorded", "already have a duration play" in card["dropped"][0]["dropped"], True)
+check("  ...with a reason recorded", "already have a manner play" in card["dropped"][0]["dropped"], True)
 
 print("\nexposure caps")
 card = select_card([
     {"fight_id": "f1", "axis": AXIS_OUTCOME,  "units": 10.0, "ev_per_unit": 0.30},
-    {"fight_id": "f1", "axis": AXIS_METHOD,   "units": 3.0,  "ev_per_unit": 0.20},
+    {"fight_id": "f1", "axis": AXIS_MANNER,  "units": 3.0,  "ev_per_unit": 0.20},
 ])
 check(f"one fight cannot exceed {MAX_UNITS_PER_FIGHT:.0f}U", card["total_units"], 10.0)
 
@@ -138,7 +142,7 @@ card = select_card([
 ])
 check("  ...so a 10U lock still places on its own", card["total_units"], 10.0)
 # Six fights leaning the same way on the finish curve is one assumption, not six.
-spread = [{"fight_id": f"g{i}", "axis": AXIS_DURATION, "units": 3.0, "ev_per_unit": 0.3 - i * 0.01}
+spread = [{"fight_id": f"g{i}", "axis": AXIS_MANNER, "units": 3.0, "ev_per_unit": 0.3 - i * 0.01}
           for i in range(6)]
 card = select_card(spread)
 check(f"one shared assumption cannot exceed {MAX_UNITS_PER_AXIS:.0f}U",

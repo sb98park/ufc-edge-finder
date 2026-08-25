@@ -42,9 +42,37 @@ would mean the site tips one fighter and bets the other.
 from __future__ import annotations
 
 from src.plays import (
-    size_play, select_card,
-    AXIS_OUTCOME, AXIS_METHOD, AXIS_DURATION,
+    size_play, select_card, decimal_odds,
+    AXIS_OUTCOME, AXIS_MANNER,
 )
+
+# HOW FAR THE MODEL MAY DISAGREE WITH A LIQUID MARKET BEFORE WE STOP CALLING
+# IT AN EDGE.
+#
+# Measured on UFC Fight Night: Nurmagomedov vs. Song, the model sits BELOW the
+# market on all seven market favourites (median -12.0 points) and ABOVE it on
+# all four market dogs (median +20.7). That is not a scatter of independent
+# disagreements; it is one systematic compression of the probability scale
+# toward 50%, which is what an Elo backbone does. The staking rule is
+# price-neutral -- the hurdle is exactly 5% expected return per unit risked at
+# every price -- so the model's compression, and nothing else, is why every
+# qualifying moneyline on that card was a plus-money underdog.
+#
+# The worst case was Aoriqileng: market 20.5%, model 53.5%. A 33-point
+# disagreement with a market that has real money on both sides is evidence
+# that the MODEL is wrong, not the market. Past this line we do not bet.
+MAX_MODEL_DISAGREEMENT = 0.25
+
+# MARKETS WE DO NOT STAKE, and why each one is here rather than merely
+# unprofitable.
+#
+# "Does not end by SUB" at -102 is a near-certainty wearing a coinflip's
+# price: it wins whenever the fight is a decision, a KO, a DQ or a doctor
+# stoppage. The model can be right about it every week and the bet still adds
+# nothing but variance to a bankroll, because the thing it is fading is rare
+# and the price is not compensating for the times it lands. A negated prop is
+# a bet against a tail, and we are not in that business.
+_UNSTAKED_PREFIX = "Fight Method: Not "
 
 # --- what kind of risk is this? ------------------------------------------
 # The axis is not "what market is it called", it is "what independent thing
@@ -63,12 +91,14 @@ def axis_for_market(market: str) -> str | None:
         return AXIS_OUTCOME
     if m.startswith("Method: "):           # per-fighter: "Method: KO/TKO"
         return AXIS_OUTCOME
-    if m.startswith("Fight Method: "):     # fight-level: "Fight Method: SUB"
-        return AXIS_METHOD
-    if m.startswith("Total Rounds ") or m.startswith("Round Betting: "):
-        return AXIS_DURATION
-    if m.startswith("Fight Outcome: "):    # finish vs distance == duration
-        return AXIS_DURATION
+    if m.startswith(_UNSTAKED_PREFIX):
+        return None
+    # EVERY OTHER PROP IS THE SAME QUESTION. "Fight ends by KO/TKO", "Over 2.5
+    # rounds" and "Goes the distance" are three ways of asking how this fight
+    # finishes, and they move together. One per bout.
+    if (m.startswith("Fight Method: ") or m.startswith("Total Rounds ")
+            or m.startswith("Round Betting: ") or m.startswith("Fight Outcome: ")):
+        return AXIS_MANNER
     return None
 
 
@@ -80,7 +110,10 @@ def label_for(market: str, fighter: str | None, matchup: str) -> str:
     """
     m = (market or "").strip()
     if m == "Moneyline":
-        return f"{fighter} to win"
+        # "Moneyline", not "to win". This is the name the market has at the
+        # book the reader is about to place it at, and a play they have to
+        # translate is a play they get wrong at the counter.
+        return f"{fighter} Moneyline"
     if m.startswith("Method: "):
         return f"{fighter} by {m.split(': ', 1)[1]}"
     if m.startswith("Fight Method: "):
@@ -95,6 +128,14 @@ def label_for(market: str, fighter: str | None, matchup: str) -> str:
     if m == "Fight Outcome: Goes The Distance":
         return "Fight goes the distance"
     return m
+
+
+def _disagreement(edge: dict) -> float | None:
+    """How far the raw model sits from the de-vigged market, in probability."""
+    try:
+        return abs(float(edge["model_prob"]) - float(edge["book_fair_prob"]))
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def _venue(edge: dict) -> str:
@@ -164,6 +205,14 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
             continue
 
         sized = size_play(p, price, tier, is_prop=not is_moneyline)
+
+        # SANITY BEFORE SIZE. A disagreement this large is a model failure
+        # wearing an edge's clothes -- see MAX_MODEL_DISAGREEMENT.
+        gap = _disagreement(edge)
+        if sized["play"] and gap is not None and gap > MAX_MODEL_DISAGREEMENT:
+            sized = dict(sized, play=False, units=0.0, reason=(
+                f"the model is {gap * 100:.0f} points off a market with money on "
+                f"both sides, which is a disagreement we distrust rather than an edge"))
         row = {
             "fight_key": _fight_key(fight),
             "fight_id": _fight_key(fight),
@@ -194,6 +243,10 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
             "fair_prob": edge.get("book_fair_prob"),
             "blended_prob": round(p, 4),
             "units": sized["units"],
+            # WHAT IT RETURNS IF IT LANDS. Profit, not total return -- a
+            # bettor thinks "2 to win 4.5", and printing the 6.5 that comes
+            # back would read as a bigger win than it is.
+            "to_win": round(sized["units"] * (decimal_odds(price) - 1.0), 2),
             "ev_per_unit": sized["ev_per_unit"],
             "required_prob": sized["required_prob"],
             "capped": sized["capped"],
@@ -238,7 +291,14 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None) ->
     # confidence tiers needs to see that the model still likes Umar and the
     # PRICE is the reason there is no play -- otherwise the plays section and
     # the fight card look like they disagree about the same fight.
+    # COMMITTED PLAYS COUNT AS PLAYED. This read card["plays"] alone, which
+    # holds only what THIS render added -- so once a moneyline was on the
+    # board, any later render where its price no longer cleared the hurdle
+    # listed it under "Picked, not played" while the bet was still live. Denise
+    # Gomes appeared as a 2U play and as an unplayed pick on the same screen.
     played_fights = {p["fight_key"] for p in card["plays"] if p["axis"] == AXIS_OUTCOME}
+    played_fights |= {c.get("fight_id") for c in (committed or [])
+                      if c.get("axis") == AXIS_OUTCOME}
     passed = [
         r for r in refused
         if r["market"] == "Moneyline"
