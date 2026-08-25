@@ -85,6 +85,22 @@ MEMBER_ONLY_CONTEXT = (
     # track_record among the things a free reader gets to audit before paying.
     "plays_card",
     "plays_rows",
+    # THIS WAS NOT REDACTED, AND IT WAS PUBLISHING THE MODEL LAYER FOR FREE.
+    # Measured on the shipped free payload: "Denise Gomes vs Yan Xiaonan ·
+    # Moneyline +153 · 62.4% model confidence", the full rationale, and the
+    # edge spelled out -- "a cushion of 22.9 points". That is the pick, the
+    # probability and the disagreement, which is precisely what the wall
+    # exists to hold back, given away on the section next to the one that
+    # asks for money.
+    #
+    # AND THE LEAK CHECK COULD NOT SEE IT. check_free_build asserts that every
+    # value the redaction REMOVED is absent from the free payload -- it reads
+    # the manifest the redaction writes, so it tracks that redaction
+    # automatically. Which is exactly its blind spot: it catches a redaction
+    # that has broken, and is structurally incapable of catching one that was
+    # never written. A key missing from this tuple contributes nothing to the
+    # manifest, so there is nothing to assert and the gate passes green.
+    "favorite_picks",
     "bankroll_parlays",
     "lotto_parlays",
     "model_legs",

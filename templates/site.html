@@ -6100,6 +6100,30 @@
   <div id="detail-view">
     <div class="back-btn" id="back-btn" onclick="showHub()" role="button" tabindex="0">‹ More</div>
 
+  {#
+    THE MEMBER WALL, said out loud rather than left as an empty section.
+
+    Every one of these sections is already redacted on the free build -- the
+    context keys are emptied in src/tiering, so the loops render nothing. What
+    they printed instead was the section's own "nothing qualified this week"
+    copy, which on a free payload is a flat lie: the card is full, and this
+    reader is simply not being shown it. "No locks this week" told a
+    prospective subscriber the product had nothing for them on precisely the
+    week it had three.
+
+    Guarded on `tier`, never on CSS. A block hidden with display:none is still
+    in the payload, and the payload is what gets cached and scraped.
+  #}
+  {% macro member_wall(head, blurb) -%}
+  <div class="oa-upsell" data-oa-upsell>
+    <div class="oa-upsell-head">{{ head }}</div>
+    <p>{{ blurb }}</p>
+    <button type="button" class="oa-upsell-cta" data-oa-subscribe="year">Start 7 days free</button>
+    <div class="oa-upsell-fine">$190/yr, or $19/mo &middot; cancel in one tap &middot;
+      <a href="/welcome">see the track record</a></div>
+  </div>
+  {%- endmacro %}
+
   <div class="detail-section" data-section="track">
   <div class="standout-title" id="section-trackrecord">{{ icon_track() }} Model Track Record</div>
   {% if track_record %}
@@ -7412,6 +7436,13 @@
   </details>
   {% endif %}
 
+  {% if not standout_props and tier == 'free' %}
+  <div class="standout-title" id="section-standout">{{ icon_flame() }} Clearest Reads</div>
+  {{ member_wall("The reads are for members",
+     "The five fights the model reads most clearly and the market agrees on
+      &mdash; the cohort that has won 85% across 7 logged cards. The line
+      movement above stays free; what the model makes of it does not.") }}
+  {% endif %}
   {% if standout_props %}
   <div class="standout-title" id="section-standout">{{ icon_flame() }} Clearest Reads · {{ event_matchup }}</div>
   {#- WHAT THIS SECTION IS, said before the cards rather than left to be
@@ -7490,7 +7521,10 @@
     </div>
     {% endfor %}
   </div>
-  {% else %}
+  {% elif tier != 'free' %}
+  {#- The wall above already answered this for a free reader. Printing "the
+      model and the market aren't lining up on any fight here" underneath it
+      contradicts the wall AND is untrue: they are lining up on five. -#}
   {{ empty_state(icon_flame(), "No clear reads on this card", "The model and the market aren't lining up confidently on any fight here yet — check back as odds update.") }}
   {% endif %}
 
@@ -7560,6 +7594,13 @@
   {% if analytics_source_event %}
   <div class="analytics-fallback-notice">{{ icon_calendar() }} This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
   {% endif %}
+  {% if not favorite_picks and tier == 'free' %}
+  <div class="standout-title">{{ icon_diamond() }} Favorite Picks</div>
+  {{ member_wall("The picks are for members",
+     "Straight, single-leg bets in a real size range, sorted by how sure the
+      model is. Everything already graded stays free &mdash; this is the read
+      on fights that have not happened yet.") }}
+  {% endif %}
   {% if favorite_picks %}
   <div class="standout-title">{{ icon_diamond() }} Favorite Picks</div>
   <div class="parlay-subtitle">Straight, single-leg bets in a realistic odds range ({{ '-220' }} to {{ '+160' }}) — built for real size, not a coinflip longshot or a -4000 favorite with no payout. Sorted by model probability, so the safest genuine plays lead.</div>
@@ -7586,7 +7627,10 @@
     </div>
     {% endfor %}
   </div>
-  {% else %}
+  {% elif tier != 'free' %}
+  {#- Same as the reads section: the wall above already answered this, and
+      "the model doesn't see a clean edge on this card" is untrue on a payload
+      where it saw five and they were redacted out. -#}
   {{ empty_state(icon_diamond(), "No favorite picks right now", "Nothing in the realistic straight-bet range at the moment — check back as odds update, or the model just doesn't see a clean high-probability edge on this card yet.") }}
   {% endif %}
   </div>
@@ -7597,6 +7641,7 @@
     read at -1000 is a confident pick and a terrible bet. See src/plays.py for
     the rule and src/plays_ledger.py for why nothing here is ever restated.
   #}
+
   <div class="detail-section" data-section="plays">
   <div class="standout-title" id="section-plays">{{ icon_coins() }} This Week's Plays</div>
 
@@ -7640,15 +7685,10 @@
      there -- the card is full of plays and this reader simply is not being
      shown them. Guarded on tier rather than hidden with CSS so the claim
      cannot leak into the wrong payload. #}
-  <div class="oa-upsell" data-oa-upsell>
-    <div class="oa-upsell-head">The plays are for members</div>
-    <p>Every bet the model is placing this weekend, the price it went in at,
-       and the stake &mdash; sized from the edge rather than from a hunch. The
-       record they build is public either way; the bets themselves are not.</p>
-    <button type="button" class="oa-upsell-cta" data-oa-subscribe="year">Start 7 days free</button>
-    <div class="oa-upsell-fine">$190/yr, or $19/mo &middot; cancel in one tap &middot;
-      <a href="/welcome">see the track record</a></div>
-  </div>
+  {{ member_wall("The plays are for members",
+     "Every bet the model is placing this weekend, the price it went in at, and
+      the stake &mdash; sized from the edge rather than from a hunch. The record
+      they build is public either way; the bets themselves are not.") }}
   {% else %}
   {{ empty_state(icon_coins(), "No plays this week", "Nothing on this card beats its own price by enough to be worth staking. That is the rule working, not a gap \u2014 a week with no bet is the whole reason the rule exists.") }}
   {% endif %}
@@ -7690,6 +7730,12 @@
     </div>
     {% endfor %}
   </div>
+  {% elif tier == 'free' %}
+  <div class="standout-title">{{ icon_lock() }} Locks of the Week</div>
+  {{ member_wall("The locks are for members",
+     "The model's highest-conviction call on a card &mdash; at most three, and
+      only above 82%. The record they have built is public: 9&ndash;0 so far,
+      staked at ten units apiece.") }}
   {% else %}
   {{ empty_state(icon_lock(), "No locks this week", "Nothing on this card clears the 82% bar a lock has to meet. That's the system working, not a gap — the label is only worth something if some weeks it goes unearned.") }}
   {% endif %}
@@ -7730,6 +7776,11 @@
     {% endfor %}
   </ul>
   <div class="parlay-note">Take it at the listed price <strong>or better</strong>. That threshold already carries a margin over break-even, because these are the model’s most confident calls and picking the best of anything flatters it. No edge figure is shown: the feed doesn’t quote these markets, so there is nothing yet to compare against.</div>
+  {% elif tier == 'free' %}
+  {{ member_wall("The parlays are for members",
+     "The legs the model likes, each with the price it has to be paid to be
+      worth taking, plus the built slips. Every one of them is a read on a
+      fight that has not happened yet.") }}
   {% elif events %}
   {{ empty_state(icon_coins(), "No legs to recommend yet", "The card has no priced moneyline to anchor the method grid against.") }}
   {% endif %}
@@ -7763,7 +7814,7 @@
   {{ parlay_card(p, "bankroll", 1) }}
   {% endfor %}
   <div class="parlay-note">Fights on the same card were checked for correlation and behave independently, so multiplying across them is sound. The estimate is still optimistic for a different reason: picking the best slip out of many inflates whatever it was ranked on. Legs marked "model" have no live book price to compare against.</div>
-  {% elif events %}
+  {% elif events and tier != 'free' %}
   <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
   {{ empty_state(icon_coins(), "No bankroll parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
   {% endif %}
@@ -7775,7 +7826,7 @@
   {{ parlay_card(p, "lotto", 2) }}
   {% endfor %}
   <div class="parlay-note">These are long shots by design — meant as a "worth a small stab" section, not a plan.</div>
-  {% elif events %}
+  {% elif events and tier != 'free' %}
   <div class="parlay-section-title lotto" id="section-lotto">{{ icon_dice() }} Lotto Parlays</div>
   {{ empty_state(icon_dice(), "No lotto parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
   {% endif %}
