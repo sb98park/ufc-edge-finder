@@ -45,56 +45,29 @@ Run:  python3 scripts/grade_prop_prices.py
 import random
 import re
 import sys
-import unicodedata
 
 import pandas as pd
 
 sys.path.insert(0, ".")
 
 from src.prop_ledger import load as load_ledger
+# ONE DEFINITION OF "IS THIS A KO". These used to live here; the plays ledger
+# needs the same questions answered about the same fights from the same file,
+# and two copies is how two ledgers end up disagreeing about one night.
+from src.play_settlement import (
+    ROUND_SECONDS, fold, clock_seconds, is_decision, is_ko, is_sub, elapsed_rounds,
+)
 
 RESULTS = "data/fight_results.csv"
-ROUND_SECONDS = 300
 SEED = 17
 BOOTSTRAP = 4000
 
 T, F, UNKNOWN = True, False, None
 
 
-def fold(s) -> str:
-    return unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode().lower().strip()
-
-
 def to_decimal(american) -> float:
     o = float(american)
     return 1 + (100.0 / -o) if o < 0 else 1 + (o / 100.0)
-
-
-def clock_seconds(value):
-    m = re.fullmatch(r"(\d+):([0-5]\d)", str(value).strip())
-    return int(m.group(1)) * 60 + int(m.group(2)) if m else None
-
-
-def is_decision(method) -> bool:
-    return "dec" in fold(method)
-
-
-def is_ko(method) -> bool:
-    m = fold(method)
-    return "ko" in m or "tko" in m
-
-
-def is_sub(method) -> bool:
-    return "sub" in fold(method)
-
-
-def elapsed_rounds(end_round, end_time, count_up: bool):
-    """Total rounds elapsed at the stoppage, under the stated convention."""
-    secs = clock_seconds(end_time)
-    if secs is None or end_round is None or pd.isna(end_round):
-        return None
-    within = secs if count_up else (ROUND_SECONDS - secs)
-    return (int(end_round) - 1) + within / ROUND_SECONDS
 
 
 def settle(entry: dict, res: dict, count_up: bool = True):

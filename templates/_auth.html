@@ -45,16 +45,28 @@
      stack like it.
      10000/10001 rather than another 9999: ties are broken by document
      order, and this partial is included before some of those rules. */
+  /* THE SOFT KEYBOARD IS NOT PART OF THE VIEWPORT THESE ARE FIXED TO.
+     inset:0 pins to the LAYOUT viewport, which iOS does not shrink when the
+     keyboard opens -- so the scrim ended above the keys and the strip between
+     the two showed the page, sharp and undimmed, with the sheet floating
+     clear of them. --vv-* are written from visualViewport while the sheet is
+     open and describe what the reader can actually see; the fallbacks keep
+     this correct where visualViewport does not exist. */
   .oa-scrim {
-    position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(3px);
+    position: fixed; left: 0; right: 0;
+    top: var(--vv-top, 0px); height: var(--vv-h, 100%);
+    background: rgba(0,0,0,.72); backdrop-filter: blur(3px);
     opacity: 0; pointer-events: none; transition: opacity .18s ease; z-index: 10000;
   }
   .oa-scrim[data-open] { opacity: 1; pointer-events: auto; }
   .oa-sheet {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10001;
+    position: fixed; left: 0; right: 0; bottom: var(--vv-kb, 0px); z-index: 10001;
     background: #111113; border-top: 1px solid var(--hairline);
     border-radius: 20px 20px 0 0;
     padding: 12px 18px calc(24px + env(safe-area-inset-bottom));
+    /* Taller than the space left once the keys are up. Scrolling inside the
+       sheet beats hiding its own submit button behind them. */
+    max-height: var(--vv-h, 100%); overflow-y: auto; -webkit-overflow-scrolling: touch;
     transform: translateY(100%); transition: transform .24s cubic-bezier(.22,1,.36,1);
     max-width: 480px; margin: 0 auto;
   }
@@ -257,7 +269,39 @@
     [scrim, sheet].forEach(function (el) {
       if (v) el.setAttribute("data-open", ""); else el.removeAttribute("data-open");
     });
+    if (v) startViewportSync(); else stopViewportSync();
     if (v && !showAcct) setTimeout(function () { email.focus(); }, 260);
+  }
+
+  /* KEEPING THE SHEET ON TOP OF THE KEYS. visualViewport is the only thing
+     that knows where the keyboard is -- window.innerHeight does not change
+     when it opens. offsetTop matters as much as height: iOS scrolls the
+     layout viewport inside the visual one to reveal a focused input, and
+     without it the scrim drifts off the top of the screen. Bound only while
+     the sheet is open, because these fire on every scroll frame. */
+  var vvBound = false;
+  function syncViewport() {
+    var vv = window.visualViewport;
+    if (!vv) return;
+    var st = document.documentElement.style;
+    st.setProperty("--vv-top", vv.offsetTop + "px");
+    st.setProperty("--vv-h", vv.height + "px");
+    st.setProperty("--vv-kb", Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px");
+  }
+  function startViewportSync() {
+    if (vvBound || !window.visualViewport) return;
+    vvBound = true;
+    window.visualViewport.addEventListener("resize", syncViewport);
+    window.visualViewport.addEventListener("scroll", syncViewport);
+    syncViewport();
+  }
+  function stopViewportSync() {
+    if (!vvBound) return;
+    vvBound = false;
+    window.visualViewport.removeEventListener("resize", syncViewport);
+    window.visualViewport.removeEventListener("scroll", syncViewport);
+    var st = document.documentElement.style;
+    st.removeProperty("--vv-top"); st.removeProperty("--vv-h"); st.removeProperty("--vv-kb");
   }
   /* Move into the app's header row if there is one. Done here rather than by
      rendering the button inside site.html so this partial stays self-contained

@@ -1264,7 +1264,13 @@ def main(tier: str = "member", output_path: str | None = None):
     # definition, shared by the landing page and the app, and the input still
     # ACCEPTS up to 10 so a future settings change degrades to "tap the
     # button" rather than to "cannot type your code".
-    env.globals["otp_length"] = 8
+    # WHAT SUPABASE ACTUALLY ISSUES. Changed in the project settings from 8 to
+    # 6; this drives the placeholder and the aria-label, and while it said 8 the
+    # code box invited a reader to type two digits that were never sent. The
+    # SUBMIT path stays length-agnostic on purpose -- it fires when the field
+    # settles rather than at a fixed count -- so this being stale can only ever
+    # mislabel the box, never refuse a valid code.
+    env.globals["otp_length"] = 6
     env.globals["otp_max_length"] = 10
     env.globals["stake_ladder"] = UNITS_BY_CONFIDENCE
     # The day the current ladder took effect, for the one-line note under the

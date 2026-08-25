@@ -66,16 +66,64 @@ def _stamp_time():
         return None
 
 
-def _commit_time():
-    """The last commit's time, or None if git cannot answer."""
+def _head_commit():
+    """(subject, time) for HEAD, or (None, None) if git cannot answer."""
     try:
-        out = subprocess.run(["git", "log", "-1", "--format=%ct"],
+        out = subprocess.run(["git", "log", "-1", "--format=%ct%x09%s"],
                              capture_output=True, text=True, timeout=20)
         if out.returncode != 0 or not out.stdout.strip():
-            return None
-        return dt.datetime.fromtimestamp(int(out.stdout.strip()), dt.timezone.utc)
+            return None, None
+        stamp, _, subject = out.stdout.strip().partition("\t")
+        return subject, dt.datetime.fromtimestamp(int(stamp), dt.timezone.utc)
     except (OSError, ValueError, subprocess.SubprocessError):
+        return None, None
+
+
+def _commit_time():
+    """The last commit's time, or None if git cannot answer."""
+    return _head_commit()[1]
+
+
+# The subject marker on the commit this workflow makes for ITSELF, after a
+# build. Anything carrying it was produced BY a build and therefore cannot be
+# evidence of work awaiting one.
+_AUTO_COMMIT_MARK = "[skip ci]"
+
+
+def _unbuilt_commit():
+    """
+    A human commit that no build has seen yet, or None.
+
+    WHY THIS OVERRIDE EXISTS, and it is not a nicety.
+
+    A push always builds -- refresh.yml routes push straight past this gate.
+    Except the workflow's concurrency group holds one run and queues one, so
+    when the next 5-minute tick arrives while a build is running, GitHub
+    cancels the PENDING run to make room. That pending run is regularly the
+    push. Measured on 2026-08-24: the push at 23:38 carrying the passkey
+    sign-in was cancelled 2 minutes later by an automated tick.
+
+    And then this gate made it worse. _minutes_since_last_build takes the
+    LATER of the stamp and the commit, so the brand-new commit -- the thing
+    that has not been built -- reset the clock and every tick for the next
+    half hour reported "last build 2m ago, skipping". A code change is the
+    strongest possible reason to build, and it was being read as the strongest
+    possible reason not to.
+
+    So: unbuilt human work beats the interval. Automated refresh commits are
+    excluded by their subject marker; they are made by a build, one minute
+    after it stamped, and would otherwise look like pending work on every
+    single tick and disable the throttle entirely.
+    """
+    subject, when = _head_commit()
+    if when is None or subject is None:
         return None
+    if _AUTO_COMMIT_MARK in subject:
+        return None
+    stamp = _stamp_time()
+    if stamp is None or when > stamp:
+        return when
+    return None
 
 
 def record_build_time():
@@ -173,6 +221,15 @@ def main():
             interval, why = 15, "within 72h of a card"
         else:
             interval, why = 30, "no card close"
+
+        # BEFORE the interval, deliberately -- see _unbuilt_commit. A cadence
+        # designed around how fast odds move has no opinion about code, and
+        # must not be the reason a fix waits half an hour to reach anyone.
+        pending = _unbuilt_commit()
+        if pending is not None:
+            print(f"[cadence] {why} ({hours:.0f}h) -- commit at "
+                  f"{pending.isoformat()} not built yet -- BUILDING")
+            return 0
 
         age = _minutes_since_last_build()
         if age is None:
