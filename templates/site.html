@@ -4148,7 +4148,7 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 4px; padding: 11px 2px 10px;
     background: none; border: 0; cursor: pointer;
-    color: rgba(255,255,255,0.62); font-family: inherit; font-size: var(--t-small); font-weight: 600;
+    font-family: inherit; font-size: var(--t-small); font-weight: 600;
     /* Carries contrast that the fill no longer provides. Two stacked shadows:
        a tight dark halo for edge definition, a wider soft one for separation
        from bright content scrolling underneath. */
@@ -4206,6 +4206,40 @@
     filter: grayscale(1) brightness(3) drop-shadow(0 1px 2px rgba(0,0,0,0.5));
   }
   .tabbar-btn.active .inline-icon { opacity: 1; }
+
+  /* --- THE TAB ICONS THEMSELVES ------------------------------------------
+     Two drawings per tab, swapped on selection, and no filter anywhere.
+
+     WHY NOT A CSS FILL TOGGLE, which is what a comment above says was tried
+     and abandoned. It was right to abandon it: filling an OUTLINE drawing
+     collapses its interior into a blob -- an outline calendar filled in is
+     just a rounded rectangle. A filled calendar is a different drawing, a
+     solid body with the dates knocked out of it. SF Symbols ships two
+     drawings per symbol for exactly this reason, and now so does tab_icon.
+
+     WARM, NOT WHITE. The old rule was grayscale(1) brightness(3), which
+     neutralises five differently-coloured macros in one line -- clever, and
+     its ceiling is pure white. Apple's unselected icons are a warm cream
+     picking up the material behind them, and pure white next to them looks
+     clinical. currentColor plus a warm pair does the same neutralising job
+     and can land anywhere. */
+  .tabbar-btn .tab-ico {
+    width: 23px; height: 23px; display: block;
+    /* Same subpixel pinning as the old icons: promoting a layer on
+       activation re-rounds its position, which is the faint sideways shift
+       when switching tabs. Declare it up front so the layer never changes
+       state. */
+    transform: translateZ(0); backface-visibility: hidden;
+    /* A stroke-only glyph over a near-transparent bar would otherwise
+       disappear against light content. */
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+  }
+  .tabbar-btn .ti-fill { display: none; }
+  .tabbar-btn.active .ti-outline { display: none; }
+  .tabbar-btn.active .ti-fill { display: block; }
+  /* Icon and label move together, because in a native bar they always do. */
+  .tabbar-btn { color: rgba(240, 236, 228, 0.58); }
+  .tabbar-btn.active { color: #f6f2ea; }
   /* No :active background. This painted a RECTANGLE across the whole button
      while the finger was down -- it predates the pill, from when there was no
      shared indicator to show the pressed state. Against a capsule pill it
@@ -4323,7 +4357,8 @@
      the job the indicator was supposed to do. The prefers-contrast block
      further down already draws exactly this border -- the default should not
      wait for a user preference to become legible. */
-  .tabbar-btn.active { color: var(--text); }
+  /* Superseded by the warm pair above; kept out of the cascade rather than
+     left to fight it. */
 
   /* PRESSED STATES. Feedback belongs on pointer-DOWN and has to be instant;
      the moment it lags, directness "falls off a cliff". Twelve interactive
@@ -4431,10 +4466,12 @@
       border: 1px solid var(--text);
       box-shadow: none;
     }
-    /* Inactive tabs sit at --muted, which is deliberately quiet against the
-       glass. With the glass gone that contrast ratio is the only thing
-       distinguishing them, so lift it. */
-    .seg-tab, .tabbar-btn { color: var(--text-soft); }
+    /* Inactive tabs sit quiet against the glass. With the glass gone that
+       contrast ratio is the only thing distinguishing them, so lift it --
+       but stay on the warm neutral rather than dropping back to a cool grey,
+       or the fallback would look like a different app. */
+    .seg-tab { color: var(--text-soft); }
+    .tabbar-btn { color: rgba(240, 236, 228, 0.74); }
   }
 
   @media (max-width: 1023px) {
@@ -4735,12 +4772,10 @@
      the contrast has to come from the glyph itself. brightness(3) after
      grayscale drives every gradient to flat white regardless of its source
      colour, so all five read identically. */
-  /* Same outline, crisper. Inactive sits at a muted white; selected goes to
-     full strength. The stroke weight is deliberately unchanged so the shape
-     doesn't shift at all between states. */
-  .tabbar-btn.active .inline-icon { opacity: 1; filter: grayscale(1) brightness(3); }
-  /* Label stays bright rather than tinted: with the icon carrying its own
-     hue, a gold label would clash against a purple padlock. */
+  /* Both of these described the .inline-icon bar, which the tab no longer
+     uses -- tab_icon ships its own two drawings in currentColor. Left as a
+     note rather than deleted, because the reasoning still governs the
+     SECTION-TITLE icons, which do carry their own gradients. */
   /* NO BORDER. A 1px border here paints all four sides, so it landed as a
      vertical rule down each edge of the active tab -- a box drawn inside a
      capsule, fighting the shape it sits in.
@@ -4748,7 +4783,11 @@
      and which the old 1.30:1 lift did not meet. That is now carried by the
      indicator pill's own fill (raised to .18/.11) plus the white 600 label,
      which gets the contrast without drawing a single line. */
-  .tabbar-btn.active { color: #ffffff; font-weight: 600; }
+  /* Warm, not #ffffff. Pure white is the coldest possible selected state and
+     is what made the bar read as grey-on-grey next to a native one; the pair
+     is set above with the icon so the two can never drift apart. Weight still
+     carries part of the state. */
+  .tabbar-btn.active { font-weight: 600; }
   /* Inset stays 5px in BOTH states. Changing it to 4px when compact would
      break the equal-inset condition the concentric capsule relies on. */
   @media (prefers-reduced-motion: reduce) {
@@ -5694,6 +5733,62 @@
     icon, because gold is reserved for "model" and cyan for "market" and
     navigation is neither. Section titles keep the house gradient like every
     other icon macro. -#}
+{#- TAB ICONS, TWO DRAWINGS EACH, AND currentColor THROUGHOUT.
+    A separate set from the section-title macros on purpose. Those carry the
+    house gold gradient, which is correct in a heading and wrong in a tab: the
+    colour system reserves gold for "model" and cyan for "market", and
+    navigation is neither. The old bar solved that with
+    grayscale(1) brightness(3), which works but can only ever produce PURE
+    WHITE -- the most neutral result available, and the coldest. Using
+    currentColor instead lets the button set a warm off-white and drops the
+    filter hack entirely.
+
+    AND THE FILLED VARIANTS ARE DRAWN, NOT FILLED. There is a comment in this
+    file saying filling on selection "was tried and abandoned" because a solid
+    fill collapses an outline drawing into a featureless blob. That was true
+    and is the reason this is a second SET rather than a CSS fill toggle: an
+    outline calendar filled in is a rounded rectangle, while a filled calendar
+    is a solid body with the dates knocked out of it. Apple gets away with it
+    for exactly this reason -- SF Symbols ships two drawings, not one drawing
+    and a switch. So do we now.
+
+    Record and More were ALREADY solid while Card, Reads and Plays were
+    outlines, so the row was half one idiom and half the other. The filled set
+    settles that too. -#}
+{% macro tab_icon(name, filled=False) -%}
+{%- if name == 'card' -%}
+  {%- if filled -%}
+<svg class="tab-ico ti-fill" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M9.1 3.1a1.05 1.05 0 0 1 1.05 1.05V5.4h5.7V4.15a1.05 1.05 0 1 1 2.1 0V5.4h1.05A3.1 3.1 0 0 1 22.1 8.5v10.5a3.1 3.1 0 0 1-3.1 3.1H7a3.1 3.1 0 0 1-3.1-3.1V8.5A3.1 3.1 0 0 1 7 5.4h1.05V4.15A1.05 1.05 0 0 1 9.1 3.1ZM9.3 14.1a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3ZM13 14.1a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3ZM16.7 14.1a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3Z"/></svg>
+  {%- else -%}
+<svg class="tab-ico ti-outline" viewBox="0 0 26 26" fill="none" aria-hidden="true"><rect x="4" y="6" width="18" height="16" rx="2.4" stroke="currentColor" stroke-width="2"/><path d="M4 11h18M9 4v4M17 4v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  {%- endif -%}
+{%- elif name == 'reads' -%}
+  {%- if filled -%}
+<svg class="tab-ico ti-fill" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M4.6 19.4A9 9 0 1 1 21.4 19.4" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" opacity=".38"/><path fill="currentColor" d="M12.1 18.6 17.3 9.1a1.3 1.3 0 0 1 2.3 1.2l-5 9.7Z"/><circle cx="13" cy="19.8" r="3" fill="currentColor"/></svg>
+  {%- else -%}
+<svg class="tab-ico ti-outline" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M4,20 A9,9 0 1,1 22,20" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".45"/><line x1="13" y1="20" x2="18.5" y2="9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="13" cy="20" r="2.2" fill="currentColor"/></svg>
+  {%- endif -%}
+{%- elif name == 'plays' -%}
+  {%- if filled -%}
+<svg class="tab-ico ti-fill" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M5.6 3.4h14.8v14.2l-2.5 1.8-2.5-1.8-2.4 1.8-2.5-1.8-2.4 1.8-2.5-1.8ZM9.4 7.5h7.2a1 1 0 0 1 0 2H9.4a1 1 0 0 1 0-2ZM9.4 11h4.6a1 1 0 0 1 0 2H9.4a1 1 0 0 1 0-2Z"/></svg>
+  {%- else -%}
+<svg class="tab-ico ti-outline" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M6 4h14v13l-2.3 1.6L15.4 17l-2.3 1.6L10.8 17l-2.3 1.6L6 17z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.4 8.6h7.2M9.4 12h4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  {%- endif -%}
+{%- elif name == 'record' -%}
+  {%- if filled -%}
+<svg class="tab-ico ti-fill" viewBox="0 0 26 26" fill="none" aria-hidden="true"><rect x="4.6" y="13.4" width="4.6" height="8.8" rx="1.5" fill="currentColor"/><rect x="10.7" y="7.2" width="4.6" height="15" rx="1.5" fill="currentColor"/><rect x="16.8" y="10.4" width="4.6" height="11.8" rx="1.5" fill="currentColor"/></svg>
+  {%- else -%}
+<svg class="tab-ico ti-outline" viewBox="0 0 26 26" fill="none" aria-hidden="true"><rect x="5" y="14" width="4" height="8" rx="1" fill="currentColor"/><rect x="11" y="8" width="4" height="14" rx="1" fill="currentColor"/><rect x="17" y="11" width="4" height="11" rx="1" fill="currentColor"/></svg>
+  {%- endif -%}
+{%- else -%}
+  {%- if filled -%}
+<svg class="tab-ico ti-fill" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M5 8h16M5 13h16M5 18h16" stroke="currentColor" stroke-width="2.9" stroke-linecap="round"/></svg>
+  {%- else -%}
+<svg class="tab-ico ti-outline" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M5 8h16M5 13h16M5 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  {%- endif -%}
+{%- endif -%}
+{%- endmacro %}
+
 {% macro icon_slip() -%}
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Betting slip"><defs><linearGradient id="hi-slip" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M6 4h14v13l-2.3 1.6L15.4 17l-2.3 1.6L10.8 17l-2.3 1.6L6 17z" stroke="url(#hi-slip)" stroke-width="1.9" stroke-linejoin="round" fill="none"/><path d="M9.4 8.6h7.2M9.4 12h4.6" stroke="url(#hi-slip)" stroke-width="1.9" stroke-linecap="round"/></svg>
 {%- endmacro %}
@@ -13852,21 +13947,21 @@
   </div>
 
   <nav class="mobile-tabbar" id="mobile-tabbar" aria-label="Main"><span class="tabbar-indicator" id="tabbar-indicator" aria-hidden="true"></span>
-    <button class="tabbar-btn" data-tab="thisweekend">{{ icon_calendar() }}<span>Card</span></button>
+    <button class="tabbar-btn" data-tab="thisweekend">{{ tab_icon("card") }}{{ tab_icon("card", True) }}<span>Card</span></button>
     {#- "Reads", not "Edges". Every card in this section renders
         .ev-headline.neg.unbettable, every price is suffixed "fair", and the
         section's own title already says "Clearest Reads". The tab promised an
         edge and the first line beneath it said there isn't one -- a
         five-character nav label undercutting the most careful writing in the
         product. -#}
-    <button class="tabbar-btn" data-tab="standout">{{ icon_target() }}<span>Reads</span></button>
+    <button class="tabbar-btn" data-tab="standout">{{ tab_icon("reads") }}{{ tab_icon("reads", True) }}<span>Reads</span></button>
     {#- PLAYS TOOK THE LOCKS SLOT. A lock is a statement about the model's
         conviction; a play is a statement about money, and money is what the
         reader came for. Locks of the Week are still a section, still linked
         from More, and still badged on the fight cards they belong to. -#}
-    <button class="tabbar-btn" data-tab="plays">{{ icon_slip() }}<span>Plays</span></button>
-    <button class="tabbar-btn" data-tab="track">{{ icon_barchart() }}<span>Record</span></button>
-    <button class="tabbar-btn" data-tab="__hub">{{ icon_list() }}<span>More</span></button>
+    <button class="tabbar-btn" data-tab="plays">{{ tab_icon("plays") }}{{ tab_icon("plays", True) }}<span>Plays</span></button>
+    <button class="tabbar-btn" data-tab="track">{{ tab_icon("record") }}{{ tab_icon("record", True) }}<span>Record</span></button>
+    <button class="tabbar-btn" data-tab="__hub">{{ tab_icon("list") }}{{ tab_icon("list", True) }}<span>More</span></button>
   </nav>
 {# window.OctanePasskey -- must parse BEFORE the auth widget, which reads it. #}
 {% include "_passkey.html" %}
