@@ -896,8 +896,8 @@
          two tiers the table above is about. A +63.44U headline over a line
          ending at +58.76U is two different claims stacked on top of each
          other, and the reader has no way to tell which one they are looking
-         at. Every tier, Medium's losses included, is still in the ledger
-         card. #}
+         at. The ledger card below carries all four tiers, with the two we
+         do not stake shown as one line. #}
       <div class="big"><b data-roll>{{ '%+.2f'|format(tr.units_stats.shortlist_units) }}</b><span>U</span></div>
       <div class="sub">{{ tr.units_stats.shortlist_count }} picks &middot; {{ tr.units_stats.shortlist_events }} cards<br><b>ROI {{ '%+.1f'|format(tr.units_stats.shortlist_roi_pct) }}%</b></div>
     </div>
@@ -1215,7 +1215,7 @@
 
   <div class="grouphd">
     <div class="g1">What it proves</div>
-    <div class="g2">Scored against the closing line, losses included.</div>
+    <div class="g2">Scored against the closing line, at the price on the day.</div>
   </div>
 
   {% if clv_stats %}
@@ -1338,7 +1338,9 @@
   <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">The ledger</span>
-        <h3>Priced, not just picked &mdash; including what lost</h3></div>
+        {#- "including what lost" was pointing at the Medium row, which is no
+            longer its own line. The first half was always the real claim. -#}
+        <h3>Priced, not just picked</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -1346,15 +1348,39 @@
     <div class="canvas warm" data-reveal>
       <div class="shot">
         <div class="sh-top"><span>By confidence tier</span><span>{{ tr.units_stats.eligible_count }} positions</span></div>
+        {#- THREE ROWS, NOT FOUR. Medium and Low are one line now, and that is
+            a claim about the product rather than a tidy-up: as of the plays
+            ledger they are the tiers we do not stake, so splitting them asks
+            the reader to weigh two numbers that no longer lead anywhere.
+            Their combined figure is what a reader would actually have got.
+            IT COSTS THE PAGE ITS ONLY NEGATIVE, and the copy under and around
+            this table has been rewritten to stop claiming otherwise -- see
+            the card title, the group header above it, and the detail panel
+            below. What survives is the claim that is still true and still
+            rare: every position is priced at the market, so a good hit rate
+            can still show a bad number. -#}
+        {%- set bt = tr.units_stats.by_tier -%}
+        {%- set staked = [('Lock of the Week', bt.get('Lock of the Week')),
+                          ('High', bt.get('High Confidence'))] -%}
+        {%- set rest = [bt.get('Medium Confidence'), bt.get('Low Confidence')] | select | list -%}
         <table class="ltbl">
           <tr><th>Tier</th><th>N</th><th>Units</th></tr>
-          {% for tier_name, st in tr.units_stats.by_tier.items() %}
+          {% for label, st in staked %}{% if st %}
           <tr style="--fd:{{ loop.index0 * 0.07 }}s">
-            <td>{{ tier_name|replace(' Confidence','') }}</td>
+            <td>{{ label }}</td>
             <td>{{ st.count }}</td>
             <td class="{{ 'up' if st.units >= 0 else 'dn' }}"
                 data-roll data-roll-delay="{{ loop.index0 * 70 + 140 }}">{{ '%+.2f'|format(st.units) }}</td></tr>
-          {% endfor %}
+          {% endif %}{% endfor %}
+          {% if rest %}
+          {%- set rest_n = rest | sum(attribute='count') -%}
+          {%- set rest_u = rest | sum(attribute='units') -%}
+          <tr style="--fd:0.14s">
+            <td>Medium and Low</td>
+            <td>{{ rest_n }}</td>
+            <td class="{{ 'up' if rest_u >= 0 else 'dn' }}"
+                data-roll data-roll-delay="280">{{ '%+.2f'|format(rest_u) }}</td></tr>
+          {% endif %}
         </table>
       </div>
     </div>
@@ -1362,13 +1388,20 @@
       <p>A win-loss record can hide a losing business. <b>{{ tr.accuracy_pct }}% at short prices
          still loses money</b> &mdash; so every pick is scored in units at the real market price
          when it was published, never at the model's own probability.</p>
-      {% set med = tr.units_stats.by_tier.get('Medium Confidence') %}
-      {% if med and med.units < 0 %}
-      <p>The Medium tier is <b>{{ '%+.2f'|format(med.units) }}U</b> and it stays on the page. It
-         is the row that proves the other three.</p>
-      {% endif %}
-      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> Publishing
-        the tier that loses money is a choice no one selling picks will make.</span></div>
+      {#- BOTH OF THESE POINTED AT A ROW THAT NO LONGER EXISTS. The Medium
+          paragraph named a figure the table stopped printing, and "publishing
+          the tier that loses money" described a thing the page no longer
+          does. Neither was worth keeping by pretending. What replaces them is
+          the claim the card is actually built on and which nothing here has
+          weakened: the unit figure is scored at the market price on the day,
+          so it can disagree with the win-loss record -- and every loss is
+          inside it whether or not any single row is negative. -#}
+      <p>Every loss is inside these numbers. A pick that missed is a full stake gone at the price
+         it was published at &mdash; which is why the units and the win-loss record do not always
+         tell the same story.</p>
+      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> A hit rate
+        is easy to publish and easy to flatter. A unit figure priced at the market on the day is
+        neither, and it is the only one that says whether the picks made money.</span></div>
     </div></div>
   </div>
 
