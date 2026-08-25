@@ -72,21 +72,31 @@ check("moneyline is named the way the book names it",
 check("round total", label_for("Total Rounds Under 1.5", None, ""), "Under 1.5 rounds")
 check("round total", label_for("Total Rounds Over 2.5", None, ""), "Over 2.5 rounds")
 
-print("\nTHE CASE THAT STARTED THIS: a pick too short to bet")
-# Umar at -388 is a High Confidence pick and NOT a play. The model has him at
-# 75.1%, the blend at 78.2%, and the price demands 83.5%. This is the whole
-# argument for the plays layer existing: conviction and value are different
-# questions, and the tiers only ever answered the first.
-passed = {p["selection"]: p for p in built["passed"]}
+print("\nTHE LADDER TIERS ARE PLAYED ON THE RECORD, NOT ON THE HURDLE")
+# This test used to assert the opposite, and the record says the old rule was
+# wrong. Measured across every graded pick: the locks and high-confidence
+# picks the EV hurdle REFUSED went 12-0 for +21.10U, and -- the part that
+# matters, since 12-0 is above expectation -- they averaged +1.02% EV per unit
+# on our own blended probability. They were thin positive-expectation bets
+# under a threshold built for the props board, not negative ones that got
+# lucky. And the published record IS every lock at 10U and every high pick at
+# 5U, so a plays section that skips half of them is not the system the
+# landing page draws a curve of.
 check("Umar is picked", by_name["Umar Nurmagomedov"]["preview"]["favorite"], "Umar Nurmagomedov")
 check("  ...at High Confidence",
       by_name["Umar Nurmagomedov"]["preview"]["confidence_label"], "High Confidence")
-check("  ...and is NOT played", "Umar Nurmagomedov to win" in plays, False)
-check("  ...but is listed as passed, not silently dropped",
-      "Umar Nurmagomedov" in passed, True)
-check("  ...with the price named as the reason",
-      "below the" in passed["Umar Nurmagomedov"]["reason"], True)
-check("the other short favorite is passed too", "Rei Tsuruya" in passed, True)
+check("  ...and IS played, at -388", "Umar Nurmagomedov Moneyline" in plays, True)
+check("  ...at the ladder stake, not a Kelly size",
+      plays["Umar Nurmagomedov Moneyline"]["units"], 5.0)
+check("  ...flagged as riding the ladder",
+      plays["Umar Nurmagomedov Moneyline"]["on_ladder"], True)
+check("the other short favorite plays too", "Rei Tsuruya Moneyline" in plays, True)
+# The price is still short enough that the hurdle would refuse it, and the row
+# says so honestly: 5 units to win less than one.
+check("  ...and the row is honest about what that returns",
+      plays["Rei Tsuruya Moneyline"]["to_win"] < 1.0, True)
+check("no ladder pick is ever listed as unplayed",
+      any(p["tier"] in ("Lock of the Week", "High Confidence") for p in built["passed"]), False)
 
 print("\nand a pick the market disagrees with IS bet")
 check("Gomes plays", "Denise Gomes Moneyline" in plays, True)
@@ -105,6 +115,20 @@ taken, refused = candidates_for_fight(ce)
 check("  ...yet produces no candidates", len(taken) + len(refused), 0)
 check("  ...and no play", any("Ce Liu" in p for p in plays), False)
 
+print("\nand a cap invented later cannot cancel a bet the record is made of")
+# Three locks is 30U and the card ceiling is 20U. The ladder is placed
+# regardless; what it leaves behind is the discretionary budget, which on a
+# card like that is nothing -- and that is the right answer.
+from src.plays import select_card, MAX_UNITS_PER_CARD  # noqa: E402
+_locks = [{"fight_id": f"L{i}", "axis": AXIS_OUTCOME, "units": 10.0,
+           "ev_per_unit": 0.01, "priority": 2, "caps_exempt": True} for i in range(3)]
+_extra = [{"fight_id": "X", "axis": AXIS_MANNER, "units": 3.0, "ev_per_unit": 0.9}]
+_card = select_card(_locks + _extra)
+check(f"all three locks place, past the {MAX_UNITS_PER_CARD:.0f}U ceiling",
+      sum(1 for p in _card["plays"] if p.get("caps_exempt")), 3)
+check("  ...and the discretionary play is what yields",
+      any(d["fight_id"] == "X" for d in _card["dropped"]), True)
+
 print("\nwe never stake against our own pick")
 # Kai Asakura is the market favorite and the model's underdog. His moneyline
 # is the better-priced side of that fight by a distance, and it must never
@@ -121,6 +145,8 @@ check("  ...and a 33-point disagreement is refused, not bet",
 print("\nthe tier describes the pick, not every bet on the fight")
 check("a moneyline carries its tier",
       plays["Denise Gomes Moneyline"]["tier"], "Medium Confidence")
+check("  ...and Medium is NOT on the ladder -- it still earns its place",
+      plays["Denise Gomes Moneyline"]["on_ladder"], False)
 check("a prop carries none",
       [p for p in built["plays"] if p["is_prop"]][0]["tier"], None)
 
@@ -144,8 +170,14 @@ check("her price no longer qualifies", "Denise Gomes Moneyline" in
       {p["label"] for p in _later["plays"]}, False)
 check("  ...and she is STILL not listed as unplayed",
       any(p["selection"] == "Denise Gomes" for p in _later["passed"]), False)
-check("  ...while the picks that were never bet still are",
-      any(p["selection"] == "Umar Nurmagomedov" for p in _later["passed"]), True)
+# The other direction, so this is testing the fix and not just its absence:
+# the SAME moved price with nothing committed does surface as unplayed.
+_uncommitted = build_card_plays(_moved)
+check("  ...while the same pick, never bet, does show as unplayed",
+      any(p["selection"] == "Denise Gomes" for p in _uncommitted["passed"]), True)
+check("  ...with the price given as the reason",
+      "below the" in next(p["reason"] for p in _uncommitted["passed"]
+                          if p["selection"] == "Denise Gomes"), True)
 
 print("\ntotals")
 check("the card stays inside its ceiling", built["total_units"] <= MAX_UNITS_PER_CARD, True)

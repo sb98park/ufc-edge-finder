@@ -117,12 +117,15 @@ MAX_UNITS_PER_CARD = 20.0
 # Nurmagomedov vs. Song, the unconstrained card put 13.5 of its 25 units on
 # duration alone.
 #
-# TEN, NOT EIGHT, AND THE REASON IS STRUCTURAL. This cap must never be able to
-# veto a single play that every other rule allows -- at 8 it silently made a
-# 10U Lock of the Week unplaceable, which is the one bet the whole product is
-# built around. Any axis ceiling below max(TIER_CAP_UNITS) is not a risk limit,
-# it is a bug that only shows up on the best card of the year.
-MAX_UNITS_PER_AXIS = 10.0
+# THE MANNER AXIS ONLY, AND THE OUTCOME AXIS WAS A MISAPPLICATION. This once
+# applied to every axis, and the moment the ladder tiers started placing, two
+# high-confidence moneylines filled the 10U outcome budget between them and a
+# third qualifying moneyline was refused for "exceeding 10U on outcome". That
+# is not the risk this cap was written for. Six round totals share one curve;
+# six moneylines share only the model itself, which is the same as saying they
+# share nothing in particular -- and total exposure is already what
+# MAX_UNITS_PER_CARD is for.
+MAX_UNITS_ON_MANNER = 10.0
 
 
 def decimal_odds(american: float) -> float:
@@ -246,6 +249,14 @@ def select_card(candidates: list[dict], committed: list[dict] | None = None) -> 
     when two plays collide on an axis the better bet keeps the slot rather
     than whichever happened to be listed first.
 
+    `caps_exempt` marks a play that is placed no matter what the exposure
+    caps say. It is for the published confidence ladder and nothing else: a
+    lock is 10 units because that is what every lock in the record was, and a
+    cap invented later must not be able to reach back and cancel one. Exempt
+    plays still SPEND the budget, so a card heavy in locks simply leaves no
+    room for anything discretionary -- which is the right answer, because that
+    is already a big night.
+
     `priority` (default 0, higher goes first) exists because EV alone is the
     wrong tiebreak when a cap binds. The caller knows things this layer does
     not: which of these markets has a published record behind it and which is
@@ -275,11 +286,18 @@ def select_card(candidates: list[dict], committed: list[dict] | None = None) -> 
         if (fid, axis) in used_axis:
             dropped.append({**c, "dropped": f"already have a {axis} play on this fight"})
             continue
+        if c.get("caps_exempt"):
+            used_axis.add((fid, axis))
+            per_fight[fid] = per_fight.get(fid, 0.0) + units
+            per_axis[axis] = per_axis.get(axis, 0.0) + units
+            card_total += units
+            taken.append(c)
+            continue
         if per_fight.get(fid, 0.0) + units > MAX_UNITS_PER_FIGHT:
             dropped.append({**c, "dropped": f"would exceed {MAX_UNITS_PER_FIGHT:.0f}U on one fight"})
             continue
-        if per_axis.get(axis, 0.0) + units > MAX_UNITS_PER_AXIS:
-            dropped.append({**c, "dropped": f"would exceed {MAX_UNITS_PER_AXIS:.0f}U on {axis} across the card"})
+        if axis == AXIS_MANNER and per_axis.get(axis, 0.0) + units > MAX_UNITS_ON_MANNER:
+            dropped.append({**c, "dropped": f"would exceed {MAX_UNITS_ON_MANNER:.0f}U on how fights end, across the card"})
             continue
         if card_total + units > MAX_UNITS_PER_CARD:
             dropped.append({**c, "dropped": f"would exceed {MAX_UNITS_PER_CARD:.0f}U on the card"})

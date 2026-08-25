@@ -42,9 +42,39 @@ would mean the site tips one fighter and bets the other.
 from __future__ import annotations
 
 from src.plays import (
-    size_play, select_card, decimal_odds,
+    size_play, select_card, decimal_odds, ev_per_unit, required_prob,
+    TIER_CAP_UNITS, HURDLE_MONEYLINE,
     AXIS_OUTCOME, AXIS_MANNER,
 )
+
+# THE TWO TIERS WITH A RECORD ARE PLAYED ON THE RECORD, NOT ON THE HURDLE.
+#
+# The EV hurdle was refusing them, and measured against every graded pick we
+# have, it was refusing money:
+#
+#     Locks and high confidence the hurdle REFUSED   12 picks, 12-0, +21.10U
+#     Locks and high confidence the hurdle CLEARED    8 picks,  7-1, +39.20U
+#
+# 12-0 is above expectation -- the market priced those at 79.9% and expected
+# 9.6 winners, and the run has about a 6.6% chance of happening by luck -- so
+# the +24.8% ROI is not the number to plan around. But that is not the point.
+# The point is the EV: those refused picks averaged +1.02% per unit ON OUR OWN
+# BLENDED PROBABILITY. They were not negative-expectation bets that got lucky.
+# They were thin positive-expectation bets sitting under a threshold set for a
+# different purpose.
+#
+# The hurdle exists to stop the props board selling us a 95% read at -1000,
+# where four points of edge is fragile and the market is thin. On a moneyline
+# the model has been graded 19-1 on, it was solving a problem that was not
+# there -- and it broke something real in the process: the published record IS
+# "every lock at 10U and every high-confidence pick at 5U", and a plays
+# section that quietly skips half of them is no longer the system the landing
+# page shows a curve of. A subscriber following the plays could not reproduce
+# the record they subscribed for.
+#
+# So these two tiers ride the published ladder, unconditionally. Everything
+# else -- Medium, Low, and every prop -- still has to earn its place on EV.
+_LADDER_TIERS = ("Lock of the Week", "High Confidence")
 
 # HOW FAR THE MODEL MAY DISAGREE WITH A LIQUID MARKET BEFORE WE STOP CALLING
 # IT AN EDGE.
@@ -204,15 +234,29 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
         except (TypeError, ValueError):
             continue
 
-        sized = size_play(p, price, tier, is_prop=not is_moneyline)
+        on_ladder = is_moneyline and tier in _LADDER_TIERS
+        if on_ladder:
+            # THE PUBLISHED SYSTEM, EXECUTED. No hurdle, no Kelly -- the stake
+            # is the one this tier's whole record was built at. See
+            # _LADDER_TIERS for the measurement behind that.
+            sized = {
+                "play": True, "units": TIER_CAP_UNITS[tier], "reason": None,
+                "capped": False, "ev_per_unit": round(ev_per_unit(p, price), 4),
+                "implied": None, "kelly": None, "cap": TIER_CAP_UNITS[tier],
+                "required_prob": round(required_prob(price, HURDLE_MONEYLINE), 4),
+            }
+        else:
+            sized = size_play(p, price, tier, is_prop=not is_moneyline)
 
-        # SANITY BEFORE SIZE. A disagreement this large is a model failure
-        # wearing an edge's clothes -- see MAX_MODEL_DISAGREEMENT.
-        gap = _disagreement(edge)
-        if sized["play"] and gap is not None and gap > MAX_MODEL_DISAGREEMENT:
-            sized = dict(sized, play=False, units=0.0, reason=(
-                f"the model is {gap * 100:.0f} points off a market with money on "
-                f"both sides, which is a disagreement we distrust rather than an edge"))
+            # SANITY BEFORE SIZE. A disagreement this large is a model failure
+            # wearing an edge's clothes -- see MAX_MODEL_DISAGREEMENT. Not
+            # applied to the ladder tiers: there the tier's own graded record
+            # is the evidence, and it is a better one than this heuristic.
+            gap = _disagreement(edge)
+            if sized["play"] and gap is not None and gap > MAX_MODEL_DISAGREEMENT:
+                sized = dict(sized, play=False, units=0.0, reason=(
+                    f"the model is {gap * 100:.0f} points off a market with money on "
+                    f"both sides, which is a disagreement we distrust rather than an edge"))
         row = {
             "fight_key": _fight_key(fight),
             "fight_id": _fight_key(fight),
@@ -238,7 +282,13 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
             # graded record in (19-1, and 58.3% of priced positions beat the
             # close). The prop board has none, which is why its hurdle is
             # double -- and why, when the card cap binds, it yields.
-            "priority": 1 if is_moneyline else 0,
+            # 2 for the ladder tiers, so a full card can never let a round
+            # total crowd out a lock; 1 for other moneylines; 0 for props.
+            "priority": (2 if on_ladder else 1) if is_moneyline else 0,
+            "on_ladder": on_ladder,
+            # See select_card: a cap invented after the fact must not be able
+            # to cancel a bet the published record is made of.
+            "caps_exempt": on_ladder,
             "model_prob": edge.get("model_prob"),
             "fair_prob": edge.get("book_fair_prob"),
             "blended_prob": round(p, 4),

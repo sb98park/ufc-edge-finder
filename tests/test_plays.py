@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.plays import (  # noqa: E402
     decimal_odds, implied_prob, ev_per_unit, required_prob, kelly_fraction,
     size_play, select_card, HURDLE_MONEYLINE, HURDLE_PROP,
-    PROP_CAP_UNITS, MAX_UNITS_PER_FIGHT, MAX_UNITS_PER_CARD, MAX_UNITS_PER_AXIS,
+    PROP_CAP_UNITS, MAX_UNITS_PER_FIGHT, MAX_UNITS_PER_CARD, MAX_UNITS_ON_MANNER,
     MIN_STAKE_UNITS,
     TIER_CAP_UNITS,
     AXIS_OUTCOME, AXIS_MANNER,
@@ -131,24 +131,26 @@ card = select_card([
 ])
 check(f"one fight cannot exceed {MAX_UNITS_PER_FIGHT:.0f}U", card["total_units"], 10.0)
 
-print("\nthe axis cap, and the thing it must never do")
-# A maximum-stake Lock has to survive every rule. An axis ceiling below the
-# largest tier cap would silently forbid the product's headline bet, and only
-# on the card where it mattered most.
-check("no axis ceiling below the biggest single stake",
-      MAX_UNITS_PER_AXIS >= max(TIER_CAP_UNITS.values()), True)
-card = select_card([
-    {"fight_id": "f1", "axis": AXIS_OUTCOME, "units": 10.0, "ev_per_unit": 0.30},
-])
-check("  ...so a 10U lock still places on its own", card["total_units"], 10.0)
+print("\nthe shared-assumption cap, and what it must NOT reach")
 # Six fights leaning the same way on the finish curve is one assumption, not six.
 spread = [{"fight_id": f"g{i}", "axis": AXIS_MANNER, "units": 3.0, "ev_per_unit": 0.3 - i * 0.01}
           for i in range(6)]
 card = select_card(spread)
-check(f"one shared assumption cannot exceed {MAX_UNITS_PER_AXIS:.0f}U",
-      card["total_units"] <= MAX_UNITS_PER_AXIS, True)
+check(f"one shared assumption cannot exceed {MAX_UNITS_ON_MANNER:.0f}U",
+      card["total_units"] <= MAX_UNITS_ON_MANNER, True)
 check("  ...and the ones it refused say so",
-      "across the card" in card["dropped"][0]["dropped"], True)
+      "how fights end" in card["dropped"][0]["dropped"], True)
+# It once applied to EVERY axis, and the moment the ladder tiers started
+# placing, two high-confidence moneylines filled the 10U outcome budget
+# between them and a third qualifying moneyline was refused for "exceeding 10U
+# on outcome". Six round totals share a curve; six moneylines share only the
+# model itself, which is the same as sharing nothing in particular.
+mls = [{"fight_id": f"m{i}", "axis": AXIS_OUTCOME, "units": 5.0, "ev_per_unit": 0.2}
+       for i in range(3)]
+card = select_card(mls)
+check("three moneylines are not one shared assumption", len(card["plays"]), 3)
+check("  ...and all of them place", card["total_units"], 15.0)
+
 big = [{"fight_id": f"f{i}", "axis": AXIS_OUTCOME, "units": 10.0, "ev_per_unit": 0.3 - i * 0.01}
        for i in range(8)]
 card = select_card(big)
