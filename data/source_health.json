@@ -1,16 +1,16 @@
 {
-  "at": "2026-08-25T21:26:54+00:00",
+  "at": "2026-08-25T21:39:01+00:00",
   "edges_two_way": {
     "best_book": {
       "DraftKings": 40,
       "FanDuel": 10,
-      "Polymarket": 92
+      "Polymarket": 94
     },
     "books_quoting": {
-      "1.0": 118,
+      "1.0": 120,
       "2.0": 24
     },
-    "n": 142
+    "n": 144
   },
   "moneyline": {
     "best_book": {
@@ -37,7 +37,7 @@
   "rows_by_source": {
     "DraftKings": 48,
     "FanDuel": 26,
-    "Polymarket": 391
+    "Polymarket": 389
   },
   "rundown_dates_requested": [
     "2026-08-29"
