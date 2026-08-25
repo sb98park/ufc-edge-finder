@@ -5675,21 +5675,27 @@
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Padlock"><defs><linearGradient id="hi-lock" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><rect x="5" y="12" width="16" height="11" rx="2.2" fill="url(#hi-lock)" opacity="0.18" stroke="url(#hi-lock)" stroke-width="1.8"/><path d="M8.5 12 V8 a4.5 4.5 0 0 1 9 0 V12" stroke="url(#hi-lock)" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="13" cy="17" r="1.9" fill="url(#hi-lock)"/></svg>
 {%- endmacro %}
 
-{#- THE PLAYS ICON, and it was drawn at the size it is actually seen.
-    icon_coins draws three flat ellipses with an OPAQUE fill and hard vertical
-    side walls, and the fill is what ruins it: the thing that reads as "coin"
-    is the elliptical edge, and two of the three are hidden behind the one in
-    front. At 21px that is a stack of pancakes.
-    A poker chip was the obvious replacement and it failed for the same
-    reason -- drawn at 64px the dashed rim reads as chip spots, and at 21px it
-    reads as a GEAR, which in a tab bar is worse than pancakes because it
-    means settings. Four candidates were rendered at 21px next to the real
-    calendar, gauge, bars and list before this one was chosen.
-    A banknote survives the size: three elements, a wide rounded rect that
-    cannot be confused with the taller calendar beside it, and a centred
-    circle that carries the meaning on its own. -#}
-{% macro icon_note() -%}
-<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Banknote"><defs><linearGradient id="hi-note" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><rect x="3.6" y="7" width="18.8" height="12" rx="2.2" stroke="url(#hi-note)" stroke-width="1.9"/><circle cx="13" cy="13" r="2.7" stroke="url(#hi-note)" stroke-width="1.9"/><path d="M7 13h.01M19 13h.01" stroke="url(#hi-note)" stroke-width="2.4" stroke-linecap="round"/></svg>
+{#- THE PLAYS ICON: A BETTING SLIP, AND THE TORN EDGE IS THE WHOLE THING.
+    Without it this is a document, and the More tab is already three
+    horizontal lines. The zigzag is what makes it a slip rather than a page,
+    and it is the part that has to survive 23px -- so it is four teeth, not
+    eight, each one wide enough to read.
+
+    THIS WAS THE THIRD ATTEMPT AND THE FIRST TWO BOTH FAILED FOR ONE REASON:
+    they were judged large. icon_coins stacks three ellipses with an OPAQUE
+    fill, and since the thing that reads as "coin" is the elliptical edge,
+    two of the three are hidden behind the one in front -- at 23px, pancakes.
+    A poker chip replaced it and at 23px the dashed rim read as a GEAR, which
+    in a tab bar is worse, because it means settings. Ten candidates went into
+    a mock strip at 21px before this one was picked.
+
+    IT IS GOLD HERE AND GREY IN THE TAB BAR, and that is not a contradiction:
+    .tabbar-btn .inline-icon applies grayscale(1) brightness(3) to every tab
+    icon, because gold is reserved for "model" and cyan for "market" and
+    navigation is neither. Section titles keep the house gradient like every
+    other icon macro. -#}
+{% macro icon_slip() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Betting slip"><defs><linearGradient id="hi-slip" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><path d="M6 4h14v13l-2.3 1.6L15.4 17l-2.3 1.6L10.8 17l-2.3 1.6L6 17z" stroke="url(#hi-slip)" stroke-width="1.9" stroke-linejoin="round" fill="none"/><path d="M9.4 8.6h7.2M9.4 12h4.6" stroke="url(#hi-slip)" stroke-width="1.9" stroke-linecap="round"/></svg>
 {%- endmacro %}
 
 {% macro icon_coins() -%}
@@ -7798,7 +7804,7 @@
   #}
 
   <div class="detail-section" data-section="plays">
-  <div class="standout-title" id="section-plays">{{ icon_note() }} This Week's Plays</div>
+  <div class="standout-title" id="section-plays">{{ icon_slip() }} This Week's Plays</div>
 
   {% if bankroll and bankroll.settled %}
   {#- THE NUMBER THE WHOLE THING IS FOR. Units are the record's currency and
@@ -7893,7 +7899,7 @@
       the stake &mdash; sized from the edge rather than from a hunch. The record
       they build is public either way; the bets themselves are not.") }}
   {% else %}
-  {{ empty_state(icon_note(), "No plays this week", "Nothing on this card beats its own price by enough to be worth staking. That is the rule working, not a gap \u2014 a week with no bet is the whole reason the rule exists.") }}
+  {{ empty_state(icon_slip(), "No plays this week", "Nothing on this card beats its own price by enough to be worth staking. That is the rule working, not a gap \u2014 a week with no bet is the whole reason the rule exists.") }}
   {% endif %}
 
   {% if plays_card and plays_card.passed %}
@@ -13858,7 +13864,7 @@
         conviction; a play is a statement about money, and money is what the
         reader came for. Locks of the Week are still a section, still linked
         from More, and still badged on the fight cards they belong to. -#}
-    <button class="tabbar-btn" data-tab="plays">{{ icon_note() }}<span>Plays</span></button>
+    <button class="tabbar-btn" data-tab="plays">{{ icon_slip() }}<span>Plays</span></button>
     <button class="tabbar-btn" data-tab="track">{{ icon_barchart() }}<span>Record</span></button>
     <button class="tabbar-btn" data-tab="__hub">{{ icon_list() }}<span>More</span></button>
   </nav>
