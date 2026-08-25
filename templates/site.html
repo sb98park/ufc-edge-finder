@@ -2565,9 +2565,6 @@
                       font-variant-numeric: tabular-nums; font-family: var(--font-display); }
   .plays-bank .pb-v.up { color: var(--pos, #3ddc84); }
   .plays-bank .pb-v.down { color: var(--neg, #ff7a7a); }
-  .plays-shelved { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--hairline); }
-  .plays-shelved p { font-size: var(--t-micro); color: var(--muted); line-height: 1.55; margin: 0; }
-  .plays-shelved b { color: var(--text); }
 
   .ml-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .ml-leg {
@@ -5678,6 +5675,23 @@
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Padlock"><defs><linearGradient id="hi-lock" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><rect x="5" y="12" width="16" height="11" rx="2.2" fill="url(#hi-lock)" opacity="0.18" stroke="url(#hi-lock)" stroke-width="1.8"/><path d="M8.5 12 V8 a4.5 4.5 0 0 1 9 0 V12" stroke="url(#hi-lock)" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="13" cy="17" r="1.9" fill="url(#hi-lock)"/></svg>
 {%- endmacro %}
 
+{#- THE PLAYS ICON, and it was drawn at the size it is actually seen.
+    icon_coins draws three flat ellipses with an OPAQUE fill and hard vertical
+    side walls, and the fill is what ruins it: the thing that reads as "coin"
+    is the elliptical edge, and two of the three are hidden behind the one in
+    front. At 21px that is a stack of pancakes.
+    A poker chip was the obvious replacement and it failed for the same
+    reason -- drawn at 64px the dashed rim reads as chip spots, and at 21px it
+    reads as a GEAR, which in a tab bar is worse than pancakes because it
+    means settings. Four candidates were rendered at 21px next to the real
+    calendar, gauge, bars and list before this one was chosen.
+    A banknote survives the size: three elements, a wide rounded rect that
+    cannot be confused with the taller calendar beside it, and a centred
+    circle that carries the meaning on its own. -#}
+{% macro icon_note() -%}
+<svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Banknote"><defs><linearGradient id="hi-note" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><rect x="3.6" y="7" width="18.8" height="12" rx="2.2" stroke="url(#hi-note)" stroke-width="1.9"/><circle cx="13" cy="13" r="2.7" stroke="url(#hi-note)" stroke-width="1.9"/><path d="M7 13h.01M19 13h.01" stroke="url(#hi-note)" stroke-width="2.4" stroke-linecap="round"/></svg>
+{%- endmacro %}
+
 {% macro icon_coins() -%}
 <svg class="inline-icon" viewBox="0 0 26 26" fill="none" role="img" aria-label="Stacked coins"><defs><linearGradient id="hi-coins" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-hi)"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient></defs><ellipse cx="13" cy="19" rx="9" ry="3.2" fill="none" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="14" rx="9" ry="3.2" fill="#1c1c1e" stroke="url(#hi-coins)" stroke-width="2"/><ellipse cx="13" cy="9" rx="9" ry="3.2" fill="#1c1c1e" stroke="url(#hi-coins)" stroke-width="2"/><line x1="4" y1="9" x2="4" y2="19" stroke="url(#hi-coins)" stroke-width="2"/><line x1="22" y1="9" x2="22" y2="19" stroke="url(#hi-coins)" stroke-width="2"/></svg>
 {%- endmacro %}
@@ -7784,7 +7798,7 @@
   #}
 
   <div class="detail-section" data-section="plays">
-  <div class="standout-title" id="section-plays">{{ icon_coins() }} This Week's Plays</div>
+  <div class="standout-title" id="section-plays">{{ icon_note() }} This Week's Plays</div>
 
   {% if bankroll and bankroll.settled %}
   {#- THE NUMBER THE WHOLE THING IS FOR. Units are the record's currency and
@@ -7879,24 +7893,7 @@
       the stake &mdash; sized from the edge rather than from a hunch. The record
       they build is public either way; the bets themselves are not.") }}
   {% else %}
-  {{ empty_state(icon_coins(), "No plays this week", "Nothing on this card beats its own price by enough to be worth staking. That is the rule working, not a gap \u2014 a week with no bet is the whole reason the rule exists.") }}
-  {% endif %}
-
-  {% if plays_card and not plays_card.discretionary_on and plays_card.shelved %}
-  {#- WHAT WE ARE NOT BETTING, AND WHY. Backtested over every graded pick, the
-      discretionary layer returned less than leaving it out: ladder-only made
-      +60.30U on 150 staked where ladder-plus-discretionary made +55.94U on
-      184. Saying nothing would leave a reader wondering why the model's
-      round-total reads never become plays. -#}
-  <div class="plays-shelved">
-    <div class="plays-passed-title">Not staked while we build the record</div>
-    <p>{{ plays_card.shelved|length }} read{{ '' if plays_card.shelved|length == 1 else 's' }} on
-       this card clear the value bar and are being left alone. Backtested over
-       every graded pick, adding them returned <b>less</b> than leaving them
-       out &mdash; and the prop board has 50 settled quotes out of 894, which is
-       not a record to stake against yet. They keep being logged; they go back
-       on when they have earned it.</p>
-  </div>
+  {{ empty_state(icon_note(), "No plays this week", "Nothing on this card beats its own price by enough to be worth staking. That is the rule working, not a gap \u2014 a week with no bet is the whole reason the rule exists.") }}
   {% endif %}
 
   {% if plays_card and plays_card.passed %}
@@ -13861,7 +13858,7 @@
         conviction; a play is a statement about money, and money is what the
         reader came for. Locks of the Week are still a section, still linked
         from More, and still badged on the fight cards they belong to. -#}
-    <button class="tabbar-btn" data-tab="plays">{{ icon_coins() }}<span>Plays</span></button>
+    <button class="tabbar-btn" data-tab="plays">{{ icon_note() }}<span>Plays</span></button>
     <button class="tabbar-btn" data-tab="track">{{ icon_barchart() }}<span>Record</span></button>
     <button class="tabbar-btn" data-tab="__hub">{{ icon_list() }}<span>More</span></button>
   </nav>
