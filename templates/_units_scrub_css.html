@@ -49,3 +49,33 @@
     height: var(--od-h, 1.06em); line-height: var(--od-h, 1.06em);
   }
   @media (prefers-reduced-motion: reduce) { .od-col { transition: none; } }
+
+  /* ===== The endpoint marker =====
+     The last point on this curve is "Now" -- the most recently graded pick --
+     and that is worth marking continuously rather than announcing once. The
+     app's shared burst (`endpoint-pulse ... 4`) fires 1.6s after the chart
+     reveals and is over in six seconds, so anyone already on the Record tab,
+     or returning to it, sees nothing at all. The landing page had it worse:
+     the builder emits the halo ring but landing.html defines neither the
+     keyframes nor a rule for it, so there it was a static circle sitting on
+     the dot, animation in name only.
+     Its own keyframes, not site.html's `endpoint-pulse`: the landing page
+     needs a definition regardless, and borrowing a name defined in one of the
+     two files is how this drifted apart in the first place.
+     Two selectors, not one list-with-a-shared-specificity: the app's halo also
+     matches `.chart-block.revealed .chart-endpoint-halo` (0,3,0), so the app
+     arm has to reach that weight to win, while the landing page has nothing to
+     outrank. Both are ordered after the rules they override -- this partial is
+     included below them in site.html and its reduced-motion block below both. */
+  @keyframes units-endpoint-pulse {
+    0%        { transform: scale(1); opacity: 0.55; }
+    75%, 100% { transform: scale(3); opacity: 0; }
+  }
+  .units-chart-wrap.chart-block .chart-endpoint-halo,
+  .units-chart-wrap .chart-endpoint-halo {
+    animation: units-endpoint-pulse 2.5s ease-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .units-chart-wrap.chart-block .chart-endpoint-halo,
+    .units-chart-wrap .chart-endpoint-halo { animation: none; }
+  }
