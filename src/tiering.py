@@ -108,6 +108,75 @@ MEMBER_ONLY_CONTEXT = (
     "disagreement_props",
 )
 
+# KEYS THAT ARE MOSTLY FREE AND CARRY ONE MEMBER-ONLY LIMB.
+#
+# whats_new_snapshot is the "what changed since you last looked" banner. Its
+# `movements` list is market data and belongs to everyone. Its `standout` list
+# is built FROM standout_props, before redaction, and was shipping the model's
+# five clearest reads to the free payload with the edge attached:
+#
+#     {"key": "Rei Tsuruya|Moneyline", "label": "Rei Tsuruya Moneyline",
+#      "edge_pct": -6.05}
+#
+# Emptying the whole key would take the movement banner down with it, so the
+# limb is removed and the rest survives.
+MEMBER_ONLY_SUBKEYS = {
+    "whats_new_snapshot": ("standout",),
+}
+
+# EVERY OTHER CONTEXT KEY, NAMED ON PURPOSE.
+#
+# This tuple exists because of how the favorite_picks leak was found -- which
+# is to say, by accident, months late, by a person reading a page. The leak
+# gate could not have found it: check_free_build asserts that every value the
+# redaction REMOVED is absent from the free payload, so it catches a redaction
+# that has broken and is structurally blind to one that was never written. A
+# key missing from MEMBER_ONLY_CONTEXT contributes nothing to the manifest,
+# so there is nothing to assert and the gate passes green.
+#
+# The fix is not a smarter heuristic -- a heuristic is what we already had,
+# and it was "someone will remember". It is a CLOSED SET: every key in the
+# render context must appear in exactly one of these lists, and a key in
+# neither fails the build. Adding a context key now forces the question "is
+# this the model layer?" at the moment it is added, by someone holding the
+# reason in their head, instead of leaving it to be discovered in production.
+#
+# Each group below says why the whole group is free.
+FREE_CONTEXT = (
+    # THE RECORD, and the whole argument for paying. A reader has to be able
+    # to audit what the model has already done before being asked for money.
+    "track_record", "calibration_svg", "units_sparkline_svg",
+    "units_timeseries_svg", "plays_record", "countdown_confidence_counts",
+
+    # MARKET DATA. Prices and how they moved. Not model output -- these come
+    # from the books and the exchange, and are the best free teaser we have.
+    "notable_movements", "notable_movements_upcoming",
+
+    # THE CARD ITSELF, redacted FIGHT BY FIGHT rather than wholesale, so a
+    # graded fight stays visible and an upcoming one loses its model layer.
+    # See redact_fight.
+    "events", "future_events",
+
+    # WHO IS FIGHTING, WHERE, AND WHEN. Public facts about a scheduled event.
+    "analytics_source_event", "countdown_city", "countdown_label",
+    "countdown_matchup", "countdown_series", "countdown_target_iso",
+    "countdown_venue", "days_since_event", "event_full_name", "event_matchup",
+    "event_short_name", "fight_schedule_json", "just_concluded_json",
+    "espn_live_fight_key_json",
+
+    # SCOUTING AND HISTORY. Measured facts about fighters -- rates, records,
+    # trivia. Free by design: the landing page sells the tape and the scout
+    # rails as permanently free, and this is what backs that claim.
+    "fighter_history_json", "fighter_rates_json", "fun_facts",
+    "fun_facts_by_fighter",
+
+    # BUILD PLUMBING. Timestamps, the tier flag itself, error states, and
+    # coverage reporting. No model output anywhere in here.
+    "generated_at", "generated_at_date", "generated_at_short",
+    "generated_at_time_only", "live_error", "results_coverage", "source",
+    "tier", "unmatched", "whats_new_snapshot",
+)
+
 # Deliberately NOT redacted, and each for a reason worth stating:
 #   events                    past cards, picks included -- the proof
 #   track_record, units_*     the public record
@@ -226,10 +295,37 @@ def redact_context(context: dict) -> tuple[dict, list[str]]:
     out = dict(context)
     sink: set[str] = set()
 
+    # THE CLOSED SET, CHECKED BEFORE ANYTHING IS REMOVED. See FREE_CONTEXT.
+    # This raises rather than warns: a warning in a build log is how the last
+    # one shipped for months.
+    unclassified = sorted(set(out) - set(MEMBER_ONLY_CONTEXT) - set(FREE_CONTEXT))
+    if unclassified:
+        raise RuntimeError(
+            "src/tiering.py does not know whether these render-context keys are "
+            f"the model layer: {unclassified}.\n"
+            "Add each one to MEMBER_ONLY_CONTEXT (it is a pick, a probability, "
+            "an edge or a stake on a fight that has not happened) or to "
+            "FREE_CONTEXT (it is a public fact, market data, or the graded "
+            "record). Refusing to guess: guessing is how favorite_picks shipped "
+            "the model's picks on the free payload."
+        )
+
     for key in MEMBER_ONLY_CONTEXT:
         if key in out:
             _collect(out[key], sink)
             out[key] = []
+
+    # One limb, not the whole key -- see MEMBER_ONLY_SUBKEYS.
+    for key, subkeys in MEMBER_ONLY_SUBKEYS.items():
+        holder = out.get(key)
+        if not isinstance(holder, dict):
+            continue
+        trimmed = dict(holder)
+        for sub_key in subkeys:
+            if sub_key in trimmed:
+                _collect(trimmed[sub_key], sink)
+                trimmed[sub_key] = []
+        out[key] = trimmed
 
     # BOTH lists. `events` holds the card being sold right now; future_events
     # holds the ones after it. Missing the first was the original bug.
