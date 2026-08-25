@@ -147,6 +147,10 @@ FREE_CONTEXT = (
     # to audit what the model has already done before being asked for money.
     "track_record", "calibration_svg", "units_sparkline_svg",
     "units_timeseries_svg", "plays_record", "countdown_confidence_counts",
+    # Settled bets only, expressed as a multiple of where it started. It
+    # carries no pick and no currency -- see src/bankroll for why it is a
+    # ratio rather than a sum.
+    "bankroll",
 
     # MARKET DATA. Prices and how they moved. Not model output -- these come
     # from the books and the exchange, and are the best free teaser we have.

@@ -2495,6 +2495,23 @@
                         font-variant-numeric: tabular-nums; }
   .plays-record .pr-v.up { color: var(--pos, #3ddc84); }
   .plays-record .pr-v.down { color: var(--neg, #ff7a7a); }
+  /* THE BANKROLL LEADS, because it is the only figure here that answers
+     "is this working". Units are how a bet is described; this is what the
+     bets did. */
+  .plays-bank {
+    display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline;
+    margin: 0 0 10px; padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(212,175,55,.10), rgba(212,175,55,.02) 60%, transparent);
+    border: 1px solid rgba(212,175,55,.30); border-radius: var(--r-lg);
+  }
+  .plays-bank .pb-k { font-size: var(--t-micro); color: var(--muted); display: block; }
+  .plays-bank .pb-v { font-size: 19px; font-weight: 700; color: var(--text);
+                      font-variant-numeric: tabular-nums; font-family: var(--font-display); }
+  .plays-bank .pb-v.up { color: var(--pos, #3ddc84); }
+  .plays-bank .pb-v.down { color: var(--neg, #ff7a7a); }
+  .plays-shelved { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--hairline); }
+  .plays-shelved p { font-size: var(--t-micro); color: var(--muted); line-height: 1.55; margin: 0; }
+  .plays-shelved b { color: var(--text); }
 
   .ml-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .ml-leg {
@@ -7645,6 +7662,21 @@
   <div class="detail-section" data-section="plays">
   <div class="standout-title" id="section-plays">{{ icon_coins() }} This Week's Plays</div>
 
+  {% if bankroll and bankroll.settled %}
+  {#- THE NUMBER THE WHOLE THING IS FOR. Units are the record's currency and
+      always will be; this is what those units have done to the bankroll they
+      are one per cent of. Compounding, so a unit is worth more after a good
+      run and less after a bad one -- which is the difference between a
+      flat-stake result and a bankroll. -#}
+  <div class="plays-bank">
+    <div><span class="pb-k">Bankroll</span>
+      <span class="pb-v {{ 'up' if bankroll.growth_pct > 0 else 'down' }}">{{ '%.4f'|format(bankroll.multiple) }}&times;</span></div>
+    <div><span class="pb-k">Growth</span>
+      <span class="pb-v {{ 'up' if bankroll.growth_pct > 0 else 'down' }}">{{ '%+.1f'|format(bankroll.growth_pct) }}%</span></div>
+    <div><span class="pb-k">Worst drawdown</span>
+      <span class="pb-v">&minus;{{ '%.1f'|format(bankroll.max_drawdown_pct) }}%</span></div>
+  </div>
+  {% endif %}
   {% if plays_record and plays_record.settled %}
   <div class="plays-record">
     <div><span class="pr-k">Record</span>
@@ -7661,7 +7693,7 @@
   <div class="plays-head">
     <div class="plays-total"><b>{{ plays_rows|length }}</b> play{{ '' if plays_rows|length == 1 else 's' }} &middot;
       <b>{{ '%g'|format(plays_card.total_units) }}U</b> at risk</div>
-    <div class="plays-unit">1U = 1% of bankroll</div>
+    <div class="plays-unit">1U = 1% of bankroll, compounding</div>
   </div>
   <ul class="plays-list">
     {% for p in plays_rows %}
@@ -7691,6 +7723,23 @@
       they build is public either way; the bets themselves are not.") }}
   {% else %}
   {{ empty_state(icon_coins(), "No plays this week", "Nothing on this card beats its own price by enough to be worth staking. That is the rule working, not a gap \u2014 a week with no bet is the whole reason the rule exists.") }}
+  {% endif %}
+
+  {% if plays_card and not plays_card.discretionary_on and plays_card.shelved %}
+  {#- WHAT WE ARE NOT BETTING, AND WHY. Backtested over every graded pick, the
+      discretionary layer returned less than leaving it out: ladder-only made
+      +60.30U on 150 staked where ladder-plus-discretionary made +55.94U on
+      184. Saying nothing would leave a reader wondering why the model's
+      round-total reads never become plays. -#}
+  <div class="plays-shelved">
+    <div class="plays-passed-title">Not staked while we build the record</div>
+    <p>{{ plays_card.shelved|length }} read{{ '' if plays_card.shelved|length == 1 else 's' }} on
+       this card clear the value bar and are being left alone. Backtested over
+       every graded pick, adding them returned <b>less</b> than leaving them
+       out &mdash; and the prop board has 50 settled quotes out of 894, which is
+       not a record to stake against yet. They keep being logged; they go back
+       on when they have earned it.</p>
+  </div>
   {% endif %}
 
   {% if plays_card and plays_card.passed %}

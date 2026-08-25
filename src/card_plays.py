@@ -76,6 +76,33 @@ from src.plays import (
 # else -- Medium, Low, and every prop -- still has to earn its place on EV.
 _LADDER_TIERS = ("Lock of the Week", "High Confidence")
 
+# THE DISCRETIONARY LAYER IS OFF, AND THE BACKTEST IS WHY.
+#
+# Replaying every graded moneyline pick through each rule, 84 picks over the
+# 7 cards with results:
+#
+#     ladder only (locks + high)     20 picks, 19-1, 150U staked, +60.30U (+40.2%)
+#     ladder + discretionary         42 picks, 26-16, 184U staked, +55.94U (+30.4%)
+#
+# The layer I added returns LESS than not adding it: the 22 Medium and Low
+# picks it selected went -4.36U on 34U staked, -12.8%. And it is worse than
+# the naive alternative -- taking every Medium and Low at its ladder stake
+# returns +7.99U over the same tiers. So the hurdle is not merely failing to
+# add value there; it is selecting worse than not selecting at all.
+#
+# n=22 is far too small to call the rule broken rather than unlucky, and the
+# effective sample is 7 CARDS. That cuts both ways: it is also far too small
+# to justify risking a third of a bankroll on a layer with no record, when the
+# layer beside it has one. The prop half cannot be judged at all -- 894 quotes
+# recorded, 50 settled.
+#
+# So this is a pause, not a verdict. The prop ledger keeps recording, the
+# selector keeps computing candidates, and everything that would have been
+# played is still returned under `shelved` so the page can show what the rule
+# WOULD have taken. Turn it back on when the props have a settled record, or
+# when the discretionary moneylines have enough of one to argue with.
+DISCRETIONARY_PLAYS = False
+
 # HOW FAR THE MODEL MAY DISAGREE WITH A LIQUID MARKET BEFORE WE STOP CALLING
 # IT AN EDGE.
 #
@@ -320,6 +347,7 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None) ->
     a tiered pick never vanishes unexplained), and the totals.
     """
     empty = {"event_name": None, "plays": [], "passed": [], "dropped": [],
+             "shelved": [], "discretionary_on": DISCRETIONARY_PLAYS,
              "total_units": 0.0, "new_units": 0.0, "fights_considered": 0}
     if not event or not event.get("fights"):
         return empty
@@ -334,6 +362,13 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None) ->
         t, r = candidates_for_fight(fight)
         candidates.extend(t)
         refused.extend(r)
+
+    # See DISCRETIONARY_PLAYS. Held back rather than never computed, so the
+    # section can be honest about what it is not betting and why.
+    shelved = []
+    if not DISCRETIONARY_PLAYS:
+        shelved = [c for c in candidates if not c.get("on_ladder")]
+        candidates = [c for c in candidates if c.get("on_ladder")]
 
     card = select_card(candidates, committed=committed)
 
@@ -365,5 +400,7 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None) ->
         "dropped": card["dropped"],
         "total_units": card["total_units"],
         "new_units": card["new_units"],
+        "shelved": sorted(shelved, key=lambda c: -c["ev_per_unit"]),
+        "discretionary_on": DISCRETIONARY_PLAYS,
         "fights_considered": considered,
     }

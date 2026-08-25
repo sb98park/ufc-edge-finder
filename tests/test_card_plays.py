@@ -37,6 +37,11 @@ card = json.load(open(FIXTURE))
 by_name = {f["fighter_a"]: f for f in card["fights"]}
 built = build_card_plays(card)
 plays = {p["label"]: p for p in built["plays"]}
+# With the discretionary layer paused, everything outside the ladder is sized
+# and then held back rather than never computed -- so the assertions about
+# SIZING still have something to look at. See DISCRETIONARY_PLAYS.
+shelved = {p["label"]: p for p in built["shelved"]}
+sizeable = {**shelved, **plays}
 
 print("\nwhat kind of risk is this")
 check("a moneyline is an outcome", axis_for_market("Moneyline"), AXIS_OUTCOME)
@@ -98,14 +103,23 @@ check("  ...and the row is honest about what that returns",
 check("no ladder pick is ever listed as unplayed",
       any(p["tier"] in ("Lock of the Week", "High Confidence") for p in built["passed"]), False)
 
-print("\nand a pick the market disagrees with IS bet")
-check("Gomes plays", "Denise Gomes Moneyline" in plays, True)
-check("  ...at +153", plays["Denise Gomes Moneyline"]["odds_american"], 153)
+print("\nTHE DISCRETIONARY LAYER IS SIZED, THEN HELD BACK")
+# Backtested over every graded pick: ladder-only returned +60.30U on 150U
+# staked, ladder-plus-discretionary +55.94U on 184U. The layer cost money, so
+# it is paused -- but the arithmetic still runs, so the pause can be lifted
+# without rebuilding it and the page can say what it is not betting.
+check("nothing outside the ladder is staked",
+      all(p["on_ladder"] for p in built["plays"]), True)
+check("  ...and the rest is shelved, not discarded", len(built["shelved"]) > 0, True)
+check("  ...with a flag saying which mode this is", built["discretionary_on"], False)
+check("Gomes is still sized", "Denise Gomes Moneyline" in sizeable, True)
+check("  ...at +153", sizeable["Denise Gomes Moneyline"]["odds_american"], 153)
 check("  ...on the blend, not the model's 62.4%",
-      plays["Denise Gomes Moneyline"]["blended_prob"] < 0.5, True)
+      sizeable["Denise Gomes Moneyline"]["blended_prob"] < 0.5, True)
 check("  ...and says what it returns if it lands",
-      plays["Denise Gomes Moneyline"]["to_win"],
-      round(plays["Denise Gomes Moneyline"]["units"] * 1.53, 2))
+      sizeable["Denise Gomes Moneyline"]["to_win"],
+      round(sizeable["Denise Gomes Moneyline"]["units"] * 1.53, 2))
+check("  ...but is not on the card", "Denise Gomes Moneyline" in plays, False)
 
 print("\ncancelled fights are not bet")
 ce = by_name["Ce Liu"]
@@ -140,15 +154,15 @@ check("  ...so Asakura is never staked", any("Asakura" in p for p in plays), Fal
 # Aoriqileng is ALSO the card's worst disagreement -- market 20.5%, model
 # 53.5% -- so the sanity cap refuses him even though the arithmetic likes him.
 check("  ...and a 33-point disagreement is refused, not bet",
-      "Aoriqileng Moneyline" in plays, False)
+      "Aoriqileng Moneyline" in sizeable, False)
 
 print("\nthe tier describes the pick, not every bet on the fight")
 check("a moneyline carries its tier",
-      plays["Denise Gomes Moneyline"]["tier"], "Medium Confidence")
-check("  ...and Medium is NOT on the ladder -- it still earns its place",
-      plays["Denise Gomes Moneyline"]["on_ladder"], False)
+      sizeable["Denise Gomes Moneyline"]["tier"], "Medium Confidence")
+check("  ...and Medium is NOT on the ladder -- it still has to earn its place",
+      sizeable["Denise Gomes Moneyline"]["on_ladder"], False)
 check("a prop carries none",
-      [p for p in built["plays"] if p["is_prop"]][0]["tier"], None)
+      [p for p in built["shelved"] if p["is_prop"]][0]["tier"], None)
 
 print("\nA COMMITTED PLAY IS NEVER LISTED AS UNPLAYED")
 # Denise Gomes appeared as a live 2U play and as a "Picked, not played" pick

@@ -44,6 +44,7 @@ from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parla
 from src.parlay_ledger import record_slips
 from src.recommendations import build_recommendations
 from src.card_plays import build_card_plays
+from src import bankroll as bankroll_state
 from src.plays_ledger import (
     load as plays_load, record_plays, committed_for, play_id,
     grade_rows as grade_plays, summarise as summarise_plays, write_graded,
@@ -1101,7 +1102,7 @@ def main(tier: str = "member", output_path: str | None = None):
     # granted afresh on every one of a week's worth of renders.
     plays_card = {"event_name": None, "plays": [], "passed": [], "dropped": [],
                   "total_units": 0.0, "new_units": 0.0, "fights_considered": 0}
-    plays_rows, plays_record = [], None
+    plays_rows, plays_record, bankroll = [], None, None
     try:
         _plays_event = events_for_model_only[0] if events_for_model_only else None
         _ledger = plays_load()
@@ -1134,10 +1135,19 @@ def main(tier: str = "member", output_path: str | None = None):
             write_graded(_all)
             plays_rows = [r for r in plays_load()
                           if r.get("event_name") == plays_card.get("event_name")]
-        plays_record = summarise_plays(plays_load())
+        # THE BANKROLL, folded forward from whatever has just settled. Only
+        # newly graded plays move it, and only once each -- see src/bankroll.
+        _all_now = plays_load()
+        _bank = bankroll_state.apply_settled(bankroll_state.load(), _all_now)
+        bankroll_state.save(_bank)
+        bankroll = bankroll_state.summarise(_bank)
+        plays_record = summarise_plays(_all_now)
+        _shelved = len(plays_card.get("shelved") or [])
+        _note = "" if plays_card["discretionary_on"] else f", {_shelved} shelved"
         print(f"[plays] {len(plays_card['plays'])} new, {len(plays_rows)} on the card, "
-              f"{plays_card['total_units']}U committed; record "
-              f"{plays_record['won']}-{plays_record['lost']} ({plays_record['units']:+.2f}U)")
+              f"{plays_card['total_units']}U committed{_note}; record "
+              f"{plays_record['won']}-{plays_record['lost']} "
+              f"({plays_record['units']:+.2f}U), bankroll {bankroll['multiple']:.4f}x")
     except Exception as e:
         # A broken plays section must not take the site down with it. Every
         # other section on this page is older and has a record behind it.
@@ -1584,6 +1594,7 @@ def main(tier: str = "member", output_path: str | None = None):
         favorite_picks=favorite_picks,
         lock_picks=lock_picks,
         plays_card=plays_card, plays_rows=plays_rows, plays_record=plays_record,
+        bankroll=bankroll,
         event_short_name=event_short_name,
         event_full_name=event_full_name,
         event_matchup=event_matchup,
