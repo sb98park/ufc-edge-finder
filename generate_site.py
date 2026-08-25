@@ -41,6 +41,8 @@ from src.card_matcher import (
 from src.power_rating import build_effective_ratings
 from src.odds_utils import implied_prob_to_american, format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
+from src.parlay_builder import _build_candidate_pieces as _candidate_pieces
+from src import parlay_pin
 from src.parlay_ledger import record_slips
 from src.recommendations import build_recommendations
 from src.card_plays import build_card_plays
@@ -701,8 +703,26 @@ def main(tier: str = "member", output_path: str | None = None):
 
     try:
         record_edge_health(edges_df, tracked_edges_list)
-        bankroll_parlays = build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight)
-        lotto_parlays = build_lotto_parlays(tracked_edges_list, model_only_by_fight)
+        # CHOSEN ONCE PER CARD, THEN HELD. The builders run every render, and
+        # letting them re-pick each time produced 51 bankroll and 93 lotto
+        # slips on a single card -- see src/parlay_pin.py. The pin keeps the
+        # legs and lets the prices move, which is what makes the slip a thing
+        # that can be graded rather than a stream.
+        # THE SAME KEY record_slips USES, twenty lines below. event_full_name
+        # is not in scope yet -- it is built further down the function -- and
+        # reaching for it here would raise a NameError straight into the
+        # catch-all below, which would drop the parlay sections from the site
+        # silently rather than loudly.
+        _pin_event = events[0].get("event_name") if events else None
+        _pin_pieces = _candidate_pieces(tracked_edges_list, model_only_by_fight)
+        bankroll_parlays = parlay_pin.hold(
+            _pin_event, "bankroll",
+            build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight),
+            _pin_pieces)
+        lotto_parlays = parlay_pin.hold(
+            _pin_event, "lotto",
+            build_lotto_parlays(tracked_edges_list, model_only_by_fight),
+            _pin_pieces)
     except Exception as e:
         # Never let a parlay-building bug take the whole site down with it --
         # confirmed live: a single fighter with a NaN power rating (missing
