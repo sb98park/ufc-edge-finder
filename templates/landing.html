@@ -947,6 +947,209 @@
      anyone to back anything. The footer is explicit that this is information
      rather than betting advice, and a how-to block is exactly where that line
      would get blurred by accident. #}
+  {# ===== THE ORDER OF THE ARGUMENT ===================================
+     Measured on the live page before this change: the record landed at 1.1
+     screens, the proof that it is not luck at 4.6, and the next thing a
+     convinced reader could press at 5.5. Four feature cards sat between the
+     claim and its evidence, so the page interrupted its own credibility
+     argument to list features and then resumed it.
+     Now the proof runs as one stretch -- record, closing line, ledger -- and
+     the ask lands on the end of it at about 3.1 screens. The features follow
+     as detail for someone already convinced rather than as an obstacle for
+     someone deciding, and pricing closes the page.
+     ================================================================== #}
+  <div class="grouphd">
+    <div class="g1">What it proves</div>
+    <div class="g2">Scored against the closing line, at the price on the day.</div>
+  </div>
+
+  {% if clv_stats %}
+  {# NO NAMED FIGHT. A specific result is the most persuasive version of this
+     card, but it makes the page's strongest claim hostage to one performance
+     that has to be re-argued every time a better or worse one lands. The
+     aggregate is the durable form of the same argument -- and it still moves
+     on its own as the ledger grows. #}
+  <div class="pcard" data-card data-open>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="true">
+      <div><span class="kick">Closing line value</span>
+        <h3>We beat the closing line {{ clv_stats.beat_pct }}% of the time</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="canvas green" data-reveal>
+      {# TWO WORDS IN BIG TYPE WAS NOT A DEMONSTRATION. "Longer odds" next to
+         "Shorter odds" is the claim restated, not shown -- and at 375px both
+         wrapped onto two lines, so it read as broken as well as abstract.
+         A price PATH shows the same thing in the site's own visual language:
+         it is the moneyline chart above, at illustration scale. Still no
+         fighter named, so nothing here ages. #}
+      <div class="shot">
+        <div class="sh-top"><span>How a price moves</span><span>Illustration</span></div>
+        {# THE LINE USED TO GO DOWN, AND IT PLOTTED NOTHING.
+           Y was unlabelled and the curve fell left to right, which reads as
+           decline no matter what the caption says -- so the picture argued
+           against the sentence beside it. It also never showed a price, which
+           is the one thing that makes the idea concrete.
+           Y is now the market's own chance our pick wins, so the market
+           agreeing with us moves the line UP, and both ends carry the price
+           they correspond to: +200 on the way in, -150 at the bell. The shaded
+           wedge between the entry level and the curve IS the edge -- the thing
+           being measured, not decoration around it.
+           preserveAspectRatio is gone: the text inside would have been
+           stretched with the box. #}
+        <svg class="clvchart" viewBox="0 0 300 118" role="img"
+             aria-label="The market's implied chance of our pick rising from 33 percent at plus 200 when we published to 60 percent at minus 150 at the close">
+          <defs>
+            <linearGradient id="clvFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#3ddc84" stop-opacity=".26"/>
+              <stop offset="1" stop-color="#3ddc84" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          {# A LABEL, NOT A SENTENCE. "Market's chance our pick wins" carries a
+             verb, so it scans as a clause with a missing "that" -- the eye
+             tries to read it as prose and stalls. Drop the verb and it can
+             only be read as the name of an axis. Whose chance is answered by
+             the two points on the line, which carry both the price and the
+             percentage. #}
+          <text class="clv-ax" x="4" y="20">Our pick&#8217;s implied chance</text>
+          <path data-fade d="M40 88 L82 84 L124 74 L166 66 L208 54 L250 44 L288 36 L288 88 Z"
+                fill="url(#clvFill)"/>
+          <line data-fade x1="40" y1="88" x2="288" y2="88" stroke="rgba(255,255,255,.18)"
+                stroke-width="1" stroke-dasharray="3 4"/>
+          <path data-draw d="M40 88 L82 84 L124 74 L166 66 L208 54 L250 44 L288 36"
+                fill="none" stroke="#3ddc84" stroke-width="1.8"
+                stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+          <circle data-fade cx="40" cy="88" r="3.6" fill="#3ddc84"/>
+          <circle data-fade cx="288" cy="36" r="3.6" fill="none" stroke="#e0bb45" stroke-width="1.8"/>
+          <text class="clv-pt g" data-fade x="40" y="105">+200</text>
+          <text class="clv-pt g sm" data-fade x="40" y="114">33%</text>
+          <text class="clv-pt y" data-fade x="288" y="24" text-anchor="end">&#8722;150</text>
+          <text class="clv-pt y sm" data-fade x="288" y="50" text-anchor="end">60%</text>
+        </svg>
+        <div class="clvlabels">
+          <span><i class="dot g"></i>When we published</span>
+          <span><i class="dot y"></i>At the bell</span>
+        </div>
+        <div class="verdict">{{ clv_stats.beat }} of {{ clv_stats.total }} priced positions moved our way</div>
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      {# ONE PARAGRAPH, NOT TWO. These were making one point twice across 55
+         words, on the longest card on the page -- 848px, more than a full
+         screen, at card four of six. Both ideas survive in 40: the market
+         moving toward us means the model saw it first, and that is true
+         whether the fighter wins or loses. Nothing is hidden and nothing is
+         cut; the card just stops saying it twice. #}
+      <p><b>The closing line is the market's final answer.</b> If the price moves toward our pick
+         before the bell, the model saw something first &mdash; and that holds <b>whether the
+         fighter wins or loses</b>. Anyone can go 7&ndash;3 on a Saturday.</p>
+      <div class="mini">
+        <div class="r"><span>Beat the closing line</span><b class="up">{{ clv_stats.beat_pct }}%</b></div>
+        <div class="r"><span>Priced positions measured</span><b>{{ clv_stats.total }}</b></div>
+        <div class="r"><span>Basis</span><b>de-vigged fair odds</b></div>
+      </div>
+      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> It needs a
+        timestamped price at pick time and at close. Retro-fitting means inventing prices &mdash;
+        and the closing line is public.</span></div>
+    </div></div>
+  </div>
+  {% endif %}
+
+  {# THE ONLY PLACE TO ACT BETWEEN THE HERO AND THE PRICES.
+     The hero button sits at ~490px and the next one was the Pro plan at
+     ~5,230px: 5.8 screens holding the record, the closing-line proof and the
+     ledger, with nothing to press. A reader convinced here had to scroll
+     three more screens to do anything about it.
+     HERE, specifically. The three cards above this are what the model
+     produces; this is the first one arguing it is any good, and it closes on
+     why nobody else can show it -- which is where interested turns into
+     convinced. Early enough that three screens remain, 1,900px clear of the
+     pricing section so it is not the same ask twice, and it lands at card
+     four of six, which is exactly where the eye starts skimming a stack of
+     identically-shaped cards.
+     ONE LINE, NOT TWO. The card above is the longest read on the page; coming
+     out of it this should be an exhale, not another paragraph. #}
+  <div class="pcard" data-card>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      <div><span class="kick">The ledger</span>
+        {#- "including what lost" was pointing at the Medium row, which is no
+            longer its own line. The first half was always the real claim. -#}
+        <h3>Priced, not just picked</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="canvas warm" data-reveal>
+      <div class="shot">
+        <div class="sh-top"><span>By confidence tier</span><span>{{ tr.units_stats.eligible_count }} positions</span></div>
+        {#- THREE ROWS, NOT FOUR. Medium and Low are one line now, and that is
+            a claim about the product rather than a tidy-up: as of the plays
+            ledger they are the tiers we do not stake, so splitting them asks
+            the reader to weigh two numbers that no longer lead anywhere.
+            Their combined figure is what a reader would actually have got.
+            IT COSTS THE PAGE ITS ONLY NEGATIVE, and the copy under and around
+            this table has been rewritten to stop claiming otherwise -- see
+            the card title, the group header above it, and the detail panel
+            below. What survives is the claim that is still true and still
+            rare: every position is priced at the market, so a good hit rate
+            can still show a bad number. -#}
+        {%- set bt = tr.units_stats.by_tier -%}
+        {%- set staked = [('Lock of the Week', bt.get('Lock of the Week')),
+                          ('High', bt.get('High Confidence'))] -%}
+        {%- set rest = [bt.get('Medium Confidence'), bt.get('Low Confidence')] | select | list -%}
+        <table class="ltbl">
+          <tr><th>Tier</th><th>N</th><th>Units</th></tr>
+          {% for label, st in staked %}{% if st %}
+          <tr style="--fd:{{ loop.index0 * 0.07 }}s">
+            <td>{{ label }}</td>
+            <td>{{ st.count }}</td>
+            <td class="{{ 'up' if st.units >= 0 else 'dn' }}"
+                data-roll data-roll-delay="{{ loop.index0 * 70 + 140 }}">{{ '%+.2f'|format(st.units) }}</td></tr>
+          {% endif %}{% endfor %}
+          {% if rest %}
+          {%- set rest_n = rest | sum(attribute='count') -%}
+          {%- set rest_u = rest | sum(attribute='units') -%}
+          <tr style="--fd:0.14s">
+            <td>Medium and Low</td>
+            <td>{{ rest_n }}</td>
+            <td class="{{ 'up' if rest_u >= 0 else 'dn' }}"
+                data-roll data-roll-delay="280">{{ '%+.2f'|format(rest_u) }}</td></tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      <p>A win-loss record can hide a losing business. <b>{{ tr.accuracy_pct }}% at short prices
+         still loses money</b> &mdash; so every pick is scored in units at the real market price
+         when it was published, never at the model's own probability.</p>
+      {#- BOTH OF THESE POINTED AT A ROW THAT NO LONGER EXISTS. The Medium
+          paragraph named a figure the table stopped printing, and "publishing
+          the tier that loses money" described a thing the page no longer
+          does. Neither was worth keeping by pretending. What replaces them is
+          the claim the card is actually built on and which nothing here has
+          weakened: the unit figure is scored at the market price on the day,
+          so it can disagree with the win-loss record -- and every loss is
+          inside it whether or not any single row is negative. -#}
+      <p>Every loss is inside these numbers. A pick that missed is a full stake gone at the price
+         it was published at &mdash; which is why the units and the win-loss record do not always
+         tell the same story.</p>
+      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> A hit rate
+        is easy to publish and easy to flatter. A unit figure priced at the market on the day is
+        neither, and it is the only one that says whether the picks made money.</span></div>
+    </div></div>
+  </div>
+
+  {% if landing_facts %}
+  <div class="actband">
+    <div class="ab-rail">
+      <div><b class="up">{{ '%+.2f'|format(tr.units_stats.total_units) }}U</b><span>all {{ tr.units_stats.eligible_count }} picks</span></div>
+      {% if tr.clv_stats %}<div><b class="up">{{ tr.clv_stats.beat_pct }}%</b><span>beat the close</span></div>{% endif %}
+      <div><b>{{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b><span>ROI</span></div>
+    </div>
+    <p class="ab-l">That is the whole argument, in three numbers.</p>
+    <button type="button" class="cta" data-auth>Start 7 days free</button>
+  </div>
   <div class="howto" data-reveal>
     <div class="g1">How you'd use it</div>
     {# THIS SAID "Four days before the bell" AND THE FOUR WAS HARDCODED. It
@@ -1213,199 +1416,6 @@
     </div></div>
   </div>
 
-  <div class="grouphd">
-    <div class="g1">What it proves</div>
-    <div class="g2">Scored against the closing line, at the price on the day.</div>
-  </div>
-
-  {% if clv_stats %}
-  {# NO NAMED FIGHT. A specific result is the most persuasive version of this
-     card, but it makes the page's strongest claim hostage to one performance
-     that has to be re-argued every time a better or worse one lands. The
-     aggregate is the durable form of the same argument -- and it still moves
-     on its own as the ledger grows. #}
-  <div class="pcard" data-card data-open>
-    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="true">
-      <div><span class="kick">Closing line value</span>
-        <h3>We beat the closing line {{ clv_stats.beat_pct }}% of the time</h3></div>
-      <span class="expand" aria-hidden="true">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-    </div>
-    <div class="canvas green" data-reveal>
-      {# TWO WORDS IN BIG TYPE WAS NOT A DEMONSTRATION. "Longer odds" next to
-         "Shorter odds" is the claim restated, not shown -- and at 375px both
-         wrapped onto two lines, so it read as broken as well as abstract.
-         A price PATH shows the same thing in the site's own visual language:
-         it is the moneyline chart above, at illustration scale. Still no
-         fighter named, so nothing here ages. #}
-      <div class="shot">
-        <div class="sh-top"><span>How a price moves</span><span>Illustration</span></div>
-        {# THE LINE USED TO GO DOWN, AND IT PLOTTED NOTHING.
-           Y was unlabelled and the curve fell left to right, which reads as
-           decline no matter what the caption says -- so the picture argued
-           against the sentence beside it. It also never showed a price, which
-           is the one thing that makes the idea concrete.
-           Y is now the market's own chance our pick wins, so the market
-           agreeing with us moves the line UP, and both ends carry the price
-           they correspond to: +200 on the way in, -150 at the bell. The shaded
-           wedge between the entry level and the curve IS the edge -- the thing
-           being measured, not decoration around it.
-           preserveAspectRatio is gone: the text inside would have been
-           stretched with the box. #}
-        <svg class="clvchart" viewBox="0 0 300 118" role="img"
-             aria-label="The market's implied chance of our pick rising from 33 percent at plus 200 when we published to 60 percent at minus 150 at the close">
-          <defs>
-            <linearGradient id="clvFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#3ddc84" stop-opacity=".26"/>
-              <stop offset="1" stop-color="#3ddc84" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          {# A LABEL, NOT A SENTENCE. "Market's chance our pick wins" carries a
-             verb, so it scans as a clause with a missing "that" -- the eye
-             tries to read it as prose and stalls. Drop the verb and it can
-             only be read as the name of an axis. Whose chance is answered by
-             the two points on the line, which carry both the price and the
-             percentage. #}
-          <text class="clv-ax" x="4" y="20">Our pick&#8217;s implied chance</text>
-          <path data-fade d="M40 88 L82 84 L124 74 L166 66 L208 54 L250 44 L288 36 L288 88 Z"
-                fill="url(#clvFill)"/>
-          <line data-fade x1="40" y1="88" x2="288" y2="88" stroke="rgba(255,255,255,.18)"
-                stroke-width="1" stroke-dasharray="3 4"/>
-          <path data-draw d="M40 88 L82 84 L124 74 L166 66 L208 54 L250 44 L288 36"
-                fill="none" stroke="#3ddc84" stroke-width="1.8"
-                stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-          <circle data-fade cx="40" cy="88" r="3.6" fill="#3ddc84"/>
-          <circle data-fade cx="288" cy="36" r="3.6" fill="none" stroke="#e0bb45" stroke-width="1.8"/>
-          <text class="clv-pt g" data-fade x="40" y="105">+200</text>
-          <text class="clv-pt g sm" data-fade x="40" y="114">33%</text>
-          <text class="clv-pt y" data-fade x="288" y="24" text-anchor="end">&#8722;150</text>
-          <text class="clv-pt y sm" data-fade x="288" y="50" text-anchor="end">60%</text>
-        </svg>
-        <div class="clvlabels">
-          <span><i class="dot g"></i>When we published</span>
-          <span><i class="dot y"></i>At the bell</span>
-        </div>
-        <div class="verdict">{{ clv_stats.beat }} of {{ clv_stats.total }} priced positions moved our way</div>
-      </div>
-    </div>
-    <div class="detail"><div class="detail-in">
-      {# ONE PARAGRAPH, NOT TWO. These were making one point twice across 55
-         words, on the longest card on the page -- 848px, more than a full
-         screen, at card four of six. Both ideas survive in 40: the market
-         moving toward us means the model saw it first, and that is true
-         whether the fighter wins or loses. Nothing is hidden and nothing is
-         cut; the card just stops saying it twice. #}
-      <p><b>The closing line is the market's final answer.</b> If the price moves toward our pick
-         before the bell, the model saw something first &mdash; and that holds <b>whether the
-         fighter wins or loses</b>. Anyone can go 7&ndash;3 on a Saturday.</p>
-      <div class="mini">
-        <div class="r"><span>Beat the closing line</span><b class="up">{{ clv_stats.beat_pct }}%</b></div>
-        <div class="r"><span>Priced positions measured</span><b>{{ clv_stats.total }}</b></div>
-        <div class="r"><span>Basis</span><b>de-vigged fair odds</b></div>
-      </div>
-      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> It needs a
-        timestamped price at pick time and at close. Retro-fitting means inventing prices &mdash;
-        and the closing line is public.</span></div>
-    </div></div>
-  </div>
-  {% endif %}
-
-  {# THE ONLY PLACE TO ACT BETWEEN THE HERO AND THE PRICES.
-     The hero button sits at ~490px and the next one was the Pro plan at
-     ~5,230px: 5.8 screens holding the record, the closing-line proof and the
-     ledger, with nothing to press. A reader convinced here had to scroll
-     three more screens to do anything about it.
-     HERE, specifically. The three cards above this are what the model
-     produces; this is the first one arguing it is any good, and it closes on
-     why nobody else can show it -- which is where interested turns into
-     convinced. Early enough that three screens remain, 1,900px clear of the
-     pricing section so it is not the same ask twice, and it lands at card
-     four of six, which is exactly where the eye starts skimming a stack of
-     identically-shaped cards.
-     ONE LINE, NOT TWO. The card above is the longest read on the page; coming
-     out of it this should be an exhale, not another paragraph. #}
-  <div class="actband">
-    <div class="ab-rail">
-      <div><b class="up">{{ '%+.2f'|format(tr.units_stats.total_units) }}U</b><span>all {{ tr.units_stats.eligible_count }} picks</span></div>
-      {% if tr.clv_stats %}<div><b class="up">{{ tr.clv_stats.beat_pct }}%</b><span>beat the close</span></div>{% endif %}
-      <div><b>{{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b><span>ROI</span></div>
-    </div>
-    <p class="ab-l">That is the whole argument, in three numbers.</p>
-    <button type="button" class="cta" data-auth>Start 7 days free</button>
-  </div>
-
-  <div class="pcard" data-card>
-    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
-      <div><span class="kick">The ledger</span>
-        {#- "including what lost" was pointing at the Medium row, which is no
-            longer its own line. The first half was always the real claim. -#}
-        <h3>Priced, not just picked</h3></div>
-      <span class="expand" aria-hidden="true">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-    </div>
-    <div class="canvas warm" data-reveal>
-      <div class="shot">
-        <div class="sh-top"><span>By confidence tier</span><span>{{ tr.units_stats.eligible_count }} positions</span></div>
-        {#- THREE ROWS, NOT FOUR. Medium and Low are one line now, and that is
-            a claim about the product rather than a tidy-up: as of the plays
-            ledger they are the tiers we do not stake, so splitting them asks
-            the reader to weigh two numbers that no longer lead anywhere.
-            Their combined figure is what a reader would actually have got.
-            IT COSTS THE PAGE ITS ONLY NEGATIVE, and the copy under and around
-            this table has been rewritten to stop claiming otherwise -- see
-            the card title, the group header above it, and the detail panel
-            below. What survives is the claim that is still true and still
-            rare: every position is priced at the market, so a good hit rate
-            can still show a bad number. -#}
-        {%- set bt = tr.units_stats.by_tier -%}
-        {%- set staked = [('Lock of the Week', bt.get('Lock of the Week')),
-                          ('High', bt.get('High Confidence'))] -%}
-        {%- set rest = [bt.get('Medium Confidence'), bt.get('Low Confidence')] | select | list -%}
-        <table class="ltbl">
-          <tr><th>Tier</th><th>N</th><th>Units</th></tr>
-          {% for label, st in staked %}{% if st %}
-          <tr style="--fd:{{ loop.index0 * 0.07 }}s">
-            <td>{{ label }}</td>
-            <td>{{ st.count }}</td>
-            <td class="{{ 'up' if st.units >= 0 else 'dn' }}"
-                data-roll data-roll-delay="{{ loop.index0 * 70 + 140 }}">{{ '%+.2f'|format(st.units) }}</td></tr>
-          {% endif %}{% endfor %}
-          {% if rest %}
-          {%- set rest_n = rest | sum(attribute='count') -%}
-          {%- set rest_u = rest | sum(attribute='units') -%}
-          <tr style="--fd:0.14s">
-            <td>Medium and Low</td>
-            <td>{{ rest_n }}</td>
-            <td class="{{ 'up' if rest_u >= 0 else 'dn' }}"
-                data-roll data-roll-delay="280">{{ '%+.2f'|format(rest_u) }}</td></tr>
-          {% endif %}
-        </table>
-      </div>
-    </div>
-    <div class="detail"><div class="detail-in">
-      <p>A win-loss record can hide a losing business. <b>{{ tr.accuracy_pct }}% at short prices
-         still loses money</b> &mdash; so every pick is scored in units at the real market price
-         when it was published, never at the model's own probability.</p>
-      {#- BOTH OF THESE POINTED AT A ROW THAT NO LONGER EXISTS. The Medium
-          paragraph named a figure the table stopped printing, and "publishing
-          the tier that loses money" described a thing the page no longer
-          does. Neither was worth keeping by pretending. What replaces them is
-          the claim the card is actually built on and which nothing here has
-          weakened: the unit figure is scored at the market price on the day,
-          so it can disagree with the win-loss record -- and every loss is
-          inside it whether or not any single row is negative. -#}
-      <p>Every loss is inside these numbers. A pick that missed is a full stake gone at the price
-         it was published at &mdash; which is why the units and the win-loss record do not always
-         tell the same story.</p>
-      <div class="nobody"><span>&#9679;</span><span><b>Why nobody else shows this.</b> A hit rate
-        is easy to publish and easy to flatter. A unit figure priced at the market on the day is
-        neither, and it is the only one that says whether the picks made money.</span></div>
-    </div></div>
-  </div>
-
-  {% if landing_facts %}
   {# ===== FIGHT FACTS =====
      The one section on this page that is not an argument. Five analytical
      cards is a lot of ledger, and this is the beat where the product is
