@@ -2620,6 +2620,9 @@
      is how the threshold was derived; the price is the thing to act on. */
   .ml-price { font-size: var(--t-lead); font-weight: 700; color: var(--accent-hi); font-variant-numeric: tabular-nums; }
   .ml-prob { font-size: var(--t-micro); color: var(--muted); white-space: nowrap; margin-top: 1px; }
+  /* Small, because the threshold number is the loud part -- but present,
+     because "-150" and "-150 or better" are different instructions. */
+  .ml-orbetter { font-size: var(--t-micro); font-weight: 600; color: var(--muted); }
 
   .no-parlays { font-size: var(--t-body); color: var(--muted); padding: 4px 0 8px; }
 
@@ -8127,8 +8130,17 @@
         <div class="ml-sub">{{ leg.fight_label }} · {{ leg.why }}</div>
       </div>
       <div class="ml-right">
-        <div class="ml-price">{{ leg.min_price | american }}</div>
+        {# TWO DIFFERENT CLAIMS, SHOWN DIFFERENTLY. A priced leg states an edge
+           against a real number; an unpriced one states the price it would
+           have to be paid. Rendering them identically would let a threshold
+           read as a quote. #}
+        {% if leg.kind == 'edge' %}
+        <div class="ml-price">{{ leg.price | american }}</div>
+        <div class="ml-prob">{{ '%+.1f'|format(leg.edge_pp) }}pp edge{% if leg.source %} · {{ leg.source }}{% endif %}</div>
+        {% else %}
+        <div class="ml-price">{{ leg.min_price | american }}<span class="ml-orbetter"> or better</span></div>
         <div class="ml-prob">model {{ (leg.p_model*100)|round|int }}%</div>
+        {% endif %}
       </div>
     </li>
     {% endfor %}

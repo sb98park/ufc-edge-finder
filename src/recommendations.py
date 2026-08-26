@@ -59,7 +59,14 @@ MIN_PROB = 0.12
 # How many legs of any ONE market type the list will show. Keeps the range of
 # the card visible instead of whichever market happens to sit highest on the
 # probability scale.
-MAX_PER_MARKET = 5
+#
+# WAS 5, AND FIVE WAS TOO MANY. "Fight to start round 2" is roughly one minus
+# the chance of a first-round finish, so it is the highest-probability leg on
+# almost every fight and it filled five of the six visible rows at 79, 79, 79,
+# 80 and 83 percent -- five rows that are one observation about early finishes,
+# not five recommendations. Two is enough to show the market exists without
+# letting it own the section.
+MAX_PER_MARKET = 2
 
 _METHODS = ("KO/TKO", "Submission", "Decision")
 
@@ -146,6 +153,7 @@ def legs_for_fight(fight: dict, market_probs: dict | None = None) -> list[dict]:
                 "fight_key": key, "fight_label": f"{fa} vs {fb}",
                 "fighter": name, "market": "Double Chance",
                 "label": f"{name} {phrase}",
+                "kind": "threshold",
                 "p_model": round(p, 4), "min_price": th,
                 "why": f"{_METHODS[a]} {row[a]*100:.0f}% + {_METHODS[b]} {row[b]*100:.0f}%",
             })
@@ -169,6 +177,7 @@ def legs_for_fight(fight: dict, market_probs: dict | None = None) -> list[dict]:
                 "fight_key": key, "fight_label": f"{fa} vs {fb}",
                 "fighter": None, "market": "Round start",
                 "label": f"Fight to start round {n} — Yes",
+                "kind": "threshold",
                 "p_model": round(p, 4), "min_price": th,
                 "why": f"{ends_before*100:.0f}% chance it ends first",
             })
@@ -196,6 +205,58 @@ def build_recommendations(events: list[dict], tracked_edges: list[dict] | None =
             if p is not None and p == p:
                 market_probs[row.get("fighter")] = float(p)
 
+    # PRICED LEGS, which this section used to exclude by charter.
+    #
+    # The rule was "publish only what the feed does not price", because an
+    # unpriced market can be given an honest THRESHOLD while a priced one is
+    # already shown elsewhere on the page. Defensible, and it produced a
+    # section that was nothing but round-start rows -- a reader looking for
+    # the model's actual calls found the one market that sits structurally
+    # highest on the probability scale, repeated.
+    #
+    # So the charter widens: the best legs on the card, wherever they are
+    # priced. The two claims stay VISIBLY different rather than being mixed
+    # into one ranking, because they are not the same statement. A priced leg
+    # says "the model disagrees with this number by this much". An unpriced
+    # one says "here is the probability, here is what you must be paid".
+    priced = []
+    for row in tracked_edges or []:
+        if str(row.get("market")) != "Moneyline":
+            continue
+        p, fair = row.get("model_prob"), row.get("book_fair_prob")
+        odds, who = row.get("odds_american"), row.get("fighter")
+        if None in (p, fair, odds, who) or p != p or fair != fair:
+            continue
+        edge = float(p) - float(fair)
+        if edge <= 0:
+            continue          # no claim to make when the book is ahead
+        # AND THE MODEL MUST AGREE WITH THE MARKET ON WHO WINS.
+        #
+        # Ranking by edge selects the largest model-vs-market disagreement,
+        # and that disagreement is largest exactly where this model is worst.
+        # Measured in this module's own docstring: 85.2% on the 61 picks where
+        # it agreed with the market on the winner, 39.1% on the 23 where it
+        # took the underdog. validate_market_blend puts the same split at
+        # 40/47 against 9/21 -- worse than a coin flip.
+        #
+        # Without this the section led with seven straight underdogs at +130
+        # to +614, which is not the model being bold, it is the ranking
+        # function seeking the cohort the model cannot price.
+        if float(fair) < 0.5:
+            continue
+        priced.append({
+            "fight_key": row.get("fight_key") or row.get("fight_id"),
+            "fight_label": f'{row.get("fighter_a")} vs {row.get("fighter_b")}',
+            "fighter": who, "market": "Moneyline",
+            "label": f"{who} Moneyline",
+            "kind": "edge",
+            "p_model": round(float(p), 4),
+            "price": float(odds),
+            "edge_pp": round(edge * 100, 1),
+            "source": row.get("source"),
+            "why": f"model {float(p)*100:.0f}% against a fair {float(fair)*100:.0f}%",
+        })
+
     legs = []
     for event in events or []:
         for fight in event.get("fights") or []:
@@ -205,6 +266,15 @@ def build_recommendations(events: list[dict], tracked_edges: list[dict] | None =
                 legs.extend(legs_for_fight(fight, market_probs))
             except Exception:
                 continue          # one bad fight must not empty the section
+    # Ranked WITHIN a kind, never across it. Sorting the two together on
+    # p_model is what buried everything under round-start: "fight to start
+    # round 2" is roughly one minus the chance of a first-round finish, so it
+    # outranks a genuine 70% moneyline read on almost every fight without
+    # being a better call.
+    # CONFIDENCE FIRST, NOT EDGE. Edge is the claim, but it is not the
+    # ordering: sorting on it puts the thinnest, longest-priced reads at the
+    # top of a section a reader treats as "what the model likes most".
+    priced.sort(key=lambda l: (-l["p_model"], -l["edge_pp"]))
     legs.sort(key=lambda l: -l["p_model"])
 
     # ONE LEG PER FIGHT, and this is a correctness constraint rather than a
@@ -217,25 +287,37 @@ def build_recommendations(events: list[dict], tracked_edges: list[dict] | None =
     # near-identical "Fight to start round 2" rows: that market is the highest
     # probability leg on most fights, so a pure probability sort returns the
     # same market thirteen times and buries every other option on the card.
-    best_per_fight: dict = {}
-    for leg in legs:
-        best_per_fight.setdefault(leg["fight_key"], leg)
-    picked = list(best_per_fight.values())
-
-    # AND A CAP PER MARKET TYPE, because raw probability is not comparable
-    # ACROSS markets. "Fight to start round 2" is structurally the highest
-    # probability leg on almost every card -- it is roughly one minus the
-    # chance of a first-round finish -- so a pure probability sort returned it
-    # for eight of twelve fights and buried every Double Chance option. That
-    # ordering reflects which market sits highest on the probability scale,
-    # not which leg is the better call, and a reader building a slip needs the
-    # range of what the card offers rather than one market repeated.
+    # ONE PASS, NOT TWO FILTERS IN SEQUENCE -- and the order was the bug.
+    #
+    # This used to collapse every fight to its single highest-probability leg
+    # FIRST, then apply the per-market cap. But "fight to start round 2" is
+    # the highest-probability leg on nearly every fight, so the first stage
+    # threw away every Double Chance leg before the cap could ever admit one,
+    # and the cap then just truncated a pile of identical round-start rows.
+    # The card went from twelve slots to three filled.
+    #
+    # Walking the ranked list once, taking a leg only if its fight is unused
+    # AND its market still has room, lets a fight whose round-start leg is
+    # capped out contribute its next-best leg instead.
     per_market: dict = {}
+    seen_fights: set = set()
     out = []
-    for leg in picked:
+
+    # Priced legs lead: they are the only ones carrying a claim about a real
+    # number. One per fight, for the independence reason above.
+    for leg in priced:
+        if leg["fight_key"] in seen_fights:
+            continue
+        seen_fights.add(leg["fight_key"])
+        out.append(leg)
+
+    for leg in legs:
+        if leg["fight_key"] in seen_fights:
+            continue
         m = leg["market"]
         if per_market.get(m, 0) >= MAX_PER_MARKET:
             continue
         per_market[m] = per_market.get(m, 0) + 1
+        seen_fights.add(leg["fight_key"])
         out.append(leg)
     return out[:limit]

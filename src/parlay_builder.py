@@ -35,6 +35,17 @@ from src.odds_utils import (american_to_decimal, decimal_to_american, format_ame
 from src.card_matcher import is_pickable_market, price_is_fragile
 
 
+# WHERE A SLIP CAN ACTUALLY BE PLACED.
+#
+# The site carries two kinds of price and they do different jobs. DraftKings
+# and FanDuel carry vig and are bettable, so they are the BOOK. Polymarket has
+# no margin in it, which is exactly why it serves as the FAIR line the model
+# measures edge against -- and exactly why it must not be quoted as a wager.
+#
+# Only a book can carry a parlay. If none of them can field one, the section
+# is empty; see the note in _find_parlays.
+BETTABLE_VENUES = frozenset({"DraftKings", "FanDuel", "BetMGM"})
+
 # HOW MUCH MODEL GOES INTO THE RANKING. Deliberately NOT the site's
 # MARKET_BLEND_MODEL_WEIGHT (0.30), which sizes single bets.
 #
@@ -555,16 +566,33 @@ def _find_parlays(
     # this stops any more being created.
     by_venue: dict = {}
     unattributed = 0
+    reference_only = 0
     for p in eligible:
         venue = p.get("source")
         if not venue or venue == "model":
             unattributed += 1
+            continue
+        # A REFERENCE LINE IS NOT A TICKET. Polymarket is carried precisely
+        # because it has no margin in it -- that is what makes it a fair
+        # yardstick for measuring edge, and it is also what makes it the
+        # wrong thing to quote as a bet. Publishing a Polymarket parlay tells
+        # a reader to go and take a price their sportsbook does not offer,
+        # which is how a -270 that only exists there got read as a
+        # DraftKings line.
+        if venue not in BETTABLE_VENUES:
+            reference_only += 1
             continue
         by_venue.setdefault(venue, []).append(p)
     if unattributed:
         print(f"[{label}] {unattributed} leg(s) dropped: no venue recorded, so they "
               f"cannot be shown to belong on one ticket")
     if not by_venue:
+        # EMPTY BEATS UNPLACEABLE. A week where no book fields a full slip is
+        # a real answer, and the section says so rather than substituting a
+        # price from the yardstick.
+        if reference_only:
+            print(f"[{label}] no slip: {reference_only} leg(s) priced only on a "
+                  f"reference line, which is not a book you can bet at")
         return []
     if len(by_venue) > 1:
         print(f"[{label}] venues available: "
