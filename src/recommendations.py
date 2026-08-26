@@ -56,6 +56,11 @@ REQUIRED_EDGE = 1.05
 # much, and the price it would demand is longer than any book offers.
 MIN_PROB = 0.12
 
+# A moneyline only counts as a confident call if the model has the fighter
+# winning by a clear margin. A coin flip is not a call, and the section is
+# titled for what the model likes.
+MIN_MONEYLINE_PROB = 0.60
+
 # How many legs of any ONE market type the list will show. Keeps the range of
 # the card visible instead of whichever market happens to sit highest on the
 # probability scale.
@@ -228,9 +233,22 @@ def build_recommendations(events: list[dict], tracked_edges: list[dict] | None =
         if None in (p, fair, odds, who) or p != p or fair != fair:
             continue
         edge = float(p) - float(fair)
-        if edge <= 0:
-            continue          # no claim to make when the book is ahead
-        # AND THE MODEL MUST AGREE WITH THE MARKET ON WHO WINS.
+        # A LEG THE PRICE ALREADY CONTAINS STILL BELONGS HERE, and it is
+        # labelled rather than dropped. This section is the model's most
+        # confident calls, so a read the market shares is still a read -- the
+        # honest move is to show it and say the price is ahead, not to hide a
+        # pick because it happens to be correctly priced. Dropping them left
+        # the heaviest favourites off a list titled "legs the model likes",
+        # which is the opposite of what a reader expects to find there.
+        priced_in = edge <= 0
+        # THE MODEL HAS TO ACTUALLY LIKE IT. Obvious in hindsight and it was
+        # missing: the filter below only asked whether the BOOK favoured the
+        # fighter, so "Yan Xiaonan, model 38%" appeared in a list of legs the
+        # model likes. A call the model rates a loser is not a confident call,
+        # it is the opposite one.
+        if float(p) < MIN_MONEYLINE_PROB:
+            continue
+        # AND IT MUST AGREE WITH THE MARKET ON WHO WINS.
         #
         # Ranking by edge selects the largest model-vs-market disagreement,
         # and that disagreement is largest exactly where this model is worst.
@@ -253,8 +271,10 @@ def build_recommendations(events: list[dict], tracked_edges: list[dict] | None =
             "p_model": round(float(p), 4),
             "price": float(odds),
             "edge_pp": round(edge * 100, 1),
+            "priced_in": priced_in,
             "source": row.get("source"),
-            "why": f"model {float(p)*100:.0f}% against a fair {float(fair)*100:.0f}%",
+            "why": (f"model {float(p)*100:.0f}% against a fair {float(fair)*100:.0f}%"
+                    + ("" if not priced_in else " -- the price already has it")),
         })
 
     legs = []
@@ -303,11 +323,17 @@ def build_recommendations(events: list[dict], tracked_edges: list[dict] | None =
     seen_fights: set = set()
     out = []
 
-    # Priced legs lead: they are the only ones carrying a claim about a real
-    # number. One per fight, for the independence reason above.
+    # Priced legs lead, but they OBEY THE SAME CAP. Letting them bypass it
+    # put twelve moneylines in twelve slots and pushed Double Chance and
+    # round-start off the card entirely -- the same crowding-out the cap
+    # exists to prevent, arriving from the other direction.
     for leg in priced:
         if leg["fight_key"] in seen_fights:
             continue
+        m = leg["market"]
+        if per_market.get(m, 0) >= MAX_PER_MARKET:
+            continue
+        per_market[m] = per_market.get(m, 0) + 1
         seen_fights.add(leg["fight_key"])
         out.append(leg)
 

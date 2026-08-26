@@ -2623,6 +2623,9 @@
   /* Small, because the threshold number is the loud part -- but present,
      because "-150" and "-150 or better" are different instructions. */
   .ml-orbetter { font-size: var(--t-micro); font-weight: 600; color: var(--muted); }
+  /* Not an error state -- a correctly priced favourite is a normal outcome,
+     and this only has to stop the row reading as a value call. */
+  .ml-pricedin { color: var(--text-soft); }
 
   .no-parlays { font-size: var(--t-body); color: var(--muted); padding: 4px 0 8px; }
 
@@ -8119,7 +8122,7 @@
     be paid for it.
   #}
   <div class="standout-title" id="section-modellegs">{{ icon_coins() }} Legs the model likes</div>
-  <div class="parlay-subtitle">Markets your book offers that this feed doesn’t price. The model gives the probability; the threshold is the number you need to beat. Combine as many as you like — each clears the bar on its own.</div>
+  <div class="parlay-subtitle">The model’s most confident calls on this card, in whatever market they sit. Where a live price exists it is shown with the edge against it, or marked <em>priced in</em> when the market already has the read. Where no price exists the number is the threshold you need to beat.</div>
 
   {% if model_legs %}
   <ul class="ml-list">
@@ -8136,7 +8139,11 @@
            read as a quote. #}
         {% if leg.kind == 'edge' %}
         <div class="ml-price">{{ leg.price | american }}</div>
-        <div class="ml-prob">{{ '%+.1f'|format(leg.edge_pp) }}pp edge{% if leg.source %} · {{ leg.source }}{% endif %}</div>
+        {# A CONFIDENT READ THE PRICE ALREADY CONTAINS IS STILL SHOWN, and
+           says so. Printing a negative "edge" would be worse than useless;
+           silently dropping it left the heaviest favourites off a list of
+           what the model likes. #}
+        <div class="ml-prob">model {{ (leg.p_model*100)|round|int }}%{% if leg.priced_in %} · <span class="ml-pricedin">priced in</span>{% else %} · {{ '%+.1f'|format(leg.edge_pp) }}pp edge{% endif %}{% if leg.source %} · {{ leg.source }}{% endif %}</div>
         {% else %}
         <div class="ml-price">{{ leg.min_price | american }}<span class="ml-orbetter"> or better</span></div>
         <div class="ml-prob">model {{ (leg.p_model*100)|round|int }}%</div>
