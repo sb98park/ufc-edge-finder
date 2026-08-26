@@ -2161,15 +2161,20 @@
     color: var(--muted); margin: 16px 0 8px;
   }
   .model-group-title:first-child { margin-top: 6px; }
+  /* ITS OWN CARD, NOT A ROW INSIDE ONE. These sat in a .track-record-card
+     container with a 3px identity strip down the left, which left How the
+     Model Works the only section on the site drawn that way. .favorite-card's
+     own note records those strips coming off the fight cards, the drawer and
+     the standout props; these were the last ones. Geometry now matches
+     .standout-card and .favorite-card exactly, so the panes stack like every
+     other list of boxes. --e1 rather than --e2 because these are read, not
+     pressed -- no hover transform to justify the heavier resting shadow. */
   .model-factor-card {
     display: flex; gap: 10px; align-items: flex-start;
-    background: var(--panel2); border: 1px solid var(--border); border-left: 3px solid var(--border);
-    border-radius: var(--r-md); padding: 10px 12px; margin-bottom: 6px;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 10px;
+    box-shadow: var(--e1);
   }
-  .model-factor-card.group-gold { border-left-color: var(--accent); }
-  .model-factor-card.group-blue { border-left-color: var(--muted); }
-  .model-factor-card.group-purple { border-left-color: var(--muted); }
-  .model-factor-card.group-green { border-left-color: var(--green); }
   .model-factor-icon { font-size: var(--t-sub); flex-shrink: 0; width: 20px; text-align: center; line-height: 1.4; }
   .model-factor-content { min-width: 0; }
   .model-factor-title { font-size: var(--t-body); font-weight: 600; color: var(--text); margin-bottom: 3px; }
@@ -8347,9 +8352,8 @@
     <button class="seg-tab" aria-pressed="false" data-seg-target="hiw-4" onclick="switchSegTab(this)">Validation</button>
     <button class="seg-tab" aria-pressed="false" data-seg-target="hiw-5" onclick="switchSegTab(this)">Honest Data Limitations</button>
   </div>
-  <div class="track-record-card">
     <div class="seg-pane active" id="hiw-0">
-      <div class="model-factor-card group-gold">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_barchart() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Elo + Stats Blend</div>
@@ -8359,70 +8363,70 @@
 
     </div>
     <div class="seg-pane" id="hiw-1">
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_underdog() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Style Matchup — "Styles Make Fights"</div>
           <div class="model-factor-text">Takedown accuracy vs. the opponent's takedown defense (or control time percentage, when populated — a fighter who goes 1-for-5 on takedowns but holds 4 minutes of control is more effective than raw accuracy implies), striking accuracy and volume differential (SLpM minus SApM, when populated), and durability all shift the base rating gap.</div>
         </div>
       </div>
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_trenddown() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Age Cliff by Weight Class</div>
           <div class="model-factor-text">The decline threshold varies a lot by division — Flyweight/Bantamweight/Featherweight/Strawweight start seeing a real decline past 35, while Heavyweight and Light Heavyweight often sustain into the late 30s. A flat age penalty across all divisions would be wrong in both directions.</div>
         </div>
       </div>
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_clock() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Layoff / Ring Rust vs. Quick Return</div>
           <div class="model-factor-text">Fighters back after more than a year away take a ring-rust penalty; fighters back too soon after being finished (under ~6 months) take a separate, opposite-direction penalty. The layoff weight was revised down sharply after backtesting against 30 years of fight history showed the original penalty was sized far too aggressively — the current weight is the strongest the historical evidence actually supports.</div>
         </div>
       </div>
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_flame() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Recent Form (Backtest-Validated)</div>
           <div class="model-factor-text">Each fighter's last three results, weighted by how recent they are (a win last month counts more than a win 18 months ago). Both the three-fight window and the weight were selected on pre-2019 historical fights and confirmed on held-out 2019+ fights — one of the few adjustments fitted to evidence rather than hand-tuned.</div>
         </div>
       </div>
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_target() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Stance Matchup</div>
           <div class="model-factor-text">Southpaw or switch fighters get a modest edge against pure-orthodox opponents — the classic "unfamiliar look" advantage. Two fighters sharing a stance (including two southpaws) is neutral, since neither has the familiarity edge.</div>
         </div>
       </div>
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_lock() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Submission Threat</div>
           <div class="model-factor-text">A fighter's rate of finishing wins by submission, as a distinct skill from raw wrestling stats — a fighter can have modest takedown numbers but a live submission threat off scrambles and clinch entries, which takedown accuracy alone misses.</div>
         </div>
       </div>
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_scales() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Weight Class Change</div>
           <div class="model-factor-text">Moving up a division (facing bigger opponents) carries a penalty per division jumped; moving down earns a small bonus. Detected automatically from each fighter's tracked division history against the division this specific fight is booked at.</div>
         </div>
       </div>
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_ruler() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Height Advantage</div>
           <div class="model-factor-text">A small edge per inch of height difference — deliberately small, because reach (which tracks height closely) already carries weight in the base rating, and counting the same physical edge twice would overstate it.</div>
         </div>
       </div>
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_warning() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Short Notice</div>
           <div class="model-factor-text">Fighters who accept a bout on short notice — a late replacement without a full training camp — win measurably less often; published analyses of UFC short-notice outcomes put the drop at roughly 10 percentage points, which is the penalty applied here. Flagged per fighter when a late booking is confirmed, and cleared automatically once that fight happens, so a one-booking fact never bleeds into the fighter's next matchup.</div>
         </div>
       </div>
-      <div class="model-factor-card group-blue">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_scales() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Missed Weight</div>
@@ -8432,14 +8436,14 @@
 
     </div>
     <div class="seg-pane" id="hiw-2">
-      <div class="model-factor-card group-purple">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_target() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Method of Victory</div>
           <div class="model-factor-text">Prior-informed blend — starts at the divisional average rate for that method (heavyweight fights have an inherently higher baseline KO/TKO rate than strawweight, which leans toward decisions), shifts toward the fighter's own career tendency (weighted by experience), then further incorporates the specific opponent's demonstrated vulnerability.</div>
         </div>
       </div>
-      <div class="model-factor-card group-purple">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_clock() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Total Rounds</div>
@@ -8449,14 +8453,14 @@
 
     </div>
     <div class="seg-pane" id="hiw-3">
-      <div class="model-factor-card group-green">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_trendup() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Line Movement</div>
           <div class="model-factor-text">Each refresh is compared against saved history to show real price movement and render an actual chart. Honest limitation: this tracks price only, not bet volume or who's behind a move — true "sharp money" detection needs handle/ticket-count data no free source provides, so this is labeled "notable movement," not a sharp-money claim.</div>
         </div>
       </div>
-      <div class="model-factor-card group-green">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_coins() }}</div>
         <div class="model-factor-content">
           {#- REWRITTEN to describe the sizing the reader can actually see.
@@ -8478,14 +8482,14 @@
           <div class="model-factor-text">Flat units by conviction, not a bankroll percentage: 5 units on a High Confidence pick, 3 on Medium, 1 on Low, and 10 on the single Lock of the Week — the pips beside every result in Track Record. Deliberately simple, and deliberately not advice: a unit is whatever you decide it is, and the tiers exist so the record can be scored consistently rather than to tell anyone what to risk. Results are then priced at the real market odds at pick time, never at the model's own probability, which would only be grading the model against itself.</div>
         </div>
       </div>
-      <div class="model-factor-card group-green">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_gauge() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Closing Line Value (CLV)</div>
           <div class="model-factor-text">The moneyline price on the model's favorite the FIRST time it was logged, compared against the last known price before the fight. If the market moved toward the model's side by fight night (the price shortened), that's a "beat" — a real signal the model saw value before the market caught up, independent of whether the pick actually won. This is why CLV is tracked separately from raw accuracy: a model can lose a coinflip fight while still having correctly read where the market was headed, and that skill is what CLV isolates.</div>
         </div>
       </div>
-      <div class="model-factor-card group-green">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_sigma() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Historical Upset Analysis</div>
@@ -8495,7 +8499,7 @@
 
     </div>
     <div class="seg-pane" id="hiw-4">
-      <div class="model-factor-card group-gold">
+      <div class="model-factor-card">
         <div class="model-factor-icon">{{ icon_gauge() }}</div>
         <div class="model-factor-content">
           <div class="model-factor-title">Walk-Forward Backtest</div>
@@ -8511,7 +8515,6 @@
       <div class="model-limitations-notice" style="margin-top:10px;">
         {{ icon_ruler() }} <strong>Reach sometimes matches height exactly.</strong> For roughly 1 in 7 tracked fighters, our source data lists reach identical to height down to the inch. We checked our own pipeline carefully — height and reach are pulled and validated completely independently, with no code path that copies one into the other — so this looks like a real quirk in the upstream data (some fighters' true reach genuinely isn't tracked, and it gets mirrored from height as a placeholder) rather than something we can correct on our end. Shown as-is rather than silently adjusted.
       </div>
-    </div>
   </div>
   </div>
 
