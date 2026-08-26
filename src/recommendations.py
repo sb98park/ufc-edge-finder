@@ -264,7 +264,12 @@ def build_recommendations(events: list[dict], tracked_edges: list[dict] | None =
             continue
         priced.append({
             "fight_key": row.get("fight_key") or row.get("fight_id"),
-            "fight_label": f'{row.get("fighter_a")} vs {row.get("fighter_b")}',
+            # fighter_a/fighter_b ARE NOT ON A TRACKED EDGE. It carries
+            # `fighter` and `opponent`, so this rendered "None vs None" on
+            # every priced row. Falls back to the fight_id, which is
+            # "A|B"-shaped, rather than printing None again.
+            "fight_label": (f'{who} vs {row.get("opponent")}' if row.get("opponent")
+                            else str(row.get("fight_key") or row.get("fight_id") or "").replace("|", " vs ")),
             "fighter": who, "market": "Moneyline",
             "label": f"{who} Moneyline",
             "kind": "edge",

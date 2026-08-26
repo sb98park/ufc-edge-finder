@@ -2448,7 +2448,15 @@
     box-shadow: var(--e1);
   }
   .parlay-card.bankroll { border-left-color: #3ddc84; }
-  .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  /* GAP AND A SHRINKABLE MIDDLE. This was a bare space-between with no gap,
+     so at a wide price ("+101") and a long readout the two ran into each
+     other -- confirmed on a real card, where the odds sat on top of the
+     words. The readout is the only part that may shrink; the price and the
+     venue chip keep their size. */
+  .parlay-top { display: flex; justify-content: space-between; align-items: center;
+                gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .parlay-top > .parlay-odds, .parlay-top > .parlay-venue { flex: 0 0 auto; }
+  .parlay-top > [data-slip-readout] { flex: 1 1 auto; min-width: 0; }
   .parlay-odds { font-size: var(--t-h2); font-weight: 700; font-family: var(--font-display); }
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
   .parlay-prob { font-size: var(--t-small); color: var(--muted); }
@@ -8100,7 +8108,6 @@
   {% for p in bankroll_parlays %}
   {{ parlay_card(p, "bankroll", 1) }}
   {% endfor %}
-  <div class="parlay-note">Fights on the same card were checked for correlation and behave independently, so multiplying across them is sound. The estimate is still optimistic for a different reason: picking the best slip out of many inflates whatever it was ranked on. Legs marked "model" have no live book price to compare against.</div>
   {% elif events and tier != 'free' %}
   <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} The Parlay</div>
   {{ empty_state(icon_coins(), "No parlay yet", "Not enough live-priced or model-projected legs on this card yet.") }}
@@ -8121,7 +8128,9 @@
     move. The claim is only: here is the probability, here is what you need to
     be paid for it.
   #}
-  <div class="standout-title" id="section-modellegs">{{ icon_coins() }} Legs the model likes</div>
+  {# The parlay above ends on a card; this heading was landing straight on it.
+     Section-sized space, not paragraph-sized. #}
+  <div class="standout-title" id="section-modellegs" style="margin-top:34px">{{ icon_coins() }} Legs the model likes</div>
   <div class="parlay-subtitle">The model’s most confident calls on this card, in whatever market they sit. Where a live price exists it is shown with the edge against it, or marked <em>priced in</em> when the market already has the read. Where no price exists the number is the threshold you need to beat.</div>
 
   {% if model_legs %}
