@@ -795,6 +795,73 @@
   .fine.bad{color:#ff8a8a}
   .fine{font-size:11px;color:var(--ink3);text-align:center;margin-top:12px;line-height:1.6}
   @media (prefers-reduced-motion:reduce){.sheet,.scrim{transition:none}}
+
+  /* ===================== DESKTOP =====================================
+     The page was 440px wide on every screen -- there was not one width
+     media query in this file -- so a laptop got the phone layout centred in
+     a third of the window.
+
+     THE WRAPPERS ARE display:contents BELOW THE BREAKPOINT. .dgrid, .dcol
+     and .dcards are grouping elements only; contents removes them from the
+     layout entirely, so the phone stack is not merely equivalent to what it
+     was, it is the same boxes in the same order with the same parents. That
+     is why this could be added without re-testing the mobile page section by
+     section.
+
+     NOT "the same page, wider". Body copy at 1100px is unreadable and every
+     card canvas is a phone-shaped fragment of the real product -- stretch one
+     and it stops looking like the thing it is advertising. So the columns
+     pair what belongs together and the measure stays bounded; only the
+     geometry changes, never the copy, the figures, or the order.
+     ================================================================== */
+  .dgrid, .dcol, .dcards { display: contents; }
+  .navlinks, .nav button.navcta { display: none; }
+
+  @media (min-width: 900px) {
+    .wrap { max-width: 1120px; }
+
+    .nav { gap: 10px; }
+    .navlinks { display: flex; gap: 20px; margin-left: 30px; margin-right: auto; }
+    .navlinks a { font-size: 12.5px; color: var(--ink2); text-decoration: none; }
+    .navlinks a:hover { color: var(--ink); }
+    /* .nav button -- (0,1,1) -- already sets background:none, color and
+       padding, and it is declared above this block. A bare .navcta is (0,1,0)
+       and loses every one of those, which rendered the CTA as flat text with
+       no background at all. Qualifying it with .nav matches that weight and
+       wins on order. */
+    .nav button.navcta { display: inline-flex; font-size: 12.5px; font-weight: 700;
+              padding: 8px 15px; border-radius: 9px; border: 0; cursor: pointer;
+              background: var(--gold); color: #151208; }
+    .nav button.navcta:hover { background: var(--goldhi, #e8c766); }
+
+    .dgrid { display: grid; gap: 30px; align-items: start; }
+    .dcol  { display: block; min-width: 0; }
+
+    /* The claim and the proof arrive together instead of one under the other. */
+    .d-hero { grid-template-columns: 1.05fr .95fr; align-items: center; }
+    .d-hero .eyebrow { margin-top: 0 !important; }
+    .hero h1 { font-size: 40px; }
+    .hero .lede2 { max-width: 46ch; }
+
+    /* Two halves of one argument. */
+    .d-proof { grid-template-columns: 1fr 1fr; }
+
+    /* align-items:start, or an expanded card stretches the whole row. */
+    .dcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+              align-items: start; }
+    .dcards .pcard { margin: 0; }
+
+    .d-plans { grid-template-columns: 1fr 1fr; max-width: 760px;
+               margin-left: auto; margin-right: auto; }
+
+    /* MEASURE. Everything that is prose rather than a figure stays inside a
+       column a person can actually read across. */
+    .grouphd, .actband, .howto, .facts, .seg, .disc, .eyebrow {
+      max-width: 760px; margin-left: auto; margin-right: auto;
+    }
+    .grouphd { text-align: center; }
+    .d-hero .eyebrow { max-width: none; }
+  }
 </style>
 </head>
 <body>
@@ -810,7 +877,18 @@
       </svg>
       OCTANE<b>&nbsp;ALPHA</b>
     </span>
+    {# DESKTOP ONLY. A phone has nowhere to put section links; a laptop makes
+       their absence conspicuous, and they keep the CTA on screen for the whole
+       scroll instead of only at the two ends of it. display:none below the
+       breakpoint, so the phone nav is exactly what it was. #}
+    <span class="navlinks">
+      <a href="#record">Track record</a>
+      <a href="#howto">How you&rsquo;d use it</a>
+      <a href="#reads">What it reads</a>
+      <a href="#pricing">Pricing</a>
+    </span>
     <button type="button" data-auth>Sign in</button>
+    <button type="button" class="navcta" data-plan="year">Start 7 days free</button>
   </nav>
 
   {# THE HERO STATES THE CLAIM; THE PROOF FOLLOWS IMMEDIATELY BELOW.
@@ -818,6 +896,12 @@
      first-time reader met a number before they knew what it was a number OF.
      The claim now comes first and the ledger is one scroll down, still above
      everything else. #}
+  {# DESKTOP GROUPING. Every .dgrid and .dcol is display:contents below the
+     breakpoint, so on a phone these wrappers are not in the layout at all and
+     the stack is exactly what it was. Above it they become the two columns.
+     Purely additive: no section moved, none was rewritten. #}
+  <div class="dgrid d-hero">
+  <div class="dcol">
   <div class="hero">
     <canvas id="hero-canvas" aria-hidden="true"></canvas>
     {# WAS "Next card sealed in 4d 15:47:24", one grey line doing four things
@@ -910,6 +994,8 @@
   </div>
   {% endif %}
 
+  </div>
+  <div class="dcol">
   <div class="eyebrow" id="record" style="margin-top:34px">Public track record &middot; updated {{ generated_at_short }}</div>
   {% if shortlist %}
   {# THE FIRST THING A NEW READER SHOULD SEE, above the full curve. Nobody
@@ -1024,6 +1110,9 @@
      as detail for someone already convinced rather than as an obstacle for
      someone deciding, and pricing closes the page.
      ================================================================== #}
+  </div>
+  </div>
+
   <div class="grouphd">
     <div class="g1">What it proves</div>
     <div class="g2">Scored against the closing line, at the price on the day.</div>
@@ -1035,7 +1124,10 @@
      that has to be re-argued every time a better or worse one lands. The
      aggregate is the durable form of the same argument -- and it still moves
      on its own as the ledger grows. #}
-  <div class="pcard" data-card data-open>
+    {# The two halves of one argument -- the hit rate against the closing
+     line, and the ledger that prices it -- side by side above 900px. #}
+  <div class="dgrid d-proof">
+<div class="pcard" data-card data-open>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="true">
       <div><span class="kick">Closing line value</span>
         <h3>We beat the closing line {{ clv_stats.beat_pct }}% of the time</h3></div>
@@ -1205,6 +1297,8 @@
         neither, and it is the only one that says whether the picks made money.</span></div>
     </div></div>
   </div>
+  </div>
+
 
   {% if landing_facts %}
   <div class="actband">
@@ -1216,7 +1310,7 @@
     <p class="ab-l">That is the whole argument, in three numbers.</p>
     <button type="button" class="cta" data-auth>Start 7 days free</button>
   </div>
-  <div class="howto" data-reveal>
+  <div id="howto" class="howto" data-reveal>
     <div class="g1">How you'd use it</div>
     {# THIS SAID "Four days before the bell" AND THE FOUR WAS HARDCODED. It
        happened to be true on the day it was written and is wrong on six days
@@ -1294,7 +1388,10 @@
      frame the other five sit inside. It is also the wrong card to put last,
      next to "every graded card is free" -- the forward reads are the paid
      thing, and the two claims must not touch. #}
-  <div class="pcard" data-card>
+    {# The feature grid. align-items:start in the css, because an expanding
+     card in a grid row would otherwise stretch its neighbours. #}
+  <div class="dcards" id="reads">
+<div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
       <div><span class="kick">Forward coverage</span>
         <h3>Every announced fight, {{ coverage.weeks_out }} weeks out</h3></div>
@@ -1574,6 +1671,8 @@
         better.</span></div>
     </div></div>
   </div>
+  </div>
+
 
   {# ===== FIGHT FACTS =====
      The one section on this page that is not an argument. Five analytical
@@ -1626,7 +1725,8 @@
     <button type="button" data-plan="year" aria-pressed="true">Annual <b class="pill">Save $38</b></button>
   </div>
 
-  <div class="plan gold">
+    <div class="dgrid d-plans" id="pricing">
+<div class="plan gold">
     <div class="rib">7 days free</div>
     <div class="ph">
       {# NOT "The model layer, unlocked". "Layer" is how this codebase divides
@@ -1699,6 +1799,8 @@
     <button type="button" class="cta ghost" data-free-cta>Create a free account</button>
     <div class="cur">No card required &middot; keeps your history</div>
   </div>
+  </div>
+
 
   <div class="disc" data-charge>Your trial covers the next card. After it ends you are charged <b>$190</b> for 12 months. We email you 3 days before &mdash; cancel by then and you pay nothing.</div>
 
