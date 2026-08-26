@@ -517,6 +517,11 @@ def _combine(pieces: tuple[dict, ...]) -> dict:
         # and what it is trusted for stays visible rather than being quietly
         # replaced.
         "combined_prob_raw": round(combined_prob_raw, 4),
+        # Every leg shares this by construction -- see the venue split in
+        # _find_parlays. Stamped on the slip so the page can say where the
+        # price is, which is the other half of the same problem: a price with
+        # no venue reads as "your book", and Polymarket is not your book.
+        "venue": next((l.get("source") for l in legs if l.get("source")), None),
     }
 
 
@@ -531,11 +536,62 @@ def _find_parlays(
 ) -> list[dict]:
     eligible = [p for p in pieces if p["model_prob"] >= min_leg_prob]
 
+    # ONE VENUE PER SLIP, AND IT IS NOT A PREFERENCE. A parlay is a single
+    # wager placed at a single book: legs from DraftKings and Polymarket
+    # cannot be combined into one, so a mixed slip is not a worse
+    # recommendation, it is an unplaceable one. Measured on the ledger when
+    # this was added: 26 of 193 published slips drew from more than one
+    # venue.
+    #
+    # The search therefore runs once PER VENUE and the winners compete at the
+    # end. Filtering afterwards would not work -- the best mixed combination
+    # is usually better than the best single-venue one, so a post-filter
+    # would throw away the slate and return nothing.
+    #
+    # A PIECE WITH NO RECORDED VENUE IS DROPPED rather than pooled. Those
+    # cannot be attributed to a book, so there is no way to know they can sit
+    # on one ticket together -- exactly the property this is enforcing. The
+    # ledger carries 318 such legs from before the source column existed;
+    # this stops any more being created.
+    by_venue: dict = {}
+    unattributed = 0
+    for p in eligible:
+        venue = p.get("source")
+        if not venue or venue == "model":
+            unattributed += 1
+            continue
+        by_venue.setdefault(venue, []).append(p)
+    if unattributed:
+        print(f"[{label}] {unattributed} leg(s) dropped: no venue recorded, so they "
+              f"cannot be shown to belong on one ticket")
+    if not by_venue:
+        return []
+    if len(by_venue) > 1:
+        print(f"[{label}] venues available: "
+              + ", ".join(f"{v} ({len(ps)} legs)" for v, ps in sorted(by_venue.items())))
+
     # Hard safety cap: combinations of size 5 from a pool of even ~100
     # pieces is tens of millions of combos -- confirmed this can hang the
     # process. Capping the pool (keeping the most-likely pieces first)
     # keeps the search fast regardless of how large the input ever gets.
     MAX_POOL_SIZE = 30
+
+    if len(by_venue) > 1:
+        # Recurse once per venue, then take the best slate. Each inner call
+        # sees a single-venue pool and so cannot mix by construction.
+        per_venue = []
+        for venue, ps in by_venue.items():
+            got = _find_parlays(ps, leg_counts, min_american, max_american,
+                                min_leg_prob, max_results, label=f"{label}/{venue}")
+            for g in got:
+                g["venue"] = venue
+            per_venue.extend(got)
+        if not per_venue:
+            return []
+        per_venue.sort(key=lambda x: x["combined_prob"], reverse=True)
+        return per_venue[:max_results]
+
+    venue, eligible = next(iter(by_venue.items()))
     if len(eligible) > MAX_POOL_SIZE:
         eligible = sorted(eligible, key=lambda p: p["model_prob"], reverse=True)[:MAX_POOL_SIZE]
 

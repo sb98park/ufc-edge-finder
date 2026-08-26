@@ -2474,6 +2474,16 @@
     font-size: var(--t-micro); font-weight: 700; color: var(--muted); background: #16283a;
     border-radius: var(--r-sm); padding: 1.5px 5px; letter-spacing: 0.3px; white-space: nowrap;
   }
+  .parlay-venue {
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--t-micro);
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    border: 1px solid var(--hairline); border-radius: 5px; padding: 2px 7px;
+    align-self: center; white-space: nowrap;
+  }
+  /* Only ever rendered when a leg somehow disagrees with the slip -- it
+     cannot happen through the builder, so if it appears something upstream
+     changed and it should be loud rather than silent. */
+  .leg-venue { font-size: var(--t-micro); color: var(--red); letter-spacing: 0.06em; }
   .parlay-note { font-size: var(--t-small); color: var(--muted); margin-top: 8px; line-height: 1.5; }
 
   /* ===================================================================
@@ -5904,6 +5914,12 @@
          quietly swap. On 501 replayed cards the raw number ran 1.74x high on
          bankroll slips and 6.76x on lottos. #}
       <div class="parlay-prob" data-slip-readout>Est. hit rate: {{ (p.combined_prob*100)|round(prob_places) }}%{% if p.combined_prob_raw and (p.combined_prob_raw - p.combined_prob) | abs > 0.001 %} <span class="prob-raw">model alone {{ (p.combined_prob_raw*100)|round(prob_places) }}%</span>{% endif %}</div>
+      {# WHERE THE PRICE IS. A number with no venue reads as "your book", and
+         a -270 that only exists on Polymarket is not a price a DraftKings
+         account can take. Every leg shares this venue by construction --
+         a parlay is one wager at one book, so the builder searches each
+         venue separately rather than mixing. #}
+      {% if p.venue %}<div class="parlay-venue">{{ p.venue }}</div>{% endif %}
       <div class="slip-pips" aria-hidden="true" data-slip-pips></div>
     </summary>
     <ul class="parlay-legs">
@@ -5913,6 +5929,7 @@
         <span class="parlay-leg-label">{{ leg.label }}</span>
         <span class="parlay-leg-right">
           <span class="parlay-leg-odds">{{ leg.odds_display }}</span>
+          {% if leg.source and leg.source != p.venue %}<span class="leg-venue">{{ leg.source }}</span>{% endif %}
           {% if leg.is_model %}<span class="model-tag">MODEL EST.</span>{% endif %}
         </span>
       </li>
