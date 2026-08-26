@@ -436,6 +436,16 @@
            flex:none;font-variant-numeric:tabular-nums}
   .mrow.rr em{color:var(--gold)}
 
+  /* THE SLIP. Same rhythm as .mrow with the bar taken out: a parlay leg has a
+     price and no magnitude to draw, and an empty track would imply one. */
+  .slip{display:flex;align-items:center;gap:9px;margin-top:9px;font-size:11px;color:#c8ccd6}
+  .slip span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .slip em{font-style:normal;font-family:var(--mono);font-size:10.5px;flex:none;text-align:right}
+  .slip.tot{margin-top:11px;padding-top:9px;border-top:1px solid rgba(255,255,255,.1)}
+  .slip.tot span{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;
+                 text-transform:uppercase;color:#8a8f9a}
+  .slip.tot em{color:var(--gold);font-size:12.5px}
+
   /* ===== FORWARD COVERAGE ============================================
      A schedule, not a sentence. "We cover 8 upcoming cards" is a claim the
      reader has to take on trust; the eight cards with their dates and bout
@@ -1675,6 +1685,60 @@
       <div class="nobody"><span>&#9679;</span><span><b>Most services pick a side and stop.</b>
         Method and round need an actual model of how the fight plays out, not a lean on who is
         better.</span></div>
+    </div></div>
+  </div>
+
+  {# ===== LEGS AND THE SLIP =====
+     THE COPY HERE WAS TRIMMED AGAINST WHAT THE BUILDER ACTUALLY DOES, and
+     the trims are the point rather than an afterthought.
+     "Screens for optimal correlation" came out: correlation is deliberately
+     NOT modelled. It was predicted as the thing most likely to sink the
+     tier, then measured -- at sigma = 0 the construction UNDERSTATES (0.92
+     bankroll), so a correlation penalty would have pushed an already
+     conservative number further the wrong way. See
+     decisions/2026-08-26-parlay-record.md.
+     "Positive expected value" came out: there is no EV screen on a parlay
+     leg. Eligibility is model_prob >= 0.50 and the ranking is combined
+     probability inside the payout band -- see build_bankroll_builder_parlays.
+     "Engineered for steady bankroll growth" came out, and it is the one that
+     mattered most: slips are PUBLISHED, NOT PLAYED. They are scored at 1U
+     flat as a stated hypothetical and do not get staked until 20 graded
+     slips across 10 cards come back positive. Promising growth from them is
+     the exact promise that file pre-registers against.
+     What is left is all checkable, and the single-book line is a real
+     differentiator rather than a softer version of the claim it replaced:
+     26 of 193 published slips were once spread across venues and could not
+     have been placed by anyone. #}
+  <div class="pcard" data-card>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      <div><span class="kick">Legs &amp; the slip</span>
+        <h3>No more hunting for parlay pieces</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="canvas" data-reveal>
+      {# Labelled an illustration and deliberately unnamed. The upcoming slip
+         is member-only, and a landing page showing real fighters at real
+         prices would read as a live recommendation to anyone skimming. The
+         arithmetic is real: -205 and -285 multiply to +101. #}
+      <div class="shot">
+        <div class="sh-top"><span>The slip</span><span>Illustration</span></div>
+        <div class="slip"><span>Main-card favorite &middot; Moneyline</span><em>&minus;205</em></div>
+        <div class="slip"><span>Prelim favorite &middot; Moneyline</span><em>&minus;285</em></div>
+        <div class="slip tot"><span>Combined &middot; one book</span><em>+101</em></div>
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      <p>Stop guessing which legs to combine. The engine reads every market on every
+         fight and surfaces the legs the model is most confident in &mdash; then builds
+         <b>one slip</b>, two or three legs, landing between +100 and +320.</p>
+      <p>Every leg is priced at the <b>same book</b>, so what you get is a ticket you can
+         actually place &mdash; not a number that only exists if you could bet three
+         sportsbooks at once.</p>
+      <div class="nobody"><span>&#9679;</span><span><b>Most services sell you a parlay and never
+        mention it again.</b> Ours goes up before the bell and gets graded after it &mdash; at one
+        flat unit, published and not played, until the record says it has earned a stake.</span></div>
     </div></div>
   </div>
   </div>
