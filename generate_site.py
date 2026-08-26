@@ -44,6 +44,7 @@ from src.odds_utils import implied_prob_to_american, format_american_odds
 from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
 from src.parlay_builder import _build_candidate_pieces as _candidate_pieces
 from src import parlay_pin
+from src import parlay_grader
 from src.parlay_ledger import record_slips
 from src.recommendations import build_recommendations
 from src.card_plays import build_card_plays
@@ -1170,6 +1171,21 @@ def main(tier: str = "member", output_path: str | None = None):
             write_graded(_all)
             plays_rows = [r for r in plays_load()
                           if r.get("event_name") == plays_card.get("event_name")]
+        # THE PARLAYS, settled from the same results map. Only the PINNED
+        # slip for a card is graded -- before src/parlay_pin the builder
+        # re-picked every render, so one card holds dozens of variants and
+        # grading them all would answer a question nobody acted on.
+        #
+        # Nothing here is staked. The figure is what 1U flat on a published
+        # slip would have returned, and the site says so wherever it appears.
+        try:
+            parlay_grader.grade_pinned(
+                parlay_pin.load(), generated_at_str,
+                results_path=parlay_grader.RESULTS_PATH)
+        except Exception as _exc:
+            # A bookkeeping bug must not take the build down.
+            print(f"[parlay_grader] not run ({_exc}) -- continuing")
+
         # THE BANKROLL, folded forward from whatever has just settled. Only
         # newly graded plays move it, and only once each -- see src/bankroll.
         _all_now = plays_load()

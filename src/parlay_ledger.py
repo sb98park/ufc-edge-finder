@@ -86,17 +86,25 @@ entry point here swallows its own errors and says so on stdout.
 """
 
 import json
+from itertools import zip_longest
 import os
 from datetime import datetime, timezone
 
 LEDGER_PATH = "data/parlay_ledger.jsonl"
 
 
-def _leg_record(leg: dict) -> dict:
+def _leg_record(leg: dict, prior_leg: dict | None = None) -> dict:
     return {
         "label": leg.get("label"),
         "odds_display": leg.get("odds_display"),
         "decimal_odds": leg.get("decimal_odds"),
+        # THE PRICE THIS LEG WAS FIRST PUBLISHED AT, set once. A pinned slip
+        # re-quotes its legs on every render, so by settlement day the live
+        # figure is not the one anybody was offered. It also cannot be
+        # reconstructed from combined_decimal_first when a leg voids and has
+        # to be divided back out -- that needs the leg's own number.
+        "decimal_odds_first": (prior_leg or {}).get("decimal_odds_first",
+                                                    leg.get("decimal_odds")),
         "is_model": bool(leg.get("is_model")),
         "fight_key": leg.get("fight_key"),
         "source": leg.get("source"),
@@ -147,7 +155,12 @@ def record_slips(slips_by_tier: dict, event_name: str | None,
                     "combined_prob": s.get("combined_prob"),
                     "combined_prob_raw": s.get("combined_prob_raw"),
                     "has_model_legs": bool(s.get("has_model_legs")),
-                    "legs": [_leg_record(l) for l in (s.get("legs") or [])],
+                    # Zipped against the prior render so first-publication
+                    # prices carry forward. Same slip_id means the same legs
+                    # in the same order -- that is what a slip_id IS.
+                    "legs": [_leg_record(l, p) for l, p in
+                             zip_longest(s.get("legs") or [], (prior or {}).get("legs") or [])
+                             if l is not None],
                     # PRICE AT FIRST PUBLICATION IS THE ONE THAT COUNTS. A
                     # slip republished at a drifted price is still the same
                     # recommendation; grading it at the later price would
@@ -179,6 +192,23 @@ def record_slips(slips_by_tier: dict, event_name: str | None,
         # Never let bookkeeping break a build.
         print(f"[parlay_ledger] not written ({exc}) -- continuing")
         return 0
+
+
+def write_graded(rows: list[dict], path: str = LEDGER_PATH) -> None:
+    """
+    Rewrite the ledger with grading applied. Atomic, and it writes whatever the
+    rows carry rather than a fixed field list -- the grader adds keys and this
+    must not be the thing that silently drops them.
+    """
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            for row in rows:
+                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+        os.replace(tmp, path)
+    except OSError as exc:
+        print(f"[parlay_ledger] grading not written ({exc}) -- continuing")
 
 
 def load(path: str = LEDGER_PATH) -> list[dict]:
