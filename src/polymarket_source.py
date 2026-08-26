@@ -352,7 +352,13 @@ def fetch_price_history(token_id: str, interval: str = "max") -> list[dict]:
     accumulated ourselves since this site started tracking. Public, no auth.
     Returns [{"t": unix_timestamp, "p": price_0_to_1}, ...].
     """
-    if not token_id:
+    # NaN IS TRUTHY, which is how "market=nan" reached the wire. These ids
+    # come out of a pandas frame, an absent one arrives as float('nan'), and
+    # `if not token_id` is False for it -- so the guard passed, str() rendered
+    # it "nan", and every one of those was a guaranteed 400. Checked by shape
+    # rather than by falsiness: a CLOB token id is a long decimal string.
+    token_id = str(token_id or "").strip()
+    if not token_id.isdigit():
         return []
 
     def _try_request(params: dict) -> list[dict]:
@@ -360,30 +366,35 @@ def fetch_price_history(token_id: str, interval: str = "max") -> list[dict]:
         resp.raise_for_status()
         return resp.json().get("history", [])
 
+    # THE startTs/endTs FALLBACK IS GONE, and it was worse than useless.
+    #
+    # It fired whenever interval=max returned fewer than five points and asked
+    # the same endpoint with explicit timestamps instead. Measured against the
+    # live API on 2026-08-26:
+    #
+    #     interval=max                 -> 200
+    #     startTs=0     + endTs=now    -> 400
+    #     startTs=now-90d + endTs=now  -> 400
+    #
+    # The whole parameter path is rejected, not merely the zero -- so the
+    # fallback could never succeed in any form. And because it raised inside
+    # the try, the 400 landed in the except below and returned [] -- THROWING
+    # AWAY the one to four points interval=max had already returned
+    # successfully. A thin history became no history, and the log line blamed
+    # the fetch rather than the fallback.
     try:
         history = _try_request({"market": token_id, "interval": interval})
-
-        # If interval=max returned suspiciously few points, try explicit
-        # start/end timestamps instead -- a different parameter path in case
-        # "max" isn't behaving as documented for this market.
-        if len(history) < 5:
-            import time
-            fallback = _try_request({"market": token_id, "startTs": 0, "endTs": int(time.time())})
-            if len(fallback) > len(history):
-                print(f"[polymarket] interval=max returned only {len(history)} points for token "
-                      f"{token_id[:12]}...; startTs/endTs fallback returned {len(fallback)} instead")
-                history = fallback
-
         if history:
             from datetime import datetime, timezone
             first_dt = datetime.fromtimestamp(history[0]["t"], tz=timezone.utc).strftime("%Y-%m-%d")
             last_dt = datetime.fromtimestamp(history[-1]["t"], tz=timezone.utc).strftime("%Y-%m-%d")
-            print(f"[polymarket] price history for token {token_id[:12]}...: {len(history)} points, {first_dt} to {last_dt}")
-        else:
-            print(f"[polymarket] price history for token {token_id[:12]}... returned ZERO points (empty history)")
+            print(f"[polymarket] price history for token {token_id[:12]}...: "
+                  f"{len(history)} points, {first_dt} to {last_dt}")
+        # A valid token with no history is a resolved or never-traded market,
+        # not a failure, and it was printing a line each. Silent.
         return history
     except Exception as exc:
-        print(f"[polymarket] price history fetch failed for token {token_id}: {exc}")
+        print(f"[polymarket] price history fetch failed for token {token_id[:12]}...: {exc}")
         return []
 
 
