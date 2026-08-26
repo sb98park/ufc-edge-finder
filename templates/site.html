@@ -2548,6 +2548,7 @@
   .play-price { font-size: var(--t-lead); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
   .play-ev { font-size: var(--t-micro); color: var(--pos, #3ddc84); white-space: nowrap; margin-top: 1px; }
   .play-ev.muted { color: var(--muted); }
+  .play-ev.neg { color: var(--neg, #ff7a7a); }
   .play-price.muted { color: var(--muted); }
   .play-price.returned.up { color: var(--pos, #3ddc84); }
   .play-price.returned.down { color: var(--neg, #ff7a7a); }
@@ -8029,7 +8030,14 @@
         <div class="play-ev muted">void</div>
         {% else %}
         <div class="play-price">{{ p.odds_american | american }}</div>
-        {% if p.ev_per_unit %}<div class="play-ev">+{{ (p.ev_per_unit * 100) | round | int }}% EV</div>{% endif %}
+        {#- THE SIGN COMES FROM THE NUMBER. This was a hardcoded "+", which was
+            invisible while every staked play happened to be positive-EV and
+            printed "+-6% EV" the moment a ladder-tier play was not: the ladder
+            stakes off the tier's record rather than off EV, so a negative one
+            reaches this row by design rather than by accident. Same reason the
+            colour is no longer unconditionally green. `is real_value` rather
+            than a truth test, so a genuine 0% EV shows instead of vanishing. -#}
+        {% if p.ev_per_unit is real_value %}<div class="play-ev {{ 'neg' if p.ev_per_unit < 0 }}">{{ '%+d'|format((p.ev_per_unit * 100) | round | int) }}% EV</div>{% endif %}
         {% endif %}
       </div>
     </li>
