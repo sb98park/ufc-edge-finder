@@ -37,6 +37,8 @@ import json
 import os
 from datetime import datetime, timezone
 
+from src.parlay_builder import BETTABLE_VENUES
+
 PIN_PATH = "data/pinned_parlays.json"
 
 # How many cards' pins to keep. Purely a file-size bound -- a pin is only ever
@@ -141,6 +143,29 @@ def hold(event_name: str | None, tier: str, fresh: list[dict],
         print(f"[parlay_pin] pinned {tier} for {event_name}: "
               f"{slip.get('combined_american'):+d}, {len(slip.get('legs') or [])} legs")
         return [slip]
+
+    # A PIN IS NOT A LICENCE TO IGNORE A LATER RULE.
+    #
+    # The snapshot fallback below exists so a leg that is momentarily
+    # unpriced does not destroy a card's slip. But "the leg is gone" is also
+    # exactly what happens when a validity check REJECTS it -- the rounds
+    # coherence gate in polymarket_source drops a whole ladder, and a pinned
+    # slip built from that ladder would then be served from its snapshot
+    # forever, outliving the finding that condemned it.
+    #
+    # So a pin is re-examined against the rules that exist NOW, not only the
+    # ones that existed when it was taken. A snapshot whose venue is not
+    # bettable, or which carries no venue at all because it predates the
+    # field, is dropped and re-pinned rather than held.
+    snap = entry.get("snapshot") or {}
+    snap_venue = snap.get("venue") or next(
+        (l.get("source") for l in (snap.get("legs") or []) if l.get("source")), None)
+    if snap_venue not in BETTABLE_VENUES:
+        print(f"[parlay_pin] dropping the {tier} pin for {event_name}: "
+              f"venue {snap_venue!r} is not one a slip can be placed at")
+        pins.get(event_name, {}).pop(tier, None)
+        save(pins, path)
+        return hold(event_name, tier, fresh, pieces, path)
 
     identities = entry.get("identities") or []
     requoted = _requote(identities, pieces) if identities else None
