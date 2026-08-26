@@ -102,7 +102,6 @@ MEMBER_ONLY_CONTEXT = (
     # manifest, so there is nothing to assert and the gate passes green.
     "favorite_picks",
     "bankroll_parlays",
-    "lotto_parlays",
     "model_legs",
     "standout_props",
     "disagreement_props",

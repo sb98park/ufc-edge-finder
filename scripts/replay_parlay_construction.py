@@ -62,8 +62,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.parlay_builder import (  # noqa: E402
-    build_bankroll_builder_parlays, build_lotto_parlays)
+from src.parlay_builder import build_bankroll_builder_parlays  # noqa: E402
 from src.odds_utils import decimal_to_american, implied_prob_to_american  # noqa: E402
 from src.method_model import finish_share_before  # noqa: E402
 
@@ -211,8 +210,9 @@ def grade(slip, truth):
     return True
 
 
-TIERS = (("bankroll", build_bankroll_builder_parlays),
-         ("lotto", build_lotto_parlays))
+# The lotto tier was deleted 2026-08-26 -- this harness is what measured it
+# into retirement. Its numbers are recorded in src/parlay_builder.
+TIERS = (("bankroll", build_bankroll_builder_parlays),)
 
 
 def run(sigma, events, tiers, seed=7):
@@ -266,8 +266,8 @@ def main():
     # impossible to replay at any useful scale -- has since been deleted, and
     # that unmeasurability was one of the arguments for deleting it. The full
     # reasoning is recorded in src/parlay_builder.
-    ap.add_argument("--tiers", nargs="+", default=["bankroll", "lotto"],
-                    choices=["bankroll", "lotto"])
+    ap.add_argument("--tiers", nargs="+", default=["bankroll"],
+                    choices=["bankroll"])
     a = ap.parse_args()
 
     print(f"{'sigma':>6} {'tier':<10} {'slips':>6} {'published':>10} {'realised':>9} "

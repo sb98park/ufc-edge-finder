@@ -41,7 +41,7 @@ from src.card_matcher import (
 )
 from src.power_rating import build_effective_ratings
 from src.odds_utils import implied_prob_to_american, format_american_odds
-from src.parlay_builder import build_bankroll_builder_parlays, build_lotto_parlays
+from src.parlay_builder import build_bankroll_builder_parlays
 from src.parlay_builder import _build_candidate_pieces as _candidate_pieces
 from src import parlay_pin
 from src import parlay_grader
@@ -721,10 +721,6 @@ def main(tier: str = "member", output_path: str | None = None):
             _pin_event, "bankroll",
             build_bankroll_builder_parlays(tracked_edges_list, model_only_by_fight),
             _pin_pieces)
-        lotto_parlays = parlay_pin.hold(
-            _pin_event, "lotto",
-            build_lotto_parlays(tracked_edges_list, model_only_by_fight),
-            _pin_pieces)
     except Exception as e:
         # Never let a parlay-building bug take the whole site down with it --
         # confirmed live: a single fighter with a NaN power rating (missing
@@ -735,7 +731,7 @@ def main(tier: str = "member", output_path: str | None = None):
         # fixed at the source now, but this stays as a second line of
         # defense against whatever the next one turns out to be.
         print(f"[parlays] build failed unexpectedly, continuing without parlay sections: {e}")
-        bankroll_parlays, lotto_parlays = [], []
+        bankroll_parlays = []
 
     # WRITE DOWN WHAT WE PUBLISHED. Nine slips a week have been going out
     # ungraded while single picks are scored to three decimals on the same
@@ -743,7 +739,7 @@ def main(tier: str = "member", output_path: str | None = None):
     # not exist. Merged on slip_id, so the 5-minute rebuild cycle leaves nine
     # rows per card rather than nine per render.
     record_slips(
-        {"bankroll": bankroll_parlays, "lotto": lotto_parlays},
+        {"bankroll": bankroll_parlays},
         event_name=(events[0].get("event_name") if events else None),
     )
 
@@ -1673,7 +1669,6 @@ def main(tier: str = "member", output_path: str | None = None):
         units_sparkline_svg=units_sparkline_svg,
         units_timeseries_svg=units_timeseries_svg,
         bankroll_parlays=bankroll_parlays,
-        lotto_parlays=lotto_parlays,
         model_legs=model_legs,
         notable_movements=notable_movements,
         notable_movements_upcoming=notable_movements_upcoming,

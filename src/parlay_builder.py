@@ -35,6 +35,38 @@ from src.odds_utils import (american_to_decimal, decimal_to_american, format_ame
 from src.card_matcher import is_pickable_market, price_is_fragile
 
 
+# HOW MUCH MODEL GOES INTO THE RANKING. Deliberately NOT the site's
+# MARKET_BLEND_MODEL_WEIGHT (0.30), which sizes single bets.
+#
+# Those are different jobs. Sizing one moneyline bet has nothing hunting its
+# error. A parlay search ranks thousands of combinations by estimated joint
+# probability, which is algebraically ranking by the model's CLAIMED edge --
+# so it actively seeks the legs where the model is most optimistic relative
+# to truth, and the estimate that wins is the one most inflated by noise.
+# More model in the signal means more for the search to hunt.
+#
+# Swept over 400 real cards at sigma = 0.83, ratio = published hit rate over
+# realised, 1.00 is honest:
+#
+#     weight   bankroll   lotto
+#       0.00     0.94      0.96
+#       0.10     1.03      1.22
+#       0.20     1.04      1.48
+#       0.30     1.08      1.50      <- what this used to be
+#       0.50     1.25      2.75
+#
+# Monotone: calibration improves as the model is taken out of the ranking,
+# and is only honest at 0.00 -- where the model plays no part in choosing a
+# slip at all, which is a defensible measurement and not a product. 0.10 is
+# the compromise: it keeps the model in the loop and takes bankroll from
+# 1.08 to 1.03.
+#
+# THIS REPLACES A 250-CARD SWEEP recorded above that read 0.96 / 1.04 at this
+# weight. It did not reproduce on the larger sample -- bankroll roughly held,
+# lotto did not. Nothing should cite the old magnitudes. Re-measure at 400+
+# after any threshold change, with scripts/replay_parlay_construction.py.
+PARLAY_RANK_MODEL_WEIGHT = 0.10
+
 def _ranking_prob(row: dict) -> float:
     """
     The probability a leg is RANKED and COMBINED on: the model shrunk toward
@@ -109,7 +141,9 @@ def _ranking_prob(row: dict) -> float:
     book = row.get("book_fair_prob")
     if p is None or book is None or book != book:      # NaN-safe
         return p
-    return market_blended_prob(float(p), float(book))
+    # PARLAY_RANK_MODEL_WEIGHT, not the site-wide constant. See below.
+    w = PARLAY_RANK_MODEL_WEIGHT
+    return w * float(p) + (1.0 - w) * float(book)
 
 # Model-projected legs are priced at the model's own probability, so their
 # edge ratio is 1.000 by construction. Kept as a named switch rather than
@@ -677,44 +711,32 @@ def build_bankroll_builder_parlays(tracked_edges: list[dict], model_only_by_figh
     )
 
 
-def build_lotto_parlays(tracked_edges: list[dict], model_only_by_fight: dict | None = None, max_results: int = 1) -> list[dict]:
-    """
-    +1000 or higher combos, 2-5 pieces -- leg count doesn't matter, only the payout does.
-
-    One slip, for the reasons on the bankroll builder above.
-
-    NOTE FOR WHOEVER TUNES THIS NEXT: measured against a PERFECT model (the
-    sigma = 0 arm of scripts/replay_parlay_construction.py) over 250 cards,
-    this tier publishes a hit rate 1.14x its realised one against bankroll's
-    0.89. That residual is construction bias -- leg dependence a product of
-    marginals cannot represent -- and shrinking toward the market does not
-    touch it. An earlier 40-card run put the same figures at 1.51 and 1.03;
-    the direction held but the magnitude did not, so quote the 250-card ones.
-    """
-    pieces = _build_candidate_pieces(tracked_edges, model_only_by_fight)
-    return _find_parlays(
-        pieces, leg_counts=(2, 3, 4, 5), min_american=1000, max_american=None,
-        min_leg_prob=0.15, max_results=max_results, label="lotto",
-    )
-
-
-# The MOONSHOT TIER WAS DELETED, and it is worth recording why rather than
-# leaving a gap in the sequence for someone to helpfully restore.
+# THE LOTTO TIER IS RETIRED. Deleted 2026-08-26 on measurement rather than
+# taste, and the reasoning is left here for the same reason the moonshot
+# deletion's was: so nobody rebuilds it from the argument that justified it.
 #
-# It was +5000 or better at up to 8 legs, published three at a time, and its
-# own copy called it a lottery ticket. Four separate measurements agreed:
+# It published one +1000-or-better slip, 2-5 legs. Swept over 400 real cards
+# at sigma = 0.83 -- published hit rate over realised, 1.00 is honest:
 #
-#   - it went 0 for 21 in a rule replay over settled cards, -100% ROI
-#   - its payout band caps the true hit rate at 1.96% by arithmetic, so 0/21
-#     is the EXPECTED result rather than a bad run
-#   - 2-to-8-leg combinations over a 30-piece pool is 8,656,906 slips per
-#     card, about 62 seconds of every 300-second rebuild, and it made the
-#     tier impossible to validate at any scale -- a 60-card replay does not
-#     finish. A product whose quality cannot be measured even in principle
-#     is hard to defend on any other ground.
-#   - vig compounds hardest at length: a slip that is exactly FAIR on
-#     Polymarket is about -23% at 8 legs once placed at a real book, which
-#     exceeds any plausible model edge before the first leg is even chosen.
+#     ranking weight   0.00   0.10   0.20   0.30   0.50
+#     lotto ratio      0.96   1.22   1.48   1.50   2.75
+#     bankroll ratio   0.94   1.03   1.04   1.08   1.25
 #
-# min_leg_prob was also dead: price_is_fragile rejects anything at or below
-# 0.10 first, so the tier's advertised 0.05 floor never bound on anything.
+# Lotto is honest only at 0.00 -- where the model plays no part in choosing
+# the slip, and the product reduces to "combine market favourites at the
+# book's margin". At every weight where the model contributes anything, the
+# number printed on the page is 22-50% higher than what actually happens.
+# Bankroll over the same sweep stays inside 0.94-1.08 and is fine.
+#
+# WHY THIS TIER AND NOT THAT ONE. Both rank by estimated joint probability,
+# which is algebraically ranking by the model's claimed edge, so both hunt the
+# legs where the model is most optimistic. Lotto searches a far larger space
+# at far longer prices and therefore selects far harder on that error. The
+# deleted moonshot tier was worse still. The bias scales with the size of the
+# search, and a tier defined by a long-shot payout target is by definition the
+# one with the largest search.
+#
+# WHAT WOULD BRING IT BACK: a ranking objective that does not reward the
+# model's own optimism -- a lower confidence bound, or a penalty in the number
+# of candidates considered. Not a different payout band, and not a bigger
+# sample. 400 cards is not where the uncertainty is.

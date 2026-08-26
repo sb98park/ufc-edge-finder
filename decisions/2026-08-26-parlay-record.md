@@ -56,22 +56,90 @@ is precisely what pre-registration exists to prevent.
 
 ### The thing most likely to sink it, named in advance
 
-**Leg correlation.** The two slips pinned for Nurmagomedov vs. Song are made
-of *nothing but* "Over 1.5 rounds" legs -- two on the bankroll, five on the
-lotto. Those are not independent: a card where several fights end early kills
-every one of them at once. The builder multiplies marginal probabilities,
-which cannot represent that dependence and therefore overstates the slip.
+**AMENDED 2026-08-26, same day, before any slip was graded.** The original
+text of this section named *leg correlation* as the likely culprit and cited
+a 1.14 calibration ratio from `parlay_builder`'s docstring. Both were wrong,
+and they were tested rather than argued about. What follows replaces them.
 
-`src/parlay_builder.py` already half-says this -- measured against a perfect
-model over 250 cards, the lotto tier publishes a hit rate 1.14x its realised
-one, and the note is explicit that shrinking toward the market does not touch
-the residual.
+`scripts/replay_parlay_construction.py` drives the shipped builders over 400
+real cards with exact settlement. Ratio is published hit rate over realised;
+1.00 is honest.
 
-So the expected finding is that **graded results come in worse than the
-model's own combined probability**, and the size of that gap is the most
-useful thing this record will produce. If the gap is the whole story, the fix
-is in construction -- penalising shared failure modes across legs -- not in
-staking.
+| sigma | tier | slips | published | realised | ratio |
+|---|---|---|---|---|---|
+| 0.00 | bankroll | 400 | 46.7% | 50.7% | **0.92** |
+| 0.00 | lotto | 362 | 7.8% | 9.9% | **0.78** |
+| 0.83 | bankroll | 400 | 51.9% | 48.0% | **1.08** |
+| 0.83 | lotto | 398 | 12.8% | 8.5% | **1.50** |
+
+**At sigma = 0 the construction UNDERSTATES.** A perfectly calibrated model
+produces slips that beat their own published hit rate on both tiers.
+Multiplying marginals is conservative here, not optimistic -- so the
+correlation penalty this file originally predicted would have pushed an
+already-conservative number further in the wrong direction.
+
+**The overstatement is entirely model error being selected for.** Lotto moves
+0.78 -> 1.50 the moment sigma is realistic. Ranking candidates by combined
+probability inside a payout band is algebraically ranking by the model's
+claimed edge, so the search actively hunts the legs where the model is most
+optimistic relative to truth. Lotto searches the largest space at the longest
+prices and is hit hardest; bankroll searches a small one and stays near 1.00.
+
+**Family concentration was tested too, and is not it.** Splitting the same
+slips by whether every leg came from one market family:
+
+| sigma 0.83 | tier | slips | ratio |
+|---|---|---|---|
+| all one family | bankroll | 186 | 1.03 |
+| mixed | bankroll | 214 | 1.13 |
+| all one family | lotto | 63 | 1.38 |
+| mixed | lotto | 335 | 1.52 |
+
+Concentrated slips are **better** calibrated on both tiers, and at sigma = 0
+the two buckets are indistinguishable. Forcing diversity -- the second fix
+proposed and dropped -- would have made calibration worse. The direction is
+itself evidence for the selection story: mixing families opens a larger
+combination space, and a larger space means more opportunity to select on
+noise.
+
+**So the expected finding for the forward record is the opposite of what this
+file first said.** With the shipped 0.30 blend weight, the lotto tier's
+published probability is roughly 1.5x its realised hit rate, and the fix
+belongs in the objective function -- how much the model is shrunk toward the
+market *before* the search ranks on it -- not in a dependence model.
+
+If the blend weight changes on the strength of that, the slip count for this
+test restarts. A record built on one construction does not describe another.
+
+## AMENDED, same day: the lotto tier is retired
+
+The blend sweep that followed the finding above settled it. Over 400 cards at
+sigma = 0.83:
+
+| ranking weight | 0.00 | 0.10 | 0.20 | 0.30 | 0.50 |
+|---|---|---|---|---|---|
+| **lotto** | 0.96 | 1.22 | 1.48 | **1.50** | 2.75 |
+| **bankroll** | 0.94 | 1.03 | 1.04 | **1.08** | 1.25 |
+
+Lotto is honest only at weight 0.00, where the model plays no part in
+choosing the slip. At every weight where the model contributes, the published
+probability is 22-50% above what happens. **The tier is deleted**, and its
+numbers and the argument for its deletion are recorded in
+`src/parlay_builder.py` so it does not get rebuilt from the same reasoning.
+
+Two consequences for this file:
+
+- **The parlay ranking weight is now 0.10**, its own constant rather than the
+  site-wide 0.30 that sizes single bets. Sizing one bet has nothing hunting
+  its error; a search over thousands of combinations does.
+- **The staking test above now applies to bankroll alone**, and its count
+  starts from the first card built under the new weight. A record built on
+  one construction does not describe another -- the rule this file already
+  set for exactly this case.
+
+Nothing was staked at any point, so nothing needs unwinding. The pinned lotto
+slip for Nurmagomedov vs. Song was dropped before the card, and the ledger
+keeps every historical lotto row untouched and ungraded.
 
 ## What would reverse this
 

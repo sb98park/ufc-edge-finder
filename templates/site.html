@@ -2430,7 +2430,6 @@
      first, correctly keeps its margin, and the notice does the separating). */
   .detail-section > .parlay-section-title:first-child { margin-top: 0; }
   .parlay-section-title.bankroll { color: var(--green); }
-  .parlay-section-title.lotto { color: var(--muted); }
   /* White, matching the other section titles. Grey read as a disabled or
      secondary heading when it labels a first-class section. */
   .parlay-section-title.movement { color: #ffffff; }
@@ -2449,11 +2448,9 @@
     box-shadow: var(--e1);
   }
   .parlay-card.bankroll { border-left-color: #3ddc84; }
-  .parlay-card.lotto { border-left-color: var(--muted); }
   .parlay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .parlay-odds { font-size: var(--t-h2); font-weight: 700; font-family: var(--font-display); }
   .parlay-card.bankroll .parlay-odds { color: var(--green); }
-  .parlay-card.lotto .parlay-odds { color: var(--muted); }
   .parlay-prob { font-size: var(--t-small); color: var(--muted); }
   /* The raw model figure, deliberately quieter than the shrunk one beside it:
      it is context for how far the model is being trusted, not a second
@@ -6253,7 +6250,7 @@
              parlay grader -- how many slips can still cash is the only
              number worth carrying to the hub once fights are landing, and
              it means the state is readable without opening the section. #}
-          <div class="hub-card-title">Parlays <span class="count-badge" id="parlay-hub-badge">{{ (bankroll_parlays|length) + (lotto_parlays|length) }}</span></div>
+          <div class="hub-card-title">Parlays <span class="count-badge" id="parlay-hub-badge">{{ bankroll_parlays|length }}</span></div>
           <div class="hub-card-sub">slates across 3 tiers</div>
         </div>
         <span class="hub-card-arrow">→</span>
@@ -8147,17 +8144,6 @@
   {{ empty_state(icon_coins(), "No bankroll parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
   {% endif %}
 
-  {% if lotto_parlays %}
-  <div class="parlay-section-title lotto" id="section-lotto">{{ icon_dice() }} Lotto Parlays</div>
-  <div class="parlay-subtitle">One long-shot slip at +1000 or better, any leg count. Hit rate is shown after shrinking the model toward the market price, so it is lower — and more honest — than the model alone would claim.</div>
-  {% for p in lotto_parlays %}
-  {{ parlay_card(p, "lotto", 2) }}
-  {% endfor %}
-  <div class="parlay-note">These are long shots by design — meant as a "worth a small stab" section, not a plan.</div>
-  {% elif events and tier != 'free' %}
-  <div class="parlay-section-title lotto" id="section-lotto">{{ icon_dice() }} Lotto Parlays</div>
-  {{ empty_state(icon_dice(), "No lotto parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
-  {% endif %}
   </div>
 
   <div class="detail-section" data-section="thisweekend">
