@@ -8067,6 +8067,22 @@
   </div>
 
   <div class="detail-section" data-section="parlays">
+  {% if bankroll_parlays %}
+  {# ONE TIER, ONE SLIP. "Bankroll Builder" distinguished this from the lotto
+     and moonshot tiers, both now retired, so the name was answering a
+     question nobody is asking. The subtitle argued for one slip rather than
+     three, which is no longer a choice being made. #}
+  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} The Parlay</div>
+  <div class="parlay-subtitle">The single best 2&ndash;3 leg combination on the card, in the +100 to +300 range, from picks the model favors.</div>
+  {% for p in bankroll_parlays %}
+  {{ parlay_card(p, "bankroll", 1) }}
+  {% endfor %}
+  <div class="parlay-note">Fights on the same card were checked for correlation and behave independently, so multiplying across them is sound. The estimate is still optimistic for a different reason: picking the best slip out of many inflates whatever it was ranked on. Legs marked "model" have no live book price to compare against.</div>
+  {% elif events and tier != 'free' %}
+  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} The Parlay</div>
+  {{ empty_state(icon_coins(), "No parlay yet", "Not enough live-priced or model-projected legs on this card yet.") }}
+  {% endif %}
+
   {#
     THE MODEL'S LEGS. This replaced a manual slip builder, which was the wrong
     read of the evidence: the reader had been hand-building because the
@@ -8131,17 +8147,6 @@
   <div class="a11y-only" id="slip-announcer" role="status" aria-live="polite" aria-atomic="true"></div>
   {% if analytics_source_event %}
   <div class="analytics-fallback-notice">{{ icon_calendar() }} This weekend's card has concluded — showing early value from <strong>{{ analytics_source_event }}</strong> instead.</div>
-  {% endif %}
-  {% if bankroll_parlays %}
-  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
-  <div class="parlay-subtitle">The single best 2-3 leg combo in the +100 to +300 range, from picks the model favors. One slip rather than three: if the ranking means anything, backing the best one beats spreading the same stake across the top three.</div>
-  {% for p in bankroll_parlays %}
-  {{ parlay_card(p, "bankroll", 1) }}
-  {% endfor %}
-  <div class="parlay-note">Fights on the same card were checked for correlation and behave independently, so multiplying across them is sound. The estimate is still optimistic for a different reason: picking the best slip out of many inflates whatever it was ranked on. Legs marked "model" have no live book price to compare against.</div>
-  {% elif events and tier != 'free' %}
-  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} Bankroll Builder</div>
-  {{ empty_state(icon_coins(), "No bankroll parlays yet", "Not enough live-priced or model-projected legs on this card yet.") }}
   {% endif %}
 
   </div>

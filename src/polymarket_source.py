@@ -724,6 +724,112 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     return rows
 
 
+
+def _american_to_prob(odds) -> float:
+    """American odds -> implied probability. Local so the gate has no import
+    cycle back through odds_utils."""
+    o = float(odds)
+    return 100.0 / (o + 100.0) if o > 0 else (-o) / ((-o) + 100.0)
+
+
+# Tolerances for the coherence gate below. Deliberately loose: the job is to
+# catch a ladder that contradicts itself, not to police a couple of points of
+# spread on a thin book.
+ROUNDS_DISTANCE_SLACK = 0.01   # how far an Over line may sit below P(distance)
+ROUNDS_SUM_SLACK      = 1.02   # implied finishes + P(distance) may reach this
+ROUNDS_MIN_SPREAD     = 0.03   # a ladder flatter than this never traded
+
+
+def _drop_incoherent_round_ladders(rows: list[dict]) -> list[dict]:
+    """
+    Remove a fight's Total Rounds ladder when the prices cannot all be true
+    at once.
+
+    WHY THIS EXISTS. Polymarket quotes an O/U ladder on most fights and it is
+    read faithfully -- but on an untraded fight the quotes are not a market,
+    they are placeholders that drift toward the distance price, and nothing
+    downstream could tell the difference. Measured live on
+    Song Yadong vs Umar Nurmagomedov:
+
+        Fight to Go the Distance  0.720
+        O/U 0.5 Over              0.895
+        O/U 1.5 Over              0.745   <- published as -277
+        O/U 2.5 Over              0.730
+        O/U 3.5 Over              0.695
+
+    DraftKings had Over 1.5 at -1400 the same day, about 93%. The gap is not
+    two venues disagreeing; it is one venue not really quoting, and the proof
+    is internal rather than comparative.
+
+    TWO THINGS MUST HOLD, and both are arithmetic rather than opinion:
+
+    1. GOING THE DISTANCE IMPLIES PASSING EVERY LINE. A fight that reaches
+       the final bell has by definition gone past 0.5, 1.5, 2.5 and 3.5
+       rounds. So P(Over k.5) >= P(distance) for every k. Above, Over 3.5 is
+       0.695 against a distance price of 0.720 -- impossible.
+
+    2. THE IMPLIED DISTRIBUTION MUST NOT EXCEED 100%. Consecutive Over prices
+       differ by the chance the fight ends inside that round, and those plus
+       P(distance) are a partition of every outcome. Above they sum to 1.055.
+
+    A ladder flat across every line fails a third way: it never traded, and
+    mirrors whatever the distance market says. Yan Xiaonan vs Denise Gomes
+    read 0.730 / 0.730 / 0.725 on three different lines the same day.
+
+    THE WHOLE LADDER GOES, not the offending rung. These prices are one
+    market's opinion of one fight; if part of it is incoherent there is no
+    principled way to decide which part was the real quote. A missing price
+    is honest and a wrong one is not -- the same conclusion the round-start
+    split reached, for the same reason.
+    """
+    dist_by_fight: dict = {}
+    for r in rows:
+        if r.get("market") == "GoesTheDistance" and r.get("selection") == "Goes The Distance":
+            try:
+                dist_by_fight[r["fight_id"]] = _american_to_prob(r["odds_american"])
+            except Exception:
+                pass
+
+    ladder_by_fight: dict = {}
+    for r in rows:
+        if r.get("market") != "TotalRounds" or not str(r.get("selection", "")).startswith("Over "):
+            continue
+        try:
+            line = float(str(r["selection"]).split()[1])
+            ladder_by_fight.setdefault(r["fight_id"], {})[line] = _american_to_prob(r["odds_american"])
+        except Exception:
+            continue
+
+    drop = set()
+    for fid, ladder in ladder_by_fight.items():
+        lines = sorted(ladder)
+        vals = [ladder[k] for k in lines]
+        why = None
+        if len(vals) >= 2 and max(vals) - min(vals) < ROUNDS_MIN_SPREAD:
+            why = f"flat across {len(vals)} lines (spread {max(vals) - min(vals):.3f})"
+        dist = dist_by_fight.get(fid)
+        if why is None and dist is not None:
+            below = [(k, ladder[k]) for k in lines if ladder[k] < dist - ROUNDS_DISTANCE_SLACK]
+            if below:
+                why = (f"Over {below[0][0]} at {below[0][1]:.3f} is under P(distance) "
+                       f"{dist:.3f} -- the distance implies passing it")
+            else:
+                prev, total = 1.0, 0.0
+                for k in lines:
+                    total += prev - ladder[k]
+                    prev = ladder[k]
+                total += dist
+                if total > ROUNDS_SUM_SLACK:
+                    why = f"implied outcomes sum to {total:.3f}"
+        if why:
+            drop.add(fid)
+            print(f"[polymarket] dropping the Total Rounds ladder for {fid}: {why}")
+
+    if not drop:
+        return rows
+    return [r for r in rows if not (r.get("market") == "TotalRounds" and r.get("fight_id") in drop)]
+
+
 def fetch_polymarket_ufc_props() -> list[dict]:
     """Convenience wrapper: find UFC events, parse every nested market."""
     events = fetch_ufc_events()
@@ -749,6 +855,10 @@ def fetch_polymarket_ufc_props() -> list[dict]:
                 })
 
     print(f"[polymarket] outcome-count breakdown across all markets: {outcome_count_histogram}")
+    # THE GATE RUNS HERE, not inside the per-market parser: coherence is a
+    # property of a fight's whole ladder, and the parser only ever sees one
+    # question at a time.
+    rows = _drop_incoherent_round_ladders(rows)
     print(f"[polymarket] classified {markets_seen} markets into {len(rows)} usable rows")
     if dropped_samples:
         print(f"[polymarket] sample of {len(dropped_samples)} DROPPED markets (actual raw content, not a guess):")
