@@ -1,1 +1,55 @@
-{}
+{
+ "UFC Fight Night: Nurmagomedov vs. Song": {
+  "bankroll": {
+   "pinned_at": "2026-08-26T21:48:08+00:00",
+   "identities": [
+    "[\"Liu Ce|Levi Rodrigues Jr.\", [{\"fighter\": \"Liu Ce\", \"kind\": \"winner\"}]]",
+    "[\"Lawrence Lui|Hector Santiago\", [{\"fighter\": \"Lawrence Lui\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Liu Ce ML",
+      "odds_display": "-205",
+      "is_model": false,
+      "decimal_odds": 1.487805,
+      "fight_key": "Liu Ce|Levi Rodrigues Jr.",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Liu Ce"
+       }
+      ],
+      "source": "DraftKings"
+     },
+     {
+      "label": "Lawrence Lui ML",
+      "odds_display": "-285",
+      "is_model": false,
+      "decimal_odds": 1.350877,
+      "fight_key": "Lawrence Lui|Hector Santiago",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Lawrence Lui"
+       }
+      ],
+      "source": "DraftKings"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_4",
+     "card_10"
+    ],
+    "slip_id": "5a71b1f2db51",
+    "combined_decimal": 2.009842,
+    "combined_american": 101,
+    "combined_american_display": "+101",
+    "combined_prob": 0.4441,
+    "combined_prob_raw": 0.3497,
+    "venue": "DraftKings"
+   }
+  }
+ }
+}
