@@ -41,6 +41,10 @@ would mean the site tips one fighter and bets the other.
 
 from __future__ import annotations
 
+import json
+import os
+from datetime import datetime, timezone
+
 from src.parlay_builder import BETTABLE_VENUES
 from src.plays import (
     size_play, select_card, decimal_odds, ev_per_unit, required_prob,
@@ -218,6 +222,53 @@ def _fight_key(fight: dict) -> str:
     return f"{fight.get('fighter_a')}|{fight.get('fighter_b')}"
 
 
+HEALTH_PATH = "data/source_health.json"
+
+
+def _record_incoherent(fighter, market, model, fair, blend,
+                       path: str = HEALTH_PATH) -> None:
+    """
+    Leave the refusal somewhere a person can read without CI log access.
+
+    The guard below prints, and print goes to the Actions log, which is the
+    one place this repo cannot get at from a laptop -- there is no gh here.
+    source_health.json is committed by the refresh job, so a build that
+    refuses to stake says so in the diff instead of only in a log nobody
+    fetches.
+
+    Keyed by fighter and market rather than appended, so the file describes
+    what is wrong NOW instead of growing a line every five minutes; `at`
+    is there to tell a live entry from one a later fix already cleared.
+
+    Written where the refusal happens rather than batched at the end,
+    because a build that dies mid-card is exactly when the reason matters.
+    Every source_health writer runs during the props fetch, long before card
+    selection, so this cannot land under one of them.
+    """
+    try:
+        with open(path, encoding="utf-8") as fh:
+            payload = json.load(fh)
+    except (OSError, ValueError):
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    entries = payload.get("incoherent_blends")
+    if not isinstance(entries, dict):
+        entries = {}
+    entries[f"{fighter}|{market}"] = {
+        "model_prob": round(model, 4), "fair_prob": round(fair, 4),
+        "blended_prob": round(blend, 4),
+        "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    payload["incoherent_blends"] = entries
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2, sort_keys=True)
+    except OSError as exc:
+        print(f"[card_plays] could not record the refusal ({exc}) -- continuing")
+
+
 def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
     """
     Every staked candidate this fight offers, and every priced row that was
@@ -339,6 +390,7 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
                 print(f"[card_plays] REFUSING TO STAKE {edge.get('fighter')} {market}: "
                       f"blended {p:.4f} is outside [{min(_m, _f):.4f}, {max(_m, _f):.4f}] "
                       f"-- model {_m:.4f}, fair {_f:.4f}. Stale derived field upstream.")
+                _record_incoherent(edge.get("fighter"), market, _m, _f, p)
                 sized = dict(sized, play=False, units=0.0, reason=(
                     "the blended probability on this row is not between the model's "
                     "number and the market's, so at least one of the three was "
