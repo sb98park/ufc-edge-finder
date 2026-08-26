@@ -90,7 +90,8 @@ def save(pins: dict, path: str = PIN_PATH) -> None:
         print(f"[parlay_pin] not written ({exc}) -- continuing")
 
 
-def _requote(identities: list[str], pieces: list[dict]) -> dict | None:
+def _requote(identities: list[str], pieces: list[dict],
+             prefer: str | None = None) -> dict | None:
     """
     Rebuild the pinned slip at today's prices, or None if any leg has left
     the pool.
@@ -101,17 +102,45 @@ def _requote(identities: list[str], pieces: list[dict]) -> dict | None:
     """
     from src.parlay_builder import _combine
 
-    by_identity = {}
+    # ONE BOOK, OR NO SLIP. _identity is fight_key plus conditions and says
+    # nothing about where a leg was priced -- deliberately, because prose is
+    # not a protocol. That makes it the wrong key to rebuild a slip from on
+    # its own: the pool carries the same leg from several books, the first
+    # one wins per identity, and the slip comes back spread across two of
+    # them. It did. The bankroll pin for Nurmagomedov vs. Song was re-quoted
+    # into Liu Ce at FanDuel alongside Lawrence Lui at DraftKings, under a
+    # single slip_id that had been wholly DraftKings when it was pinned, and
+    # the slip-level venue check upstream passed it because FanDuel is a real
+    # book. Nobody can place that ticket.
+    #
+    # So the search is per venue and a venue has to cover EVERY leg. The
+    # pinned book is tried first, which keeps a slip on the book it was
+    # pinned at whenever that book still quotes the whole thing, rather than
+    # letting it drift to whichever one happens to sort first.
+    by_venue: dict[str, dict[str, dict]] = {}
     for p in pieces:
-        by_identity.setdefault(_identity(p), p)
+        venue = p.get("source") or p.get("venue")
+        if venue not in BETTABLE_VENUES:
+            continue
+        by_venue.setdefault(venue, {}).setdefault(_identity(p), p)
 
-    matched = []
-    for ident in identities:
-        piece = by_identity.get(ident)
-        if piece is None:
-            return None
-        matched.append(piece)
-    return _combine(tuple(matched))
+    order = ([prefer] if prefer in by_venue else []) + sorted(
+        v for v in by_venue if v != prefer)
+    for venue in order:
+        table = by_venue[venue]
+        matched = [table.get(i) for i in identities]
+        if any(m is None for m in matched):
+            continue
+        combined = _combine(tuple(matched))
+        # A PRICELESS SLIP IS NOT A RE-QUOTE. _combine returns None for the
+        # price when a leg it was handed has none, and the caller writes
+        # whatever comes back straight into the snapshot -- which is how the
+        # pin ended up published with american=None on every leg. Falling
+        # through to the stored snapshot is the honest answer: that one has
+        # the price it was pinned at.
+        if combined and combined.get("combined_american") is not None:
+            return combined
+    return None
 
 
 def hold(event_name: str | None, tier: str, fresh: list[dict],
@@ -160,15 +189,23 @@ def hold(event_name: str | None, tier: str, fresh: list[dict],
     snap = entry.get("snapshot") or {}
     snap_venue = snap.get("venue") or next(
         (l.get("source") for l in (snap.get("legs") or []) if l.get("source")), None)
-    if snap_venue not in BETTABLE_VENUES:
-        print(f"[parlay_pin] dropping the {tier} pin for {event_name}: "
-              f"venue {snap_venue!r} is not one a slip can be placed at")
+    # THE STORED SNAPSHOT GETS THE SAME TEST THE POOL DOES. Checking only the
+    # slip-level venue was not enough: that field is stamped from the first
+    # leg, so a slip whose legs came from two books still reports one of them
+    # and passes. This pin did -- venue FanDuel over Liu Ce at FanDuel and
+    # Lawrence Lui at DraftKings, after being pinned wholly at DraftKings.
+    leg_venues = {l.get("source") for l in (snap.get("legs") or []) if l.get("source")}
+    if snap_venue not in BETTABLE_VENUES or len(leg_venues) > 1:
+        why = (f"venue {snap_venue!r} is not one a slip can be placed at"
+               if snap_venue not in BETTABLE_VENUES else
+               f"its legs are split across {sorted(leg_venues)}, which is not one ticket")
+        print(f"[parlay_pin] dropping the {tier} pin for {event_name}: {why}")
         pins.get(event_name, {}).pop(tier, None)
         save(pins, path)
         return hold(event_name, tier, fresh, pieces, path)
 
     identities = entry.get("identities") or []
-    requoted = _requote(identities, pieces) if identities else None
+    requoted = _requote(identities, pieces, prefer=snap_venue) if identities else None
 
     if requoted is None:
         snapshot = entry.get("snapshot")
