@@ -306,6 +306,44 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
             sized = dict(sized, play=False, units=0.0, reason=(
                 f"priced at {_venue_name or 'no named venue'}, which is a reference "
                 f"line rather than a book this can be placed at"))
+        # A BLEND THAT IS NOT BETWEEN ITS OWN INPUTS DID NOT COME FROM THEM.
+        #
+        # blended_prob is market_blended_prob(model_prob, book_fair_prob) -- a
+        # convex combination, so whatever the weight is, the result has to sit
+        # between the two. When it does not, the row is carrying numbers from
+        # two different passes: one field was recomputed after a price or a
+        # model probability moved and the others kept their old values.
+        #
+        # This is not hypothetical. Both moneylines staked for Nurmagomedov
+        # vs. Song on 2026-08-26 were written with model 0.593 / fair 0.839 /
+        # blend 0.483 and model 0.445 / fair 0.808 / blend 0.367. No weight in
+        # [0, 1] produces either. The same fights rebuilt from the live
+        # pipeline gave 0.785 / 0.845 / 0.827 and 0.751 / 0.825 / 0.803.
+        # Because EV is quoted off the blend, the two rows reported -0.448 and
+        # -0.564 units per unit and were staked five units each anyway: the
+        # ladder branch above sizes off the tier, not off EV, so nothing
+        # downstream was ever going to look at those numbers and object.
+        #
+        # The invariant is checked rather than the arithmetic re-run, because
+        # re-deriving the blend here would paper over whichever upstream pass
+        # is stale and hand back a confident number built on one stale input.
+        # An incoherent row still PUBLISHES as a pick -- the model made a call
+        # and the call is on the record -- it just cannot carry money.
+        if sized["play"]:
+            _m, _f = edge.get("model_prob"), edge.get("book_fair_prob")
+            try:
+                _m, _f = float(_m), float(_f)
+            except (TypeError, ValueError):
+                _m = _f = None
+            if _m is not None and not (min(_m, _f) - 1e-6 <= p <= max(_m, _f) + 1e-6):
+                print(f"[card_plays] REFUSING TO STAKE {edge.get('fighter')} {market}: "
+                      f"blended {p:.4f} is outside [{min(_m, _f):.4f}, {max(_m, _f):.4f}] "
+                      f"-- model {_m:.4f}, fair {_f:.4f}. Stale derived field upstream.")
+                sized = dict(sized, play=False, units=0.0, reason=(
+                    "the blended probability on this row is not between the model's "
+                    "number and the market's, so at least one of the three was "
+                    "computed in a different pass than the others"))
+
         row = {
             "fight_key": _fight_key(fight),
             "fight_id": _fight_key(fight),
