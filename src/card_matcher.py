@@ -960,7 +960,19 @@ def group_edges_by_card(
                         _fixed = _by_key.get(_k)
                         if not _fixed:
                             continue
-                        for _f in ("model_prob", "edge_pct", "ev_pct", "blended_prob",
+                        # book_fair_prob TRAVELS WITH THE BLEND IT PRODUCED.
+                        # It was missing from this list, and the omission is
+                        # not cosmetic: blended_prob is a convex combination
+                        # of model_prob and book_fair_prob, so adopting the
+                        # reconciled blend while keeping the local fair leaves
+                        # a row whose three numbers cannot all be true. The
+                        # key falls back to (market, selection) whenever there
+                        # is no clob token -- which is every DraftKings and
+                        # FanDuel row -- so _fixed and _e can easily be two
+                        # different feeds' views of one market, with two
+                        # different fair lines.
+                        for _f in ("model_prob", "book_fair_prob", "edge_pct",
+                                   "ev_pct", "blended_prob",
                                    "vig_cost_pct", "suggested_stake_pct"):
                             if _f in _fixed:
                                 _e[_f] = _fixed[_f]
