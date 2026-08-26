@@ -41,6 +41,7 @@ would mean the site tips one fighter and bets the other.
 
 from __future__ import annotations
 
+from src.parlay_builder import BETTABLE_VENUES
 from src.plays import (
     size_play, select_card, decimal_odds, ev_per_unit, required_prob,
     TIER_CAP_UNITS, HURDLE_MONEYLINE,
@@ -284,6 +285,27 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
                 sized = dict(sized, play=False, units=0.0, reason=(
                     f"the model is {gap * 100:.0f} points off a market with money on "
                     f"both sides, which is a disagreement we distrust rather than an edge"))
+
+        # A STAKE NEEDS A PRICE YOU CAN PLACE.
+        #
+        # Every play on this card was priced at Polymarket, which is carried
+        # precisely because it is VIG-FREE -- the fair line the model measures
+        # edge against. Staking there means the units, the ROI and the
+        # bankroll are all computed at prices better than any book offers, so
+        # the record would run flatteringly high forever while describing bets
+        # a subscriber cannot make. Umar at -388 and Rei at -545 were
+        # Polymarket numbers; a DraftKings bettor pays vig on both.
+        #
+        # So a reference price can still produce a PICK -- it appears in the
+        # track record like every other call -- but it cannot produce a STAKE.
+        # The cost is real and was chosen knowingly: on a week when the books
+        # quote thinly, fewer plays are staked. A thin week is honest; a
+        # record measured at unobtainable prices is not.
+        _venue_name = _venue(edge)
+        if sized["play"] and _venue_name not in BETTABLE_VENUES:
+            sized = dict(sized, play=False, units=0.0, reason=(
+                f"priced at {_venue_name or 'no named venue'}, which is a reference "
+                f"line rather than a book this can be placed at"))
         row = {
             "fight_key": _fight_key(fight),
             "fight_id": _fight_key(fight),
@@ -295,7 +317,7 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
             "selection": edge.get("fighter"),
             "label": label_for(market, edge.get("fighter"), matchup),
             "odds_american": round(price),
-            "venue": _venue(edge),
+            "venue": _venue_name,
             # THE TIER BELONGS TO THE PICK, NOT TO EVERY BET ON THE FIGHT.
             # "Over 2.5 rounds -- Low Confidence" is a category error: the
             # tier describes how sure the model is about WHO WINS, which a
