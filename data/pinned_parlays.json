@@ -10,9 +10,9 @@
     "legs": [
      {
       "label": "Liu Ce ML",
-      "odds_display": "-205",
+      "odds_display": "-215",
       "is_model": false,
-      "decimal_odds": 1.487805,
+      "decimal_odds": 1.465116,
       "fight_key": "Liu Ce|Levi Rodrigues Jr.",
       "conditions": [
        {
@@ -20,7 +20,7 @@
         "fighter": "Liu Ce"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      },
      {
       "label": "Lawrence Lui ML",
@@ -43,12 +43,12 @@
      "card_10"
     ],
     "slip_id": "5a71b1f2db51",
-    "combined_decimal": 2.009842,
-    "combined_american": 101,
-    "combined_american_display": "+101",
-    "combined_prob": 0.4441,
+    "combined_decimal": 1.979192,
+    "combined_american": -102,
+    "combined_american_display": "-102",
+    "combined_prob": 0.4416,
     "combined_prob_raw": 0.3497,
-    "venue": "DraftKings"
+    "venue": "FanDuel"
    }
   }
  }
