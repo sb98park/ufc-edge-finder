@@ -1616,10 +1616,16 @@
          underneath: round by round, significant strikes, control time and takedowns for both
          corners. The bars are each round&rsquo;s share of measurable output &mdash; not who a
          judge gave it to, which this data cannot know and does not claim.</p>
-      <p>Not the last five. <b>All of them</b> &mdash; Kelvin Gastelum&rsquo;s twenty-seven, Marlon
-         Vera&rsquo;s twenty-six. The fighters with the longest careers are exactly the ones whose
-         arc is worth reading, and truncating would cost the only thing that makes it worth
-         opening.</p>
+      {# NAMES AND COUNTS COME FROM THE ROSTER, not from the day this was
+         written. Both were hardcoded, both were true then, and both stop
+         being true the moment those fighters are not booked -- the history
+         only covers booked fighters, so the sentence would name someone the
+         page no longer carries. #}
+      <p>Not the last five. <b>All of them</b>
+         {%- if history_preview and history_preview.deepest %} &mdash;
+         {% for d in history_preview.deepest %}{{ d.name }}&rsquo;s {{ d.bouts | spell }}{{ ", " if not loop.last }}{% endfor %}{% endif %}.
+         The fighters with the longest careers are exactly the ones whose arc is worth reading,
+         and truncating would cost the only thing that makes it worth opening.</p>
       {% if history_preview %}
       <div class="mini">
         <div class="r"><span>Fighters with full history</span><b>{{ history_preview.fighters_covered }}</b></div>

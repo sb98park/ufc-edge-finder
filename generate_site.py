@@ -1412,6 +1412,26 @@ def main(tier: str = "member", output_path: str | None = None):
         env.globals["stake_change_date"] = _eff
     env.globals["lock_units"] = LOCK_OF_WEEK_UNITS
     env.filters["american"] = format_american_odds
+    # Spelled out, because the sentence it lands in is prose. Falls back to
+    # the digits above ninety-nine, where a word would be worse than a number.
+    _ONES = ("zero one two three four five six seven eight nine ten eleven twelve "
+             "thirteen fourteen fifteen sixteen seventeen eighteen nineteen").split()
+    _TENS = {2: "twenty", 3: "thirty", 4: "forty", 5: "fifty",
+             6: "sixty", 7: "seventy", 8: "eighty", 9: "ninety"}
+
+    def _spell(n):
+        try:
+            n = int(n)
+        except (TypeError, ValueError):
+            return str(n)
+        if n < 20:
+            return _ONES[n] if 0 <= n < 20 else str(n)
+        if n < 100:
+            t, o = divmod(n, 10)
+            return _TENS[t] + ("-" + _ONES[o] if o else "")
+        return str(n)
+
+    env.filters["spell"] = _spell
     # Probability -> the price at which a bet on it breaks even, i.e. the
     # model's own fair line. Both existing helpers already exist; this just
     # composes them so a template can render the Model column in the same
@@ -1821,6 +1841,18 @@ def _write_legal(env, updated):
         with open(os.path.join("docs", out_name), "w") as f:
             f.write(html)
     print(f"Wrote {len(pages)} legal page(s)")
+
+
+def _display_name(folded: str, names: list[str]) -> str:
+    """
+    build_fighter_history keys on a folded name (case and accents stripped).
+    This maps one back to the roster spelling, because "kelvin gastelum" is
+    not what goes on the page.
+    """
+    for n in names:
+        if fh_fold_name(n) == folded:
+            return n
+    return folded.title()
 
 
 def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short,
@@ -2327,6 +2359,19 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
                 "fighters_covered": len(_covered),
                 "bouts_covered": sum(len(v) for v in _covered.values()),
                 "rounds_covered": sum(len(b.get("rs") or []) for v in _covered.values() for b in v),
+                # THE TWO DEEPEST CAREERS ON THE CURRENT ROSTER, generated.
+                # The copy underneath used to name Gastelum and Vera with
+                # their bout counts written out by hand. Both were true the
+                # day they were typed and both stop being true the moment
+                # those two are not booked -- build_fighter_history only
+                # covers booked fighters, so the sentence would go on naming
+                # someone the page no longer carries, and nothing would warn
+                # us because it is marketing copy rather than a figure.
+                # Whoever actually tops the list now wins the sentence.
+                "deepest": [
+                    {"name": _display_name(k, _booked), "bouts": len(v)}
+                    for k, v in sorted(_covered.items(), key=lambda kv: -len(kv[1]))[:2]
+                ],
             }
             print(f"[landing] history card: {_name}, {len(_bouts)} bouts, "
                   f"{_rank[1]} rounds drawn ({history_preview['bouts_covered']} bouts / "
