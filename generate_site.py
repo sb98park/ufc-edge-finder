@@ -28,6 +28,7 @@ from src.radar_chart import build_category_radar_svg
 from src.fighter_profile import (build_profiles, summarise as fp_summarise,
                                  RAIL_LABELS, CATEGORIES as PROFILE_CATEGORIES,
                                  ATTRIBUTES as PROFILE_ATTRIBUTES, DRAWER_RANKS, tier as profile_tier)
+from src.fighter_history import build_fighter_history, fold_name as fh_fold_name
 from src.display_names import surname as display_surname, PARTICLES as NAME_PARTICLES, SUFFIXES as NAME_SUFFIXES
 from src.edge_finder import find_all_edges
 from src.live_props import get_live_props, record_edge_health
@@ -2236,13 +2237,18 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         # reads as a rendering failure rather than as a thin record.
         if not (_prof.get("radar_svg") and _prof.get("a_ok") and _prof.get("b_ok")):
             continue
-        # RANK ON EXACTLY THE FOUR RAILS THE CARD SHOWS, in their canonical
-        # order. Scoring all six -- or picking whichever four diverge most --
-        # would overstate what is on screen: the reader would be looking at a
-        # curated subset presented as an ordinary sample. What is measured
-        # here is what renders.
-        _rows = (_prof.get("rows") or [])[:4]
-        if len(_rows) < 4 or any(r.get("a") is None or r.get("b") is None for r in _rows):
+        # RANK ON EXACTLY THE RAILS THE CARD SHOWS, in their canonical order.
+        # Picking whichever subset diverges most would overstate what is on
+        # screen: the reader would be looking at a curated sample presented as
+        # an ordinary one. What is measured here is what renders.
+        #
+        # ALL SIX NOW, matching fighter_profile.RAIL_LABELS and therefore the
+        # product. The card showed four and the app has always drawn six, so
+        # the landing page was quietly advertising less than it ships --
+        # Control and Chin, two of the more separating measures, were missing
+        # from the pitch and present in the thing being pitched.
+        _rows = (_prof.get("rows") or [])[:len(RAIL_LABELS)]
+        if len(_rows) < len(RAIL_LABELS) or any(r.get("a") is None or r.get("b") is None for r in _rows):
             continue
         _contrast = sum(abs(r["a"] - r["b"]) for r in _rows) / len(_rows)
         if _best is None or _contrast > _best[0]:
@@ -2257,6 +2263,69 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
               f"{scout_preview['fighter_b']}, {_contrast:.0f}pt mean rail gap")
     else:
         print("[landing] no fight with both sides profiled -- scouting card falls back")
+
+    # HISTORY CARD. The scouting card ranks a fighter; this one is the tape
+    # behind the ranking, and until now the landing page never mentioned it
+    # existed -- which made it the biggest thing in the product with no line
+    # of copy anywhere.
+    #
+    # Picked for DEPTH, not for a good night. The claim is "all of it, not the
+    # last five", so the card has to be carried by someone with enough career
+    # for that to mean something; a two-bout fighter would illustrate the
+    # opposite. Ties break toward the fighter on the nearest card, so the name
+    # is one a reader recognises from the fights above.
+    history_preview = None
+    try:
+        # NEAREST CARD FIRST. In the app this history is one tap from a fighter
+        # on Saturday's card, so the name here should be one the reader has
+        # just scrolled past rather than someone booked in six weeks.
+        _near = {n for ev in (events or []) for f in (ev.get("fights") or [])
+                 for n in (f.get("fighter_a"), f.get("fighter_b")) if n}
+        _booked = [n for _f in _all_fights
+                   for n in (_f.get("fighter_a"), _f.get("fighter_b")) if n]
+        _hist = build_fighter_history(_booked) if _booked else {}
+        _best = None
+        for _name in _booked:
+            _bouts = _hist.get(fh_fold_name(_name)) or []
+            # Enough career that "all of them, not the last five" means
+            # something -- a three-bout fighter illustrates the opposite.
+            if len(_bouts) < 6:
+                continue
+            _shown = _bouts[:4]
+            _drawn = sum(len(b.get("rs") or []) for b in _shown)
+            # A strip that is mostly hatching is a picture of missing data.
+            if _drawn < 8:
+                continue
+            # RESULT-BLIND, deliberately. Ranking on rounds that render and
+            # career depth says nothing about whether the man won them, so
+            # this cannot quietly become a highlight reel; whoever it lands
+            # on, his record is drawn as it happened.
+            _rank = (_name in _near, _drawn, len(_bouts))
+            if _best is None or _rank > _best[0]:
+                _best = (_rank, _name, _bouts)
+        if _best:
+            _rank, _name, _bouts = _best
+            _covered = {k: v for k, v in _hist.items() if v}
+            history_preview = {
+                "fighter": _name,
+                "total_bouts": len(_bouts),
+                # Four fits the canvas without this becoming the tallest card
+                # on the page. The copy carries the "all of them" claim and
+                # the counts underneath prove it.
+                "bouts": _bouts[:4],
+                "fighters_covered": len(_covered),
+                "bouts_covered": sum(len(v) for v in _covered.values()),
+                "rounds_covered": sum(len(b.get("rs") or []) for v in _covered.values() for b in v),
+            }
+            print(f"[landing] history card: {_name}, {len(_bouts)} bouts, "
+                  f"{_rank[1]} rounds drawn ({history_preview['bouts_covered']} bouts / "
+                  f"{history_preview['rounds_covered']} rounds across "
+                  f"{history_preview['fighters_covered']} booked fighters)")
+        else:
+            print("[landing] no booked fighter with a deep enough history -- card falls back")
+    except Exception as _exc:
+        # Marketing copy must never take the build down.
+        print(f"[landing] history card unavailable ({_exc})")
 
     # ---------------------------------------------------------------------
     # FORWARD COVERAGE. Every competitor's landing page is about this
@@ -2343,6 +2412,7 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
     html = env.get_template("landing.html").render(
         market_preview=market_preview,
         scout_preview=scout_preview,
+        history_preview=history_preview,
         tape=tape,
         coverage=coverage,
         landing_facts=landing_facts or [],

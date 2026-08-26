@@ -114,7 +114,7 @@ ATTRIBUTES = [
     ("Strikes/min",  lambda c: _per_min(c, "sig_str_landed"),   True,  "Striking"),
     ("Knockdowns",   lambda c: _per15(c, "kd_for"),             True,  "Power"),
     ("TD volume",    lambda c: _per15(c, "td_att"),             True,  "Wrestling"),
-    ("TD defence",   lambda c: (100.0 * c["td_stuffed"] / c["td_faced"]) if c["td_faced"] else None, True, "Wrestling"),
+    ("TD defense",   lambda c: (100.0 * c["td_stuffed"] / c["td_faced"]) if c["td_faced"] else None, True, "Wrestling"),
     ("Control",      lambda c: (100.0 * c["ctrl_seconds"] / c["fight_seconds"]) if c["fight_seconds"] else None, True, "Grappling"),
     ("Sub attempts", lambda c: _per15(c, "sub_att"),            True,  "Grappling"),
     # Both durability measures invert: fewer knockdowns absorbed and fewer
@@ -130,13 +130,13 @@ CATEGORIES = ["Striking", "Power", "Wrestling", "Grappling", "Durability"]
 
 # The six the scout row draws. Deliberately not all nine: the row sits under
 # the fighter buttons and has room for six rails before the card gets tall.
-RAIL_LABELS = ["Strike acc", "Knockdowns", "TD volume", "TD defence", "Control", "Chin"]
+RAIL_LABELS = ["Strike acc", "Knockdowns", "TD volume", "TD defense", "Control", "Chin"]
 
 # The drawer's four header tiles, mapped to the attribute that ranks each one.
 DRAWER_RANKS = {
     "control_time_pct": "Control",
     "slpm": "Strikes/min",
-    "td_defense_pct": "TD defence",
+    "td_defense_pct": "TD defense",
     "strike_accuracy_pct": "Strike acc",
 }
 

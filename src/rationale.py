@@ -57,7 +57,7 @@ def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
         # so no sentence in the file could ever name. They are the raw
         # material for saying WHY a factor fired instead of that it did:
         # strike accuracy, output and absorption, takedown volume, takedown
-        # defence, control share, age. None is None-checked here rather than
+        # defense, control share, age. None is None-checked here rather than
         # defaulted, because a default silently becomes a comparison -- the
         # failure matchup_model documents at length.
         **{k: (float(r[k]) if k in r and pd.notna(r[k]) else None) for k in (
@@ -872,8 +872,8 @@ def _grappling_clause(fighter, opponent, st, opp) -> str:
                              "the most active takedown threat on this card",
                              "one of the most active takedown threats on this card")
                 or _cohort_note(opponent, "td_defense_pct", False,
-                                "the leakiest takedown defence on this card",
-                                "one of the leakier takedown defences on this card"))
+                                "the leakiest takedown defense on this card",
+                                "one of the leakier takedown defenses on this card"))
         if rank:
             base += f" -- {rank}"
         if ctrl_f is not None and ctrl_o is not None and ctrl_f - ctrl_o > 8:
@@ -885,7 +885,7 @@ def _grappling_clause(fighter, opponent, st, opp) -> str:
         return base
     if ctrl_f is not None and ctrl_o is not None and ctrl_f - ctrl_o > 8:
         return f"{fighter} has held position for {ctrl_f:.0f}% of all fight minutes against {ctrl_o:.0f}% for {opponent}, and this is a matchup where that tends to decide things"
-    return f"{fighter} has a real path to control where this fight happens, and {opponent}'s takedown defence is the weaker half of that exchange"
+    return f"{fighter} has a real path to control where this fight happens, and {opponent}'s takedown defense is the weaker half of that exchange"
 
 
 def _striking_clause(fighter, opponent, st, opp) -> str:

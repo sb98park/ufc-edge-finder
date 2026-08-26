@@ -1136,13 +1136,13 @@ def style_matchup_adjustment(
         # reads as half as good while actually controlling where the fight
         # happens far more. The old form also clipped at zero (max(0, acc - def)),
         # discarding the sign -- so being clearly WORSE at takedowns than the
-        # opponent's defence registered identically to being merely equal.
+        # opponent's defense registered identically to being merely equal.
         # Testing the clipping removal on its own made things slightly worse,
         # so the clipping was never the real problem; the input was.
         wrestling_adj = (float(td_rate_a) - float(td_rate_b)) * TD_RATE_ADVANTAGE_SCALE
     elif pd.notna(ctrl_a) and pd.notna(ctrl_b) and td_def_data_ok:
         # td_def_data_ok is required as well: this branch compares each
-        # fighter's REAL control time against the OTHER's takedown defence,
+        # fighter's REAL control time against the OTHER's takedown defense,
         # so a defaulted 65 on one side manufactures the same phantom edge
         # the striking term above guards against.
         # Fallback for fighters with no tracked cage time yet (debutants, and

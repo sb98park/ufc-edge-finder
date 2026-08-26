@@ -381,10 +381,10 @@ def build_spotlight_chips(row_a: dict, row_b: dict, name_a: str, name_b: str,
     read as a sentence, not inferred from how far one spoke reaches.
 
     THE TAKEDOWN-ATTEMPTS-FACED CHIP EARNS ITS PLACE SPECIFICALLY. Curtis
-    Blaydes reads 35% takedown defence, which looks damning for a decorated
+    Blaydes reads 35% takedown defense, which looks damning for a decorated
     wrestler -- until you see that opponents attempted only 20 takedowns
-    across 22 fights. Avoidance and defence are different quantities, and the
-    defence rate cannot express the first; it answers "what happens when
+    across 22 fights. Avoidance and defense are different quantities, and the
+    defense rate cannot express the first; it answers "what happens when
     someone shoots", not "does anyone dare". That distinction misled me for a
     full round of analysis, so it is worth stating outright.
 

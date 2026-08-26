@@ -636,6 +636,26 @@
   .pv-side i{height:3px;border-radius:2px;display:block;max-width:100%}
   .pv-row span{font-family:var(--mono);font-size:7px;letter-spacing:.09em;color:var(--ink3);
                width:72px;text-align:center;flex:none;text-transform:uppercase}
+  /* ---- fight-history card ---- */
+  .bout{margin-bottom:10px}
+  .bout:last-child{margin-bottom:0}
+  .bhead{display:flex;align-items:baseline;gap:7px;font-size:10.5px;margin-bottom:4px}
+  .wl{font-family:var(--mono);font-size:9px;font-weight:700;width:13px;height:13px;border-radius:3px;
+      display:grid;place-items:center;flex:none}
+  .wl.w{color:#0b1a10;background:var(--green)}
+  .wl.l{color:#e2564d;border:1px solid rgba(226,86,77,.5)}
+  .opp{color:#e8eaf0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .meth{margin-left:auto;color:#6d7789;font-family:var(--mono);font-size:8.5px;white-space:nowrap}
+  .pips{display:flex;gap:3px}
+  /* Each cell is a round; the fill is that round's share of measurable output.
+     Bottom-anchored, so a glance down the column reads as a trajectory. */
+  .pip{flex:1;height:16px;border-radius:3px;background:rgba(255,255,255,.06);position:relative;
+       overflow:hidden;display:block}
+  .pip b{position:absolute;left:0;bottom:0;width:100%;display:block;
+         background:linear-gradient(180deg,#5f9dfa,#3f6fd0)}
+  .pip.ghost{background:repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0 3px,transparent 3px 6px)}
+  .bstat{display:flex;gap:11px;margin-top:4px;font-family:var(--mono);font-size:8.5px;color:#6d7789}
+  .bstat b{color:#c8ccd6}
   .pv-radar{display:flex;justify-content:center}
   .pv-radar svg{max-width:100%;height:auto}
   {% include "_ml_chart_css.html" %}
@@ -1402,7 +1422,9 @@
         {% endfor %}
         {% else %}
         <div class="sh-top"><span>Scouting report</span><span>Illustration</span></div>
-        {% for row in [('Strike acc', 88, 72), ('Knockdowns', 41, 93), ('TD volume', 76, 58), ('TD defence', 64, 81)] %}
+        {# SIX, in fighter_profile.RAIL_LABELS order -- the illustration has to
+           be a fair picture of the real thing, and the real thing draws six. #}
+        {% for row in [('Strike acc', 88, 72), ('Knockdowns', 41, 93), ('TD volume', 76, 58), ('TD defense', 64, 81), ('Control', 82, 47), ('Chin', 55, 88)] %}
         <div class="rail">
           <div class="l"><i style="width:{{ row[1] }}%;background:var(--red)"></i></div>
           <span>{{ row[0] }}</span>
@@ -1424,6 +1446,90 @@
         <div class="r"><span>Bouts in the spine</span><b>1,434</b></div>
         <div class="r"><span>Rounds of tape</span><b>3,590</b></div>
       </div>
+    </div></div>
+  </div>
+
+  {# THE TAPE BEHIND THE RANKING. The scouting card says where a fighter sits
+     in his division; this one is the evidence underneath it, and the page has
+     never mentioned it existed -- which made it the most laborious thing a
+     reader would otherwise do by hand, shipped and unadvertised.
+     The bout rows are drawn exactly as the drawer draws them, because the
+     claim is "this is in the product", and an idealised illustration would be
+     a claim about something else. #}
+  <div class="pcard" data-card>
+    <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      <div><span class="kick">Fight history</span>
+        <h3>Every round they have ever fought</h3></div>
+      <span class="expand" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </div>
+    <div class="canvas warm" data-reveal>
+      <div class="shot">
+        {% if history_preview %}
+        <div class="sh-top"><span>{{ history_preview.fighter }}</span>
+          <span>{{ history_preview.total_bouts }} UFC bout{{ 's' if history_preview.total_bouts != 1 }}</span></div>
+        {% for b in history_preview.bouts %}
+        <div class="bout">
+          <div class="bhead">
+            <span class="wl {{ 'w' if b.w == 1 else 'l' }}">{{ 'W' if b.w == 1 else 'L' if b.w == 0 else '&ndash;' | safe }}</span>
+            <span class="opp">{{ b.o }}</span>
+            <span class="meth">{{ b.m | replace('Decision - Unanimous', 'Decision') | replace('Decision - Split', 'Split dec') | replace('Decision - Majority', 'Maj dec') }} &middot; R{{ b.er }}</span>
+          </div>
+          {# One cell per SCHEDULED round, so a fight that ended early reads as
+             one that ended early. The hatched cells are rounds that existed on
+             the contract and were never needed. #}
+          <div class="pips">
+            {% for i in range(b.sr or (b.rs | length)) %}
+              {% if i < (b.rs | length) %}<i class="pip"><b style="height:{{ b.rs[i] }}%"></b></i>
+              {% else %}<i class="pip ghost"></i>{% endif %}
+            {% endfor %}
+          </div>
+          <div class="bstat">
+            <span>sig <b>{{ b.sg[0] }}</b>&ndash;{{ b.sg[1] }}</span>
+            {% if b.ct[0] >= 0 and b.ct[1] >= 0 %}
+            <span>ctrl <b>{{ '%d:%02d'|format(b.ct[0] // 60, b.ct[0] % 60) }}</b>&ndash;{{ '%d:%02d'|format(b.ct[1] // 60, b.ct[1] % 60) }}</span>
+            {% endif %}
+            <span>td <b>{{ b.td[0] }}</b>&ndash;{{ b.td[1] }}</span>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="sh-top"><span>Fight history</span><span>Illustration</span></div>
+        {% for b in [('Deiveson Figueiredo','W','Decision &middot; R3',[100,70,100],3),
+                     ('Mario Bautista','W','Decision &middot; R3',[93,66,68],3),
+                     ('Merab Dvalishvili','L','Decision &middot; R5',[47,56,52,36,53],5)] %}
+        <div class="bout">
+          <div class="bhead"><span class="wl {{ 'w' if b[1] == 'W' else 'l' }}">{{ b[1] }}</span>
+            <span class="opp">{{ b[0] }}</span><span class="meth">{{ b[2] | safe }}</span></div>
+          <div class="pips">
+            {% for i in range(b[4]) %}
+              {% if i < (b[3] | length) %}<i class="pip"><b style="height:{{ b[3][i] }}%"></b></i>
+              {% else %}<i class="pip ghost"></i>{% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    <div class="detail"><div class="detail-in">
+      <p><b>Tap either fighter&rsquo;s name on the card.</b> Every UFC fight that man has had opens
+         underneath: round by round, significant strikes, control time and takedowns for both
+         corners. The bars are each round&rsquo;s share of measurable output &mdash; not who a
+         judge gave it to, which this data cannot know and does not claim.</p>
+      <p>Not the last five. <b>All of them</b> &mdash; Kelvin Gastelum&rsquo;s twenty-seven, Marlon
+         Vera&rsquo;s twenty-six. The fighters with the longest careers are exactly the ones whose
+         arc is worth reading, and truncating would cost the only thing that makes it worth
+         opening.</p>
+      {% if history_preview %}
+      <div class="mini">
+        <div class="r"><span>Fighters with full history</span><b>{{ history_preview.fighters_covered }}</b></div>
+        <div class="r"><span>Past bouts, round by round</span><b>{{ '{:,}'.format(history_preview.bouts_covered) }}</b></div>
+        <div class="r"><span>Rounds you can open</span><b>{{ '{:,}'.format(history_preview.rounds_covered) }}</b></div>
+      </div>
+      {% endif %}
     </div></div>
   </div>
 

@@ -130,9 +130,9 @@ def zone_profile(row: dict, zone_index: dict, prefix: str = "strikes") -> dict |
     """
     {zone: {share, percentile, alpha}} or None when the fighter has no profile.
 
-    `prefix` selects offence ("strikes", where he lands) or defence
+    `prefix` selects offense ("strikes", where he lands) or defense
     ("absorbed", where he gets hit) -- the defensive side costs nothing
-    because the opponent's row was already fetched for takedown defence.
+    because the opponent's row was already fetched for takedown defense.
     """
     out = {}
     for zone in ZONES:
@@ -252,7 +252,7 @@ def fight_shape(pos_a: dict | None, pos_b: dict | None,
     # the most interesting fight on any card. Averaging erases exactly the
     # thing worth seeing. When the two disagree sharply, say so instead of
     # picking a side: whose game it becomes is decided by takedown entries
-    # against takedown defence, which the wrestling term already prices and
+    # against takedown defense, which the wrestling term already prices and
     # this panel has no business restating.
     if abs(ga - gb) >= 25:
         grappler = "A" if ga > gb else "B"
