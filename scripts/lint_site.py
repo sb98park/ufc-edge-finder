@@ -320,12 +320,39 @@ def _strip_nested(body):
     return "".join(out)
 
 
+# document.getElementById / .querySelector / .getElementsByClassName and
+# friends. ROOTED AT `document` ON PURPOSE -- see check_deferred_inits.
+_DOCUMENT_QUERY = re.compile(
+    r"\bdocument\s*\.\s*(?:getElementById|querySelectorAll|querySelector"
+    r"|getElementsBy\w+)\s*\(")
+
+
 def check_deferred_inits(c):
     """
     The page body is emitted AFTER the inline script, so any getElementById
     at parse time returns null and an early-return guard silently wires
     NOTHING. Hit four separate times in one feature -- the filter chips were
     dead for days before anyone noticed.
+
+    ONLY document-ROOTED QUERIES COUNT, and the narrowing matters as much as
+    the check. This looked for the bare strings "getElementById" and
+    "querySelector" anywhere in the top-level body, which also matches
+    `wrap.querySelector('svg')` -- a lookup inside an element the function was
+    HANDED. That cannot be the parse-time hazard: if the caller had an element
+    to pass, the element existed.
+
+    initUnitsScrub is exactly that shape. It takes its wrap through cfg and
+    queries inside it, and its callers (wireUnitsTracker, and the landing
+    page's IIFE) are both properly deferred -- so this check failed on every
+    single build for a function that was correctly wired. A linter that is
+    always red is a linter nobody reads, which is the failure mode the lint
+    step in refresh.yml already warns about in its own comment: three real
+    failures shipped for days because the step was green and nobody looked.
+
+    The original bug shape is untouched. `const el = document.getElementById(
+    'chips'); if (!el) return;` at the top of an init function still matches,
+    because that is the query that runs against a body which does not exist
+    yet.
     """
     for m in re.finditer(r"function (init\w+)\s*\(", c):
         name = m.group(1)
@@ -336,7 +363,7 @@ def check_deferred_inits(c):
         # function's body too, so the check has to brace-match and strip
         # nested functions before looking.
         top = _strip_nested(body)
-        if "getElementById" not in top and "querySelector" not in top:
+        if not _DOCUMENT_QUERY.search(top):
             continue
         if f"DOMContentLoaded', {name}" not in c and f'DOMContentLoaded", {name}' not in c:
             fail("deferred-init", f"{name}() queries the DOM at init time but is never deferred")
