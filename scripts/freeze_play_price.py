@@ -37,7 +37,7 @@ import sys
 sys.path.insert(0, ".")
 
 from src.plays import HURDLE_MONEYLINE, decimal_odds, ev_per_unit, required_prob
-from src.plays_ledger import FIELDNAMES, LEDGER_PATH, load, play_id
+from src.plays_ledger import FIELDNAMES, LEDGER_PATH, _serialise, load, play_id
 
 
 def main() -> int:
@@ -91,12 +91,24 @@ def main() -> int:
         "result": "", "units_result": "", "graded_at": "", "void_reason": "",
     }
 
+    # THROUGH _serialise, NOT STRAIGHT OUT. load() hands back COERCED rows --
+    # is_lock and is_prop as Python bools -- so writing them back with a bare
+    # DictWriter renders them "False" instead of "0". That is the exact
+    # self-destruction _serialise's docstring describes, and it is not
+    # cosmetic: check_plays_ledger compares the working tree against HEAD, the
+    # next build re-serialises "False" back to "0", and the checker reads that
+    # normalisation as a restated play and fails the job. It did -- every
+    # refresh from 23:21 UTC on 2026-08-26 until this landed.
+    #
+    # It only bit the row written FIRST, because that one is the only one
+    # already on disk when the second call reads and rewrites it. One door
+    # out of this file, and _serialise is it.
     with open(a.path, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=FIELDNAMES, extrasaction="ignore")
         w.writeheader()
         for r in rows:
-            w.writerow(r)
-        w.writerow(row)
+            w.writerow(_serialise(r))
+        w.writerow(_serialise(row))
 
     print(f"froze {a.selection} {a.market} at {row['odds_american']:+d} ({a.venue}), "
           f"{a.units}U to win {row['to_win']}, published {a.at}")
