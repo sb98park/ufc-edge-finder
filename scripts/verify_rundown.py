@@ -37,10 +37,10 @@ WHAT IT CHECKS, each earned rather than invented:
               bad data or a genuine arbitrage, and either one is worth
               stopping for.
   quota       the free tier allows 20,000 points a day, a point being one
-              participant x one line x one book. The module docstring works
-              that arithmetic out by hand for one example card, which is the
-              kind of number that is right the day it is written. This counts
-              the real payload and projects it at the real cadence.
+              participant x one line x one book. This counts the real payload
+              and replays the client's actual ramping schedule against it, day
+              by day -- the cadence is no longer one number, so multiplying one
+              interval by 1440 would describe nothing the client does.
   dropped     raw prices whose affiliate id is not in AFFILIATES, counted
               rather than discarded in silence.
   staleness   how old the quoted prices are, which is the difference between
@@ -59,11 +59,12 @@ import sys
 sys.path.insert(0, ".")
 
 from src.odds_utils import american_to_implied_prob
-from src.rundown_source import (AFFILIATES, BOOK_AFFILIATES, MARKET_IDS,
-                                MIN_SECONDS_BETWEEN_PULLS, SPORT_MMA,
-                                _rows_from_event)
+from src.rundown_source import (AFFILIATES, BOOK_AFFILIATES, BUDGET_SAFETY,
+                                DAILY_POINT_CAP as SOURCE_CAP, MARKET_IDS,
+                                SPORT_MMA, _rows_from_event, plan_pull)
 
-DAILY_POINT_CAP = 20_000
+# Mirrored from the client so the harness cannot drift from what it checks.
+DAILY_POINT_CAP = SOURCE_CAP
 
 # A two-sided book price sums above 1.0 by construction -- that is the margin.
 # Below 1.0 means the two sides can be backed for a guaranteed profit, which no
@@ -106,9 +107,6 @@ def main() -> int:
     ap.add_argument("--date", default=dt.date.today().isoformat())
     ap.add_argument("--fixture", help="read a saved payload instead of calling the API")
     ap.add_argument("--save", help="write the raw payload here (live calls only)")
-    ap.add_argument("--cadence-minutes", type=float,
-                    default=MIN_SECONDS_BETWEEN_PULLS / 60.0,
-                    help="pull spacing to project the daily quota bill at")
     a = ap.parse_args()
 
     if a.fixture:
@@ -194,17 +192,47 @@ def main() -> int:
     if stamps:
         print(f"    oldest {min(stamps)}   newest {max(stamps)}")
 
-    # ---- the quota bill, counted rather than remembered ----
-    pulls = (24 * 60) / a.cadence_minutes if a.cadence_minutes else 0
-    daily = points * pulls
-    pct = (daily / DAILY_POINT_CAP * 100) if DAILY_POINT_CAP else 0
-    print(f"\n  QUOTA       {points} point(s) per pull x {pulls:.0f} pull(s)/day "
-          f"at {a.cadence_minutes:.0f}m = {daily:,.0f} of {DAILY_POINT_CAP:,} ({pct:.0f}%)")
-    if daily > DAILY_POINT_CAP:
-        problems.append(f"projected {daily:,.0f} points/day against a {DAILY_POINT_CAP:,} "
-                        f"cap -- widen MIN_SECONDS_BETWEEN_PULLS or drop a market")
-    elif pct > 75:
-        print(f"    within cap but thin -- one more card date would exceed it")
+    # ---- the quota bill, walked forward day by day ----
+    #
+    # NOT A SINGLE CADENCE ANY MORE. The client ramps toward the card and
+    # paces fight day off whatever budget is left, so one interval times 1440
+    # describes nothing it actually does. This replays the real schedule
+    # against the measured cost of this payload.
+    print(f"\n  QUOTA       {points} point(s) per pull, measured from this payload")
+    print(f"              allowance {int(DAILY_POINT_CAP * BUDGET_SAFETY):,} "
+          f"of {DAILY_POINT_CAP:,} ({BUDGET_SAFETY:.0%} safety margin)")
+    cost = points or None
+    if not cost:
+        print("    nothing came back, so there is no cost to project")
+    else:
+        card = dt.date.fromisoformat(a.date)
+        print(f"    {'day':12s} {'pulls':>6s} {'points':>8s} {'% cap':>7s}  spacing")
+        worst = 0
+        for offset in range(6, -1, -1):
+            day = card - dt.timedelta(days=offset)
+            budget = {"points": 0, "pulls": 0, "last_cost": cost}
+            last, n, gaps = None, 0, []
+            t = dt.datetime.combine(day, dt.time.min, tzinfo=dt.timezone.utc)
+            stop = t + dt.timedelta(days=1)
+            while t < stop:
+                plan = plan_pull([a.date], budget, t)
+                if plan["affordable"] and (
+                        last is None or (t - last).total_seconds() >= plan["interval"]):
+                    budget["points"] += cost
+                    budget["pulls"] += 1
+                    last, n = t, n + 1
+                    gaps.append(plan["interval"])
+                t += dt.timedelta(minutes=1)
+            pct = budget["points"] / DAILY_POINT_CAP * 100
+            worst = max(worst, budget["points"])
+            gap = (sorted(gaps)[len(gaps) // 2] / 60) if gaps else 0
+            tag = "  <- fight day" if offset == 0 else ""
+            print(f"    {day.isoformat():12s} {n:6d} {budget['points']:8,d} "
+                  f"{pct:6.1f}% {gap:8.0f}m{tag}")
+        if worst > DAILY_POINT_CAP:
+            problems.append(f"the schedule peaks at {worst:,} points in a day against "
+                            f"a {DAILY_POINT_CAP:,} cap -- widen CADENCE_BY_DAYS_OUT "
+                            f"or lower BUDGET_SAFETY")
 
     print()
     if problems:

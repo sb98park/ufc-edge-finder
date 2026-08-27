@@ -83,12 +83,89 @@ code, out = run("--fixture", ok_path)
 check("exits 0", code, 0)
 check("says so", "PASS" in out, True)
 
-print("\nthe quota projection is arithmetic, not a remembered number")
-code, out = run("--fixture", ok_path, "--cadence-minutes", "1")
-check("scales with the cadence", "1440 pull(s)/day" in out, True)
-code, out = run("--fixture", ok_path, "--cadence-minutes", "0.5")
-check("fails when the cap would be blown", code, 1)
-check("says which knob to turn", "MIN_SECONDS_BETWEEN_PULLS" in out, True)
+print("\nthe quota projection replays the real schedule")
+code, out = run("--fixture", ok_path, "--date", "2026-08-29")
+check("costs the payload rather than a remembered number",
+      "point(s) per pull, measured from this payload" in flat(out), True)
+check("names the allowance and the margin", "allowance 17,000 of 20,000" in flat(out), True)
+check("walks a week, ending on the card", "<- fight day" in out, True)
+# Parsed rather than string-matched: the point is that the spacing column
+# decreases as the card approaches, and that survives a format change.
+_gaps = [int(m) for m in re.findall(r"^\s+2026-\d\d-\d\d\s+\d+\s+[\d,]+\s+[\d.]+%\s+(\d+)m",
+                                    out, re.M)]
+check("the schedule has a row per day", len(_gaps) >= 5, True)
+check("and tightens monotonically toward the card",
+      _gaps == sorted(_gaps, reverse=True), True)
+check("  ...ending at the fight-day floor", _gaps[-1] <= 20 if _gaps else False, True)
+
+
+print("\nthe cadence ramps toward the card")
+import datetime as dt  # noqa: E402
+from src.rundown_source import (  # noqa: E402
+    plan_pull, DAILY_POINT_CAP, BUDGET_SAFETY, FIGHT_DAY_FLOOR_SECONDS,
+)
+
+CARD = "2026-08-29"
+
+
+def at(days_before, hour=12, points=0, cost=104):
+    when = dt.datetime.combine(
+        dt.date(2026, 8, 29) - dt.timedelta(days=days_before),
+        dt.time(hour, 0), tzinfo=dt.timezone.utc)
+    return plan_pull([CARD], {"points": points, "last_cost": cost}, when), when
+
+
+check("a week out is six-hourly", at(7)[0]["interval"], 6 * 3600)
+check("three days out is hourly", at(3)[0]["interval"], 3600)
+check("the day before is twenty minutes", at(1)[0]["interval"], 20 * 60)
+check("fight day is tighter than the day before",
+      at(0)[0]["interval"] < at(1)[0]["interval"], True)
+check("  ...and never below the floor",
+      at(0)[0]["interval"] >= FIGHT_DAY_FLOOR_SECONDS, True)
+
+print("\nfight day paces itself off what is left")
+_early, _ = at(0, hour=6)
+_late, _ = at(0, hour=22)
+check("a nearly spent budget slows down",
+      at(0, points=16_000)[0]["interval"] > at(0, points=0)[0]["interval"], True)
+check("a dearer card slows down too",
+      at(0, cost=400)[0]["interval"] > at(0, cost=104)[0]["interval"], True)
+
+print("\nthe hard stop is what makes it a guarantee")
+_allow = int(DAILY_POINT_CAP * BUDGET_SAFETY)
+check("affordable with budget left", at(0, points=0)[0]["affordable"], True)
+check("refused once the allowance is gone",
+      at(0, points=_allow)[0]["affordable"], False)
+check("  ...and the allowance sits under the real cap", _allow < DAILY_POINT_CAP, True)
+
+
+def simulate(cost):
+    """Walk a week minute by minute and return the worst day's spend."""
+    worst, budget, last, day = 0, None, None, None
+    t = dt.datetime(2026, 8, 22, tzinfo=dt.timezone.utc)
+    end = dt.datetime(2026, 8, 31, tzinfo=dt.timezone.utc)
+    while t < end:
+        d = t.strftime("%Y-%m-%d")
+        if d != day:
+            day, budget, last = d, {"points": 0, "last_cost": cost}, None
+        p = plan_pull([CARD], budget, t)
+        if p["affordable"] and (last is None or (t - last).total_seconds() >= p["interval"]):
+            budget["points"] += cost
+            last = t
+            worst = max(worst, budget["points"])
+        t += dt.timedelta(minutes=1)
+    return worst
+
+
+print("\nA WHOLE WEEK STAYS UNDER THE CAP, whatever a pull turns out to cost")
+# The repo has carried two different figures for the cost of a pull -- ~104
+# with main_line totals and ~208 without -- and neither has been measured
+# against the live feed. 400 is included because the guarantee has to hold
+# when the estimate is wrong, not only when it is right.
+for _cost in (104, 208, 400, 900):
+    _worst = simulate(_cost)
+    check(f"worst day at {_cost} pts/pull stays under {DAILY_POINT_CAP:,}",
+          _worst <= DAILY_POINT_CAP, True)
 
 print("\n" + ("-" * 70))
 if FAILURES:
