@@ -28,6 +28,12 @@ SNAPSHOT_PATH = "data/odds_snapshot.json"
 TOKEN_CACHE_PATH = "data/clob_token_cache.json"
 NOTABLE_MOVEMENT_THRESHOLD_PCT = 15.0
 MAX_HISTORY_POINTS = 30
+
+# How many of the most recent points are kept at full resolution. The rest of
+# the budget covers the open and a thinned sample of everything between, so a
+# chart still shows where a line STARTED rather than only where it has been
+# this afternoon. See _thin_history.
+RECENT_HISTORY_POINTS = 18
 # How long an untouched bet stays in the snapshot. Long enough to survive a
 # quiet stretch between cards, short enough that orphaned keys -- settled
 # fights, and every entry stranded by a key-format change -- do not accumulate.
@@ -194,12 +200,54 @@ def save_snapshot(edges: list[dict], previous_snapshot: dict) -> dict:
         key = _bet_key_str(row)
         entry = new_snapshot.setdefault(key, {"history": []})
         entry["history"].append({"odds": row["odds_american"], "timestamp": now})
-        entry["history"] = entry["history"][-MAX_HISTORY_POINTS:]
+        entry["history"] = _thin_history(entry["history"])
 
     os.makedirs(os.path.dirname(SNAPSHOT_PATH), exist_ok=True)
     with open(SNAPSHOT_PATH, "w") as f:
         json.dump(new_snapshot, f, indent=2)
     return new_snapshot
+
+
+
+def _thin_history(hist: list[dict], cap: int = MAX_HISTORY_POINTS,
+                  recent: int = RECENT_HISTORY_POINTS) -> list[dict]:
+    """
+    Fit a price history into `cap` points WITHOUT throwing away the open.
+
+    THE OLD RULE WAS hist[-cap:], A PURE TAIL, and the opening price is the
+    first thing it discards. That is the one point nobody can reconstruct
+    later: on 2026-08-26 the DraftKings open on two staked fights had to be
+    recovered from a phone screenshot because this file had rolled past it,
+    and the oldest surviving quote was a Polymarket midpoint from a different
+    venue entirely. A buffer that keeps only the recent past answers "where is
+    it now", which the live feed already answers, and cannot answer "where did
+    it start", which nothing else can.
+
+    So the budget is spent as: the open, a uniform sample of the middle, and
+    the most recent `recent` points at full resolution. Same total size -- this
+    trades a handful of redundant recent quotes for the whole earlier shape,
+    and the file does not grow by a byte.
+
+    Uniform rather than "keep every Nth arrival" because the arrival rate is
+    not constant: the cadence ramps toward a card, so counting arrivals would
+    sample fight week densely and the week before it barely at all. Sampling
+    by POSITION over the older region keeps the early shape visible.
+
+    The charts read timestamps rather than assuming even spacing
+    (_snapshot_points), so a thinned series renders at its true dates.
+    """
+    if len(hist) <= cap:
+        return hist
+    keep_recent = max(1, min(recent, cap - 2))
+    tail = hist[-keep_recent:]
+    older = hist[:-keep_recent]
+    slots = cap - keep_recent
+    if slots <= 1 or len(older) <= slots:
+        return older[-slots:] + tail if slots > 0 else tail
+    # Index 0 is always taken, which is what pins the open.
+    step = (len(older) - 1) / float(slots - 1)
+    idx = sorted({int(round(i * step)) for i in range(slots)})
+    return [older[i] for i in idx] + tail
 
 
 def annotate_movement(edges: list[dict], previous_snapshot: dict) -> None:
