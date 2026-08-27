@@ -1,3 +1,56 @@
 {
- "UFC Fight Night: Nurmagomedov vs. Song": {}
+ "UFC Fight Night: Nurmagomedov vs. Song": {
+  "bankroll": {
+   "pinned_at": "2026-08-27T00:14:15+00:00",
+   "identities": [
+    "[\"Sumudaerji|Alex Perez\", [{\"kind\": \"rounds\", \"line\": 2.5, \"op\": \"under\"}]]",
+    "[\"Lawrence Lui|Hector Santiago\", [{\"fighter\": \"Lawrence Lui\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Alex Perez vs Sumudaerji Under 2.5 rounds",
+      "odds_display": "-130",
+      "is_model": false,
+      "decimal_odds": 1.769231,
+      "fight_key": "Sumudaerji|Alex Perez",
+      "conditions": [
+       {
+        "kind": "rounds",
+        "op": "under",
+        "line": 2.5
+       }
+      ],
+      "source": "DraftKings"
+     },
+     {
+      "label": "Lawrence Lui ML",
+      "odds_display": "-285",
+      "is_model": false,
+      "decimal_odds": 1.350877,
+      "fight_key": "Lawrence Lui|Hector Santiago",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Lawrence Lui"
+       }
+      ],
+      "source": "DraftKings"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_3",
+     "card_10"
+    ],
+    "slip_id": "8fdb0f63b8e3",
+    "combined_decimal": 2.390013,
+    "combined_american": 139,
+    "combined_american_display": "+139",
+    "combined_prob": 0.2649,
+    "combined_prob_raw": 0.2434,
+    "venue": "DraftKings"
+   }
+  }
+ }
 }
