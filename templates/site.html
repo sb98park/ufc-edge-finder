@@ -711,7 +711,13 @@
     animation: toast-in 0.42s cubic-bezier(0.22, 1, 0.36, 1);
     touch-action: pan-y;                  /* let the page scroll vertically */
   }
-  .whats-new-banner.toast-out { animation: toast-out 0.32s ease-in forwards; }
+  /* 0.18s, down from 0.32s. The confirm layer is the REWARD FOR THE SWIPE
+     and it has already been read by the time the gesture commits -- its
+     reveal is driven by drag progress, so the check is fully drawn while
+     the finger is still down. Holding it on screen afterwards is not
+     showing the user anything, it is making them wait to be told what
+     they just did. */
+  .whats-new-banner.toast-out { animation: toast-out 0.18s ease-in forwards; }
 
   /* THE CONFIRM SURFACE, underneath. It is not a static icon that gets
      uncovered -- it GROWS from the trailing edge, so its width is
@@ -13134,15 +13140,21 @@
         const banner = document.getElementById('whats-new-banner');
         if (!banner || banner.style.display === 'none') return;
         banner.classList.add('toast-out');
-        // animationend, not a 300ms timer. The CSS animation is 0.32s, so the
-        // timer hid the banner 20ms early and every dismissal ended with a
-        // visible pop instead of a fade. The timeout stays as a fallback for
-        // the reduced-motion path, where the rule sets `animation: none` and
-        // no animationend will ever fire.
+        // animationend, not a timer matched to the duration by hand. A timer
+        // that lands even 20ms early hides the banner mid-fade and every
+        // dismissal ends on a visible pop -- which is exactly what happened
+        // when a 300ms timer was racing a 0.32s animation. Reading the event
+        // means the fade can be retimed in CSS without this needing to know,
+        // and it has been: it is 0.18s now.
+        //
+        // The timeout survives ONLY as a fallback for the reduced-motion
+        // path, where the rule sets `animation: none` and no animationend
+        // will ever fire. It has to stay clear of the animation rather than
+        // track it, which is why it is not 180.
         let done = false;
         const finish = () => { if (done) return; done = true; banner.style.display = 'none'; };
         banner.addEventListener('animationend', finish, { once: true });
-        setTimeout(finish, 400);
+        setTimeout(finish, 300);
       };
 
       // ===== SWIPE TO DISMISS =====
@@ -13257,7 +13269,20 @@
                                                        : (dx > 0 ? 1 : -1);
             const target = dir * (width + 40);
             if (reduced()) { paint(target); window.__dismissToast(); return; }
-            spring.start(dx, target, v, 0.32, 1.0, () => window.__dismissToast());
+            // THE FADE OVERLAPS THE FLIGHT rather than queueing behind it.
+            // This was spring.start(..., () => __dismissToast()), so the
+            // banner did not even BEGIN its 0.32s fade until the card had
+            // finished springing off screen -- about 0.4s at response 0.32
+            // and critical damping. Roughly 0.7s from finger-up to gone, and
+            // for most of it the green bar was simply sitting there fully
+            // exposed with nothing left to say.
+            //
+            // The 80ms lets the card visibly leave under its own momentum
+            // before everything dissolves; fading from the same frame reads
+            // as the card evaporating mid-throw rather than being thrown.
+            // Total is now ~0.26s.
+            spring.start(dx, target, v, 0.26, 1.0);
+            setTimeout(window.__dismissToast, 80);
           } else {
             // Snap back with a little overshoot -- the card is returning to a
             // rest position it wants to be at, and a critically damped return
