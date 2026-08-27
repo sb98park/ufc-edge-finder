@@ -225,8 +225,8 @@ def _fight_key(fight: dict) -> str:
 HEALTH_PATH = "data/source_health.json"
 
 
-def _record_incoherent(fighter, market, model, fair, blend,
-                       path: str = HEALTH_PATH) -> None:
+def _record_incoherent(fighter, market, model, fair, blend, edge=None,
+                       source=None, odds=None, path: str = HEALTH_PATH) -> None:
     """
     Leave the refusal somewhere a person can read without CI log access.
 
@@ -255,11 +255,38 @@ def _record_incoherent(fighter, market, model, fair, blend,
     entries = payload.get("incoherent_blends")
     if not isinstance(entries, dict):
         entries = {}
-    entries[f"{fighter}|{market}"] = {
+    # EDGE_PCT IS THE DIAGNOSTIC, and it is why this records more than the
+    # three numbers that failed the check. edge_pct and blended_prob are
+    # produced together by _two_numbers from one (model, fair) pair, so
+    # whether the EDGE still agrees with the stored pair says which pass went
+    # stale:
+    #
+    #   edge agrees, blend does not -> blended_prob alone is from another
+    #                                  pass; something rewrote it, or rewrote
+    #                                  the fair it was derived from
+    #   neither agrees              -> model_prob or book_fair_prob was
+    #                                  overwritten AFTER _two_numbers ran and
+    #                                  the whole triple is stale together
+    #
+    # Two local reproductions of the multi-source path -- with and without the
+    # rounds-reconciliation fix -- failed to produce this, so the next real
+    # occurrence is the only evidence available and it should arrive already
+    # narrowed rather than as a bare flag.
+    expected_edge = round((model - fair) * 100.0, 2)
+    entry = {
         "model_prob": round(model, 4), "fair_prob": round(fair, 4),
         "blended_prob": round(blend, 4),
+        "source": str(source or ""), "odds_american": odds,
+        "edge_pct_stored": edge,
+        "edge_pct_from_stored_pair": expected_edge,
+        "edge_agrees": (edge is not None
+                        and abs(float(edge) - expected_edge) < 0.05),
         "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
+    entry["reads_as"] = (
+        "blended_prob alone is from another pass" if entry["edge_agrees"]
+        else "model_prob or book_fair_prob was overwritten after the blend")
+    entries[f"{fighter}|{market}"] = entry
     payload["incoherent_blends"] = entries
     try:
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
@@ -390,7 +417,9 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
                 print(f"[card_plays] REFUSING TO STAKE {edge.get('fighter')} {market}: "
                       f"blended {p:.4f} is outside [{min(_m, _f):.4f}, {max(_m, _f):.4f}] "
                       f"-- model {_m:.4f}, fair {_f:.4f}. Stale derived field upstream.")
-                _record_incoherent(edge.get("fighter"), market, _m, _f, p)
+                _record_incoherent(edge.get("fighter"), market, _m, _f, p,
+                                   edge=edge.get("edge_pct"),
+                                   source=_venue_name, odds=price)
                 sized = dict(sized, play=False, units=0.0, reason=(
                     "the blended probability on this row is not between the model's "
                     "number and the market's, so at least one of the three was "
