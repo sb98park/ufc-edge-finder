@@ -158,6 +158,15 @@ FREE_CONTEXT = (
     # check; the filter is now in the function and there is a test on it.
     "plays_events",
 
+    # THE PARLAY RECORD, on the same footing and for the same reason.
+    # parlay_grader.summarise and summarise_by_event both drop every ungraded
+    # slip before these are built, so what survives is settled history: whether
+    # a published read paid. The UPCOMING slip stays member-only -- it is
+    # bankroll_parlays, classified above -- and this is only ever the graded
+    # one. Recorded in decisions/2026-08-26-parlay-record.md: the slips are
+    # the product, the record is the evidence, and evidence here is public.
+    "parlay_record", "parlay_events",
+
     # MARKET DATA. Prices and how they moved. Not model output -- these come
     # from the books and the exchange, and are the best free teaser we have.
     "notable_movements", "notable_movements_upcoming",

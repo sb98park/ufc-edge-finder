@@ -40,12 +40,13 @@ from src.card_matcher import (
     is_pickable_market, price_is_fragile,
 )
 from src.power_rating import build_effective_ratings
-from src.odds_utils import implied_prob_to_american, format_american_odds
+from src.odds_utils import (implied_prob_to_american, format_american_odds,
+                            decimal_to_american)
 from src.parlay_builder import build_bankroll_builder_parlays
 from src.parlay_builder import _build_candidate_pieces as _candidate_pieces
 from src import parlay_pin
 from src import parlay_grader
-from src.parlay_ledger import record_slips
+from src.parlay_ledger import load as parlay_load, record_slips
 from src.recommendations import build_recommendations
 from src.card_plays import build_card_plays
 from src import bankroll as bankroll_state
@@ -1123,6 +1124,11 @@ def main(tier: str = "member", output_path: str | None = None):
                   "total_units": 0.0, "new_units": 0.0, "fights_considered": 0}
     plays_rows, plays_record, bankroll = [], None, None
     plays_events = {}
+    # PUBLISHED, NOT PLAYED. Graded slips only -- summarise drops everything
+    # ungraded -- so this carries no read on a fight that has not happened and
+    # is free by the same rule the plays record is. Empty until the first
+    # pinned slip settles, which is what the template's guard is for.
+    parlay_record, parlay_events = None, {}
     try:
         _plays_event = events_for_model_only[0] if events_for_model_only else None
         _ledger = plays_load()
@@ -1178,6 +1184,17 @@ def main(tier: str = "member", output_path: str | None = None):
             parlay_grader.grade_pinned(
                 parlay_pin.load(), generated_at_str,
                 results_path=parlay_grader.RESULTS_PATH)
+            _parlay_rows = parlay_load()
+            parlay_record = parlay_grader.summarise(_parlay_rows)
+            # Keyed on the slip's `event`, which is the same string
+            # track_record groups by -- so the template looks it up with
+            # group.event_name and needs no mapping of its own.
+            parlay_events = parlay_grader.summarise_by_event(_parlay_rows)
+            if parlay_record["n"]:
+                print(f"[parlay_grader] record {parlay_record['cashed']}/"
+                      f"{parlay_record['n']} cashed, "
+                      f"{parlay_record['units_flat']:+.2f}U at 1U flat "
+                      f"across {parlay_record['events']} card(s)")
         except Exception as _exc:
             # A bookkeeping bug must not take the build down.
             print(f"[parlay_grader] not run ({_exc}) -- continuing")
@@ -1412,6 +1429,14 @@ def main(tier: str = "member", output_path: str | None = None):
         env.globals["stake_change_date"] = _eff
     env.globals["lock_units"] = LOCK_OF_WEEK_UNITS
     env.filters["american"] = format_american_odds
+    # THE PRICE A SETTLED SLIP ACTUALLY PAID, from the decimal the units
+    # were computed from. Printing combined_american instead would let the
+    # displayed price drift from the number beside it the moment a leg
+    # voided and the slip shortened -- the row would then disagree with
+    # itself, which is the exact defect class the staking guard exists for.
+    # Uncapped: this is a whole slip, not one market.
+    env.filters["american_from_decimal"] = lambda d: format_american_odds(
+        decimal_to_american(float(d)), cap=None)
     # Spelled out, because the sentence it lands in is prose. Falls back to
     # the digits above ninety-nine, where a word would be worse than a number.
     _ONES = ("zero one two three four five six seven eight nine ten eleven twelve "
@@ -1665,6 +1690,7 @@ def main(tier: str = "member", output_path: str | None = None):
         lock_picks=lock_picks,
         plays_card=plays_card, plays_rows=plays_rows, plays_record=plays_record,
         bankroll=bankroll, plays_events=plays_events,
+        parlay_record=parlay_record, parlay_events=parlay_events,
         event_short_name=event_short_name,
         event_full_name=event_full_name,
         event_matchup=event_matchup,
