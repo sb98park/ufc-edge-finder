@@ -162,6 +162,40 @@ jobs:
         if: steps.cadence.outputs.build == 'yes'
         run: pip install -r requirements.txt
 
+      - name: Run the test suite
+        # WHY THIS IS A HARD GATE WHEN THE LINTER IS NOT. The comment on the
+        # lint step sets the condition for making something a real gate: it
+        # has to exit non-zero ONLY for structural problems, never for a
+        # number that moved overnight, or it freezes the site on fight night.
+        # These tests meet that condition by construction. They read committed
+        # fixtures, touch no network, and never see an odds feed -- so no
+        # price, no scrape and no dropped API can trip them. A failure here
+        # means the code or a fixture changed, which is a reason not to
+        # publish stakes rather than a reason to publish anyway.
+        #
+        # AND IT RUNS BEFORE ANYTHING MUTATES DATA. The steps below merge
+        # results into fight history, grade prop quotes and write the
+        # ledgers; a run that is going to fail should fail before it has
+        # rewritten a file, not after.
+        #
+        # ADDED AFTER TWO OF THEM WERE GREEN AND MEASURING NOTHING for as
+        # long as the bettable-venue rule had been shipped. The fixture is
+        # priced at Polymarket, a reference price makes a pick but never a
+        # stake, so build_card_plays returned an empty card and
+        # test_plays_ledger asserted "every play is written: got 0" against an
+        # empty ledger -- and passed. test_card_plays simply failed. Neither
+        # was noticed because nothing in this file ran tests/ at all.
+        if: steps.cadence.outputs.build == 'yes'
+        run: |
+          set -o pipefail
+          fail=0
+          for t in tests/test_*.py; do
+            echo "::group::$t"
+            python "$t" || fail=1
+            echo "::endgroup::"
+          done
+          exit $fail
+
       - name: Merge recorded results into fight history
         if: steps.cadence.outputs.build == 'yes' 
         # Runs BEFORE generate_site so the ratings, streak bonus, recency
