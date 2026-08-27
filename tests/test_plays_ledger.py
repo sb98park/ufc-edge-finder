@@ -27,7 +27,18 @@ def check(label, got, want, tol=1e-6):
 
 FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "fixtures", "card_nurmagomedov_song.json")
-card = build_card_plays(json.load(open(FIXTURE)))
+# PRICED AT A BOOK BEFORE BUILDING. The fixture quotes Polymarket, and since
+# the bettable-venue rule landed a reference price makes a PICK but never a
+# STAKE -- so the card comes back with zero plays and every assertion below
+# passes against an empty ledger. "every play is written: got 0" is a green
+# test proving nothing. src/card_plays reads best_book first and falls back to
+# source, so both have to move.
+_raw = json.load(open(FIXTURE))
+for _f in _raw.get("fights") or []:
+    for _e in _f.get("edges") or []:
+        _e["source"] = _e["best_book"] = "DraftKings"
+card = build_card_plays(_raw)
+assert card["plays"], "fixture produced no plays -- the ledger test would be vacuous"
 tmp = os.path.join(tempfile.mkdtemp(), "plays_ledger.csv")
 
 print("\nfirst publication")

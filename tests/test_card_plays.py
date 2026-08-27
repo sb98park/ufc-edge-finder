@@ -12,7 +12,7 @@ having to update them is the point: it is the only place where "we changed the
 staking rule" and "we changed what we would have bet" become the same edit.
 """
 
-import sys, os, json
+import sys, os, json, copy
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -37,11 +37,43 @@ card = json.load(open(FIXTURE))
 by_name = {f["fighter_a"]: f for f in card["fights"]}
 built = build_card_plays(card)
 plays = {p["label"]: p for p in built["plays"]}
+
+def at_book(raw, book="DraftKings"):
+    """
+    The same card with every price attributed to a real sportsbook.
+
+    THE FIXTURE IS PRICED AT POLYMARKET, and since the bettable-venue rule
+    landed that means nothing on it can be staked -- a reference line produces
+    a PICK but never a STAKE. That rule is the thing being protected, so the
+    fixture keeps its Polymarket provenance and the ladder assertions below
+    run against this copy instead. Testing the ladder on a card that cannot
+    be staked at all would prove nothing about the ladder.
+    """
+    out = copy.deepcopy(raw)
+    for fight in out.get("fights") or []:
+        for edge in fight.get("edges") or []:
+            # BOTH FIELDS. _venue prefers best_book and only falls back to
+            # source, so rewriting source alone leaves the row still claiming
+            # Polymarket and this helper silently does nothing.
+            edge["source"] = book
+            edge["best_book"] = book
+    return out
+
+
+# EVERY SIZING ASSERTION READS THE BOOK-PRICED COPY. On the Polymarket
+# original the venue rule refuses the whole card, so "nothing outside the
+# ladder is staked" and friends would pass vacuously on a card where nothing
+# is staked at all -- a green test proving the opposite of what it claims.
+# `built` is kept for the venue rule's own assertions, which need the
+# reference-priced card to have anything to say.
+_book = build_card_plays(at_book(card))
+_bplays = {p["label"]: p for p in _book["plays"]}
 # With the discretionary layer paused, everything outside the ladder is sized
 # and then held back rather than never computed -- so the assertions about
 # SIZING still have something to look at. See DISCRETIONARY_PLAYS.
+_bshelved = {p["label"]: p for p in _book["shelved"]}
 shelved = {p["label"]: p for p in built["shelved"]}
-sizeable = {**shelved, **plays}
+sizeable = {**_bshelved, **_bplays}
 
 print("\nwhat kind of risk is this")
 check("a moneyline is an outcome", axis_for_market("Moneyline"), AXIS_OUTCOME)
@@ -68,7 +100,7 @@ print("\na negated method prop is never staked")
 check("'Fight Method: Not SUB' has no axis", axis_for_market("Fight Method: Not SUB"), None)
 check("nor does 'Not KO/TKO'", axis_for_market("Fight Method: Not KO/TKO"), None)
 check("  ...and none reaches the card",
-      any(p["market"].startswith("Fight Method: Not") for p in built["plays"]), False)
+      any(p["market"].startswith("Fight Method: Not") for p in _book["plays"]), False)
 check("an unknown market is not staked", axis_for_market("Fighter Props: Sig Strikes"), None)
 
 print("\nplays are named the way someone would say them out loud")
@@ -90,36 +122,56 @@ print("\nTHE LADDER TIERS ARE PLAYED ON THE RECORD, NOT ON THE HURDLE")
 check("Umar is picked", by_name["Umar Nurmagomedov"]["preview"]["favorite"], "Umar Nurmagomedov")
 check("  ...at High Confidence",
       by_name["Umar Nurmagomedov"]["preview"]["confidence_label"], "High Confidence")
-check("  ...and IS played, at -388", "Umar Nurmagomedov Moneyline" in plays, True)
+check("  ...and IS played, at a book price", "Umar Nurmagomedov Moneyline" in _bplays, True)
 check("  ...at the ladder stake, not a Kelly size",
-      plays["Umar Nurmagomedov Moneyline"]["units"], 5.0)
+      _bplays["Umar Nurmagomedov Moneyline"]["units"], 5.0)
 check("  ...flagged as riding the ladder",
-      plays["Umar Nurmagomedov Moneyline"]["on_ladder"], True)
-check("the other short favorite plays too", "Rei Tsuruya Moneyline" in plays, True)
+      _bplays["Umar Nurmagomedov Moneyline"]["on_ladder"], True)
+check("the other short favorite plays too", "Rei Tsuruya Moneyline" in _bplays, True)
 # The price is still short enough that the hurdle would refuse it, and the row
 # says so honestly: 5 units to win less than one.
 check("  ...and the row is honest about what that returns",
-      plays["Rei Tsuruya Moneyline"]["to_win"] < 1.0, True)
-check("no ladder pick is ever listed as unplayed",
-      any(p["tier"] in ("Lock of the Week", "High Confidence") for p in built["passed"]), False)
+      _bplays["Rei Tsuruya Moneyline"]["to_win"] < 1.0, True)
+check("the HURDLE never benches a ladder pick",
+      any(p["tier"] in ("Lock of the Week", "High Confidence")
+          and "reference line" not in (p.get("reason") or "")
+          for p in _book["passed"]), False)
+
+print("\nA REFERENCE LINE MAKES A PICK, NEVER A STAKE")
+# The rule the fixture's own Polymarket provenance exists to protect: staking
+# a vig-free midpoint would compute units, ROI and the bankroll at prices no
+# book offers, so the record would run flatteringly high forever while
+# describing bets nobody could place.
+check("nothing on a Polymarket-priced card is staked", len(built["plays"]), 0)
+check("  ...and the ladder picks are not silently dropped",
+      len([p for p in built["passed"] if p["tier"] in ("Lock of the Week", "High Confidence")]) > 0,
+      True)
+check("  ...each saying the price is not one you can bet",
+      all("reference line" in (p.get("reason") or "")
+          for p in built["passed"] if p["market"] == "Moneyline"), True)
 
 print("\nTHE DISCRETIONARY LAYER IS SIZED, THEN HELD BACK")
 # Backtested over every graded pick: ladder-only returned +60.30U on 150U
 # staked, ladder-plus-discretionary +55.94U on 184U. The layer cost money, so
 # it is paused -- but the arithmetic still runs, so the pause can be lifted
 # without rebuilding it and the page can say what it is not betting.
+# Against the book-priced copy for the same reason as the ladder above: on
+# the Polymarket original nothing is staked at all, so "nothing outside the
+# ladder is staked" would pass on a card where nothing is staked full stop.
 check("nothing outside the ladder is staked",
-      all(p["on_ladder"] for p in built["plays"]), True)
-check("  ...and the rest is shelved, not discarded", len(built["shelved"]) > 0, True)
-check("  ...with a flag saying which mode this is", built["discretionary_on"], False)
-check("Gomes is still sized", "Denise Gomes Moneyline" in sizeable, True)
-check("  ...at +153", sizeable["Denise Gomes Moneyline"]["odds_american"], 153)
+      all(p["on_ladder"] for p in _book["plays"]), True)
+check("  ...and there is something on the card to say that about",
+      len(_book["plays"]) > 0, True)
+check("  ...and the rest is shelved, not discarded", len(_book["shelved"]) > 0, True)
+check("  ...with a flag saying which mode this is", _book["discretionary_on"], False)
+check("Gomes is still sized", "Denise Gomes Moneyline" in _bshelved, True)
+check("  ...at +153", _bshelved["Denise Gomes Moneyline"]["odds_american"], 153)
 check("  ...on the blend, not the model's 62.4%",
-      sizeable["Denise Gomes Moneyline"]["blended_prob"] < 0.5, True)
+      _bshelved["Denise Gomes Moneyline"]["blended_prob"] < 0.5, True)
 check("  ...and says what it returns if it lands",
-      sizeable["Denise Gomes Moneyline"]["to_win"],
-      round(sizeable["Denise Gomes Moneyline"]["units"] * 1.53, 2))
-check("  ...but is not on the card", "Denise Gomes Moneyline" in plays, False)
+      _bshelved["Denise Gomes Moneyline"]["to_win"],
+      round(_bshelved["Denise Gomes Moneyline"]["units"] * 1.53, 2))
+check("  ...but is not on the card", "Denise Gomes Moneyline" in _bplays, False)
 
 print("\ncancelled fights are not bet")
 ce = by_name["Ce Liu"]
@@ -162,7 +214,7 @@ check("a moneyline carries its tier",
 check("  ...and Medium is NOT on the ladder -- it still has to earn its place",
       sizeable["Denise Gomes Moneyline"]["on_ladder"], False)
 check("a prop carries none",
-      [p for p in built["shelved"] if p["is_prop"]][0]["tier"], None)
+      [p for p in _book["shelved"] if p["is_prop"]][0]["tier"], None)
 
 print("\nA COMMITTED PLAY IS NEVER LISTED AS UNPLAYED")
 # Denise Gomes appeared as a live 2U play and as a "Picked, not played" pick
@@ -194,12 +246,12 @@ check("  ...with the price given as the reason",
                           if p["selection"] == "Denise Gomes"), True)
 
 print("\ntotals")
-check("the card stays inside its ceiling", built["total_units"] <= MAX_UNITS_PER_CARD, True)
+check("the card stays inside its ceiling", _book["total_units"] <= MAX_UNITS_PER_CARD, True)
 check("every dropped candidate says why",
-      all(d.get("dropped") for d in built["dropped"]), True)
-check("no play is staked at zero", all(p["units"] > 0 for p in built["plays"]), True)
+      all(d.get("dropped") for d in _book["dropped"]), True)
+check("no play is staked at zero", all(p["units"] > 0 for p in _book["plays"]), True)
 check("one play per fight per axis",
-      len({(p["fight_key"], p["axis"]) for p in built["plays"]}), len(built["plays"]))
+      len({(p["fight_key"], p["axis"]) for p in _book["plays"]}), len(_book["plays"]))
 
 print("\n" + ("-" * 68))
 if FAILURES:
@@ -207,5 +259,5 @@ if FAILURES:
     for f in FAILURES:
         print("   ", f)
     sys.exit(1)
-print(f"the selector holds -- {len(built['plays'])} plays, "
-      f"{built['total_units']}U on this fixture")
+print(f"the selector holds -- {len(_book['plays'])} plays, "
+      f"{_book['total_units']}U on this fixture")

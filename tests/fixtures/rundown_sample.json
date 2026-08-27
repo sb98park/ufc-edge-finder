@@ -1,0 +1,206 @@
+{
+ "events": [
+  {
+   "teams": [
+    {
+     "name": "Rei Tsuruya",
+     "is_away": true
+    },
+    {
+     "name": "Kevin Borjas",
+     "is_home": true
+    }
+   ],
+   "markets": [
+    {
+     "market_id": 1,
+     "participants": [
+      {
+       "name": "Rei Tsuruya",
+       "lines": [
+        {
+         "value": null,
+         "prices": {
+          "19": {
+           "price": -625,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          },
+          "23": {
+           "price": -600,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          }
+         }
+        }
+       ]
+      },
+      {
+       "name": "Kevin Borjas",
+       "lines": [
+        {
+         "value": null,
+         "prices": {
+          "19": {
+           "price": 455,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          },
+          "23": {
+           "price": 440,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          }
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "market_id": 3,
+     "participants": [
+      {
+       "name": "Over",
+       "lines": [
+        {
+         "value": 1.5,
+         "prices": {
+          "19": {
+           "price": -1400,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          }
+         }
+        }
+       ]
+      },
+      {
+       "name": "Under",
+       "lines": [
+        {
+         "value": 1.5,
+         "prices": {
+          "19": {
+           "price": 750,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "teams": [
+    {
+     "name": "Alpha Fighter",
+     "is_away": true
+    },
+    {
+     "name": "Beta Fighter",
+     "is_home": true
+    }
+   ],
+   "markets": [
+    {
+     "market_id": 1,
+     "participants": [
+      {
+       "name": "Alpha Fighter",
+       "lines": [
+        {
+         "value": null,
+         "prices": {
+          "19": {
+           "price": -110,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          }
+         }
+        }
+       ]
+      },
+      {
+       "name": "Beta Fighter",
+       "lines": [
+        {
+         "value": null,
+         "prices": {
+          "19": {
+           "price": 150,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "teams": [
+    {
+     "name": "Gamma Fighter",
+     "is_away": true
+    },
+    {
+     "name": "Delta Fighter",
+     "is_home": true
+    }
+   ],
+   "markets": [
+    {
+     "market_id": 1,
+     "participants": [
+      {
+       "name": "Gamma Fighter",
+       "lines": [
+        {
+         "value": null,
+         "prices": {
+          "19": {
+           "price": -200,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          },
+          "77": {
+           "price": -205,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          }
+         }
+        }
+       ]
+      },
+      {
+       "name": "Delta Fighter",
+       "lines": [
+        {
+         "value": null,
+         "prices": {
+          "19": {
+           "price": 170,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          },
+          "77": {
+           "price": 168,
+           "is_main_line": true,
+           "updated_at": "2026-08-26T20:00:00Z"
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
