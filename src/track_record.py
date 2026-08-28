@@ -36,6 +36,20 @@ FIELDNAMES = [
     # is actually graded on. See _clv_result for why the American prices above
     # cannot do that job any more.
     "pick_fair_prob", "closing_fair_prob",
+    # THE CONVICTION AT THAT SAME MOMENT, and it belongs beside the price for
+    # exactly the reason the price is frozen. confidence_label above tracks
+    # the LIVE model and is right to -- a fight card should show what the
+    # model thinks today. But grading read that live value, so a pick
+    # published and staked as High Confidence could settle as Medium because
+    # the probability drifted three thousandths across a hard 0.75 boundary.
+    # That is a published pick being restated, which is the one thing this
+    # project does not do, and the predictions log had no gate against it the
+    # way the plays ledger and the stake schedule do.
+    #
+    # Umar Nurmagomedov, 2026-08-28: published at 0.751 and staked five units
+    # as High Confidence on 2026-08-18, logged at 0.747 and about to grade as
+    # a two-unit Medium pick.
+    "pick_confidence_label",
     "favorite_prob_history", "last_updated", "is_lock_of_week", "voided",
     # THE RISK THE BLURB NAMED, captured pre-fight. Every pick's commentary
     # ends by naming the strongest thing arguing against it; after the fight
@@ -317,6 +331,18 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
             if pick_fair_prob is None and capturing_pick_odds_now:
                 pick_fair_prob = current_fair
 
+            # THE SAME MOMENT AGAIN, for the tier. Captured on the run the
+            # price is captured rather than the first run of any kind, so
+            # "published at this price, at this conviction" describes one
+            # instant instead of two. A row that predates this field simply
+            # has none, and grading falls back to the live label -- so no
+            # figure already published moves.
+            pick_confidence_label = (prior.get("pick_confidence_label")
+                                     if prior and prior.get("pick_confidence_label") not in (None, "")
+                                     else None)
+            if pick_confidence_label is None and capturing_pick_odds_now:
+                pick_confidence_label = preview["confidence_label"]
+
             # opponent_odds is captured ON THE RUN PICK_ODDS IS FIRST CAPTURED,
             # or not at all -- which is what the "same moment" claim above
             # actually requires and what two independent set-once blocks did
@@ -398,6 +424,7 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
                 "closing_odds": closing_odds if closing_odds is not None else "",
                 "opponent_odds": opponent_odds if opponent_odds is not None else "",
                 "pick_fair_prob": pick_fair_prob if pick_fair_prob is not None else "",
+                "pick_confidence_label": pick_confidence_label or "",
                 "closing_fair_prob": closing_fair_prob if closing_fair_prob is not None else "",
                 "favorite_prob_history": json.dumps(new_history),
                 "last_updated": generated_at,
@@ -983,8 +1010,15 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
         is_lock = pred.get("is_lock_of_week") is True or str(pred.get("is_lock_of_week")).strip().lower() == "true"
         # Graded at the stake in force the day the fight RESOLVED, not the
         # stake in force today -- see STAKE_SCHEDULE.
+        # THE TIER IT WAS PUBLISHED AT, falling back to the live one for every
+        # row written before that was recorded. The fallback is what keeps the
+        # published record byte-identical: check_stake_schedule freezes the
+        # per-tier units and counts, and a graded pick changing tier would
+        # move them.
+        graded_label = (pred.get("pick_confidence_label")
+                        or pred.get("confidence_label"))
         resolved_unit_size = (LOCK_OF_WEEK_UNITS if is_lock
-                              else stake_for(pred["confidence_label"], result.get("date_added", "")))
+                              else stake_for(graded_label, result.get("date_added", "")))
         units_result = _units_result(resolved_unit_size, pred.get("pick_odds"), correct)
         matched.append({
             "event_name": result["event_name"],
@@ -992,7 +1026,9 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
             "fighter_b": result["fighter_b"],
             "predicted_favorite": pred["favorite"],
             "favorite_prob": float(pred["favorite_prob"]) if pred.get("favorite_prob") not in (None, "") else None,
-            "confidence_label": pred["confidence_label"],
+            # What it was published as, so the tier a pick is REPORTED under
+            # and the tier it is SIZED at can never disagree.
+            "confidence_label": graded_label,
             "predicted_method": pred.get("likely_method"),
             "actual_method": result.get("method"),
             "method_correct": method_correct,
