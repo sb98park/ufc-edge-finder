@@ -1461,8 +1461,29 @@ def main(tier: str = "member", output_path: str | None = None):
     # model's own fair line. Both existing helpers already exist; this just
     # composes them so a template can render the Model column in the same
     # unit as the Odds column beside it.
-    env.filters["fair_odds"] = lambda p: (
-        format_american_odds(implied_prob_to_american(float(p))) if p is not None else "")
+    # A PROBABILITY OF 0 OR 1 HAS NO FAIR PRICE, and this filter used to take
+    # the whole build down when handed one. implied_prob_to_american raises on
+    # purpose -- its docstring says so, and says the point is to let "the
+    # caller's existing try/except around this function actually catch it".
+    # This caller had no try/except. It guarded None and nothing else, so a
+    # method row whose probability rounded to 0.0000 (a submission chance for
+    # a fighter who has never been near one) reached it and raised inside
+    # Jinja, aborting the render after every page had already been computed.
+    #
+    # Hit on a local build 2026-08-28 with two such rows. CI had not tripped
+    # it, which is the whole problem with leaving it: nothing about a card
+    # night makes a 0.0 less likely, and the failure mode is the entire site
+    # rather than one empty cell.
+    def _fair_odds(p):
+        if p is None:
+            return ""
+        try:
+            return format_american_odds(implied_prob_to_american(float(p)))
+        except (TypeError, ValueError):
+            # An unrenderable probability leaves the cell blank. The number
+            # beside it still prints, so the row degrades rather than lying.
+            return ""
+    env.filters["fair_odds"] = _fair_odds
     env.filters["friendly_date"] = _format_friendly_date
 
     # Defined at module level (see above) so the concluded-fight result

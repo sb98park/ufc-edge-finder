@@ -1565,8 +1565,16 @@
      a claim about something else. #}
   <div class="pcard" data-card>
     <div class="pchead" data-toggle role="button" tabindex="0" aria-expanded="false">
+      {#- THE NUMBER IS THE NEXT CARD'S, NOT A NUMBER I LIKED. coverage.cards
+          is ordered nearest-first, so cards[0] is the card a reader is about
+          to bet, and two fighters to a bout. The old headline named the
+          capability; this names the job the reader is actually doing on a
+          Thursday night, which is the thing the card replaces.
+          Guarded, because coverage is omitted entirely when no future card
+          has fights -- and a headline is a bad place to discover that. -#}
+      {%- set _next_fighters = (coverage.cards[0].fights * 2) if (coverage and coverage.cards) else None -%}
       <div><span class="kick">Fight history</span>
-        <h3>Every round they have ever fought</h3></div>
+        <h3>Nobody watches tape on {% if _next_fighters %}{{ _next_fighters | spell }} fighters{% else %}a whole card{% endif %}</h3></div>
       <span class="expand" aria-hidden="true">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M3.5 6L8 10.5L12.5 6" stroke="var(--gold)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1622,9 +1630,15 @@
       </div>
     </div>
     <div class="detail"><div class="detail-in">
-      <p><b>Tap either fighter&rsquo;s name on the card.</b> Every UFC fight they have had opens
-         underneath: round by round, significant strikes, control time and takedowns for both
-         corners. The bars are each round&rsquo;s share of measurable output &mdash; not who a
+      {#- COUNTS FROM history_preview, never typed in. Same rule as the names
+          below, and for the same reason: a figure written by hand is true on
+          the day it is written and quietly wrong forever after. #}
+      <p>Every UFC fight both corners have had, round by round &mdash; significant strikes,
+         control time, takedowns, and how each round actually went.
+         {%- if history_preview %} <b>{{ '{:,}'.format(history_preview.bouts_covered) }} bouts,
+         {{ '{:,}'.format(history_preview.rounds_covered) }} rounds</b>, already counted.{% endif %}</p>
+      <p><b>Tap either fighter&rsquo;s name on the card</b> and their whole history opens
+         underneath. The bars are each round&rsquo;s share of measurable output &mdash; not who a
          judge gave it to, which this data cannot know and does not claim.</p>
       {# NAMES AND COUNTS COME FROM THE ROSTER, not from the day this was
          written. Both were hardcoded, both were true then, and both stop
@@ -1643,6 +1657,14 @@
         <div class="r"><span>Rounds you can open</span><b>{{ '{:,}'.format(history_preview.rounds_covered) }}</b></div>
       </div>
       {% endif %}
+      {#- NOT "tape is obsolete". Tape shows a bad weight cut, a corner, a
+          fighter who was already hurt -- none of which is in this data, and
+          claiming otherwise would be the only unfalsifiable sentence on a
+          page that earns every other one. What tape is genuinely bad at is
+          recall and scale, and that is what this says. #}
+      <div class="nobody"><span>&#9679;</span><span><b>Tape shows you one fight. This shows you
+        every one of them.</b> You&rsquo;d remember the knockout &mdash; the record remembers the
+        rounds he was losing before it.</span></div>
     </div></div>
   </div>
 
