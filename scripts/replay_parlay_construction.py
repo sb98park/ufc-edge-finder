@@ -76,6 +76,21 @@ _FINISH_SLUG = {
 }
 
 
+# EVERY SYNTHETIC EDGE NEEDS A BOOK, or this harness measures nothing.
+#
+# _find_parlays partitions candidates by venue and keeps only BETTABLE_VENUES,
+# because a parlay is one ticket at one book. These rows carried no source at
+# all, so from the moment that rule shipped every replayed card produced ZERO
+# slips -- and the script printed an empty table with its explanatory footer
+# still attached rather than failing. The calibration figures this harness
+# produced, including the ones that retired the lotto tier, all predate it.
+#
+# DraftKings is a label, not a claim: the prices here are derived from the
+# historical odds in external_odds.csv, and the venue only has to be one the
+# construction will accept so the real code path is exercised.
+REPLAY_VENUE = {"source": "DraftKings", "best_book": "DraftKings"}
+
+
 def _logit(p):
     p = min(max(float(p), 1e-6), 1 - 1e-6)
     return math.log(p / (1 - p))
@@ -136,7 +151,8 @@ def build_card(rows, sigma, rnd):
                                       (r["B_fighter"], r["R_fighter"], pb, r["B_odds"])):
             edges.append({"fight_id": fid, "fight_key": fid, "fighter": name, "opponent": opp,
                           "market": "Moneyline", "odds_american": float(am),
-                          "model_prob": perturbed(p_fair), "book_fair_prob": p_fair})
+                          "model_prob": perturbed(p_fair), "book_fair_prob": p_fair,
+                          **REPLAY_VENUE})
 
         # Method legs, from the real six-cell grid, normalised to sum to 1.
         cells = [("R", "KO/TKO", r.get("r_ko_odds")), ("R", "SUB", r.get("r_sub_odds")),
@@ -153,7 +169,8 @@ def build_card(rows, sigma, rnd):
                 edges.append({"fight_id": fid, "fight_key": fid, "fighter": who,
                               "opponent": r["B_fighter"] if corner == "R" else r["R_fighter"],
                               "market": f"Method: {meth}", "odds_american": float(am),
-                              "model_prob": perturbed(p_fair), "book_fair_prob": p_fair})
+                              "model_prob": perturbed(p_fair), "book_fair_prob": p_fair,
+                              **REPLAY_VENUE})
 
         # Total Rounds, derived the way the site derives it: P(finish) times
         # the share of finishes landing before the line. Priced with a 5%
@@ -173,7 +190,8 @@ def build_card(rows, sigma, rnd):
                         "fighter": f"{r['R_fighter']} vs {r['B_fighter']}",
                         "market": f"Total Rounds {side} {line}",
                         "odds_american": float(implied_prob_to_american(priced)),
-                        "model_prob": perturbed(p_fair), "book_fair_prob": p_fair})
+                        "model_prob": perturbed(p_fair), "book_fair_prob": p_fair,
+                        **REPLAY_VENUE})
     return edges, truth
 
 

@@ -26,6 +26,7 @@ in reality, but there's no clean way to quantify that from public data.
 
 import hashlib
 import itertools
+import os
 import re
 
 import pandas as pd
@@ -77,6 +78,64 @@ BETTABLE_VENUES = frozenset({"DraftKings", "FanDuel", "BetMGM"})
 # lotto did not. Nothing should cite the old magnitudes. Re-measure at 400+
 # after any threshold change, with scripts/replay_parlay_construction.py.
 PARLAY_RANK_MODEL_WEIGHT = 0.10
+
+# THE FLOOR A LEG HAS TO CLEAR, named so the PIN can enforce it too.
+#
+# It was a literal 0.50 inside build_bankroll_builder_parlays, which meant
+# _find_parlays applied it when a slip was BUILT and nothing applied it when
+# a pinned slip was RE-QUOTED. src/parlay_pin matches legs by identity --
+# fight_key plus conditions -- and re-prices whatever it finds, so a leg the
+# model has since turned against stayed in the slip at its new price, forever.
+#
+# Found on the live card for Nurmagomedov vs. Song: the pinned bankroll slip
+# carried "Alex Perez vs Sumudaerji Under 2.5 rounds" at a model probability
+# of 0.4282, while Over 2.5 -- the same market, the other side -- sat at
+# 0.5718. The slip was holding the side the model had come to disagree with,
+# below a floor it was supposed to have cleared.
+BANKROLL_MIN_LEG_PROB = 0.50
+
+# ON, MEASURED. scripts/replay_parlay_construction.py over 400 real cards,
+# calibration ratio (published hit rate over realised; 1.00 is honest):
+#
+#     sigma      baseline        with the constraint
+#     0.00       0.92  +2.8%     0.92  +2.8%     identical, as it must be
+#     0.83       1.03  -5.2%     1.01  -3.7%
+#
+# Identical at sigma = 0 because with no model error there is no disagreement
+# to flip a side. At realistic error it moves calibration slightly toward
+# honest. That gain is small and inside the noise, and it is NOT the argument
+# -- the measurement's job was to show the constraint costs nothing, and it
+# does not. The argument is that a slip must never contain a side the model
+# actively disbelieves.
+#
+# Env-overridable so the constraint can be measured back OFF without editing
+# code: PARLAY_REQUIRE_MODEL_SIDE=0.
+REQUIRE_MODEL_SIDE = os.environ.get("PARLAY_REQUIRE_MODEL_SIDE", "1") != "0"
+
+def leg_still_eligible(piece: dict, min_leg_prob: float = BANKROLL_MIN_LEG_PROB) -> bool:
+    """
+    Whether a candidate leg is one this construction would take TODAY.
+
+    ONE DEFINITION, TWO CALLERS. _find_parlays screens on this when a slip is
+    built; src/parlay_pin screens on it when a pinned slip is re-quoted. They
+    were separate, and the pin's copy checked only the probability floor -- so
+    the model-side rule below applied to new slips and never to the pinned one
+    already on the card, which is the slip a reader actually sees.
+    """
+    try:
+        ranked = float(piece.get("model_prob"))
+    except (TypeError, ValueError):
+        return False
+    if ranked < min_leg_prob:
+        return False
+    if REQUIRE_MODEL_SIDE:
+        try:
+            if float(piece.get("model_prob_raw", ranked)) < 0.50:
+                return False
+        except (TypeError, ValueError):
+            return False
+    return True
+
 
 def _ranking_prob(row: dict) -> float:
     """
@@ -545,7 +604,14 @@ def _find_parlays(
     max_results: int,
     label: str = "parlay",
 ) -> list[dict]:
-    eligible = [p for p in pieces if p["model_prob"] >= min_leg_prob]
+    before_all = len(pieces)
+    eligible = [p for p in pieces if leg_still_eligible(p, min_leg_prob)]
+    if REQUIRE_MODEL_SIDE and before_all:
+        _floor_only = [p for p in pieces if float(p.get("model_prob", 0)) >= min_leg_prob]
+        if len(_floor_only) != len(eligible):
+            print(f"[{label}] model-side filter dropped "
+                  f"{len(_floor_only) - len(eligible)} of {len(_floor_only)} eligible piece(s)")
+
 
     # ONE VENUE PER SLIP, AND IT IS NOT A PREFERENCE. A parlay is a single
     # wager placed at a single book: legs from DraftKings and Polymarket
@@ -791,7 +857,7 @@ def build_bankroll_builder_parlays(tracked_edges: list[dict], model_only_by_figh
     pieces = _build_candidate_pieces(tracked_edges, model_only_by_fight)
     return _find_parlays(
         pieces, leg_counts=(2, 3), min_american=100, max_american=320,
-        min_leg_prob=0.50, max_results=max_results, label="bankroll",
+        min_leg_prob=BANKROLL_MIN_LEG_PROB, max_results=max_results, label="bankroll",
     )
 
 

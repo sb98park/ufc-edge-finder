@@ -8229,7 +8229,17 @@
      question nobody is asking. The subtitle argued for one slip rather than
      three, which is no longer a choice being made. #}
   <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} The Parlay</div>
-  <div class="parlay-subtitle">The single best 2&ndash;3 leg combination on the card, in the +100 to +320 range, from picks the model favors.</div>
+  {#- "from picks the model favors" WAS NOT TRUE, and the slip on the card the
+      day this changed proved it. Legs are ranked on _ranking_prob, which is
+      90% the market's de-vigged line and 10% the model, so where the two
+      disagree the market wins and the chosen side can be the one the model is
+      AGAINST. On Perez vs Sumudaerji it was: Over 2.5 at model 0.5718 was
+      excluded and Under 2.5 at model 0.4282 was taken, because their ranked
+      probabilities were 0.4982 and 0.5018.
+      The weight is not the mistake -- ranking on the raw model was measured to
+      select the model's own errors, and is why the lotto tier was deleted. The
+      mistake was describing the output as the model's picks. -#}
+  <div class="parlay-subtitle">The single best 2&ndash;3 leg combination on the card, in the +100 to +320 range, every leg priced at one book. Legs are ranked mostly on the market's own de-vigged line rather than on the model &mdash; ranking them on the model alone was measured to select its own errors.</div>
   {% for p in bankroll_parlays %}
   {{ parlay_card(p, "bankroll", 1) }}
   {% endfor %}

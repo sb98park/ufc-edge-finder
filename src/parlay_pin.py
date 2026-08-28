@@ -37,7 +37,8 @@ import json
 import os
 from datetime import datetime, timezone
 
-from src.parlay_builder import BETTABLE_VENUES
+from src.parlay_builder import (BANKROLL_MIN_LEG_PROB, BETTABLE_VENUES,
+                                leg_still_eligible)
 
 PIN_PATH = "data/pinned_parlays.json"
 
@@ -117,10 +118,25 @@ def _requote(identities: list[str], pieces: list[dict],
     # pinned book is tried first, which keeps a slip on the book it was
     # pinned at whenever that book still quotes the whole thing, rather than
     # letting it drift to whichever one happens to sort first.
+    # AND THE LEG STILL HAS TO BE ONE THE MODEL WOULD PICK TODAY.
+    #
+    # _find_parlays screens candidates on model_prob >= BANKROLL_MIN_LEG_PROB
+    # when a slip is BUILT. Nothing applied that screen when a pinned slip was
+    # RE-QUOTED, and this function is the re-quote: it matches on identity,
+    # which is fight_key plus conditions and says nothing about what the model
+    # currently thinks. So a leg the model had turned against kept its place
+    # and simply got a new price.
+    #
+    # The live slip for Nurmagomedov vs. Song was holding Under 2.5 rounds on
+    # Perez vs Sumudaerji at model 0.4282, with Over 2.5 -- the other side of
+    # the same market -- at 0.5718. Pinning is a commitment to a SLIP, not a
+    # licence to keep a leg the model has stopped believing in.
     by_venue: dict[str, dict[str, dict]] = {}
     for p in pieces:
         venue = p.get("source") or p.get("venue")
         if venue not in BETTABLE_VENUES:
+            continue
+        if not leg_still_eligible(p):
             continue
         by_venue.setdefault(venue, {}).setdefault(_identity(p), p)
 
@@ -205,6 +221,36 @@ def hold(event_name: str | None, tier: str, fresh: list[dict],
         return hold(event_name, tier, fresh, pieces, path)
 
     identities = entry.get("identities") or []
+
+    # A LEG THE MODEL HAS TURNED AGAINST DROPS THE WHOLE PIN, rather than
+    # falling through to "cannot re-quote" and serving the stored snapshot.
+    #
+    # That distinction is the entire point. The stored snapshot is what we
+    # want when a leg is DELISTED -- the slip existed, at that price, and the
+    # market moving on does not unmake it. It is exactly what we do not want
+    # when the leg is still quoted and the model has simply changed its mind:
+    # serving it then means publishing a bet the model now disagrees with,
+    # under a slip_id that implies it still stands behind it.
+    #
+    # Checked against the CURRENT pool, because the snapshot's own legs carry
+    # no model_prob -- _combine does not keep one.
+    _now_by_identity = {_identity(p): p for p in pieces}
+    _turned = []
+    for ident in identities:
+        piece = _now_by_identity.get(ident)
+        if piece is None:
+            continue                    # delisted -- a different case, handled below
+        if not leg_still_eligible(piece):
+            _turned.append((piece.get("label") or ident,
+                            piece.get("model_prob"), piece.get("model_prob_raw")))
+    if _turned:
+        for label, ranked, raw in _turned:
+            print(f"[parlay_pin] dropping the {tier} pin for {event_name}: "
+                  f"{label} no longer qualifies (ranked {ranked}, raw model {raw})")
+        pins.get(event_name, {}).pop(tier, None)
+        save(pins, path)
+        return hold(event_name, tier, fresh, pieces, path)
+
     requoted = _requote(identities, pieces, prefer=snap_venue) if identities else None
 
     if requoted is None:
