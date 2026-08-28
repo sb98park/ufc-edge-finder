@@ -418,6 +418,43 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
         and is_pickable_market(row) and not price_is_fragile(row)
     ]
 
+    # ONE CANDIDATE PER BOOK, NOT ONE PER MARKET.
+    #
+    # odds_american on an edge is the SHOPPED price -- the best of the books
+    # that quoted it -- and best_book names the winner. That is right for a
+    # single bet and wrong here, because a parlay is one ticket at one book:
+    # keeping only the winner fragments the per-book boards. DraftKings may
+    # quote every leg a slip wants, but if FanDuel beats it on one, that leg
+    # leaves the DraftKings pool and the slip cannot be built anywhere.
+    #
+    # Measured on Nurmagomedov vs. Song: best_book split 150 two-way edges
+    # into DraftKings 32 / FanDuel 26 / Polymarket 92, and after the leg
+    # floor and the model-side rule no single book had enough left to form a
+    # 2-fight slip in the +100 to +320 band. The card published no parlay at
+    # all.
+    #
+    # book_prices carries the whole board (see _devig_and_shop._best), so a
+    # market quoted by two books becomes two candidates at their own prices.
+    # A row without it -- a model-only leg, a one-sided quote, a Polymarket
+    # reference line -- passes through unchanged, so nothing regresses.
+    expanded = []
+    for row in real_legs:
+        # isinstance, NOT `or {}`. These rows come back through pandas, which
+        # fills a missing cell with float NaN -- and NaN is TRUTHY, so `or {}`
+        # passes it straight through and len() raises. src/card_plays._venue
+        # carries the same warning about best_book for the same reason; this
+        # is that trap a second time, and it cost a build: the parlay block's
+        # catch-all swallowed "object of type 'float' has no len()" and the
+        # card published with no parlay section at all.
+        prices = row.get("book_prices")
+        if not isinstance(prices, dict) or len(prices) <= 1:
+            expanded.append(row)
+            continue
+        for book, am in prices.items():
+            expanded.append(dict(row, odds_american=am, source=book, best_book=book,
+                                 books_quoting=1))
+    real_legs = expanded
+
     by_fight: dict = {}
     for row in real_legs:
         by_fight.setdefault(row["fight_id"], []).append(row)

@@ -100,10 +100,24 @@ def _devig_and_shop(by_source, has_source: bool):
         # No book quoting -> fall back to the reference price so nothing
         # regresses on a Polymarket-only build.
         if not quotes:
-            return fallback, (fallback.get("source") if has_source else None), 1
+            return fallback, (fallback.get("source") if has_source else None), 1, {}
         side = [(nm, (pa, pb)[idx]) for nm, pa, pb in quotes]
         nm, r = min(side, key=lambda t: american_to_implied_prob(t[1]["odds_american"]))
-        return r, nm, len(side)
+        # EVERY BOOK'S PRICE, NOT ONLY THE WINNER'S.
+        #
+        # Shopping is right for a single bet and wrong for a parlay, which is
+        # one ticket at one book. Keeping only the best price fragments the
+        # per-book boards: DraftKings may quote all four legs a slip wants,
+        # but if FanDuel beats it on one, that leg leaves the DraftKings pool
+        # entirely and the slip can no longer be built anywhere. Measured on
+        # Nurmagomedov vs. Song, best_book split 150 two-way edges into
+        # DraftKings 32 / FanDuel 26 / Polymarket 92, and no parlay could be
+        # formed from any single book's 32.
+        #
+        # The shopped price above is unchanged and still drives everything
+        # else. This is an additional field that nothing is forced to read.
+        prices = {nm2: float(row2["odds_american"]) for nm2, row2 in side}
+        return r, nm, len(side), prices
 
     return a, b, fair_a, fair_b, _best(0, a), _best(1, b)
 
@@ -168,7 +182,7 @@ def compute_moneyline_edges(
             print(f"[edge_finder] moneyline skip for fight_id={fight_id!r}: no source "
                   f"quoted both sides -- rows: {len(fight_rows)}")
             continue
-        a, b, fair_a, fair_b, (best_a, book_a, n_a), (best_b, book_b, n_b) = shopped
+        a, b, fair_a, fair_b, (best_a, book_a, n_a, px_a), (best_b, book_b, n_b, px_b) = shopped
 
         matchup = None
         if fighters_df is not None:
@@ -183,9 +197,9 @@ def compute_moneyline_edges(
             model_prob_a = 1.0 / (1.0 + 10 ** ((elo_b - elo_a) / 400.0))
         model_prob_b = 1.0 - model_prob_a
 
-        for fighter, opponent, model_p, fair_p, priced, book, n_books, ref in [
-            (a["selection"], b["selection"], model_prob_a, fair_a, best_a, book_a, n_a, a),
-            (b["selection"], a["selection"], model_prob_b, fair_b, best_b, book_b, n_b, b),
+        for fighter, opponent, model_p, fair_p, priced, book, n_books, ref, book_px in [
+            (a["selection"], b["selection"], model_prob_a, fair_a, best_a, book_a, n_a, a, px_a),
+            (b["selection"], a["selection"], model_prob_b, fair_b, best_b, book_b, n_b, b, px_b),
         ]:
             odds = priced["odds_american"]
             nums = _two_numbers(model_p, fair_p, odds)
@@ -217,6 +231,9 @@ def compute_moneyline_edges(
                 # which the reader should be told rather than left to assume.
                 "best_book": book,
                 "books_quoting": n_books,
+                # See _best: the whole board, so a parlay can be built at ONE
+                # book instead of from the best-price union of several.
+                "book_prices": book_px,
             })
 
     if not rows:
@@ -624,8 +641,9 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
         shopped = _devig_and_shop(by_src, has_src)
 
         if shopped is not None:
-            a, b, fair_a, fair_b, (best_a, book_a, n_a), (best_b, book_b, n_b) = shopped
-            emit = [(a, fair_a, best_a, book_a, n_a), (b, fair_b, best_b, book_b, n_b)]
+            a, b, fair_a, fair_b, (best_a, book_a, n_a, px_a), (best_b, book_b, n_b, px_b) = shopped
+            emit = [(a, fair_a, best_a, book_a, n_a, px_a),
+                    (b, fair_b, best_b, book_b, n_b, px_b)]
         else:
             # NO SOURCE QUOTED BOTH SIDES. A lone vig-free quote is already a
             # fair price and can be published as one. A lone VIGGED quote
@@ -639,9 +657,9 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 imp_r = american_to_implied_prob(r["odds_american"])
                 fair_r = (imp_r if bool(r.get("source_is_vig_free"))
                           else devig_single_sided(imp_r, f"Total Rounds {r['selection']}"))
-                emit.append((r, fair_r, r, r.get("source") if has_src else None, 1))
+                emit.append((r, fair_r, r, r.get("source") if has_src else None, 1, {}))
 
-        for ref, fair_p, priced, book, n_books in emit:
+        for ref, fair_p, priced, book, n_books, book_px in emit:
             model_p = (model_prob_under if "under" in str(ref["selection"]).lower()
                        else 1 - model_prob_under)
             odds = priced["odds_american"]
@@ -663,6 +681,7 @@ def compute_total_rounds_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFr
                 "source_is_vig_free": priced.get("source_is_vig_free"),
                 "best_book": book,
                 "books_quoting": n_books,
+                "book_prices": book_px,
             })
 
     if not rows:
