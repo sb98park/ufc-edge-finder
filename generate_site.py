@@ -76,7 +76,7 @@ from src.fighter_backfill import backfill_fighters, fill_missing_last_fights, en
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
 from src.units_chart import build_units_timeseries_svg
-from src.donut_chart import build_donut_svg
+from src.donut_chart import build_donut_svg, build_split_donut_svg
 from src.damage_silhouette import build_damage_silhouette_svg
 from src.fun_facts import compute_fun_facts
 
@@ -1499,6 +1499,7 @@ def main(tier: str = "member", output_path: str | None = None):
     env.globals["name_particles_json"] = json.dumps(
         {"p": sorted(NAME_PARTICLES), "s": sorted(NAME_SUFFIXES)})
     env.globals["donut_svg"] = build_donut_svg
+    env.globals["split_donut_svg"] = build_split_donut_svg
     env.globals["damage_svg"] = build_damage_silhouette_svg
 
     env.filters["tojson"] = lambda obj: json.dumps(obj, default=str)

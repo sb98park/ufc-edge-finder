@@ -1758,9 +1758,28 @@
   .confidence-donut-row .donut-col:nth-child(2) .donut-fill-ring { animation-delay: 0.09s; }
   .confidence-donut-row .donut-col:nth-child(3) .donut-fill-ring { animation-delay: 0.18s; }
   @keyframes donutColIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  /* Every win in the tier, held still behind the bright arc. On the
+     unfiltered view it sits exactly under the fill ring and is invisible,
+     which is the point -- All is pixel-identical to what shipped before the
+     filter existed, and the dim arc only reveals itself as the bright one
+     retreats. Same colour at low alpha rather than a grey: a grey would read
+     as a third category instead of as the same wins, dimmed. */
+  .donut-ghost-ring { opacity: 0.28; }
+  /* THE REVEAL AND THE FILTER ARE DIFFERENT MOTIONS. donutFill above is a
+     1.6s value-being-drawn; retargeting on a chip tap is a state change and
+     belongs in the 0.55s vocabulary. The class is added by the click handler,
+     which cancels the keyframe and hands the ring to this transition -- so
+     the sweep still plays once on scroll-in and never competes with a tap. */
+  .confidence-donut-row.donuts-filtered .donut-fill-ring {
+    animation: none;
+    transition: stroke-dashoffset 0.55s cubic-bezier(0.22,1,0.36,1);
+  }
+  .donut-side-filter { margin-top: 10px; }
+  .donut-side-note { margin: -14px 0 18px; }
   @media (prefers-reduced-motion: reduce) {
     .donut-fill-ring, .confidence-donut-row .donut-col { animation: none; }
     .donut-fill-ring { stroke-dashoffset: var(--donut-end); }
+    .confidence-donut-row.donuts-filtered .donut-fill-ring { transition: none; }
   }
   .stat-compare-row { display: flex; align-items: baseline; justify-content: space-between; margin-top: 10px; margin-bottom: 3px; font-size: var(--t-body); }
   .stat-compare-val { font-weight: 700; font-family: var(--font-display); min-width: 30px; }
@@ -6559,15 +6578,32 @@
     {% if track_record.by_confidence %}
     <div class="baseline-title" style="margin-top: 14px;">Accuracy by Pick Confidence</div>
     <div class="baseline-caption" style="margin-bottom: 6px;">How often the model's own stated conviction level (High/Medium/Low) matched the actual result.</div>
+    {#- SIDE FILTER. The dim arc is every win in the tier and holds still; the
+        bright arc narrows to the wins that came from picks where we backed the
+        market's favourite, or from the ones where we faded it. Reuses .fc-chip,
+        the filter pill this site already uses on the fight list, rather than a
+        second segmented control with its own idiom. -#}
+    <div class="fight-controls donut-side-filter" role="group" aria-label="Split accuracy by market side">
+      <span class="fc-label">Side</span>
+      <button type="button" class="fc-chip on" data-side="all" aria-pressed="true">All</button>
+      <button type="button" class="fc-chip" data-side="fav" aria-pressed="false">Favorite</button>
+      <button type="button" class="fc-chip" data-side="dog" aria-pressed="false">Underdog</button>
+    </div>
     <div class="donut-row confidence-donut-row">
       {% for label, stats in track_record.by_confidence.items() %}
       {% set tier_color = {'High Confidence': '#3ddc84', 'Medium Confidence': 'var(--accent2)', 'Low Confidence': '#8a8f9a'}[label] %}
       <div class="donut-col" style="animation-delay: {{ loop.index0 * 0.15 }}s;">
-        {{ donut_svg(stats.correct, stats.total, tier_color, size=90, animate=True, delay=loop.index0 * 0.15) | safe }}
+        {{ split_donut_svg(stats, tier_color, size=90, delay=loop.index0 * 0.15) | safe }}
         <div class="donut-caption">{{ label|replace(' Confidence', '') }}</div>
       </div>
       {% endfor %}
     </div>
+    {#- Only stated when it is actually true. Every pick with a recorded price
+        lands in one bucket or the other, so this line is usually absent. -#}
+    {% set _noside = track_record.by_confidence.values()|map(attribute='no_side')|sum %}
+    {% if _noside %}
+    <div class="baseline-caption donut-side-note">{{ _noside }} pick{{ 's' if _noside != 1 }} had no price on record, so {{ 'it belongs' if _noside == 1 else 'they belong' }} to neither side &mdash; Favorite and Underdog will not add back up to All.</div>
+    {% endif %}
     {% endif %}
     {% if track_record.market_position_accuracy and track_record.market_position_accuracy.underdogs.total %}
     {% set mpa = track_record.market_position_accuracy %}
@@ -13600,6 +13636,69 @@
         });
       }, { threshold: 0.4 });
       document.querySelectorAll('.confidence-donut-row').forEach(el => donutObserver.observe(el));
+
+      // Split the confidence donuts by which side of the price we took.
+      // Composition, not rate: the dim arc is every win in the tier and never
+      // moves, and the bright arc narrows to the wins from this cohort. So the
+      // centre reads "18/22" -- of our 22 Medium wins, 18 were favourites --
+      // rather than a second percentage that would be easy to confuse with the
+      // tier's own hit rate sitting right beside it.
+      function initDonutSideFilter() {
+        const bar = document.querySelector('.donut-side-filter');
+        const row = document.querySelector('.confidence-donut-row');
+        if (!bar || !row) return;
+        const donuts = [...row.querySelectorAll('.split-donut')];
+        if (!donuts.length) return;
+
+        function apply(side) {
+          donuts.forEach(svg => {
+            const d = svg.dataset;
+            const ring = svg.querySelector('.donut-fill-ring');
+            const val = svg.querySelector('.donut-center-value');
+            const pct = svg.querySelector('.donut-center-pct');
+            ring.style.strokeDashoffset = d['off' + (side === 'all' ? 'All' : side === 'fav' ? 'Fav' : 'Dog')];
+            if (side === 'all') {
+              val.textContent = d.hit + '/' + d.total;
+              pct.textContent = (+d.total ? Math.round(d.hit / d.total * 100) : 0) + '%';
+            } else {
+              val.textContent = (side === 'fav' ? d.fav : d.dog) + '/' + d.hit;
+              pct.textContent = 'of wins';
+            }
+          });
+        }
+
+        bar.addEventListener('click', e => {
+          const btn = e.target.closest('.fc-chip');
+          if (!btn || btn.classList.contains('on')) return;
+          // TAKE THE RINGS OFF THE REVEAL KEYFRAME, freezing them at whatever
+          // they are showing this instant. Without capturing the computed
+          // offset first, a tap mid-sweep would snap the ring back to empty
+          // before transitioning -- the animation's own from-value, not what
+          // is on screen.
+          if (!row.classList.contains('donuts-filtered')) {
+            donuts.forEach(svg => {
+              const ring = svg.querySelector('.donut-fill-ring');
+              ring.style.strokeDashoffset = getComputedStyle(ring).strokeDashoffset;
+              // .countup re-animates any number it finds; "of wins" is not one.
+              svg.querySelector('.donut-center-pct').classList.remove('countup');
+            });
+            void row.offsetWidth;
+            row.classList.add('donuts-filtered');
+          }
+          bar.querySelectorAll('.fc-chip').forEach(b => {
+            b.classList.toggle('on', b === btn);
+            b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+          });
+          apply(btn.dataset.side);
+        });
+      }
+      // DEFERRED even though this script block sits after the markup it wants,
+      // so the queries above would resolve either way. The rule in
+      // scripts/lint_site.py is that an init* function doing document-rooted
+      // lookups is registered, not called inline -- four dead handlers in one
+      // feature is what bought that rule, and an exception argued per call
+      // site is how it stops being enforceable.
+      document.addEventListener('DOMContentLoaded', initDonutSideFilter);
 
       // A brief, one-time celebration flourish the first time a Perfect
       // Prop badge -- or a Lock of the Week badge that actually hit --

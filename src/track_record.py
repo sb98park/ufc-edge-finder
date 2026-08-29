@@ -1120,14 +1120,45 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
 
     correct_count = sum(1 for m in matched if m["correct"])
 
+    # WHICH SIDE OF THE PRICE THE PICK WAS ON, per tier. A tier's headline
+    # accuracy averages two quite different bets: Medium Confidence reads 59%
+    # overall but is 72% when the pick was the market's favourite and 27% when
+    # it was the dog. Splitting it is the difference between "this tier is
+    # mediocre" and "this tier is fine except where we fade the price".
+    #
+    # _is_underdog, not a fresh comparison of the two implied probabilities.
+    # It carries the relative definition this project settled on (a -105 pick
+    # against a -115 opponent is still the underdog) plus the documented
+    # fallback for rows that only ever captured one side, and the Favorites /
+    # Underdogs badges further down the same tab already classify with it.
+    # A second definition here would put two different splits of the same
+    # picks on one screen.
+    #
+    # no_side counts what neither bucket can claim -- rows with no pick_odds
+    # at all, where _is_underdog returns None. It is carried rather than
+    # silently dropped because favourite + underdog then visibly fails to
+    # reconstruct the tier, and a reader is owed the reason.
+    def _side_group(picks):
+        n = len(picks)
+        c = sum(1 for m in picks if m["correct"])
+        return {"total": n, "correct": c,
+                "accuracy_pct": round(c / n * 100, 1) if n else None}
+
     by_confidence = {}
     for label in ("High Confidence", "Medium Confidence", "Low Confidence"):
         subset = [m for m in matched if m["confidence_label"] == label]
         if subset:
+            sides = [(m, _is_underdog(m.get("pick_odds"), m.get("opponent_odds")))
+                     for m in subset]
+            fav = [m for m, u in sides if u is False]
+            dog = [m for m, u in sides if u is True]
             by_confidence[label] = {
                 "total": len(subset),
                 "correct": sum(1 for m in subset if m["correct"]),
                 "accuracy_pct": round(sum(1 for m in subset if m["correct"]) / len(subset) * 100, 1),
+                "favorite": _side_group(fav),
+                "underdog": _side_group(dog),
+                "no_side": len(subset) - len(fav) - len(dog),
             }
 
     clv_eligible = [m for m in matched if m["clv"] is not None]
