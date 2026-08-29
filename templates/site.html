@@ -6776,9 +6776,14 @@
               <div class="event-summary-label">On {{ '%g'|format(bets.staked) }}U</div>
             </div>
             {% endif %}
+            {#- SETTLED, NOT plays|length. A voided play is money that was never
+                placed, and staked/roi_pct above already exclude it -- counting it
+                here made the headline disagree with the number beside it. The
+                void is named separately rather than dropped, so a card that
+                pulled a play still says so. -#}
             <div class="event-summary-stat">
-              <div class="event-summary-value gold">{{ bets.plays|length }}</div>
-              <div class="event-summary-label">Plays</div>
+              <div class="event-summary-value gold">{{ bets.settled }}</div>
+              <div class="event-summary-label">Play{{ '' if bets.settled == 1 else 's' }}{% if bets.void %} &middot; {{ bets.void }} void{% endif %}</div>
             </div>
           </div>
           <ul class="card-bets">
@@ -6791,7 +6796,15 @@
               </div>
               <div class="cb-main">
                 <div class="cb-label">{{ b.label }}</div>
-                <div class="cb-meta">{{ b.odds_american | american }} &middot; {{ '%g'|format(b.units) }}U</div>
+                {#- A VOID DOES NOT PRINT ITS STAKE. The row carried "-470 . 5U"
+                    exactly like a placed bet, and the only thing separating it
+                    from one was a dash in the right-hand column -- so the page
+                    read as though 5 units had gone down on a play that was
+                    pulled. The price stays, since that is what it was quoted
+                    at; the size does not, because none was risked. -#}
+                <div class="cb-meta">{{ b.odds_american | american }} &middot;
+                  {%- if (b.result or '')|lower == 'void' %} not placed
+                  {%- else %} {{ '%g'|format(b.units) }}U{% endif %}</div>
               </div>
               <div class="cb-num {{ 'up' if st == 'won' else ('down' if st == 'lost' else 'muted') }}">
                 {%- if st in ('won', 'lost') %}{{ '%+.2f'|format(b.units_result) }}
