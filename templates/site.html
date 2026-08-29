@@ -3117,7 +3117,7 @@
        and 14px of horizontal padding was enough to push "CO-MAIN EVENT" onto
        two lines, which made that one card taller than every other row. */
     background: #241f10; border-radius: var(--r-lg); padding: 2px 5px; display: inline-block; margin-bottom: 3px;
-    white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
+    white-space: normal; max-width: 100%; box-sizing: border-box; overflow-wrap: break-word;
   }
   /* Deliberately a SIBLING of .card-position: same slot, same pill, same
      9px uppercase type, same max-width -- so it reads as the same class of
@@ -3149,7 +3149,7 @@
     background: linear-gradient(180deg, var(--accent-hi), var(--accent));
     border-radius: var(--r-lg); padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;
     margin-bottom: 3px; letter-spacing: 0.4px;
-    white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
+    white-space: normal; max-width: 100%; box-sizing: border-box; overflow-wrap: break-word;
   }
   .title-fight-badge .inline-icon { width: 12px; height: 12px; flex: none; }
 
@@ -3158,11 +3158,27 @@
     background: var(--panel2); border: 1px solid rgba(255,255,255,0.10);
     border-radius: var(--r-lg); padding: 2px 7px; display: inline-flex; align-items: center; gap: 3px;
     margin-bottom: 3px;
-    white-space: normal; max-width: 116px; box-sizing: border-box; overflow-wrap: break-word;
+    white-space: normal; max-width: 100%; box-sizing: border-box; overflow-wrap: break-word;
   }
   /* 9px badge type; the icon has to come down to match or it drags the
      pill taller than .card-position and the two stop looking like siblings. */
   .replacement-badge .inline-icon { width: 11px; height: 11px; flex: none; }
+  /* THE CAP WAS WIDER THAN THE COLUMN. All three badges here carried
+     max-width: 116px while .matchup-vs is clamp(88px, 27%, 98px) with
+     overflow: hidden -- so a badge that used its allowance overflowed and had
+     its right border sliced off. 100% cannot exceed whatever the column is.
+     THE LABEL ALSO HAS TO BE ABLE TO SHRINK, and only this badge needs it.
+     "Co-Main Event" and "Title Fight" have spaces to wrap at; "Replacement"
+     is one unbreakable eleven-character word in about seventy pixels. The
+     overflow-wrap above never fired on it because the text was an anonymous
+     FLEX item, and a flex item's min-width defaults to auto -- it will not go
+     below its intrinsic width, so the word held the pill open regardless of
+     any cap. A real span with min-width: 0 is what lets the wrap happen.
+     Hyphenated rather than chopped: REPLACE-MENT reads as typography,
+     REPLACEM-ENT reads as a bug. */
+  .replacement-badge > span {
+    min-width: 0; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto;
+  }
   .no-edges { color: var(--muted); font-size: var(--t-body); padding: 0 16px 14px; }
 
   /* The !important on font-size and font-weight was dead weight: .vs-text,
@@ -7370,7 +7386,7 @@
                per-fighter part of this lives in the MODEL, via the
                short_notice flag on the incoming fighter only. #}
             {% if fight.replacement %}
-            <div class="replacement-badge" {% if fight.replaced_fighter %}title="Replaces {{ fight.replaced_fighter }}"{% endif %}>{{ icon_swap() }}Replacement</div>
+            <div class="replacement-badge" {% if fight.replaced_fighter %}title="Replaces {{ fight.replaced_fighter }}"{% endif %} lang="en">{{ icon_swap() }}<span>Replacement</span></div>
             {% endif %}
           </div>
           {% if fight.result_label %}
