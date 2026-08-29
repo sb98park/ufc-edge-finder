@@ -31,7 +31,15 @@ import sys
 
 LEDGER = "data/plays_ledger.csv"
 
-MUTABLE = {"last_seen", "closing_odds", "result", "units_result", "graded_at"}
+# void_reason SHARES THE LIFECYCLE OF result, not of the price fields: empty
+# until the play settles, written once alongside result/units_result/graded_at,
+# never revised after. It was missing here, which made this check a live
+# tripwire under the pipeline's own code -- plays_ledger.void_stale() writes a
+# reason onto rows committed days earlier, and every one of those writes would
+# have been reported as REWRITTEN and failed the build. The same is true of the
+# cancelled-fight path. Nothing about set-once pricing is loosened by this.
+MUTABLE = {"last_seen", "closing_odds", "result", "units_result", "graded_at",
+           "void_reason"}
 
 
 def _committed_copy():
