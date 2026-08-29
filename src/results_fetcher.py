@@ -343,6 +343,39 @@ def _decision_subtype_from_linescores(winner_comp: dict, loser_comp: dict) -> st
     return None
 
 
+def _elapsed_from_remaining(display_clock, method: str | None) -> str | None:
+    """
+    ESPN's displayClock is time REMAINING in the round. This file stores
+    ELAPSED. Convert, or the two are silently swapped.
+
+    NOT COSMETIC. Recorded raw on 2026-08-29, Kai Asakura's round-two KO went
+    in as "0:34" -- ESPN's 34 seconds left -- which reads as a fight that
+    ended thirty-four seconds INTO the round instead of at 4:26. That is 1.11
+    rounds against a true 1.89, and an Under 1.5 leg wins on one and loses on
+    the other. src/parlay_grader's docstring already warns that this is the
+    one confusion in the system that inverts results rather than failing
+    loudly; this is that confusion, at the point the data enters.
+
+    A DECISION IS THE EXCEPTION. ESPN reports 5:00 remaining on a bout that
+    went the distance, and converting would record 0:00 -- a five-round war
+    logged as ending instantly. The file's own convention for a decision is
+    5:00 (19 of 24 existing decision rows), so it is passed through.
+    """
+    if not display_clock or ":" not in str(display_clock):
+        return display_clock
+    if method and "decision" in method.lower():
+        return "5:00"
+    try:
+        mm, ss = (int(x) for x in str(display_clock).split(":"))
+    except ValueError:
+        return display_clock
+    left = mm * 60 + ss
+    if not 0 <= left <= 5 * 60:
+        return display_clock
+    e = 5 * 60 - left
+    return f"{e // 60}:{e % 60:02d}"
+
+
 def _fetch_espn_core_results(event_id: str) -> dict:
     """
     Method of victory per fight, from the CORE api (see ESPN_CORE_EVENT_URL).
@@ -402,11 +435,13 @@ def _fetch_espn_core_results(event_id: str) -> dict:
         # drift out of sync.
         text = " ".join(str(result.get(k, "")) for k in
                         ("name", "displayName", "shortDisplayName", "description", "displayDescription"))
+        _method = _extract_method([text])
         methods[frozenset(ids)] = {
-            "method": _extract_method([text]),
+            "method": _method,
             "raw_result_text": text.strip(),
             "end_round": status.get("period"),
-            "end_time": status.get("displayClock"),
+            # REMAINING -> ELAPSED. See _elapsed_from_remaining.
+            "end_time": _elapsed_from_remaining(status.get("displayClock"), _method),
         }
 
     if methods:
