@@ -26,6 +26,24 @@ from src import track_record as tr  # noqa: E402
 #
 # Captured 2026-08-23, after 7 cards, immediately before Medium's stake was
 # cut from 3U to 2U effective 2026-08-25.
+# THE COHORT THIS DESCRIBES, and without it the check answers the wrong
+# question. It compared the WHOLE record against these numbers, so any newly
+# graded card moved them and failed the gate -- not because a stake edit had
+# reached back into history, which is the only thing this exists to catch, but
+# because the sport happened. That is a hard gate in refresh.yml, so it took
+# the whole job down with it, and the job is what writes results.
+#
+# It cost a live fight night: 2026-08-29, the Record tab sat frozen through
+# the card while every build died here. Nine fights had graded, the totals
+# moved by exactly those nine, and the gate could not tell that from a
+# retroactive restatement.
+#
+# Scoped to picks graded on or before the capture date, the frozen figures are
+# immune to new cards and still catch the thing that matters: a stake edit
+# changes the units of picks ALREADY in this cohort, and every one of them is
+# checked. Verified at the time of the change -- filtering to this date
+# reproduces all eleven frozen values exactly, count, units, ROI and per-tier.
+FROZEN_AS_OF = "2026-08-23"
 FROZEN = {
     "eligible_count": 88,
     "total_units": 63.44,
@@ -39,14 +57,56 @@ FROZEN = {
 }
 
 
+def _cohort_stats(record: dict) -> dict:
+    """
+    The published figures, recomputed over the FROZEN_AS_OF cohort only.
+
+    Sums the record's own per-pick units_result and unit_size rather than
+    re-deriving anything -- grading, stake selection and CLV all stay in
+    track_record, so there is no second implementation here to drift out of
+    sync with the first. The only thing this adds is the date filter.
+    """
+    rows = [r for r in (record.get("results") or [])
+            if r.get("units_result") is not None
+            and str(r.get("date_added") or "") <= FROZEN_AS_OF]
+
+    def tier_of(r):
+        return "Lock of the Week" if r.get("is_lock_of_week") else r.get("confidence_label")
+
+    staked = sum(r["unit_size"] for r in rows if r.get("unit_size"))
+    units = round(sum(r["units_result"] for r in rows), 2)
+    by_tier = {}
+    for r in rows:
+        t = by_tier.setdefault(tier_of(r), {"units": 0.0, "count": 0, "unit_sizes": set()})
+        t["units"] += r["units_result"]
+        t["count"] += 1
+        if r.get("unit_size"):
+            t["unit_sizes"].add(r["unit_size"])
+    for t in by_tier.values():
+        t["units"] = round(t["units"], 2)
+        t["unit_sizes"] = sorted(t["unit_sizes"])
+    # The FORWARD stake is a property of the ladder, not of the cohort, so it
+    # is carried across from the real stats for the display line. It is
+    # printed and deliberately not asserted on -- moving it is the whole point
+    # of a cutover, and the original made the same distinction.
+    live = (record.get("units_stats") or {}).get("by_tier") or {}
+    for name, t in by_tier.items():
+        t["unit_size"] = (live.get(name) or {}).get("unit_size")
+    return {"eligible_count": len(rows), "total_units": units,
+            "roi_pct": round(units / staked * 100, 1) if staked else 0.0,
+            "by_tier": by_tier}
+
+
 def main() -> int:
     record = tr.compute_track_record()
     if not record or not record.get("units_stats"):
         print("FAIL  no track record to check")
         return 1
 
-    stats = record["units_stats"]
+    stats = _cohort_stats(record)
     failures = []
+    print(f"  cohort           picks graded on or before {FROZEN_AS_OF} "
+          f"({stats['eligible_count']} of {len(record.get('results') or [])} scored)\n")
 
     # 1. The headline figures are exactly what was published.
     for field in ("eligible_count", "total_units", "roi_pct"):
