@@ -21,7 +21,8 @@ SAFE BY CONSTRUCTION:
   - append only, never edits or removes an existing row
   - skips any fight already present, matched on an unordered name pair plus
     date, so a differing fighter order can't create a duplicate
-  - skips rows with no decisive winner
+  - keeps a draw/no-contest (empty winner, NC or Draw as the method) and
+    skips anything else with no winner
   - writes nothing when there is nothing to add
 
 Usage:
@@ -70,7 +71,18 @@ def main():
     new_rows, skipped_known, skipped_nowinner = [], 0, 0
     for _, r in res.iterrows():
         a, b, w = r.get("fighter_a"), r.get("fighter_b"), r.get("winner")
-        if not a or not b or not isinstance(w, str) or not w.strip():
+        method = str(r.get("method") or "").strip()
+        decisive = isinstance(w, str) and w.strip()
+        # A NO CONTEST OR DRAW IS A RESULT, AND IT BELONGS IN THE SPINE. It
+        # used to be dropped here with everything else that had no winner, so
+        # the bout was invisible to layoff and to "last fight" -- Michael
+        # Aljarouj's 2025-04-12 no contest is why his site card read a
+        # four-year layoff. Carried through with an empty winner, which every
+        # reader of fight_history.csv now handles: elo skips it, pit_roster
+        # counts it toward neither record, matchup_model's recent-form term
+        # ignores it, fun_facts treats it as not-a-win.
+        no_contest = not decisive and method.lower() in ("nc", "no contest", "draw")
+        if not a or not b or not (decisive or no_contest):
             skipped_nowinner += 1
             continue
         d = str(r.get(date_col))[:10]
@@ -78,8 +90,9 @@ def main():
             skipped_known += 1
             continue
         new_rows.append({
-            "date": d, "fighter_a": a, "fighter_b": b, "winner": w,
-            "method": r.get("method") or "",
+            "date": d, "fighter_a": a, "fighter_b": b,
+            "winner": w if decisive else "",
+            "method": method,
         })
         have.add(key(a, b, d))
 
@@ -91,7 +104,8 @@ def main():
     if new_rows:
         print()
         for r in new_rows[:12]:
-            print(f"    {r['date']}  {r['fighter_a']} vs {r['fighter_b']}  -> {r['winner']}")
+            print(f"    {r['date']}  {r['fighter_a']} vs {r['fighter_b']}"
+                  f"  -> {r['winner'] or r['method'] or 'no winner'}")
         if len(new_rows) > 12:
             print(f"    ... and {len(new_rows) - 12} more")
 

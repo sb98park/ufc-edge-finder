@@ -1386,8 +1386,16 @@ def recent_form_adjustment(
         # backtest: formulation + scale selected on pre-2019 fights, confirmed
         # on held-out 2019+ fights, where it beat both no-form-at-all and the
         # previous single-most-recent-fight version this replaces.
+        # A DRAW OR NO CONTEST IS NEITHER. `last["winner"] == name` is False
+        # for a winnerless row, so an NC used to score a full -1.0 -- the same
+        # penalty as a knockout defeat -- and, being the most recent fight,
+        # at the heaviest decay weight. It is dropped instead: it says nothing
+        # about form in either direction. (It still counts toward layoff,
+        # which is read from the fight index, not from here.)
+        decided = rows[rows["winner"].astype(str).str.strip().ne("")
+                       & rows["winner"].notna()]
         signal = 0.0
-        for _, last in rows.tail(RECENT_FORM_LOOKBACK).iterrows():
+        for _, last in decided.tail(RECENT_FORM_LOOKBACK).iterrows():
             won = last["winner"] == name
             years_ago = max((reference_date - last["date"].date()).days / 365.25, 0.0)
             decay = max(0.0, 1.0 - years_ago / RECENT_FORM_DECAY_YEARS)

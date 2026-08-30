@@ -190,6 +190,29 @@ def sync_fighter_records(fighters_df: pd.DataFrame, fighter_a: str, fighter_b: s
     raising, consistent with the rest of this module never breaking site
     generation over a data-matching gap.
     """
+    # A NO CONTEST OR DRAW MOVES THE CLOCK BUT NOT THE RECORD. Without this
+    # branch the caller had to skip the sync entirely (it guards on a winner),
+    # so the bout never reached fighters.csv at all and the roster kept
+    # showing the fighter's PREVIOUS bout as their last -- which is how
+    # Michael Aljarouj's card read a 2021 last fight in 2026. Neither fighter
+    # gets a win or a loss; both get the date, the opponent and NC.
+    if not str(winner or "").strip():
+        for fighter, opponent in ((fighter_a, fighter_b), (fighter_b, fighter_a)):
+            matches = fighters_df.index[fighters_df["name"] == fighter]
+            if len(matches) == 0:
+                continue
+            idx = matches[0]
+            fighters_df.loc[idx, "last_fight_date"] = event_date
+            fighters_df.loc[idx, "last_fight_opponent"] = opponent
+            fighters_df.loc[idx, "last_fight_result"] = (
+                "Draw" if str(method).strip().lower() == "draw" else "NC")
+            fighters_df.loc[idx, "last_fight_method"] = None
+            if weight_class:
+                fighters_df.loc[idx, "weight_class"] = weight_class
+            if "short_notice" in fighters_df.columns:
+                fighters_df.loc[idx, "short_notice"] = 0
+        return fighters_df
+
     loser = fighter_b if winner == fighter_a else fighter_a
     prefix = _METHOD_TO_PREFIX.get(method)
     if prefix is None:
@@ -668,6 +691,22 @@ def _extract_round_time_from_text(text: str) -> tuple[int | None, str | None]:
     return end_round, end_time
 
 
+def _is_settled(row) -> bool:
+    """A recorded result, whether or not anyone won it.
+
+    Three convergence guards below used `pd.notna(row["winner"])` as a stand-in
+    for "we already hold this bout". That is true of every row we had ever
+    written until draws and no-contests started being recorded, and it is the
+    reason a winnerless bout stays in truly_missing forever: the row is on
+    disk, the guard cannot see it, the fetcher asks ESPN again on every run.
+    A row whose method says NC or Draw is settled -- there is nothing further
+    to fetch.
+    """
+    if pd.notna(row.get("winner")) and str(row.get("winner")).strip():
+        return True
+    return str(row.get("method") or "").strip().lower() in ("nc", "no contest", "draw")
+
+
 def _record_no_winner(event_name, names, description) -> None:
     """
     Note a completed bout ESPN reports with no winner, in data/source_health.json.
@@ -688,12 +727,12 @@ def _record_no_winner(event_name, names, description) -> None:
             "event": event_name,
             "fighters": [n for n in names if n],
             "espn_status": description,
-            "note": "completed with no winner (draw/no-contest) -- not written to "
-                    "fight_results.csv, so this card cannot reach n/n confirmed",
+            "note": "completed with no winner -- written to fight_results.csv "
+                    "with an empty winner and NC/Draw as the method",
         }
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(blob, fh, indent=2, sort_keys=True)
-        print(f"[results_fetcher] {key}: completed with no winner -- recorded as a known gap")
+        print(f"[results_fetcher] {key}: completed with no winner (draw/no-contest)")
     except Exception as exc:                    # diagnostics must never break a fetch
         print(f"[results_fetcher] could not record no-winner bout ({exc})")
 
@@ -727,9 +766,13 @@ def _fetch_from_espn(event_name: str, event_date: str, known_fighters_lower: set
     search across the fields most likely to carry it. If no method can
     be confidently found, the fight is deliberately treated as NOT YET
     a complete result (skipped, not logged with a blank method) so it
-    gets retried on a later run instead of silently going stale -- see
-    fetch_and_log_new_results, which only ever marks a fight "known" once
-    a result with a winner AND a method has actually been recorded.
+    gets retried on a later run instead of silently going stale.
+
+    A bout ESPN reports as completed with NO winner is the one exception.
+    That is a draw or a no-contest -- a final answer, not a missing one --
+    so it is written with an empty winner and NC/Draw as the method. It
+    used to be skipped, and was therefore refetched forever; see the
+    comment at the winner_comp guard below, and _is_settled.
     """
     params = {}
     if event_date:
@@ -787,27 +830,38 @@ def _fetch_from_espn(event_name: str, event_date: str, known_fighters_lower: set
             continue
         winner_comp = next((c for c in competitors if c.get("winner")), None)
         if winner_comp is None:
-            # A DRAW OR NO-CONTEST, AND IT NEVER CONVERGES. Skipping writes no
-            # row, and known_keys only counts rows with a winner, so this
-            # pairing stays in truly_missing on EVERY subsequent run -- refetched
-            # forever, results_coverage stuck at n-1/n with "some may still be
-            # pending" showing indefinitely, and the bout never leaving the live
-            # schedule.
+            # A DRAW OR NO-CONTEST. This used to `continue` without writing
+            # anything, and it never converged: known_keys counts only rows
+            # with a winner, so the pairing stayed in truly_missing on EVERY
+            # subsequent run -- refetched forever, results_coverage stuck at
+            # n-1/n with "some may still be pending" showing indefinitely, and
+            # the bout never leaving the live schedule.
             #
-            # NOT FIXED BY WRITING A WINNERLESS ROW. Thirty modules read
-            # fight_results.csv and most have never seen one: parlay_grader and
-            # play_settlement handle it correctly, track_record does not guard on
-            # winner at all. Introducing that row shape to settle a case with
-            # zero historical occurrences -- 0 winnerless rows in 11,860 of
-            # fight_history and 102 of fight_results -- would risk more than it
-            # fixes.
+            # The consumers were audited before this changed, not after.
+            # elo.build_from_history already skips a row whose winner matches
+            # neither fighter, and says so. ufc_method_rates only counts W/L
+            # and L/W outcomes. track_record skips a winnerless result outright
+            # (`if not result.get("winner"): continue`), so an NC is a push
+            # against the published record rather than a loss. parlay_grader
+            # and play_settlement both have explicit no-winner handling and
+            # void rather than lose. pit_roster charged BOTH fighters a defeat
+            # and is fixed in the same change as this one.
             #
-            # So it is still skipped, but no longer SILENTLY: recorded as a known
-            # gap so the reason a card cannot reach n/n is visible instead of
-            # retrying forever with no explanation.
-            _record_no_winner(event_name,
-                              [c.get("athlete", {}).get("fullName") for c in competitors],
-                              status_type.get("description"))
+            # An empty winner with the method carrying NC/Draw is the shape
+            # every one of those already understands.
+            names = [c.get("athlete", {}).get("fullName") for c in competitors]
+            _record_no_winner(event_name, names, status_type.get("description"))
+            if not all(n and str(n).strip() for n in names):
+                continue  # unnamed competitor -- nothing we could key a row on
+            desc = str(status_type.get("description") or "").lower()
+            method = "Draw" if "draw" in desc else "NC"
+            results.append({
+                "event_name": event_name,
+                "fighter_a": names[0], "fighter_b": names[1],
+                "winner": "",                       # the whole point
+                "method": method,
+                "end_round": None, "end_time": None,
+            })
             continue
         loser_comp = next(c for c in competitors if c is not winner_comp)
 
@@ -1149,7 +1203,7 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     # has to name its event, which is precisely the rematch case.
     _pair_rows = {}
     for _, r in existing.iterrows():
-        if pd.notna(r.get("winner")):
+        if _is_settled(r):
             _pair_rows.setdefault(_key(r["fighter_a"], r["fighter_b"]), []).append(r)
     known_keys = {k for k, v in _pair_rows.items() if len(v) == 1}
     known_event_keys = {
@@ -1161,6 +1215,7 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
               f"have more than one recorded result -- matching those on event name as well")
     stats_missing_keys = {
         _key(r["fighter_a"], r["fighter_b"]) for _, r in existing.iterrows()
+        # winner-only: a no-contest has no per-fighter stat line to go back for.
         if pd.notna(r.get("winner")) and not all(pd.notna(r.get(c)) for c in STAT_COLS)
     }
     card_keys = {_key(r["fighter_a"], r["fighter_b"]) for r in fight_cards_df.to_dict("records")}
@@ -1184,7 +1239,7 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     # and never converges.
     if truly_missing:
         known_loose = {_loose_key(r["fighter_a"], r["fighter_b"])
-                       for _, r in existing.iterrows() if pd.notna(r.get("winner"))}
+                       for _, r in existing.iterrows() if _is_settled(r)}
         by_loose = {}
         for r in fight_cards_df.to_dict("records"):
             by_loose.setdefault(_loose_key(r["fighter_a"], r["fighter_b"]), set()).add(
@@ -1279,9 +1334,12 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
                 "card_position": card_position_by_key.get(key),
             })
             new_rows.append(row)
-            print(f"[results_fetcher] found new result: {r['fighter_a']} vs {r['fighter_b']} -> {r['winner']} by {r['method']}" + (" (with stats)" if stats else " (no stats yet)"))
+            outcome = f"{r['winner']} by {r['method']}" if r.get("winner") else f"no winner ({r['method']})"
+            print(f"[results_fetcher] found new result: {r['fighter_a']} vs {r['fighter_b']} -> {outcome}" + (" (with stats)" if stats else " (no stats yet)"))
 
-            if fighters_df is not None and r.get("winner") and r.get("method"):
+            # A no contest has no winner and still needs syncing -- see the
+            # winnerless branch at the top of sync_fighter_records.
+            if fighters_df is not None and r.get("method"):
                 fighters_df = sync_fighter_records(
                     fighters_df, r["fighter_a"], r["fighter_b"], r["winner"], r["method"], event_date,
                     weight_class=weight_class_by_key.get(key),

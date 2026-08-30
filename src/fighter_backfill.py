@@ -500,12 +500,17 @@ def _fetch_espn_last_fight_info(eventlog_ref: str, athlete_id=None, fighter_name
         # Fallback: if id-matching failed, we can't safely tell who's who --
         # leave result/opponent out rather than guess and risk inverting them.
         if ours is not None and them is not None:
-            # RESULT: our fighter's winner boolean.
-            won = ours.get("winner")
+            # RESULT: our fighter's winner boolean. NOT a two-way street --
+            # in a draw or no contest ESPN sets `winner` False on BOTH
+            # competitors, so reading ours alone reported a defeat for each of
+            # them. Ours False AND theirs False is nobody's win.
+            won, theirs = ours.get("winner"), them.get("winner")
             if won is True:
                 result["last_fight_result"] = "W"
-            elif won is False:
+            elif won is False and theirs is True:
                 result["last_fight_result"] = "L"
+            elif won is False and theirs is False:
+                result["last_fight_result"] = "NC"
             # OPPONENT: follow the other competitor's athlete for displayName.
             them_ath = them.get("athlete")
             them_ref = them_ath.get("$ref") if isinstance(them_ath, dict) else None
@@ -1494,7 +1499,17 @@ def fetch_espn_fight_history(athlete_id: str, fighter_name: str) -> list[dict]:
         if isinstance(result, dict):
             result = result.get("displayName") or result.get("abbreviation")
         result = str(result or "").strip().upper()
-        if result not in ("W", "L", "WIN", "LOSS"):
+        # A draw or no contest is a fight that happened, and dropping it is
+        # why the spine held zero winnerless rows across 11,861 fights. It is
+        # kept with an empty winner. The exact token ESPN uses here has not
+        # been observed on a real no contest -- the accepted set is a guess,
+        # and an unrecognised one is printed rather than swallowed so the real
+        # spelling can be added the first time one comes through.
+        no_contest = result in ("D", "DRAW", "NC", "NO CONTEST", "TIE")
+        if result not in ("W", "L", "WIN", "LOSS") and not no_contest:
+            if result:
+                print(f"[fighter_backfill] unrecognised gameResult {result!r} "
+                      f"for {fighter_name} on {date} -- row skipped")
             continue
         opp = rec.get("opponent")
         if isinstance(opp, dict):
@@ -1509,6 +1524,13 @@ def fetch_espn_fight_history(athlete_id: str, fighter_name: str) -> list[dict]:
             if isinstance(m, str) and m.strip().lower() not in STATUS_WORDS:
                 method = m.strip()
         won = result.startswith("W")
+        if no_contest:
+            out.append({
+                "date": date, "fighter_a": fighter_name,
+                "fighter_b": str(opp).strip(), "winner": "",
+                "method": method or ("Draw" if result in ("D", "DRAW", "TIE") else "NC"),
+            })
+            continue
         out.append({
             "date": date,
             "fighter_a": fighter_name if won else str(opp).strip(),

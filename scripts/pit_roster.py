@@ -84,8 +84,20 @@ def build_fight_index(history_df: pd.DataFrame) -> dict:
         a, b, w = str(r.fighter_a).strip(), str(r.fighter_b).strip(), str(r.winner).strip()
         bucket = _method_bucket(getattr(r, "method", None))
         when = r.date.to_pydatetime() if hasattr(r.date, "to_pydatetime") else r.date
+        # NO WINNER MEANS NO WINNER, NOT A LOSS FOR BOTH. `name == winner` is
+        # False on both sides of a draw or no-contest, so such a row used to
+        # charge BOTH fighters a defeat. None is a third state the counter
+        # below skips.
+        #
+        # The row still enters the index, because the bout happened: it is the
+        # fighter's last time in the cage and therefore their real layoff.
+        # Michael Aljarouj's most recent fight is a 2025-04-12 no contest, and
+        # dropping it made the model read a four-year layoff instead of five
+        # months.
+        decided = bool(w) and w.lower() in (a.lower(), b.lower())
         for name in (a, b):
-            idx[name.lower()].append((when, name.lower() == w.lower(), bucket))
+            won = (name.lower() == w.lower()) if decided else None
+            idx[name.lower()].append((when, won, bucket))
     for n in idx:
         idx[n].sort(key=lambda t: t[0])
     return idx
@@ -133,7 +145,11 @@ def record_as_of(fight_index: dict, name: str, when, current: dict | None = None
         # a row lacking those columns fails the gate silently. That looked
         # like a data limitation and was a missing assignment.
         if last is not None:
-            out["last_fight_result"] = "L" if last_won is False else "W"
+            # Three-valued now. "NC" deliberately matches neither the "L" that
+            # quick_return_penalty gates on nor a win -- an undecided bout is
+            # not evidence either way.
+            out["last_fight_result"] = (
+                "NC" if last_won is None else ("L" if last_won is False else "W"))
             out["last_fight_method"] = {
                 "ko": "KO/TKO", "sub": "SUB", "dec": "DEC"}.get(last_bucket)
         return out
@@ -188,6 +204,10 @@ def _split_counts(fights, when):
         tgt = before if d < when else after
         if d < when:
             last, last_won, last_bucket = d, won, bucket
+        if won is None:
+            # A draw or no contest is neither. It still moved `last` above,
+            # which is what layoff reads.
+            continue
         if won:
             tgt["wins"] += 1
             if bucket:

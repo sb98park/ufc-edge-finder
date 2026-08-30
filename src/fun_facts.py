@@ -77,6 +77,12 @@ def _fighter_wins_chronological(history: pd.DataFrame, name: str) -> list[dict]:
     ].sort_values("date")
     out = []
     for _, r in rows.iterrows():
+        # A winnerless row (draw/no contest) lands here as False, which ENDS
+        # both streaks below. That is deliberate for a published claim:
+        # "riding a 5-fight win streak" is not true of a fighter whose last
+        # outing was a no contest. power_rating's streak skips the row instead
+        # and keeps the run alive -- a model term and a headline are allowed
+        # to disagree about what a non-result means.
         won = _normalize_name(str(r["winner"])) == norm
         opponent = r["fighter_b"] if _normalize_name(str(r["fighter_a"])) == norm else r["fighter_a"]
         out.append({"won": won, "method": r["method"], "opponent": opponent})
