@@ -184,6 +184,30 @@ def divisional_fallback_rates(priors: dict, weight_class):
     return (ko / 2.0, sub / 2.0, ko / 2.0, sub / 2.0)
 
 
+def has_measured_method_rates(name, table: dict | None = None,
+                              min_fights: int = MIN_UFC_FIGHTS) -> bool:
+    """
+    Whether this fighter's method rates are MEASURED or merely assumed.
+
+    rates_or_prior answers the same question by returning something either
+    way, which is right for producing a number and wrong for deciding whether
+    to bet on it. Two debutants in the same division receive identical rates
+    by construction -- divisional_fallback_rates halves the divisional prior
+    for both sides -- so the method model's inputs for that bout carry no
+    fighter-specific information at all, and its output is the divisional
+    base rate wearing a fight's name.
+
+    Measured on the 2026-08-29 China card: 11 of 26 fighters had fewer than
+    three UFC bouts, and that card's P(decision) spread across 13 fights was
+    0.121, the narrowest of the last six cards (median 0.234). The spread
+    alone does not prove causation -- across those six cards the correlation
+    between share-of-known-fighters and spread was -0.15, i.e. nothing -- but
+    the construction argument does not need the correlation: where both sides
+    fall back, there is provably no fighter-level signal to have.
+    """
+    return ufc_method_rates(name, table, min_fights) is not None
+
+
 def rates_or_prior(name, priors: dict, weight_class, table: dict | None = None):
     """UFC rates where they exist, the divisional prior where they don't."""
     got = ufc_method_rates(name, table)

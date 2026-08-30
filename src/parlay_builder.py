@@ -34,6 +34,7 @@ import pandas as pd
 from src.odds_utils import (american_to_decimal, decimal_to_american, format_american_odds,
                             implied_prob_to_american, market_blended_prob)
 from src.card_matcher import is_pickable_market, price_is_fragile
+from src.ufc_method_rates import has_measured_method_rates
 
 
 # WHERE A SLIP CAN ACTUALLY BE PLACED.
@@ -385,6 +386,42 @@ def _is_contradiction(leg_a: dict, leg_b: dict) -> bool:
     return False
 
 
+def _length_leg_has_measured_inputs(row: dict) -> bool:
+    """
+    A fight-length leg needs a method model that actually saw these two
+    fighters. Winner legs are unaffected.
+
+    WHY ONLY THE LENGTH FAMILY. Total Rounds and the Fight Outcome markets are
+    priced straight off the method model: model_preview sets
+    goes_distance_prob = method_distribution["decision"] and derives every
+    rounds line from it. When a fighter has fewer than three UFC bouts,
+    ufc_method_rates returns None and divisional_fallback_rates substitutes
+    half the divisional prior -- the SAME numbers for every such fighter in
+    that division. With both sides falling back, the model's inputs for that
+    bout are the divisional base rate and nothing else, so any gap against the
+    book's number is the book pricing information we do not have, not an edge.
+    The moneyline does not go through this path and keeps its own inputs.
+
+    Measured on the card that prompted this: 11 of 26 fighters were below the
+    threshold. See has_measured_method_rates for what was and was not
+    established there -- notably NOT a general claim that the method model
+    lacks spread, which one card's 0.121 range does not support.
+
+    Fails OPEN on an unparseable key. A leg whose fighters cannot be
+    identified is already handled by the fences above; silently dropping it
+    here would make this filter's effect impossible to reason about.
+    """
+    if not str(row.get("market") or "").startswith(LENGTH_FAMILY_PREFIXES):
+        return True
+    key = _fight_key(row)
+    if not key or "|" not in key:
+        return True
+    names = [n.strip() for n in key.split("|") if n.strip()]
+    if len(names) != 2:
+        return True
+    return all(has_measured_method_rates(n) for n in names)
+
+
 def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict | None = None) -> list[dict]:
     """
     Builds the atomic units that can be cross-fight-combined: either a
@@ -416,6 +453,7 @@ def _build_candidate_pieces(tracked_edges: list[dict], model_only_by_fight: dict
         row for row in tracked_edges
         if row.get("odds_american") is not None and row.get("model_prob") is not None
         and is_pickable_market(row) and not price_is_fragile(row)
+        and _length_leg_has_measured_inputs(row)
     ]
 
     # ONE CANDIDATE PER BOOK, NOT ONE PER MARKET.
