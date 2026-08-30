@@ -428,6 +428,16 @@
      below its longest unbreakable word and a long fighter name pushes the
      right rail off the card instead of ellipsing. */
   .cd-left { flex: 1 1 auto; min-width: 0; }
+  /* Card-over layout: one column, tally as a strip underneath. The divider
+     has to move with it -- .cd-right carries a border-LEFT for the side-by-side
+     view, which would sit across the wrong edge once stacked. */
+  .countdown-card.is-concluded { flex-direction: column; gap: 12px; }
+  .countdown-card.is-concluded .cd-right {
+    flex-direction: row; align-self: stretch; justify-content: center;
+    flex-wrap: wrap; gap: 14px;
+    border-left: 0; border-top: 1px solid var(--hairline);
+    padding-left: 0; padding-top: 10px;
+  }
   .cd-right {
     flex: 0 0 auto; align-self: stretch;
     display: flex; flex-direction: column; justify-content: center; gap: 7px;
@@ -599,6 +609,20 @@
     background: var(--sunken); border: 1px solid #2a2410; border-radius: var(--r-md); padding: 7px 10px;
   }
   .live-header-micro strong { color: var(--text); font-weight: 600; }
+  /* The just-concluded block. Each part gets its own line so a long matchup
+     wraps on its own terms instead of shoving the outcome around, and the
+     line-height drops from the box's 1.6 -- that spacing is for a wrapped
+     sentence, and it read as loose once this became two short labelled
+     lines. */
+  .live-header-micro .jc-matchup,
+  .live-header-micro .jc-outcome,
+  .live-header-micro .jc-note { display: block; line-height: 1.35; }
+  .live-header-micro .jc-matchup {
+    color: var(--text); font-weight: 600;
+    text-wrap: balance; letter-spacing: -0.01em;
+  }
+  .live-header-micro .jc-outcome { color: var(--muted); margin-top: 2px; }
+  .live-header-micro .jc-note { color: var(--muted); margin-top: 4px; }
   .live-header-micro .next-lock { color: var(--accent2); font-weight: 600; }
   .coverage-warning { color: var(--accent2); font-size: var(--t-small); display: inline-block; margin-top: 2px; }
 
@@ -12233,6 +12257,20 @@
       if (!card) return;
       const target = new Date(card.dataset.target).getTime();
       const boxes = document.getElementById('countdown-boxes');
+      // ONCE THE CARD IS OVER the countdown card has nothing to count down to,
+      // but it stayed a two-column flex row -- so the result line was squeezed
+      // into .cd-left at 195px of a 343px card while the tally kept its
+      // column. Measured on the 2026-08-29 main event, that is where the
+      // "tight" came from: a 33-character matchup wrapping inside 166px of
+      // usable width. Stacking gives the result the full width and turns the
+      // tally into a strip beneath it, which is the natural reading order
+      // after a card anyway. Only the two CARD-OVER states set this; the
+      // mid-card "FIGHT CONCLUDED" view still has a next fight to count down
+      // to and keeps its columns.
+      const cdCard = document.querySelector('.countdown-card');
+      function setConcludedLayout(on) {
+        if (cdCard) cdCard.classList.toggle('is-concluded', !!on);
+      }
       const liveHeader = document.getElementById('live-header');
       const liveMacroText = document.getElementById('live-macro-text');
       const liveMicro = document.getElementById('live-header-micro');
@@ -12349,8 +12387,19 @@
         return `${m}m ${String(s).padStart(2, '0')}s`;
       }
 
+      // TWO LINES, NOT ONE RUN-ON. This was a single centred sentence --
+      // "Umar Nurmagomedov vs. Song Yadong — Yadong by KO/TKO · R2 3:12",
+      // 62 characters before the trailing sentence that used to follow it --
+      // wrapping wherever it happened to run out of room, which on a long
+      // matchup meant breaking mid-name and leaving the outcome orphaned on
+      // its own line. Splitting the matchup from the outcome means each wraps
+      // on its own terms and the em dash disappears, so nothing has to be
+      // hyphenated or squeezed. text-wrap:balance evens the matchup when it
+      // does need two lines rather than leaving one word stranded.
       function resultLine(f) {
-        return `<strong>${f.fighter_a} vs. ${f.fighter_b}</strong> — ${f.result_label}${f.result_round_time ? ' · ' + f.result_round_time : ''}`;
+        const when = f.result_round_time ? ` · ${f.result_round_time}` : '';
+        return `<span class="jc-matchup">${f.fighter_a} vs. ${f.fighter_b}</span>` +
+               `<span class="jc-outcome">${f.result_label}${when}</span>`;
       }
 
 
@@ -12388,6 +12437,10 @@
 
       function update() {
         const now = Date.now();
+        // Cleared first, then re-set by whichever branch below applies. update()
+        // ticks every second and the same node survives a card handover, so a
+        // class left on from last week would stack next week's countdown.
+        setConcludedLayout(false);
 
         // The day after an event (or later, though promotion should have
         // already handed off to the next card by then) is definitive,
@@ -12397,12 +12450,15 @@
         // logic below is meaningful once the event's own date has passed.
         if (daysSinceEvent >= 1) {
           boxes.style.display = 'none';
+          setConcludedLayout(true);
           liveHeader.style.display = 'flex';
           liveMacroText.textContent = 'JUST HAPPENED';
           clearLiveRow();
           let html = '';
           if (justConcluded) {
-            html = resultLine(justConcluded) + '<br>Full card results below — see you next time.';
+            // The card's own results sit directly below this banner, so the
+            // line telling you so was restating the layout.
+            html = resultLine(justConcluded);
           } else {
             html = 'Card complete — see you next time.';
           }
@@ -12474,9 +12530,11 @@
         // not an estimate.
         if (justConcluded && schedule.length === 0) {
           boxes.style.display = 'none';
+          setConcludedLayout(true);
           liveHeader.style.display = 'flex';
           liveMacroText.textContent = 'CARD CONCLUDED';
-          liveMicro.innerHTML = resultLine(justConcluded) + '<br>Final fight of the night.';
+          liveMicro.innerHTML = resultLine(justConcluded) +
+            '<span class="jc-note">Final fight of the night.</span>';
           clearLiveRow();
           return;
         }
@@ -12506,9 +12564,9 @@
           liveMacroText.textContent = 'FIGHT CONCLUDED';
           clearLiveRow();
           const locksIn = new Date(upcoming.estimated_start_iso).getTime() - now;
-          liveMicro.innerHTML = resultLine(justConcluded) + '<br>' +
-            `⏰ Next (${upcoming.fighter_a} vs. ${upcoming.fighter_b}) locks in: ` +
-            `<span class="next-lock">${fmtClock(locksIn)}</span>`;
+          liveMicro.innerHTML = resultLine(justConcluded) +
+            `<span class="jc-note">⏰ Next (${upcoming.fighter_a} vs. ${upcoming.fighter_b}) locks in: ` +
+            `<span class="next-lock">${fmtClock(locksIn)}</span></span>`;
           return;
         }
 
