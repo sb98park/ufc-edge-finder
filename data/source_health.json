@@ -1,5 +1,31 @@
 {
-  "at": "2026-08-30T22:34:34+00:00",
+  "at": "2026-08-30T23:01:22+00:00",
+  "card_data_coverage": {
+    "carded_fighters": 156,
+    "checked_at": "2026-08-30T22:59:49+00:00",
+    "counts": {
+      "history": 1,
+      "layoff": 1,
+      "physicals": 6
+    },
+    "findings": [
+      {
+        "detail": "1 of 16 bouts in fight_history (6%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Hooker vs. Parnasse",
+        "event_date": "2026-09-05",
+        "fighter": "Michael Aljarouj",
+        "last_fight_date": "2021-03-18",
+        "severity": "history"
+      },
+      {
+        "detail": "last fight 2021-03-18 (5.5y) is the newest of only 1 bout we hold -- the real one may be far more recent",
+        "event": "UFC Fight Night: Hooker vs. Parnasse",
+        "event_date": "2026-09-05",
+        "fighter": "Michael Aljarouj",
+        "severity": "layoff"
+      }
+    ]
+  },
   "edges_two_way": {
     "best_book": {
       "DraftKings": 23,
@@ -37,7 +63,7 @@
   "rows_by_source": {
     "DraftKings": 26,
     "FanDuel": 24,
-    "Polymarket": 196
+    "Polymarket": 192
   },
   "rundown_dates_requested": [
     "2026-09-05"
