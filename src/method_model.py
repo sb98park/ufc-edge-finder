@@ -82,6 +82,42 @@ TRAINING_RANGE = {
 }
 
 
+# WHAT elo_gap CLIPPING ACTUALLY COSTS -- measured 2026-08-29, because the
+# warning below sent an investigation looking for a serving bug that is not
+# there.
+#
+# The warning used to say "the caller's feature definition has drifted from
+# the harness." On this data it has not. Every bout that exceeded the ceiling
+# was a genuine skill gap between two fighters with full records -- Abdul
+# Hussein 16-2 (1724) vs Cody Gibson 22-13 (1424) at 0.750, Luke Riley 14-0
+# vs Kai Kamaka III 18-8 at 0.655, four more of the same shape. This is not
+# the Terrance Chatman failure, where a 0-0 roster row manufactured a 0.895
+# gap out of missing data; that one was real and is fixed in power_rating.
+#
+# The served distribution IS wider than the declared range, and serving off
+# build_effective_ratings rather than raw Elo accounts for about half of it
+# (n=102 bouts, so these tails are noisy estimates):
+#
+#     declared 99th pct                  0.469
+#     raw elo.ratings, served            0.548
+#     effective ratings, served          0.655   (max 0.750)
+#     bouts above the ceiling            6 of 102 (5.9%, not the ~1% implied)
+#
+# AND IT DOES NOT MATTER. elo_gap carries the smallest coefficients in the
+# model -- DEC is -0.0201, effectively zero -- so it moves the KO/SUB split,
+# not decision-vs-finish, which is what the rounds and distance markets are
+# priced off. Clipping the most extreme value ever observed moves P(decision)
+# by 0.0141; the 0.750 case above moves it by 0.0091.
+#
+# So: do NOT widen TRAINING_RANGE to silence this. That would extrapolate a
+# logistic model past everything it was fitted on to buy at most 1.4pp on a
+# feature the decision leg barely reads. The clip is the correct behaviour.
+# The honest fix is a refit whose training features are built the way serving
+# builds them -- and that needs research_method_fightlevel.py, which is named
+# in the docstring above but is not in this repo.
+ELO_GAP_CLIP_MEASURED = "2026-08-29: <=1.4pp on P(decision); clip is correct, do not widen"
+
+
 def method_probabilities(ko_press: float, sub_press: float, ko_rate_sum: float,
                          sub_rate_sum: float, durability: float, elo_gap: float,
                          scheduled_rounds: int = 3) -> dict | None:
@@ -119,8 +155,8 @@ def method_probabilities(ko_press: float, sub_press: float, ko_rate_sum: float,
         # would train the reader to ignore the warning.
         if v > hi * 1.5:
             print(f"[method_model] {name}={v:.3f} is far outside the training "
-                  f"range [{lo:.3f}, {hi:.3f}] -- clipping. If this fires often, "
-                  f"the caller's feature definition has drifted from the harness.")
+                  f"range [{lo:.3f}, {hi:.3f}] -- clipping. See ELO_GAP_CLIP_MEASURED "
+                  f"before treating this as a serving bug.")
         x.append(min(max(v, lo), hi))
     z = [INTERCEPT[k] + sum(c * v for c, v in zip(COEF[k], x)) for k in range(3)]
     m = max(z)                                  # subtract the max for stability
