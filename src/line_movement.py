@@ -52,6 +52,9 @@ STALE_ENTRY_DAYS = 45
 SCRUB_MAX_POINTS = 240
 
 
+_CLIP_SEQ = 0
+
+
 def _html_escape(text: str) -> str:
     """For a single-quoted SVG attribute: quotes and & only."""
     return (text.replace('&', '&amp;').replace("'", '&#39;')
@@ -633,7 +636,22 @@ def build_dual_line_chart_svg(
         }
         scrub_json = _html_escape(json.dumps(scrub, separators=(",", ":")))
 
-    clip_id = f"reveal-{abs(hash((width, height, len(points_a), len(points_b), name_a, name_b))) % 10**8}"
+    # UNIQUE PER CHART, from a counter -- not a hash of the chart's shape.
+    #
+    # The hash collided whenever two charts shared those six values, which is
+    # exactly what per-fighter method charts within one fight do: same size,
+    # same point count, same two names. Every colliding <svg> then carried
+    # clip-path="url(#reveal-NNNN)", and a document-wide id reference resolves
+    # to the FIRST match -- so charts 2..n were clipped by chart 1's rect and
+    # their draw sweep was driven entirely by chart 1's reveal state. Measured
+    # across docs/movements/: 14 colliding ids, one of them shared by five
+    # charts in a single lazily-loaded fragment.
+    #
+    # Python's str hash is also seed-randomised per process, so these ids
+    # changed on every build for no reason.
+    global _CLIP_SEQ
+    _CLIP_SEQ += 1
+    clip_id = f"reveal-{_CLIP_SEQ}"
     past_id, future_id = f"past-{clip_id}", f"future-{clip_id}"
     series_id = f"series-{clip_id}"
     clip_svg = (

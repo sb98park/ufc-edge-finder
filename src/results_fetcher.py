@@ -1058,6 +1058,32 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     def _key(a, b):
         return frozenset({str(a).strip().lower(), str(b).strip().lower()})
 
+    def _loose_key(a, b):
+        """
+        Same pair key, but with each NAME's own tokens sorted -- so a source
+        that writes the family name first still matches one that writes it
+        last.
+
+        ESPN'S fullName FOR THE 2026-08-29 MAIN CARD WAS "Ce Liu"; our card
+        row said "Liu Ce". Every match in the live pipeline is exact-string,
+        so that bout never entered truly_missing, its result was never
+        fetched, and it had to be committed by hand. Its result therefore
+        landed ALONE and out of order, 14 minutes before the prelim batch --
+        which is what tripped the results-pending path in src/schedule.py and
+        took eight other fights out of the live schedule with it. One name
+        spelling cost the whole card's live mode.
+
+        DELIBERATELY A FALLBACK, NEVER THE PRIMARY. Exact matching runs first
+        and wins; this only gets consulted for pairs exact matching could not
+        place. Sorting tokens within a name is safe for the CJK-order case it
+        exists for and meaningless elsewhere -- no two distinct UFC fighters
+        differ only by the order of their own name tokens -- but it is still
+        a weaker claim than an exact hit, so it must never override one.
+        """
+        def toks(n):
+            return " ".join(sorted(str(n).strip().lower().split()))
+        return frozenset({toks(a), toks(b)})
+
     known_keys = {_key(r["fighter_a"], r["fighter_b"]) for _, r in existing.iterrows() if pd.notna(r.get("winner"))}
     stats_missing_keys = {
         _key(r["fighter_a"], r["fighter_b"]) for _, r in existing.iterrows()
@@ -1065,6 +1091,24 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     }
     card_keys = {_key(r["fighter_a"], r["fighter_b"]) for r in fight_cards_df.to_dict("records")}
     truly_missing = card_keys - known_keys
+    # SECOND PASS on whatever exact matching could not place. A card row whose
+    # loose key matches a result we already hold is the same bout written with
+    # its name tokens the other way round, not a missing result -- see
+    # _loose_key. Without this the pairing is re-fetched on every run forever
+    # and never converges.
+    if truly_missing:
+        known_loose = {_loose_key(r["fighter_a"], r["fighter_b"])
+                       for _, r in existing.iterrows() if pd.notna(r.get("winner"))}
+        by_loose = {}
+        for r in fight_cards_df.to_dict("records"):
+            by_loose.setdefault(_loose_key(r["fighter_a"], r["fighter_b"]), set()).add(
+                _key(r["fighter_a"], r["fighter_b"]))
+        resolved = {k for lk, keys in by_loose.items() if lk in known_loose for k in keys}
+        if resolved & truly_missing:
+            print(f"[results_fetcher] {len(resolved & truly_missing)} pairing(s) matched only after "
+                  f"folding name order -- already have their result: "
+                  f"{[sorted(k) for k in sorted(resolved & truly_missing, key=sorted)]}")
+            truly_missing = truly_missing - resolved
     needs_stats_only = (card_keys & known_keys) & stats_missing_keys
 
     if not truly_missing and not needs_stats_only:

@@ -14,6 +14,36 @@ import re
 import unicodedata
 from zoneinfo import ZoneInfo
 
+
+# REAL EASTERN, not a fixed -04:00. Eastern is -04:00 only between the second
+# Sunday in March and the first Sunday in November; the rest of the year it is
+# -05:00. Every site that stamped or read ET with a hardcoded -4 was an hour
+# early from November through mid-March: the countdown reached zero an hour
+# before first bell, every estimated fight window opened an hour early (pushing
+# "LIVE NOW" about one fight ahead of reality for the whole night), and the
+# date used at ~line 1413 rolled over between 23:00 and 00:00 EST, so the
+# server stopped fetching the live-fight key during the main event of every
+# winter card.
+#
+# Not hypothetical -- UFC Fight Night: Bonfim vs. Brady is already tracked for
+# 2026-11-07, six days after DST ends. event_start_time_et was always correct
+# (card_discovery converts through ZoneInfo); the bug was re-stamping that
+# correct wall-clock with a fixed offset.
+_ET_ZONE = ZoneInfo("America/New_York")
+
+
+def _et_now() -> dt.datetime:
+    return dt.datetime.now(_ET_ZONE)
+
+
+def _et_stamp(date_str, hhmm) -> str:
+    """ISO string for an ET wall-clock time, carrying that date's true offset."""
+    h, m = (int(x) for x in str(hhmm).split(":")[:2])
+    d = dt.datetime.fromisoformat(str(date_str)).replace(
+        hour=h, minute=m, second=0, microsecond=0, tzinfo=_ET_ZONE)
+    return d.isoformat()
+
+
 import pandas as pd
 
 from scripts.build_pit_stats import enrich_roster
@@ -488,14 +518,23 @@ def main(tier: str = "member", output_path: str | None = None):
         try:
             _current_event_date = dt.date.fromisoformat(str(cards_df["event_date"].iloc[0]))
             current_card_has_happened = _current_event_date <= dt.datetime.now(
-                dt.timezone(dt.timedelta(hours=-4))
+                _ET_ZONE
             ).date()
         except (ValueError, TypeError):
             current_card_has_happened = False
     if current_card_has_happened and len(tracked_edges) < MIN_EDGES_FOR_CURRENT_CARD and future_events:
         next_event = _soonest(future_events)
+        # SAME SHAPE AS THE PRIMARY PATH ABOVE -- fight_key stamped on, and
+        # cancelled fights excluded. This built bare edges, so every leg it
+        # produced reached parlay_builder._fight_key with no fight_key and a
+        # fight_id ("card_19") containing no "|", which returns None. A leg
+        # with fight_key None can never be resolved by parlay_grader.grade_leg
+        # (it needs two names from that key), so it stays 'unresolved' forever
+        # and its slip stays 'open'. 99 of 815 legs on file carry None today.
         next_tracked_edges = pd.DataFrame(
-            [edge for fight in next_event["fights"] for edge in fight["edges"]]
+            [dict(edge, fight_key=f"{fight.get('fighter_a')}|{fight.get('fighter_b')}")
+             for fight in next_event["fights"]
+             if not fight.get("cancelled") for edge in fight["edges"]]
         )
         if len(next_tracked_edges) > len(tracked_edges):
             tracked_edges = next_tracked_edges
@@ -716,7 +755,21 @@ def main(tier: str = "member", output_path: str | None = None):
         # reaching for it here would raise a NameError straight into the
         # catch-all below, which would drop the parlay sections from the site
         # silently rather than loudly.
-        _pin_event = events[0].get("event_name") if events else None
+        # THE EVENT THE SLIP IS ACTUALLY BUILT FROM, which is not always
+        # events[0]. Once the current card has happened and its edge pool
+        # thins, the block above swaps tracked_edges to next_event -- but this
+        # kept keying on events[0], so the NEXT card's slip was pinned into
+        # the CONCLUDED card's slot, destroying the pin that card was
+        # committed to before its results ever landed. parlay_grader.grade_pinned
+        # builds its wanted-set only from the live pin file, so there is no
+        # backstop: the overwritten commitment is simply gone.
+        #
+        # Observed on file: the pin under "Nurmagomedov vs. Song" (fought
+        # 2026-08-29) held Felipe Lima and Mario Pinto, both of whom fight on
+        # the Paris card a week later. Across the whole ledger 164 of 196
+        # slips would settle cleanly against recorded results and ZERO are
+        # graded -- the published parlay record has never been able to fill.
+        _pin_event = analytics_source_event or (events[0].get("event_name") if events else None)
         _pin_pieces = _candidate_pieces(tracked_edges_list, model_only_by_fight)
         bankroll_parlays = parlay_pin.hold(
             _pin_event, "bankroll",
@@ -741,7 +794,10 @@ def main(tier: str = "member", output_path: str | None = None):
     # rows per card rather than nine per render.
     record_slips(
         {"bankroll": bankroll_parlays},
-        event_name=(events[0].get("event_name") if events else None),
+        # Must be the SAME event the pin above used, or the ledger row and the
+        # pin disagree about which card the slip belongs to and the grader
+        # matches neither.
+        event_name=(analytics_source_event or (events[0].get("event_name") if events else None)),
     )
 
     # THE LEG INVENTORY for the slip builder. Every leg the card offers,
@@ -866,7 +922,11 @@ def main(tier: str = "member", output_path: str | None = None):
     countdown_matchup = None
     next_event = events[0] if events else _soonest(future_events)
     if next_event:
-        countdown_target_iso = f"{next_event['event_date']}T{next_event.get('event_start_time_et', '19:00')}:00-04:00"
+        # True ET offset for that date -- see _et_stamp. Hardcoding -04:00 here
+        # made the countdown reach zero an hour before first bell on every card
+        # between November and mid-March.
+        countdown_target_iso = _et_stamp(next_event['event_date'],
+                                         next_event.get('event_start_time_et', '19:00'))
         countdown_label = next_event["event_name"]
         # The banner sets the series as a gold eyebrow ABOVE the matchup
         # rather than running both into one line, so the matchup -- the only
@@ -1380,7 +1440,7 @@ def main(tier: str = "member", output_path: str | None = None):
     espn_live_fight_key = None
     if events:
         try:
-            today_et = dt.datetime.now(dt.timezone(dt.timedelta(hours=-4))).date()
+            today_et = _et_now().date()
             event_date_actual = dt.date.fromisoformat(str(events[0]["event_date"]))
             if today_et == event_date_actual:
                 known_fighters_lower = {
@@ -2003,8 +2063,8 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         # worse than the stale timer this block was written to prevent.
         countdown_series = countdown_matchup = None
         for ev in sorted((future_events or []), key=lambda e: e.get("event_date") or "9999"):
-            candidate = (f"{ev.get('event_date')}T"
-                         f"{ev.get('event_start_time_et', '19:00')}:00-04:00")
+            candidate = _et_stamp(ev.get('event_date'),
+                                  ev.get('event_start_time_et', '19:00'))
             countdown_target_iso = _future_or_none(candidate)
             if countdown_target_iso:
                 _name = (ev.get("event_name") or "").strip()

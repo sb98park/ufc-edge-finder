@@ -25,6 +25,7 @@ This sorts back to true chronological order before assigning estimated times.
 """
 
 import datetime as dt
+from zoneinfo import ZoneInfo
 import json
 import os
 
@@ -126,8 +127,36 @@ def _parse(event_date: str, time_str: str) -> dt.datetime:
     return dt.datetime.fromisoformat(f"{event_date}T{hour:02d}:{minute:02d}:00")
 
 
+ET = ZoneInfo("America/New_York")
+
+
+def et_now() -> dt.datetime:
+    """Now, in real Eastern wall-clock -- EDT or EST as the date requires."""
+    return dt.datetime.now(ET)
+
+
 def _fmt(d: dt.datetime) -> str:
-    return d.strftime("%Y-%m-%dT%H:%M:%S-04:00")
+    """
+    Stamp an ET wall-clock time with the offset that date ACTUALLY has.
+
+    This hardcoded -04:00. Eastern is -04:00 only from the second Sunday in
+    March to the first Sunday in November; for the rest of the year it is
+    -05:00, so every estimate published between November and March claimed to
+    be an hour earlier than it was. The browser parses these as absolute
+    instants, so on a winter card the countdown reaches zero an hour before
+    first bell and every fight window opens an hour early -- which pushes
+    "LIVE NOW" roughly one fight ahead of reality for the whole night.
+
+    Not hypothetical: UFC Fight Night Bonfim vs. Brady is already tracked for
+    2026-11-07, six days after DST ends.
+
+    event_start_time_et itself was always correct -- card_discovery converts
+    through ZoneInfo -- so the bug was purely in re-stamping that correct
+    wall-clock with a fixed offset.
+    """
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=ET)
+    return d.strftime("%Y-%m-%dT%H:%M:%S%z")[:-2] + ":" + d.strftime("%z")[-2:]
 
 
 def build_fight_schedule(
@@ -275,7 +304,7 @@ def promote_card_if_stale(
     if cards_df.empty:
         return cards_df, future_cards_df, 0
 
-    today = today or dt.datetime.now(dt.timezone(dt.timedelta(hours=-4))).date()
+    today = today or et_now().date()
     event_date = dt.date.fromisoformat(str(cards_df["event_date"].iloc[0]))
     days_since = (today - event_date).days
 
@@ -342,7 +371,7 @@ def apply_live_corrections(
     "when that count last increased" -- just enough to know a correction
     anchor exists, without needing to guess elapsed time.
     """
-    now = now or dt.datetime.now(dt.timezone(dt.timedelta(hours=-4)))
+    now = now or et_now()
 
     # Cancelled fights were already removed in build_fight_schedule, before
     # these entries were constructed -- see the note there.
@@ -413,7 +442,7 @@ def apply_live_corrections(
         genuinely_upcoming = [f for f in remaining if f not in stuck]
         if stuck:
             print(f"[schedule] {len(stuck)} fight(s) still unconfirmed despite a later result already "
-                  f"landing -- treating as results-pending rather than upcoming (not shown as live/next): "
+                  f"landing -- flagged results-pending (not shown as live/next): "
                   f"{[(f['fighter_a'], f['fighter_b']) for f in stuck]}")
         if genuinely_upcoming:
             corrected_next_start = last_confirmed_at + dt.timedelta(minutes=INTER_FIGHT_GAP_MIN)
@@ -422,6 +451,36 @@ def apply_live_corrections(
             for f in genuinely_upcoming:
                 f["estimated_start_iso"] = _fmt(dt.datetime.fromisoformat(f["estimated_start_iso"]) + shift)
                 f["estimated_end_iso"] = _fmt(dt.datetime.fromisoformat(f["estimated_end_iso"]) + shift)
-        remaining = genuinely_upcoming
+        # FLAGGED, NOT DELETED -- and the distinction is the whole bug.
+        #
+        # This used to return genuinely_upcoming alone, dropping stuck fights
+        # out of the schedule entirely. `schedule` is the ONLY lookup table
+        # the browser has, so a fight missing from it cannot be found by
+        # applyLiveScoreboard (its live result is never painted, the row shows
+        # "VS" through the fight and after it), cannot be matched by the ESPN
+        # live override, and cannot be resolved by gradeLeg -- so any parlay
+        # leg on it stays pending forever while the slip reports itself alive,
+        # which the client's own comment calls the one failure mode that
+        # actively misleads. insideCardWindow also reads schedule[0] and
+        # schedule[-1], so deleting the prelims moved the poll window start
+        # hours later and the browser stopped polling ESPN entirely for that
+        # stretch.
+        #
+        # Measured on the 2026-08-29 card, replaying its real confirmation
+        # sequence: Liu Ce's result landed alone at 07:12 (a name mismatch
+        # kept the rest from being fetched -- see _canon in results_fetcher),
+        # 14 minutes before the prelim batch. That ONE out-of-order
+        # confirmation deleted EIGHT unconfirmed fights and compressed the
+        # four survivors ~30 minutes early, which is how the site showed
+        # Yan Xiaonan live while Sumudaerji was the fight actually next.
+        #
+        # The original intent stands and is preserved: a stuck fight must not
+        # be presented as live or next, and must not have its estimate dragged
+        # into the future by a shift anchored hours later. Both are achieved
+        # by the flag -- it keeps its ORIGINAL estimate (no shift applied
+        # above) and consumers skip it when choosing live/next.
+        for f in stuck:
+            f["results_pending"] = True
+        remaining = sorted(stuck + genuinely_upcoming, key=lambda f: chrono_index[id(f)])
 
     return remaining, state.get("last_confirmed_at")

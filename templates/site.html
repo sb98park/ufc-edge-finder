@@ -9788,6 +9788,14 @@
         }
         bar.__place = place;
         bar.__activeIndex = activeIndex;
+        // PLACE IT NOW, then refine on the next frame. place() is what sets
+        // both width and translateX, so with placement deferred entirely to
+        // rAF the pill had no width at all until the first frame -- and rAF
+        // does not run in a background tab, so a page opened in one showed the
+        // Main Card / Preliminary Card control with no pill on it until the
+        // tab was foregrounded. Same class as the donut centre that rendered
+        // blank for the same reason.
+        place(activeIndex(), 0);
         requestAnimationFrame(() => place(activeIndex(), 0));
         window.addEventListener('resize', () => place(activeIndex(), 0), { passive: true });
 
@@ -10450,6 +10458,16 @@
           const far = dy > height * CLOSE_FRACTION;
           const flicked = v > FLICK_VELOCITY;
           const from = Math.max(0, dy);
+          // THE ONLY TWO spring.start SITES THAT SKIPPED THIS. The rule at the
+          // top of this file is that every spring checks the preference, and
+          // springToSeg, springToBtn, the back-swipe strip and the toast all
+          // do -- so under "reduce" the whole app went still except the sheet,
+          // which still sprang, including its underdamped 0.82 snap-back.
+          if (prefersReducedMotion()) {
+            drawer.style.transform = ''; scrim.style.opacity = '';
+            if (far || flicked) close();
+            return;
+          }
           if (far || flicked) {
             // Carry the gesture's velocity into the exit so a throw keeps its
             // speed instead of restarting from zero.
@@ -11541,7 +11559,10 @@
           : [];
         const paneName = (document.querySelector('.detail-section[data-section="thisweekend"] .seg-tab.active') || {}).textContent;
         if (active !== 'all' && visible.length === 0) {
-          const tier = active === 'high' ? 'High Confidence' : 'Medium Confidence';
+          // The chip row is all/high/medium/low, so a two-branch ternary
+        // named "Medium Confidence" for BOTH medium and low.
+        const tier = { high: 'High Confidence', medium: 'Medium Confidence',
+                       low: 'Low Confidence' }[active] || 'Medium Confidence';
           emptyText.textContent = paneName
             ? `No ${tier} picks on the ${paneName.trim().toLowerCase()}`
             : `No ${tier} picks on this card`;
@@ -11940,7 +11961,16 @@
 
         const activePane = touchStartTarget && touchStartTarget.closest('.seg-pane.active');
         if (activePane) {
-          const tabsContainer = document.querySelector('.seg-tabs');
+          // SCOPED TO THE PANE THAT WAS SWIPED, not the document. Three
+          // sections use .seg-pane -- This Weekend, Track Record (#tr-overall)
+          // and How It Works (#hiw-0) -- but only This Weekend has a .seg-tabs
+          // bar, so a document-rooted lookup resolved a swipe on Record to a
+          // DIFFERENT section's tabs, switched them, and returned before
+          // showHub(). Symptom: back-swipe silently dead on Record and How It
+          // Works, and the card tab changing underneath you.
+          const swipedPane = touchStartTarget && touchStartTarget.closest('.seg-pane');
+          const paneRoot = swipedPane && swipedPane.parentElement;
+          const tabsContainer = paneRoot ? paneRoot.querySelector('.seg-tabs') : null;
           const tabs = tabsContainer ? [...tabsContainer.querySelectorAll('.seg-tab')] : [];
           const activeIndex = tabs.findIndex(t => t.classList.contains('active'));
           if (activeIndex !== -1) {
@@ -12334,8 +12364,23 @@
         // from `schedule` server-side, so this only ever estimates real
         // unknowns, and the remaining times are self-corrected against
         // justConcluded.last_confirmed_at rather than the stale pre-card guess.
+        // results_pending: a fight the server could not confirm even though a
+        // LATER one has. It stays in `schedule` so its row can still be
+        // painted, its parlay legs can still resolve and the poll window
+        // still covers it -- but its estimate is known-stale, so it must
+        // never be chosen as live or next. It used to be deleted server-side
+        // instead, which broke all three of those things (see the note in
+        // src/schedule.py).
         let live = null, upcoming = null;
         for (const f of schedule) {
+          if (f.results_pending) continue;
+          // ALREADY FINISHED, per this same page. applyLiveScoreboard sets
+          // result_label and paints the row FINAL but never removes the entry
+          // from `schedule`, so this window loop kept matching it until its
+          // ESTIMATED end passed -- up to 15 minutes for an undercard slot,
+          // 30 for a main event. The result and "LIVE NOW" for the same bout
+          // were on screen together.
+          if (f.result_label || f.winner || f.no_winner) continue;
           const start = new Date(f.estimated_start_iso).getTime();
           const end = new Date(f.estimated_end_iso).getTime();
           if (now >= start && now < end) { live = f; }
@@ -12664,6 +12709,13 @@
       function applyLiveScoreboard(data) {
         let changed = false;
         let liveKey = null;
+        // Did this payload actually cover OUR card? The scoreboard URL carries
+        // no `dates` parameter (the server passes one), so ESPN can hand back
+        // a different day entirely -- and "no live fight in a payload about
+        // some other event" is not evidence that our card is between fights.
+        // Set true only when a competition in the payload matches a fight we
+        // know about. See the espnLiveKey assignment below.
+        let sawOurEvent = false;
         // Kick off the method lookup for this card; it resolves on a later
         // tick and paints then, so it never delays the winner appearing.
         const evId = (data.events && data.events[0] && data.events[0].id) || null;
@@ -12701,6 +12753,8 @@
             if (!names[0] || !names[1]) continue;
             const key = canonicalKey(names[0], names[1]);
             const fight = schedule.find(f => canonicalKey(f.fighter_a, f.fighter_b) === key);
+            // This payload demonstrably covers our card.
+            if (fight) sawOurEvent = true;
             if (!fight) continue;
 
             const st = (comp.status && comp.status.type) || {};
@@ -12735,7 +12789,22 @@
         // A fight ESPN still calls live overrides the schedule estimate; once
         // nothing is live, drop the override so update() falls back to its own
         // window logic rather than clinging to a stale "LIVE NOW".
-        espnLiveKey = liveKey;
+        // ONLY OVERWRITE ON EVIDENCE. This assigned unconditionally, so any
+        // poll whose payload did not contain our event -- the card crossing
+        // midnight in ESPN's default scoreboard window, ESPN serving another
+        // day, a partial 200 -- wiped the server-baked espn_live_fight_key and
+        // dropped the page back onto its drifting estimate, permanently.
+        // Reproduced: with the true live fight known and one empty payload,
+        // the banner named the wrong fight within a single poll and stayed
+        // there. A null liveKey means "this payload told us nothing", which is
+        // not the same claim as "nothing is live".
+        if (liveKey !== null) {
+          espnLiveKey = liveKey;
+        } else if (sawOurEvent) {
+          // The payload DID cover our card and showed nothing in progress --
+          // that is real evidence the card is between fights, so clear it.
+          espnLiveKey = null;
+        }
         // Which fight is in the cage right now, for the live leg glyph. Set
         // before grading so a leg can read "live" on the same pass that its
         // fight starts.
