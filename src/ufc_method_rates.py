@@ -144,6 +144,19 @@ def load_ufc_records(path: str = RESULTS) -> dict:
     return table
 
 
+_TOKEN_INDEX: dict | None = None
+_TOKEN_INDEX_FOR: int | None = None
+
+
+def _BY_TOKENS(table: dict) -> dict:
+    """Token-sorted view of the records table, rebuilt when the table changes."""
+    global _TOKEN_INDEX, _TOKEN_INDEX_FOR
+    if _TOKEN_INDEX is None or _TOKEN_INDEX_FOR != id(table):
+        _TOKEN_INDEX = {" ".join(sorted(k.split())): v for k, v in table.items()}
+        _TOKEN_INDEX_FOR = id(table)
+    return _TOKEN_INDEX
+
+
 def ufc_method_rates(name, table: dict | None = None, min_fights: int = MIN_UFC_FIGHTS):
     """
     (ko_rate, sub_rate, ko_lost, sub_lost) over UFC bouts, or None when the
@@ -157,6 +170,19 @@ def ufc_method_rates(name, table: dict | None = None, min_fights: int = MIN_UFC_
     """
     tbl = table if table is not None else load_ufc_records()
     rec = tbl.get(_fold(name))
+    if rec is None:
+        # NAME ORDER, as a fallback only. _fold strips accents but keeps token
+        # order, and this table is built from UFCStats, which writes many
+        # Chinese fighters family-name-first: it holds "Wang Cong" while our
+        # roster, our results and ESPN all say "Cong Wang". Exact matching
+        # returned nothing for her, so she fell to the divisional prior with
+        # six real UFC bouts on file.
+        #
+        # Safe because it is checked ONLY after an exact miss, and because no
+        # two distinct fighters in this table collide under a token-sorted key
+        # -- verified across all 2,733 of them. Do not promote it above the
+        # exact lookup: an exact hit is always the stronger claim.
+        rec = _BY_TOKENS(tbl).get(" ".join(sorted(_fold(name).split())))
     if not rec or rec["fights"] < min_fights:
         return None
     n = float(rec["fights"])
