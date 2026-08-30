@@ -210,6 +210,12 @@ jobs:
           echo "::group::rehearse_leg_grading"
           python scripts/rehearse_leg_grading.py || fail=1
           echo "::endgroup::"
+          # The browser's live-scoreboard handler, against a real ESPN payload
+          # captured for the 2026-08-29 card. Needs no DOM -- every paint is
+          # delegated -- so it runs under node with stubs. Skips if node is absent.
+          echo "::group::rehearse_live_poller"
+          python scripts/rehearse_live_poller.py || fail=1
+          echo "::endgroup::"
           exit $fail
 
       - name: Merge recorded results into fight history

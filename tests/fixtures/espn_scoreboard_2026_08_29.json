@@ -1,0 +1,323 @@
+{
+ "events": [
+  {
+   "id": "600060620",
+   "name": "UFC Fight Night: Nurmagomedov vs. Song",
+   "date": "2026-08-29T07:00Z",
+   "competitions": [
+    {
+     "id": "401913545",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Ding Meng"
+       }
+      },
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Cam Nelson"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401905191",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Jingnan Xiong"
+       }
+      },
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Julia Polastri"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401913544",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Lawrence Lui"
+       }
+      },
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Hector Santiago"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401913543",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Xiao Long"
+       }
+      },
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Francesco Nuzzi"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401898005",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Sean Woodson"
+       }
+      },
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Jack Jenkins"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401887537",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Rei Tsuruya"
+       }
+      },
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Kevin Borjas"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401905190",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Namsrai Batbayar"
+       }
+      },
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Andre Lima"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401913129",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Bilal Hasan"
+       }
+      },
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Nilson Rojas"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401914040",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Liu Ce"
+       }
+      },
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Levi Rodrigues Jr."
+       }
+      }
+     ]
+    },
+    {
+     "id": "401887536",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Alex Perez"
+       }
+      },
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Sumudaerji"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401891333",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Kai Asakura"
+       }
+      },
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Aoriqileng"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401887535",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Yan Xiaonan"
+       }
+      },
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Denise Gomes"
+       }
+      }
+     ]
+    },
+    {
+     "id": "401887532",
+     "status": {
+      "type": {
+       "state": "post",
+       "completed": true,
+       "description": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "winner": true,
+       "athlete": {
+        "fullName": "Song Yadong"
+       }
+      },
+      {
+       "winner": false,
+       "athlete": {
+        "fullName": "Umar Nurmagomedov"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
