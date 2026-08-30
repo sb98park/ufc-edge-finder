@@ -10,9 +10,9 @@
     "legs": [
      {
       "label": "Felipe Lima ML",
-      "odds_display": "-192",
+      "odds_display": "-210",
       "is_model": false,
-      "decimal_odds": 1.520833,
+      "decimal_odds": 1.47619,
       "fight_key": "Morgan Charrière|Felipe Lima",
       "conditions": [
        {
@@ -20,13 +20,13 @@
         "fighter": "Felipe Lima"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      },
      {
       "label": "Mario Pinto ML",
-      "odds_display": "-270",
+      "odds_display": "-280",
       "is_model": false,
-      "decimal_odds": 1.37037,
+      "decimal_odds": 1.357143,
       "fight_key": "Mario Pinto|Ryan Spann",
       "conditions": [
        {
@@ -34,7 +34,7 @@
         "fighter": "Mario Pinto"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      }
     ],
     "has_model_legs": false,
@@ -43,12 +43,12 @@
      "card_21"
     ],
     "slip_id": "e9bdd21736b3",
-    "combined_decimal": 2.084105,
-    "combined_american": 108,
-    "combined_american_display": "+108",
-    "combined_prob": 0.4556,
+    "combined_decimal": 2.003401,
+    "combined_american": 100,
+    "combined_american_display": "+100",
+    "combined_prob": 0.4562,
     "combined_prob_raw": 0.4889,
-    "venue": "DraftKings"
+    "venue": "FanDuel"
    }
   }
  }
