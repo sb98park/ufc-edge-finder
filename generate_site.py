@@ -181,6 +181,57 @@ def _result_label(winner: str, method) -> str:
     return f"{str(winner).strip().split()[-1]} by {_method_display(str(method).strip())}".strip()
 
 
+def card_result_coverage(cards_df, results_path: str = "data/fight_results.csv") -> tuple[int, int]:
+    """
+    (confirmed, total) for the card in `cards_df`, counting only bouts that
+    occupy a slot on the night.
+
+    MODULE LEVEL SO IT CAN BE REHEARSED. This was inline in main(), which meant
+    the only way to test the handover decision was to re-implement it -- and a
+    test that re-implements the logic drifts from it silently, which is the
+    failure this repo has already had with two copies of a display string.
+    scripts/rehearse_fight_night.py imports this exact function.
+
+    Cancelled bouts are excluded: they occupy no slot, so counting them would
+    mean a card could never read complete.
+    """
+    if cards_df is None or cards_df.empty:
+        return 0, 0
+    try:
+        res = pd.read_csv(results_path)
+        done = {
+            frozenset({str(r["fighter_a"]).strip().lower(),
+                       str(r["fighter_b"]).strip().lower()})
+            for _, r in res.iterrows()
+            if pd.notna(r.get("winner")) and str(r.get("winner")).strip()
+        }
+    except (FileNotFoundError, OSError, pd.errors.EmptyDataError, KeyError):
+        done = set()
+    total = confirmed = 0
+    for _, row in cards_df.iterrows():
+        if str(row.get("cancelled", "")).strip().lower() == "true":
+            continue
+        total += 1
+        if frozenset({str(row["fighter_a"]).strip().lower(),
+                      str(row["fighter_b"]).strip().lower()}) in done:
+            confirmed += 1
+    return confirmed, total
+
+
+def card_is_over(confirmed: int, total: int, days_since_event: int,
+                 current_card_has_happened: bool) -> bool:
+    """
+    Whether the forward-looking sections should move to the next event.
+
+    Results all in OR the calendar backstop. Neither is safe alone: results can
+    genuinely never confirm (see results_fetcher on draws), and the calendar
+    alone costs a day and a half of forward content every week. See the comment
+    at the call site for the full argument.
+    """
+    results_all_in = total > 0 and confirmed >= total
+    return current_card_has_happened and (results_all_in or days_since_event >= 2)
+
+
 def build_ratings(fighters_df: pd.DataFrame, history_df: pd.DataFrame) -> dict[str, float]:
     elo = EloRatingSystem()
     elo.build_from_history(history_df)
@@ -523,24 +574,7 @@ def main(tier: str = "member", output_path: str | None = None):
     # rather than reusing results_coverage, which is not built until ~800 lines
     # further down -- and this decision has to be made before tracked_edges is
     # finalised, since it is what tracked_edges gets repointed at.
-    _card_total = _card_confirmed = 0
-    if not cards_df.empty:
-        try:
-            _res = pd.read_csv("data/fight_results.csv")
-            _done = {
-                frozenset({str(r["fighter_a"]).strip().lower(),
-                           str(r["fighter_b"]).strip().lower()})
-                for _, r in _res.iterrows() if pd.notna(r.get("winner")) and str(r.get("winner")).strip()
-            }
-        except (FileNotFoundError, OSError, pd.errors.EmptyDataError, KeyError):
-            _done = set()
-        for _, _row in cards_df.iterrows():
-            if str(_row.get("cancelled", "")).strip().lower() == "true":
-                continue          # a cancelled bout occupies no slot on the night
-            _card_total += 1
-            if frozenset({str(_row["fighter_a"]).strip().lower(),
-                          str(_row["fighter_b"]).strip().lower()}) in _done:
-                _card_confirmed += 1
+    _card_confirmed, _card_total = card_result_coverage(cards_df)
 
     # THE CARD IS OVER WHEN ITS RESULTS ARE IN, OR WHEN THE CALENDAR SAYS SO.
     #
@@ -559,8 +593,9 @@ def main(tier: str = "member", output_path: str | None = None):
     # so in the worst case everything hands over together on Monday. It
     # degrades INTO agreement rather than away from it.
     _results_all_in = _card_total > 0 and _card_confirmed >= _card_total
-    card_is_over = current_card_has_happened and (_results_all_in or days_since_event >= 2)
-    if card_is_over and future_events:
+    _card_is_over = card_is_over(_card_confirmed, _card_total,
+                                 days_since_event, current_card_has_happened)
+    if _card_is_over and future_events:
         print(f"[analytics] current card is over "
               f"({'results ' + str(_card_confirmed) + '/' + str(_card_total) if _results_all_in else 'day ' + str(days_since_event)})"
               f" -- forward-looking sections move to the next event")

@@ -194,6 +194,15 @@ jobs:
             python "$t" || fail=1
             echo "::endgroup::"
           done
+          # THE FIGHT-NIGHT REHEARSAL, run with the tests and for the same
+          # reason: it reads a frozen fixture, touches no network and sees no
+          # odds feed, so it cannot fail for a price that moved overnight. It
+          # replays the real 2026-08-29 confirmation sequence through the live
+          # code and asserts the card-night behaviour that otherwise gets its
+          # first test on a Saturday with money live.
+          echo "::group::rehearse_fight_night"
+          python scripts/rehearse_fight_night.py || fail=1
+          echo "::endgroup::"
           exit $fail
 
       - name: Merge recorded results into fight history
