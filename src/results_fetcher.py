@@ -668,6 +668,36 @@ def _extract_round_time_from_text(text: str) -> tuple[int | None, str | None]:
     return end_round, end_time
 
 
+def _record_no_winner(event_name, names, description) -> None:
+    """
+    Note a completed bout ESPN reports with no winner, in data/source_health.json.
+
+    Fire-and-forget by design: this is diagnostics, and failing to write it must
+    never take down a results fetch that is otherwise working.
+    """
+    import json
+    path = "data/source_health.json"
+    try:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                blob = json.load(fh)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            blob = {}
+        key = " vs ".join(str(n) for n in names if n) or "unknown"
+        blob.setdefault("no_winner_bouts", {})[f"{event_name}|{key}"] = {
+            "event": event_name,
+            "fighters": [n for n in names if n],
+            "espn_status": description,
+            "note": "completed with no winner (draw/no-contest) -- not written to "
+                    "fight_results.csv, so this card cannot reach n/n confirmed",
+        }
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(blob, fh, indent=2, sort_keys=True)
+        print(f"[results_fetcher] {key}: completed with no winner -- recorded as a known gap")
+    except Exception as exc:                    # diagnostics must never break a fetch
+        print(f"[results_fetcher] could not record no-winner bout ({exc})")
+
+
 def _fetch_from_espn(event_name: str, event_date: str, known_fighters_lower: set) -> list[dict]:
     """
     ESPN's undocumented "site API" scoreboard -- tried FIRST as of July
@@ -757,7 +787,28 @@ def _fetch_from_espn(event_name: str, event_date: str, known_fighters_lower: set
             continue
         winner_comp = next((c for c in competitors if c.get("winner")), None)
         if winner_comp is None:
-            continue  # completed with no winner flagged (draw/no-contest) -- not modeled downstream, skip
+            # A DRAW OR NO-CONTEST, AND IT NEVER CONVERGES. Skipping writes no
+            # row, and known_keys only counts rows with a winner, so this
+            # pairing stays in truly_missing on EVERY subsequent run -- refetched
+            # forever, results_coverage stuck at n-1/n with "some may still be
+            # pending" showing indefinitely, and the bout never leaving the live
+            # schedule.
+            #
+            # NOT FIXED BY WRITING A WINNERLESS ROW. Thirty modules read
+            # fight_results.csv and most have never seen one: parlay_grader and
+            # play_settlement handle it correctly, track_record does not guard on
+            # winner at all. Introducing that row shape to settle a case with
+            # zero historical occurrences -- 0 winnerless rows in 11,860 of
+            # fight_history and 102 of fight_results -- would risk more than it
+            # fixes.
+            #
+            # So it is still skipped, but no longer SILENTLY: recorded as a known
+            # gap so the reason a card cannot reach n/n is visible instead of
+            # retrying forever with no explanation.
+            _record_no_winner(event_name,
+                              [c.get("athlete", {}).get("fullName") for c in competitors],
+                              status_type.get("description"))
+            continue
         loser_comp = next(c for c in competitors if c is not winner_comp)
 
         winner_name = winner_comp.get("athlete", {}).get("fullName")

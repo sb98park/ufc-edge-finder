@@ -1026,7 +1026,36 @@ def main(tier: str = "member", output_path: str | None = None):
                 if stats_present:
                     stats = {c: int(r[c]) for c in STAT_COLS}
 
+                # A REMATCH IS A DIFFERENT FIGHT, and this key carries no
+                # event -- so the second meeting of a pair overwrites the
+                # first, last row winning. Before the rematch happens that
+                # renders the PREVIOUS bout's winner and method on a fight
+                # that has not occurred, marks it finished so it is stripped
+                # from the live schedule, and lets just_concluded announce it.
+                # On a site whose entire claim is "published before the
+                # fights", showing a result for an unfought bout is the worst
+                # shape of wrong.
+                #
+                # RESOLVED THE SAME CONSERVATIVE WAY results_fetcher does: a
+                # pair recorded once keeps the plain key, so every pairing
+                # that works today is untouched -- including across an event
+                # rename, where requiring the name to match would BREAK
+                # matching. Only a pair already present must prove it belongs
+                # to this row's event before it is allowed to overwrite.
+                _prev = finished_results.get(key)
+                if _prev is not None:
+                    _this_ev = str(r.get("event_name") or "").strip().lower()
+                    _prev_ev = str(_prev.get("event_name") or "").strip().lower()
+                    if _this_ev != _prev_ev:
+                        _live_evs = {str(e).strip().lower()
+                                     for e in (cards_df["event_name"].tolist() if not cards_df.empty else [])}
+                        # Keep whichever row belongs to the card being rendered;
+                        # if neither does, keep the one already held rather than
+                        # letting file order decide.
+                        if _this_ev not in _live_evs:
+                            continue
                 finished_results[key] = {
+                    "event_name": str(r.get("event_name") or "").strip(),
                     "winner": r["winner"], "method": method,
                     "end_round": end_round, "end_time": end_time,
                     "stats": stats,
@@ -1043,6 +1072,26 @@ def main(tier: str = "member", output_path: str | None = None):
         for fight in event["fights"]:
             key = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
             result = finished_results.get(key)
+            # THE RESULT HAS TO BELONG TO THIS BOUT, not merely to this pair.
+            # finished_results is keyed on the fighter pair with no event
+            # because grade_plays (below) needs every historical result in one
+            # map -- but for DISPLAY that means a rematch inherits the previous
+            # meeting's outcome. Before UFC 331: Van vs. Pantoja 2 is fought,
+            # the pair already resolves to UFC 317, so the card would print
+            # Pantoja as the winner of a fight that has not happened, mark it
+            # finished, strip it from the live schedule, and let
+            # just_concluded announce it.
+            #
+            # Filtered HERE rather than by narrowing finished_results, which
+            # would break grading: line ~1293 passes that same map to
+            # grade_plays for plays on cards from weeks ago, and those results
+            # are correctly not on this card.
+            #
+            # A result with no recorded event predates the column and is
+            # accepted, so nothing that renders today changes.
+            if result and result.get("event_name"):
+                if str(result["event_name"]).strip().lower() != str(event.get("event_name") or "").strip().lower():
+                    result = None
             if result:
                 fight["winner"] = result["winner"]
                 fight["result_label"] = _result_label(result["winner"], result["method"])
