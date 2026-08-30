@@ -500,19 +500,16 @@ def main(tier: str = "member", output_path: str | None = None):
     # being shown, since silently swapping the underlying event without
     # saying so would be confusing, not helpful.
     analytics_source_event = None
-    MIN_EDGES_FOR_CURRENT_CARD = 3  # below this, the current card's pool is too thin to be a real signal
-    # Only ever fall back once the current card has ACTUALLY happened.
-    # Thin edges alone aren't proof a card is over -- a card promoted in
-    # from future_cards.csv can legitimately have few or no odds posted
-    # yet, and falling back there would claim "this weekend's card has
-    # concluded" about a card that hasn't happened. Anchoring on the
-    # event date rather than on confirmed results is deliberate: results
-    # can genuinely fail to auto-confirm (ESPN publishes no usable
-    # method-of-victory text, see results_fetcher), and the fallback
-    # shouldn't depend on a source that might never land. This is also
-    # exactly what retires the banner on the Monday handoff: once
-    # promote_card_if_stale swaps the next card in as current, its date
-    # is in the future, so the fallback stops applying on its own.
+    # ONLY EVER FALL BACK ONCE THE CURRENT CARD HAS ACTUALLY HAPPENED. A card
+    # promoted in from future_cards.csv can legitimately have few or no odds
+    # posted yet, and moving on from it would claim "this card has concluded"
+    # about one that has not. This also retires the fallback on its own at the
+    # Monday handoff: promote_card_if_stale swaps the next card in as current,
+    # its date is in the future, and the guard stops applying.
+    #
+    # (MIN_EDGES_FOR_CURRENT_CARD lived here and is gone. Counting remaining
+    # edges made a bookmaker's odds pool the thing that decided when the site
+    # moved on -- see the card_is_over comment below.)
     current_card_has_happened = False
     if not cards_df.empty:
         try:
@@ -522,7 +519,51 @@ def main(tier: str = "member", output_path: str | None = None):
             ).date()
         except (ValueError, TypeError):
             current_card_has_happened = False
-    if current_card_has_happened and len(tracked_edges) < MIN_EDGES_FOR_CURRENT_CARD and future_events:
+    # HOW MANY OF THIS CARD'S FIGHTS HAVE A RECORDED RESULT. Counted here
+    # rather than reusing results_coverage, which is not built until ~800 lines
+    # further down -- and this decision has to be made before tracked_edges is
+    # finalised, since it is what tracked_edges gets repointed at.
+    _card_total = _card_confirmed = 0
+    if not cards_df.empty:
+        try:
+            _res = pd.read_csv("data/fight_results.csv")
+            _done = {
+                frozenset({str(r["fighter_a"]).strip().lower(),
+                           str(r["fighter_b"]).strip().lower()})
+                for _, r in _res.iterrows() if pd.notna(r.get("winner")) and str(r.get("winner")).strip()
+            }
+        except (FileNotFoundError, OSError, pd.errors.EmptyDataError, KeyError):
+            _done = set()
+        for _, _row in cards_df.iterrows():
+            if str(_row.get("cancelled", "")).strip().lower() == "true":
+                continue          # a cancelled bout occupies no slot on the night
+            _card_total += 1
+            if frozenset({str(_row["fighter_a"]).strip().lower(),
+                          str(_row["fighter_b"]).strip().lower()}) in _done:
+                _card_confirmed += 1
+
+    # THE CARD IS OVER WHEN ITS RESULTS ARE IN, OR WHEN THE CALENDAR SAYS SO.
+    #
+    # This used to be "the date has passed AND fewer than 3 edges remain",
+    # which put the handover in a bookmaker's hands: the sections moved on when
+    # the odds pool happened to thin, not when the fights finished. Worse, the
+    # date half is true ON FIGHT DAY, so the condition was armed for the whole
+    # card -- a thinning feed mid-event could repoint Reads, Locks, the Parlay
+    # AND the plays list at next week while money was still live on this one.
+    #
+    # NEITHER CONDITION IS SAFE ALONE, which is why it is an OR. Results can
+    # genuinely never confirm -- results_fetcher's own comment says so, for a
+    # bout ESPN publishes no usable method text for -- and waiting on
+    # confirmed == total would strand these sections on a dead card forever.
+    # The calendar backstop is the same day-2 rule promote_card_if_stale uses,
+    # so in the worst case everything hands over together on Monday. It
+    # degrades INTO agreement rather than away from it.
+    _results_all_in = _card_total > 0 and _card_confirmed >= _card_total
+    card_is_over = current_card_has_happened and (_results_all_in or days_since_event >= 2)
+    if card_is_over and future_events:
+        print(f"[analytics] current card is over "
+              f"({'results ' + str(_card_confirmed) + '/' + str(_card_total) if _results_all_in else 'day ' + str(days_since_event)})"
+              f" -- forward-looking sections move to the next event")
         next_event = _soonest(future_events)
         # SAME SHAPE AS THE PRIMARY PATH ABOVE -- fight_key stamped on, and
         # cancelled fights excluded. This built bare edges, so every leg it
