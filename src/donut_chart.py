@@ -46,7 +46,7 @@ def build_donut_svg(landed: int, attempted: int, color: str, size: int = 108, st
     pct_class = "donut-center-pct countup" if animate else "donut-center-pct"
 
     return f"""<svg viewBox="0 0 {size} {size}" width="{size}" height="{size}" class="{ring_class}">
-  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#2e2e30" stroke-width="{stroke_width}"/>
+  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="var(--chart-grid)" stroke-width="{stroke_width}"/>
   <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{color}" stroke-width="{stroke_width}"
     class="{progress_class}" {progress_style} stroke-linecap="round"
     transform="rotate(-90 {cx} {cy})"/>
@@ -102,7 +102,7 @@ def build_split_donut_svg(stats: dict, color: str, size: int = 90, stroke_width:
   data-total="{total}" data-hit="{hit}" data-fav="{fav}" data-dog="{dog}"
   data-circ="{circ:.1f}" data-off-all="{offset(hit):.1f}"
   data-off-fav="{offset(fav):.1f}" data-off-dog="{offset(dog):.1f}">
-  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#2e2e30" stroke-width="{stroke_width}"/>
+  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="var(--chart-grid)" stroke-width="{stroke_width}"/>
   <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{color}" stroke-width="{stroke_width}"
     class="donut-ghost-ring" stroke-dasharray="{circ - offset(hit):.1f} {circ:.1f}"
     stroke-linecap="round" transform="rotate(-90 {cx} {cy})"/>

@@ -40,11 +40,11 @@ def build_calibration_svg(points: list[dict], width: int = 300) -> str:
     grid_svg = ""
     for pct in (0, 25, 50, 75, 100):
         x = x_at(pct / 100)
-        grid_svg += f'<line x1="{x:.1f}" y1="{pad_top+label_h}" x2="{x:.1f}" y2="{height-6}" stroke="#1c2028" stroke-width="1"/>'
+        grid_svg += f'<line x1="{x:.1f}" y1="{pad_top+label_h}" x2="{x:.1f}" y2="{height-6}" stroke="var(--chart-grid-soft)" stroke-width="1"/>'
     grid_svg += (
-        f'<text x="{plot_left}" y="{pad_top+10}" font-size="8" fill="#9ba1ad" text-anchor="start">0%</text>'
-        f'<text x="{x_at(0.5):.1f}" y="{pad_top+10}" font-size="8" fill="#9ba1ad" text-anchor="middle">50%</text>'
-        f'<text x="{plot_right}" y="{pad_top+10}" font-size="8" fill="#9ba1ad" text-anchor="end">100%</text>'
+        f'<text x="{plot_left}" y="{pad_top+10}" font-size="8" fill="var(--chart-label)" text-anchor="start">0%</text>'
+        f'<text x="{x_at(0.5):.1f}" y="{pad_top+10}" font-size="8" fill="var(--chart-label)" text-anchor="middle">50%</text>'
+        f'<text x="{plot_right}" y="{pad_top+10}" font-size="8" fill="var(--chart-label)" text-anchor="end">100%</text>'
     )
 
     rows_svg = ""
@@ -56,30 +56,30 @@ def build_calibration_svg(points: list[dict], width: int = 300) -> str:
 
         diff = p["predicted"] - p["actual"]
         if abs(diff) < 0.10:
-            actual_color = "#3ddc84"
+            actual_color = "var(--chart-1)"
             verdict = "on target"
         elif diff >= 0.20:
-            actual_color = "#ff5c5c"
+            actual_color = "var(--chart-5)"
             verdict = "overconfident"
         elif diff <= -0.20:
-            actual_color = "#5fb8c9"
+            actual_color = "var(--chart-3)"
             verdict = "underconfident"
         else:
-            actual_color = "#e8c766"
+            actual_color = "var(--chart-4)"
             verdict = "mild drift"
 
         bucket_lo = int(round((p["predicted"] - 0.05) * 100 / 10) * 10)
         bucket_label = f'~{round(p["predicted"]*100)}%'
 
         rows_svg += f'<text x="{pad_left-8}" y="{row_mid+3:.1f}" font-size="9.5" font-weight="700" fill="#e8e8ec" text-anchor="end">{bucket_label}</text>'
-        rows_svg += f'<text x="{pad_left-8}" y="{row_mid+15:.1f}" font-size="7.5" fill="#9ba1ad" text-anchor="end">n={p["n"]}</text>'
+        rows_svg += f'<text x="{pad_left-8}" y="{row_mid+15:.1f}" font-size="7.5" fill="var(--chart-label)" text-anchor="end">n={p["n"]}</text>'
 
         # Predicted bar (gold, matching this site's "model" color language)
         rows_svg += (
             f'<rect x="{plot_left}" y="{predicted_bar_y:.1f}" width="{(x_at(p["predicted"])-plot_left):.1f}" '
-            f'height="{bar_h}" rx="2" fill="#d4af37" fill-opacity="0.85"/>'
+            f'height="{bar_h}" rx="2" fill="var(--chart-2)" fill-opacity="0.85"/>'
         )
-        rows_svg += f'<text x="{x_at(p["predicted"])+4:.1f}" y="{predicted_bar_y+bar_h-1.5:.1f}" font-size="8" fill="#d4af37" font-weight="700">{round(p["predicted"]*100)}%</text>'
+        rows_svg += f'<text x="{x_at(p["predicted"])+4:.1f}" y="{predicted_bar_y+bar_h-1.5:.1f}" font-size="8" fill="var(--chart-2)" font-weight="700">{round(p["predicted"]*100)}%</text>'
 
         # Actual bar (colored by calibration quality)
         rows_svg += (
@@ -90,10 +90,10 @@ def build_calibration_svg(points: list[dict], width: int = 300) -> str:
 
     legend_y = height + 2
     legend_svg = (
-        f'<rect x="{plot_left}" y="{legend_y-7}" width="10" height="7" rx="1.5" fill="#d4af37" fill-opacity="0.85"/>'
-        f'<text x="{plot_left+14}" y="{legend_y-1}" font-size="8" fill="#8a8f9a">We said</text>'
-        f'<rect x="{plot_left+58}" y="{legend_y-7}" width="10" height="7" rx="1.5" fill="#3ddc84" fill-opacity="0.85"/>'
-        f'<text x="{plot_left+72}" y="{legend_y-1}" font-size="8" fill="#8a8f9a">What happened</text>'
+        f'<rect x="{plot_left}" y="{legend_y-7}" width="10" height="7" rx="1.5" fill="var(--chart-2)" fill-opacity="0.85"/>'
+        f'<text x="{plot_left+14}" y="{legend_y-1}" font-size="8" fill="var(--chart-label-dim)">We said</text>'
+        f'<rect x="{plot_left+58}" y="{legend_y-7}" width="10" height="7" rx="1.5" fill="var(--chart-1)" fill-opacity="0.85"/>'
+        f'<text x="{plot_left+72}" y="{legend_y-1}" font-size="8" fill="var(--chart-label-dim)">What happened</text>'
     )
     height += 14
 

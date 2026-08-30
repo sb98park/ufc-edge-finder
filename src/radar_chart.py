@@ -144,10 +144,10 @@ def build_category_radar_svg(rows, size: int = 250) -> str:
     out = []
     for ring in (25, 50, 75, 100):
         pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in (point(ring, i) for i in range(n)))
-        out.append(f'<polygon points="{pts}" fill="none" stroke="#2e2e30" stroke-width="1"/>')
+        out.append(f'<polygon points="{pts}" fill="none" stroke="var(--chart-grid)" stroke-width="1"/>')
     for i in range(n):
         x, y = point(100, i)
-        out.append(f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#2e2e30" stroke-width="1"/>')
+        out.append(f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="var(--chart-grid)" stroke-width="1"/>')
     for i, r in enumerate(rows):
         a = angle(i)
         lx, ly = cx + (radius + 16) * math.cos(a), cy + (radius + 16) * math.sin(a)
@@ -158,15 +158,15 @@ def build_category_radar_svg(rows, size: int = 250) -> str:
             anchor = "end"
         out.append(
             f'<text x="{lx:.1f}" y="{ly + 3:.1f}" text-anchor="{anchor}" font-size="8" '
-            f'font-weight="700" letter-spacing="0.5" fill="#8a8f9a">'
+            f'font-weight="700" letter-spacing="0.5" fill="var(--chart-label-dim)">'
             f'{r["label"].upper()}</text>')
     # B under A so the red corner reads on top, matching every other paired
     # element on the card.
     # Held back rather than appended: they go inside the .radar-polygon group
     # below, which needs the viewBox to have been computed first.
     data_polys = []
-    for key, stroke, fill in (("b", "#3b82f6", "rgba(59,130,246,0.22)"),
-                              ("a", "#e53935", "rgba(229,57,53,0.22)")):
+    for key, stroke, fill in (("b", "var(--chart-corner-b)", "rgba(59,130,246,0.22)"),
+                              ("a", "var(--chart-corner-a)", "rgba(229,57,53,0.22)")):
         pts = polygon(key)
         if pts:
             data_polys.append(f'<polygon points="{pts}" fill="{fill}" stroke="{stroke}" '

@@ -67,6 +67,34 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
+  /* ===== CHART PALETTE =====
+     One source of truth for every SVG a Python builder emits. Those builders
+     had the same nine hex literals pasted across six modules, so a colour
+     change meant editing Python in six places and hoping none was missed --
+     and nothing tied them to the tokens the rest of the page already used.
+
+     A DEDICATED PALETTE RATHER THAN REUSING --green/--red/--accent, because
+     this file and landing.html are two different design systems that
+     legitimately disagree: --red is #ff5c5c here and #e53935 there, and
+     --muted resolves through --ink3 on the landing page. Charts render on
+     BOTH pages (units timeseries, the scout radar and the market movement
+     chart are all passed to landing.html), so a shared builder pointing at a
+     semantic token would silently change colour depending on which page it
+     landed in. These are chart concerns, defined identically in both files.
+
+     Keep this block byte-identical between site.html and landing.html. */
+  --chart-grid: #2e2e30;        /* axis and ring tracks */
+  --chart-grid-soft: #1c2028;   /* interior gridlines, one step back */
+  --chart-label: #9ba1ad;       /* axis text */
+  --chart-label-dim: #8a8f9a;   /* secondary axis text */
+  --chart-1: #3ddc84;           /* positive / primary series */
+  --chart-2: #d4af37;           /* accent series */
+  --chart-3: #5fb8c9;           /* cool series */
+  --chart-4: #e8c766;           /* warm series */
+  --chart-5: #ff5c5c;           /* negative series */
+  --chart-corner-a: #e53935;    /* red corner */
+  --chart-corner-b: #3b82f6;    /* blue corner */
+
     /* --bg is TRUE BLACK, panels are not. On OLED a #0a0c10 page still lights
      every pixel; #000000 switches them off, which is a depth difference no
      amount of colour tuning reproduces -- and it makes the panels read as

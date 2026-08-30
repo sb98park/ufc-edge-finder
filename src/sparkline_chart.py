@@ -38,7 +38,7 @@ def build_sparkline_svg(values: list[float], width: int = 280, height: int = 56)
         + f" L{last_x:.1f},{height - pad} Z"
     )
 
-    trend_color = "#3ddc84" if values[-1] >= values[0] else "#ff5c5c"
+    trend_color = "var(--chart-1)" if values[-1] >= values[0] else "var(--chart-5)"
 
     return f"""<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" preserveAspectRatio="none" class="sparkline-svg">
   <defs>

@@ -72,18 +72,18 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     for v in grid_values:
         y = y_at(v)
         is_zero = v == 0
-        line_color = "#4a4f5a" if is_zero else "#1c2028"
+        line_color = "#4a4f5a" if is_zero else "var(--chart-grid-soft)"
         dasharray_attr = ' stroke-dasharray="3,3"' if is_zero else ""
         grid_svg += (
             f'<line x1="{pad_left}" y1="{y:.1f}" x2="{pad_left+plot_w}" y2="{y:.1f}" '
             f'stroke="{line_color}" stroke-width="1"{dasharray_attr}/>'
         )
         sign = "+" if v > 0 else ""
-        grid_svg += f'<text x="{pad_left-6}" y="{y+3:.1f}" font-size="8" fill="#9ba1ad" text-anchor="end">{sign}{v:g}U</text>'
+        grid_svg += f'<text x="{pad_left-6}" y="{y+3:.1f}" font-size="8" fill="var(--chart-label)" text-anchor="end">{sign}{v:g}U</text>'
 
     x_labels_svg = (
-        f'<text x="{x_at(0):.1f}" y="{height-4}" font-size="8" fill="#9ba1ad" text-anchor="start">Start</text>'
-        f'<text x="{x_at(len(running_total)-1):.1f}" y="{height-4}" font-size="8" fill="#9ba1ad" text-anchor="end">Now</text>'
+        f'<text x="{x_at(0):.1f}" y="{height-4}" font-size="8" fill="var(--chart-label)" text-anchor="start">Start</text>'
+        f'<text x="{x_at(len(running_total)-1):.1f}" y="{height-4}" font-size="8" fill="var(--chart-label)" text-anchor="end">Now</text>'
     )
 
     points = [(x_at(i), y_at(v)) for i, v in enumerate(running_total)]
@@ -103,8 +103,8 @@ def build_units_timeseries_svg(running_total: list[float], width: int = 300, hei
     # argued with the figure.
     ION_VIOLET, ION_CYAN, ION_ICE = "#7c5cff", "#22d3ee", "#e6fbff"
     positive = final_value >= 0
-    trend_color = ION_ICE if positive else "#ff5c5c"
-    line_paint = "url(#units-ts-line)" if positive else "#ff5c5c"
+    trend_color = ION_ICE if positive else "var(--chart-5)"
+    line_paint = "url(#units-ts-line)" if positive else "var(--chart-5)"
 
     fill_path = (
         f"M{points[0][0]:.1f},{y_at(0):.1f} "

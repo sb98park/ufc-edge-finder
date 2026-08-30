@@ -60,8 +60,8 @@ def _html_escape(text: str) -> str:
     return (text.replace('&', '&amp;').replace("'", '&#39;')
                 .replace('<', '&lt;').replace('>', '&gt;'))
 
-LINE_COLOR_A = "#e53935"
-LINE_COLOR_B = "#3b82f6"
+LINE_COLOR_A = "var(--chart-corner-a)"
+LINE_COLOR_B = "var(--chart-corner-b)"
 
 
 def _clean_movement_label(label: str, fighter_a: str, fighter_b: str) -> str:
@@ -424,12 +424,12 @@ def build_dual_line_chart_svg(
         odds_label = _book_odds_label(pct, 1 - pct)
         grid_svg += (
             f'<line x1="{left_pad}" y1="{y:.1f}" x2="{left_pad + plot_w}" y2="{y:.1f}" '
-            f'stroke="#2e2e30" stroke-width="1" stroke-dasharray="2,3"/>'
-            f'<text class="label-pct" x="{left_pad - 6}" y="{y + 3:.1f}" font-size="9" fill="#8a8f9a" text-anchor="end">{round(pct*100)}%</text>'
+            f'stroke="var(--chart-grid)" stroke-width="1" stroke-dasharray="2,3"/>'
+            f'<text class="label-pct" x="{left_pad - 6}" y="{y + 3:.1f}" font-size="9" fill="var(--chart-label-dim)" text-anchor="end">{round(pct*100)}%</text>'
         )
         if odds_label:
             grid_svg += (
-                f'<text class="label-odds" x="{left_pad - 6}" y="{y + 3:.1f}" font-size="9" fill="#8a8f9a" text-anchor="end">{odds_label}</text>'
+                f'<text class="label-odds" x="{left_pad - 6}" y="{y + 3:.1f}" font-size="9" fill="var(--chart-label-dim)" text-anchor="end">{odds_label}</text>'
             )
 
     axis_svg = (
@@ -443,8 +443,8 @@ def build_dual_line_chart_svg(
     # this same baseline, and these two static endpoints are exactly what it
     # would collide with there.
     x_labels_svg = (
-        f'<text class="ml-xlabel" x="{left_pad}" y="{height - 4}" font-size="9" fill="#8a8f9a" text-anchor="start">{start_label}</text>'
-        f'<text class="ml-xlabel" x="{left_pad + plot_w}" y="{height - 4}" font-size="9" fill="#8a8f9a" text-anchor="end">{end_label}</text>'
+        f'<text class="ml-xlabel" x="{left_pad}" y="{height - 4}" font-size="9" fill="var(--chart-label-dim)" text-anchor="start">{start_label}</text>'
+        f'<text class="ml-xlabel" x="{left_pad + plot_w}" y="{height - 4}" font-size="9" fill="var(--chart-label-dim)" text-anchor="end">{end_label}</text>'
     )
 
     def render_line(points, color, price_label=None):
@@ -953,13 +953,13 @@ def attach_charts_to_fight(fight: dict, full_snapshot: dict, token_cache: dict |
         is_fight_level = ("vs" in who.lower()) or market.lower().startswith(
             ("fight ", "total rounds", "round betting"))
         if is_fight_level:
-            colour = "#d4af37"
+            colour = "var(--chart-2)"
         elif _normalize_name(who) == _normalize_name(fighter_a):
             colour = LINE_COLOR_A
         elif _normalize_name(who) == _normalize_name(fighter_b):
             colour = LINE_COLOR_B
         else:
-            colour = "#d4af37"
+            colour = "var(--chart-2)"
 
         # THE MATCHUP NAME IS DROPPED from fight-level labels: you are already
         # inside that fight's card, so repeating both names costs a line of
