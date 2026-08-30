@@ -66,8 +66,55 @@ DEFAULT_START_TIME_ET = "19:00"  # US-primetime fallback when ESPN has no compet
 FUTURE_CARDS_COLUMNS = [
     "event_name", "event_date", "card_position", "weight_class",
     "fighter_a", "fighter_b", "event_start_time_et", "event_main_card_time_et", "is_womens_division", "event_location",
+    # STAMPED ONCE, READ FOREVER. See _stamp_bout_order.
+    "bout_order",
 ]
 
+
+def _stamp_bout_order(df):
+    """
+    Write each fight's position in the night onto its row, once, per event.
+
+    WHY THE COLUMN EXISTS. Fight sequence used to be reconstructed on every
+    read from card_position plus ROW POSITION -- billing order reversed within
+    each segment. That makes the order of the night a property of how this file
+    happens to be sorted, so a re-scrape, a re-sort or a hand edit silently
+    reorders the card, and the only defence was a hand-maintained map of three
+    bouts in src/schedule.py. Stamping it makes the order data rather than a
+    side effect of storage.
+
+    IT IS NOT NEW KNOWLEDGE. The value comes from schedule.derive_bout_order,
+    the same derivation the readers used -- so this changes nothing about the
+    order today. What it changes is that the answer stops depending on row
+    position from here on.
+
+    EXISTING VALUES ARE NEVER OVERWRITTEN. Once a card is stamped, a later
+    re-scrape that happens to return its fights in a different order must not
+    silently renumber the night; and if a real bout order is ever recorded from
+    a source that publishes one, this must not clobber it. Only rows with no
+    usable value are filled.
+    """
+    import pandas as _pd
+    from src.schedule import derive_bout_order, _bout_order_value
+
+    if df is None or df.empty:
+        return df
+    if "bout_order" not in df.columns:
+        df = df.copy()
+        df["bout_order"] = _pd.NA
+
+    for event, group in df.groupby("event_name", sort=False):
+        rows = group.to_dict("records")
+        if all(_bout_order_value(r) is not None for r in rows):
+            continue
+        order = derive_bout_order(rows)
+        for idx, row in zip(group.index, rows):
+            if _bout_order_value(row) is not None:
+                continue
+            got = order.get((row.get("fighter_a"), row.get("fighter_b")))
+            if got is not None:
+                df.at[idx, "bout_order"] = got
+    return df
 
 def _weight_class_from_espn(abbreviation: str) -> tuple[str, bool]:
     """ESPN prefixes women's divisions with "W " (e.g. "W Strawweight");
@@ -1067,6 +1114,7 @@ def discover_and_append_new_cards(future_cards_path: str = "data/future_cards.cs
         existing = existing[~existing["event_name"].isin(all_removed)]
 
     combined = pd.concat([existing, pd.DataFrame(new_rows)], ignore_index=True) if new_rows else existing
+    combined = _stamp_bout_order(combined)
     combined.to_csv(future_cards_path, index=False)
     if added_events:
         print(f"[card_discovery] added {len(added_events)} new card(s): {', '.join(added_events)} ({len(new_rows)} fights)")

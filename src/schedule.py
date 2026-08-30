@@ -159,6 +159,68 @@ def _fmt(d: dt.datetime) -> str:
     return d.strftime("%Y-%m-%dT%H:%M:%S%z")[:-2] + ":" + d.strftime("%z")[-2:]
 
 
+def _bout_order_value(f) -> int | None:
+    """bout_order as a positive int, or None when absent/unusable."""
+    v = f.get("bout_order")
+    if v is None or (isinstance(v, float) and v != v):      # NaN is not equal to itself
+        return None
+    try:
+        n = int(float(str(v).strip()))
+    except (TypeError, ValueError):
+        return None
+    return n if n > 0 else None
+
+
+def _explicit_bout_order(fights: list[dict]) -> list[dict] | None:
+    """
+    The card sorted by its stored bout_order, or None if it cannot be trusted.
+
+    ALL OR NOTHING, and deliberately so. A partially stamped card would mix a
+    real ordinal with a positional guess, and the guess would win for every
+    unstamped fight -- worse than using one convention consistently. Duplicate
+    ordinals are rejected for the same reason: two fights claiming slot 4 means
+    the stamp is wrong, and falling back to the derivation is the honest
+    response.
+    """
+    if not fights:
+        return None
+    values = [_bout_order_value(f) for f in fights]
+    if any(v is None for v in values):
+        return None
+    if len(set(values)) != len(values):
+        print(f"[schedule] duplicate bout_order values {sorted(values)} -- "
+              f"ignoring the stamp and deriving order from card position")
+        return None
+    return [f for _, f in sorted(zip(values, fights), key=lambda pair: pair[0])]
+
+
+def derive_bout_order(fights: list[dict]) -> dict:
+    """
+    {(fighter_a, fighter_b): ordinal} using the positional derivation.
+
+    Exposed so a writer can STAMP the order it computed once, instead of every
+    reader re-deriving it from row position forever. Cancelled fights are
+    excluded, matching build_fight_schedule.
+    """
+    kept = [f for f in fights if not _is_cancelled_fight(f)]
+    chrono = sorted(kept, key=lambda f: _SEGMENT_ORDER.get(f.get("card_position"), 2))
+    ep = [f for f in chrono if f.get("card_position") == "Early Prelims"][::-1]
+    pre = [f for f in chrono if f.get("card_position") == "Prelims"][::-1]
+    main_only = [f for f in chrono if f.get("card_position") == "Main Card"][::-1]
+    co = [f for f in chrono if f.get("card_position") == "Co-Main Event"]
+    me = [f for f in chrono if f.get("card_position") == "Main Event"]
+    undercard = sorted(main_only + co,
+                       key=lambda f: VERIFIED_CHRONOLOGICAL_ORDER.get(_fight_key(f), 999))
+    return {(_fight_key(f)): i for i, f in enumerate(ep + pre + undercard + me, start=1)}
+
+
+def _is_cancelled_fight(f) -> bool:
+    v = f.get("cancelled")
+    if isinstance(v, bool):
+        return v
+    return str(v).strip().lower() == "true"
+
+
 def build_fight_schedule(
     fights: list[dict], event_date: str, event_start_time_et: str,
     segment_starts: dict | None = None, main_event_start_et: str | None = None,
@@ -198,6 +260,24 @@ def build_fight_schedule(
 
     fights = [f for f in fights if not _is_cancelled(f)]
 
+    # A STORED ORDINAL WINS OVER ANY DERIVATION. bout_order is 1 for the first
+    # fight of the night and counts up; when every remaining fight carries one,
+    # it IS the chronology and none of the bucket/reverse reasoning below runs.
+    #
+    # WHY IT EXISTS. Order was previously reconstructed from card_position plus
+    # CSV ROW POSITION -- billing order reversed within each segment. That makes
+    # fight sequence a property of how a file happens to be sorted, so any
+    # rewrite, re-scrape or manual edit silently reorders the night, and the
+    # only defence was VERIFIED_CHRONOLOGICAL_ORDER, a hand-maintained map of
+    # three bouts. It is also why the derivation needed three separate
+    # corrections in comments above: main card not reversed, co-main pinned,
+    # cancelled fights filtered.
+    #
+    # Fights are still bucketed into segments for TIMING (each segment is
+    # distributed between its own anchors), so a stored order does not bypass
+    # the anchors -- it only decides sequence within and across them.
+    ordered = _explicit_bout_order(fights)
+
     chronological = sorted(fights, key=lambda f: _SEGMENT_ORDER.get(f.get("card_position"), 2))
 
     early_prelims = [f for f in chronological if f.get("card_position") == "Early Prelims"][::-1]
@@ -231,6 +311,23 @@ def build_fight_schedule(
         main_block_undercard,
         key=lambda f: VERIFIED_CHRONOLOGICAL_ORDER.get(_fight_key(f), 999),
     )
+
+    # THE STORED ORDER REPLACES ALL OF THE ABOVE, and it has to be applied
+    # HERE rather than by pre-sorting the input: everything between here and
+    # the top re-derives sequence from row position ([::-1] per segment), so a
+    # pre-sorted list would simply be re-reversed and the stamp would do
+    # nothing. Segments still exist because each is distributed between its own
+    # real anchors -- the stamp decides sequence, the anchors decide timing.
+    if ordered is not None:
+        _rank = {_fight_key(f): i for i, f in enumerate(ordered)}
+        def _by_stamp(group):
+            return sorted(group, key=lambda f: _rank.get(_fight_key(f), 10**6))
+        early_prelims = _by_stamp([f for f in ordered if f.get("card_position") == "Early Prelims"])
+        prelims = _by_stamp([f for f in ordered if f.get("card_position") == "Prelims"])
+        main_block_undercard = _by_stamp(
+            [f for f in ordered if f.get("card_position") in ("Main Card", "Co-Main Event")])
+        main_event_fights = _by_stamp(
+            [f for f in ordered if f.get("card_position") == "Main Event"])
 
     schedule = []
 
