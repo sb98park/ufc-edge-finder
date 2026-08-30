@@ -71,8 +71,6 @@ def compute_stats_rating(row: pd.Series) -> float:
     """
     wins = row["wins"] if pd.notna(row.get("wins")) else 0
     losses = row["losses"] if pd.notna(row.get("losses")) else 0
-    ko_wins = row["ko_wins"] if pd.notna(row.get("ko_wins")) else 0
-    sub_wins = row["sub_wins"] if pd.notna(row.get("sub_wins")) else 0
     reach_in = row["reach_in"] if pd.notna(row.get("reach_in")) else 70
 
     # NO RECORD IS NOT A BAD RECORD. With wins = losses = 0 the two lines
@@ -101,7 +99,50 @@ def compute_stats_rating(row: pd.Series) -> float:
 
     total_fights = wins + losses
     win_pct = wins / total_fights
-    finish_rate = (ko_wins + sub_wins) / max(wins, 1)
+    # THE FINISH-RATE TERM IS GONE, and it is not coming back without new
+    # evidence. It was:
+    #
+    #     finish_rate = (ko_wins + sub_wins) / max(wins, 1)
+    #     rating += 150.0 * (finish_rate - 0.4)
+    #
+    # IT COULD NEVER BE EVIDENCED, because of where this function is used.
+    # build_effective_ratings blends Elo against this rating with
+    # weight = min(1, n_prior/4), so at four or more connected fights the stats
+    # rating is multiplied by ZERO. This is a low-experience prior and nothing
+    # else. Across all of fight_history, every one of the 11,469 fighter-
+    # appearances where it still counts has three or fewer wins, and 6,932 of
+    # them -- 60% -- have NONE, where finish_rate is 0 by construction and the
+    # term fired a flat -60. So it was only ever asked the question in the one
+    # regime where it cannot be answered.
+    #
+    # THAT ALSO MADE AN ALMOST-UNKNOWN FIGHTER RATE BELOW A COMPLETELY UNKNOWN
+    # ONE. The wins+losses == 0 guard above returns the neutral prior, but 0-1
+    # missed it and landed at 1423 against a debutant's 1500. Found via Michael
+    # Aljarouj, carried as 0-1 when he is 13-3: it inflated his opponent's
+    # published probability by 23.6 points and only the thin-record label cap
+    # kept it off Lock of the Week.
+    #
+    # MEASURED, point-in-time, paired arms on identical fights
+    # (scripts/validate_finish_rate_weight.py), 9,193 fights where a corner had
+    # under four wins -- the population where this term operates at all:
+    #
+    #     arm                       acc      brier    d.brier     p
+    #     shipped (unweighted)   0.6681    0.21559        --     --
+    #     weighted k=8           0.6820    0.21245   -0.00313  0.000
+    #     weighted k=15          0.6817    0.21229   -0.00330  0.000
+    #     REMOVED                0.6808    0.21210   -0.00348  0.000
+    #
+    # Removal wins both proper scoring rules, and beats every weighted arm
+    # pairwise (k=8 p=0.001, k=15 p=0.015, k=30 p=0.037) -- the penalty
+    # shrinking as k grows, i.e. the nearer a weighting came to deleting the
+    # term, the better it did. On the well-evidenced cut (both corners 4+ wins,
+    # 2,667 fights) every arm is byte-identical, delta 0.00000, because the
+    # whole rating is already multiplied by zero there. So there is no cost
+    # elsewhere to weigh against the gain.
+    #
+    # The ko_wins / sub_wins reads that fed it are gone with it. The COLUMNS
+    # stay in fighters.csv and are still used elsewhere -- the method model and
+    # ufc_method_rates both read them -- but nothing in this function does.
 
     # experience damps how much we trust a small sample (a 3-0 record
     # shouldn't swing as hard as a 26-7 record even at similar win%)
@@ -109,7 +150,6 @@ def compute_stats_rating(row: pd.Series) -> float:
 
     rating = RATING_CENTER
     rating += 500.0 * (win_pct - 0.5) * experience_weight
-    rating += 150.0 * (finish_rate - 0.4)
     rating += 4.0 * (reach_in - 70)
 
     return rating
