@@ -83,12 +83,27 @@ def _record_source_health(pm_rows, rd_rows, dates) -> None:
         from collections import Counter
         counts = Counter(r.get("source") or "Polymarket" for r in pm_rows)
         counts.update(r.get("source") or "unknown" for r in rd_rows)
-        payload = {
+        # MERGE, DO NOT CLOBBER. This wrote a fresh dict, so every other
+        # writer's keys were silently deleted on the next props fetch --
+        # record_edge_health forty lines below reads-then-writes for exactly
+        # that reason, and results_fetcher's no-winner diagnostic and the card
+        # coverage report both live here too. A health file that erases the
+        # other half of its own health is worse than no file: it reads as
+        # "nothing to report".
+        payload = {}
+        try:
+            with open("data/source_health.json", encoding="utf-8") as fh:
+                payload = json.load(fh)
+        except (OSError, ValueError):
+            pass
+        if not isinstance(payload, dict):
+            payload = {}
+        payload.update({
             "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "rows_by_source": dict(sorted(counts.items())),
             "rundown_key_set": bool(os.environ.get("RUNDOWN_API_KEY")),
             "rundown_dates_requested": list(dates or []),
-        }
+        })
         os.makedirs("data", exist_ok=True)
         with open("data/source_health.json", "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2, sort_keys=True)

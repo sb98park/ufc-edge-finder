@@ -47,6 +47,7 @@ def _et_stamp(date_str, hhmm) -> str:
 import pandas as pd
 
 from scripts.build_pit_stats import enrich_roster
+from src.matchup_model import attach_history_coverage
 from src.rationale import set_card_cohort
 from jinja2 import Environment, FileSystemLoader
 
@@ -378,6 +379,14 @@ def main(tier: str = "member", output_path: str | None = None):
     print(f"[pit_stats] rate columns filled for "
           f"{fighters_df.attrs.get('pit_stats_filled', 0)} of {len(fighters_df)} fighters")
     history_df = pd.read_csv(f"{DATA_DIR}/fight_history.csv")
+    # HOW MUCH OF EACH FIGHTER DO WE ACTUALLY HOLD. Compared against their own
+    # claimed record, so the model can tell a genuine five-year layoff from a
+    # career we only have one bout of -- see matchup_model.layoff_years.
+    fighters_df = attach_history_coverage(fighters_df, history_df)
+    _thin = fighters_df["history_coverage"] < 0.60
+    if _thin.any():
+        print(f"[coverage] {int(_thin.sum())} fighter(s) hold under 60% of their "
+              f"claimed bouts; layoff is not read for them")
     elo_ratings = build_ratings(fighters_df, history_df)
 
     future_cards_df = load_fight_cards(f"{DATA_DIR}/future_cards.csv")

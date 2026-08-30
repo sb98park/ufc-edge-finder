@@ -268,8 +268,95 @@ def _get(row: pd.Series, col: str, default: float) -> float:
     return float(row[col]) if col in row and pd.notna(row[col]) else default
 
 
+# Below this share of a fighter's own claimed bouts, last_fight_date stops
+# being a fact about them and becomes a fact about us. Measured, not picked:
+# see scripts/validate_layoff_coverage_guard.py. 0.60 is the LARGEST threshold
+# that is still a bit-for-bit no-op on well-covered fights.
+HISTORY_COVERAGE_FLOOR = 0.60
+
+
+def history_is_partial(row) -> bool:
+    """
+    Do we hold materially fewer bouts than this fighter says they have had?
+
+    A row with no `history_coverage` column reads as covered, so every caller
+    that does not supply it -- every test, every harness, rationale.py -- gets
+    exactly the behaviour it had before this existed.
+    """
+    cov = row.get("history_coverage") if hasattr(row, "get") else None
+    if cov is None or (isinstance(cov, float) and pd.isna(cov)):
+        return False
+    try:
+        return float(cov) < HISTORY_COVERAGE_FLOOR
+    except (TypeError, ValueError):
+        return False
+
+
+def attach_history_coverage(fighters_df, fight_history_df):
+    """
+    Add a `history_coverage` column: bouts we hold / bouts they claim.
+
+    The two numbers come from independent places, which is the only reason the
+    comparison means anything. `wins + losses` in fighters.csv is sourced from
+    ESPN's career record (or a hand correction); the count is of rows in
+    fight_history.csv. When they agree we have the whole career. When they do
+    not, every history-derived term -- layoff, recent form, streaks, Elo -- is
+    reading a sample we can see is partial, and we can say so instead of
+    quietly treating absence as evidence.
+
+    NaN, not 1.0, for a fighter with no usable record: unmeasurable is not the
+    same claim as complete, and history_is_partial reads NaN as "do not
+    intervene".
+
+    Returns the frame; safe to call on a frame that already has the column.
+    """
+    if fighters_df is None or getattr(fighters_df, "empty", True):
+        return fighters_df
+    counts = {}
+    if fight_history_df is not None and not getattr(fight_history_df, "empty", True):
+        for col in ("fighter_a", "fighter_b"):
+            if col not in fight_history_df.columns:
+                continue
+            for n in fight_history_df[col].dropna().astype(str):
+                key = n.strip().lower()
+                counts[key] = counts.get(key, 0) + 1
+
+    def _cov(row):
+        w, l = row.get("wins"), row.get("losses")
+        if pd.isna(w) or pd.isna(l):
+            return float("nan")
+        claimed = int(w) + int(l)
+        if claimed <= 0:
+            return float("nan")     # a 0-0 row says nothing about coverage
+        return counts.get(str(row.get("name")).strip().lower(), 0) / claimed
+
+    fighters_df = fighters_df.copy()
+    fighters_df["history_coverage"] = fighters_df.apply(_cov, axis=1)
+    return fighters_df
+
+
 def layoff_years(row: pd.Series, reference_date: dt.date | None = None) -> float | None:
     if "last_fight_date" not in row or pd.isna(row["last_fight_date"]):
+        return None
+    # AN INCOMPLETE HISTORY CANNOT PROVE A LAYOFF. last_fight_date is the
+    # newest bout WE HOLD, so on a partial history it is a lower bound on the
+    # fighter's real activity -- the true last fight can only be more recent,
+    # never older. Both consumers of this number only ever subtract points, so
+    # a gap in our data can manufacture ring rust but can never remove any.
+    # That asymmetry is the whole argument; the threshold is the only part
+    # that needed measuring.
+    #
+    # Michael Aljarouj, priced 2026-09-05: fighters.csv has him 13-3, the
+    # spine has one of those sixteen bouts, from 2021. The model read a
+    # 5.47-year layoff and charged -89.3 points. His real last fight was
+    # 2025-04-12 -- 1.40 years, worth -8.0.
+    #
+    # Measured over 675 point-in-time fights with a corner below the floor:
+    # Brier 0.23790 -> 0.23557 (-0.00233, p=0.004), accuracy 0.5985 -> 0.6044.
+    # On the 2,013 fully-covered fights it is identical to five decimal places
+    # (delta 0.00000, p=1.000), which is the check that matters: it does
+    # nothing where it has no business doing anything.
+    if history_is_partial(row):
         return None
     reference_date = reference_date or dt.date.today()
     last_fight = pd.to_datetime(row["last_fight_date"]).date()

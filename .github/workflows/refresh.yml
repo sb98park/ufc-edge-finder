@@ -216,6 +216,15 @@ jobs:
           echo "::group::rehearse_live_poller"
           python scripts/rehearse_live_poller.py || fail=1
           echo "::endgroup::"
+          # WHAT DO WE KNOW ABOUT THE PEOPLE WE ARE ABOUT TO PRICE. Deliberately
+          # NOT part of `fail`: a thin record is a legitimate state and a gate
+          # freezes the whole site. This reports, and writes its findings into
+          # data/source_health.json where they get committed and survive the
+          # log ageing out. Michael Aljarouj was priced off 1 of his 16 bouts
+          # and nothing said so -- a human found it on Tapology by chance.
+          echo "::group::card_data_coverage"
+          python scripts/check_card_data_coverage.py || true
+          echo "::endgroup::"
           exit $fail
 
       - name: Merge recorded results into fight history
