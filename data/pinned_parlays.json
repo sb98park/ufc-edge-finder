@@ -1,108 +1,55 @@
 {
- "UFC Fight Night: Hooker vs. Parnasse": {
-  "bankroll": {
-   "pinned_at": "2026-08-30T01:16:12+00:00",
-   "identities": [
-    "[\"Morgan Charrière|Felipe Lima\", [{\"fighter\": \"Felipe Lima\", \"kind\": \"winner\"}]]",
-    "[\"Mario Pinto|Ryan Spann\", [{\"fighter\": \"Mario Pinto\", \"kind\": \"winner\"}]]"
-   ],
-   "snapshot": {
-    "legs": [
-     {
-      "label": "Felipe Lima ML",
-      "odds_display": "-192",
-      "is_model": false,
-      "decimal_odds": 1.520833,
-      "fight_key": "Morgan Charrière|Felipe Lima",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Felipe Lima"
-       }
+  "UFC Fight Night: Hooker vs. Parnasse": {
+    "bankroll": {
+      "identities": [
+        "[\"Morgan Charri\u00e8re|Felipe Lima\", [{\"fighter\": \"Felipe Lima\", \"kind\": \"winner\"}]]",
+        "[\"Mario Pinto|Ryan Spann\", [{\"fighter\": \"Mario Pinto\", \"kind\": \"winner\"}]]"
       ],
-      "source": "DraftKings"
-     },
-     {
-      "label": "Mario Pinto ML",
-      "odds_display": "-270",
-      "is_model": false,
-      "decimal_odds": 1.37037,
-      "fight_key": "Mario Pinto|Ryan Spann",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Mario Pinto"
-       }
-      ],
-      "source": "DraftKings"
-     }
-    ],
-    "has_model_legs": false,
-    "fight_ids": [
-     "card_19",
-     "card_21"
-    ],
-    "slip_id": "e9bdd21736b3",
-    "combined_decimal": 2.084105,
-    "combined_american": 108,
-    "combined_american_display": "+108",
-    "combined_prob": 0.4557,
-    "combined_prob_raw": 0.4896,
-    "venue": "DraftKings"
-   }
+      "pinned_at": "2026-08-30T01:16:12+00:00",
+      "snapshot": {
+        "combined_american": 108,
+        "combined_american_display": "+108",
+        "combined_decimal": 2.084105,
+        "combined_prob": 0.4557,
+        "combined_prob_raw": 0.4896,
+        "fight_ids": [
+          "card_19",
+          "card_21"
+        ],
+        "has_model_legs": false,
+        "legs": [
+          {
+            "conditions": [
+              {
+                "fighter": "Felipe Lima",
+                "kind": "winner"
+              }
+            ],
+            "decimal_odds": 1.520833,
+            "fight_key": "Morgan Charri\u00e8re|Felipe Lima",
+            "is_model": false,
+            "label": "Felipe Lima ML",
+            "odds_display": "-192",
+            "source": "DraftKings"
+          },
+          {
+            "conditions": [
+              {
+                "fighter": "Mario Pinto",
+                "kind": "winner"
+              }
+            ],
+            "decimal_odds": 1.37037,
+            "fight_key": "Mario Pinto|Ryan Spann",
+            "is_model": false,
+            "label": "Mario Pinto ML",
+            "odds_display": "-270",
+            "source": "DraftKings"
+          }
+        ],
+        "slip_id": "e9bdd21736b3",
+        "venue": "DraftKings"
+      }
+    }
   }
- },
- "UFC Fight Night: Nurmagomedov vs. Song": {
-  "bankroll": {
-   "pinned_at": "2026-08-30T00:02:45+00:00",
-   "identities": [
-    "[\"\", [{\"fighter\": \"Felipe Lima\", \"kind\": \"winner\"}]]",
-    "[\"\", [{\"fighter\": \"Mario Pinto\", \"kind\": \"winner\"}]]"
-   ],
-   "snapshot": {
-    "legs": [
-     {
-      "label": "Felipe Lima ML",
-      "odds_display": "-185",
-      "is_model": false,
-      "decimal_odds": 1.540541,
-      "fight_key": null,
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Felipe Lima"
-       }
-      ],
-      "source": "DraftKings"
-     },
-     {
-      "label": "Mario Pinto ML",
-      "odds_display": "-270",
-      "is_model": false,
-      "decimal_odds": 1.37037,
-      "fight_key": null,
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Mario Pinto"
-       }
-      ],
-      "source": "DraftKings"
-     }
-    ],
-    "has_model_legs": false,
-    "fight_ids": [
-     "card_19",
-     "card_21"
-    ],
-    "slip_id": "e9bdd21736b3",
-    "combined_decimal": 2.111111,
-    "combined_american": 111,
-    "combined_american_display": "+111",
-    "combined_prob": 0.4538,
-    "combined_prob_raw": 0.4896,
-    "venue": "DraftKings"
-   }
-  }
- }
 }

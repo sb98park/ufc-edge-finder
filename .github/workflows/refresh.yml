@@ -203,6 +203,13 @@ jobs:
           echo "::group::rehearse_fight_night"
           python scripts/rehearse_fight_night.py || fail=1
           echo "::endgroup::"
+          # Settlement is implemented twice -- JS in the template for the live
+          # card, Python in parlay_grader for the ledger -- and they read the
+          # clock in OPPOSITE directions by design. This proves they still
+          # agree. It skips cleanly if node is unavailable.
+          echo "::group::rehearse_leg_grading"
+          python scripts/rehearse_leg_grading.py || fail=1
+          echo "::endgroup::"
           exit $fail
 
       - name: Merge recorded results into fight history
