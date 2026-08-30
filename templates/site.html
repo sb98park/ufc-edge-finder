@@ -4726,6 +4726,18 @@
   /* A command, not a filter. No pill, no border -- an underline on the text
      so it still reads as pressable, at the same size as the chips so the row
      stays on one baseline. */
+  /* 44px of touch height without changing the visual box -- the same
+     ::before expander the chips already use. Measured at 375px these were
+     59x24 (this control), 29 wide (.fun-fact-chip), and 32-33 tall on the two
+     summary rows below. .seg-tab and .market-group-summary already carried a
+     min-height; these did not. */
+  .fc-action, .fun-fact-chip, .waterfall-summary, .market-group-summary { position: relative; }
+  .fc-action::after, .fun-fact-chip::after {
+    content: ""; position: absolute; left: 0; right: 0;
+    top: 50%; transform: translateY(-50%); height: 44px; min-width: 44px;
+  }
+  .waterfall-summary, details > summary.waterfall-summary { min-height: 44px; }
+  .fun-fact-chip { min-width: 44px; }
   .fc-action {
     margin-left: auto; padding: 5px 2px; cursor: pointer;
     background: none; border: 0; border-bottom: 1px solid var(--hairline);
@@ -11584,14 +11596,28 @@
       apply();
 
       const toggle = document.getElementById('fc-toggle-all');
+      // THE LABEL FOLLOWS THE LIST, not the last tap on this button. It was
+      // only ever written inside the click handler, so opening cards by hand
+      // left it reading "Expand all" while a tap would collapse them -- and
+      // collapsing one by hand after "Expand all" left it reading "Collapse
+      // all" while a tap expanded. It was wrong in both directions.
+      function syncToggleLabel() {
+        const visible = cards().filter(c => !c.classList.contains('fc-hidden'));
+        toggle.hidden = visible.length === 0;
+        toggle.textContent = visible.some(c => !c.open) ? 'Expand all' : 'Collapse all';
+      }
       toggle.addEventListener('click', () => {
         // Act on VISIBLE cards only, so "expand all" respects an active
         // filter instead of quietly opening things you've filtered out.
         const visible = cards().filter(c => !c.classList.contains('fc-hidden'));
         const anyClosed = visible.some(c => !c.open);
         visible.forEach(c => { c.open = anyClosed; });
-        toggle.textContent = anyClosed ? 'Collapse all' : 'Expand all';
+        syncToggleLabel();
       });
+      // Any card opened or closed by hand re-syncs it. `toggle` fires on
+      // <details> and does not bubble, so it is captured.
+      cards().forEach(c => c.addEventListener('toggle', syncToggleLabel));
+      syncToggleLabel();
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initFightControls);

@@ -1194,8 +1194,12 @@ def main(tier: str = "member", output_path: str | None = None):
         _ledger = plays_load()
         plays_card = build_card_plays(
             _plays_event,
+            # event_date as well as the name -- see committed_for. Without it a
+            # renamed event hands select_card a fresh budget and double-books
+            # every play on the card.
             committed=committed_for(_plays_event.get("event_name") if _plays_event else None,
-                                    _ledger),
+                                    _ledger,
+                                    event_date=(_plays_event.get("event_date") if _plays_event else None)),
         )
 
         # The closing line for everything already on the board, including

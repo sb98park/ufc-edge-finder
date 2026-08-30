@@ -1084,13 +1084,48 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
             return " ".join(sorted(str(n).strip().lower().split()))
         return frozenset({toks(a), toks(b)})
 
-    known_keys = {_key(r["fighter_a"], r["fighter_b"]) for _, r in existing.iterrows() if pd.notna(r.get("winner"))}
+    # A REMATCH IS A DIFFERENT FIGHT. These keys carry no event, so the second
+    # meeting of a pair collides with the first: the bout is excluded from
+    # truly_missing and its result is never fetched, its plays void after two
+    # days, and the card renders LAST time's winner. UFC 331: Van vs. Pantoja 2
+    # is tracked for 2026-09-19 and UFC 329: McGregor vs. Holloway 2 already
+    # shipped, so this is routine rather than exotic.
+    #
+    # DISAMBIGUATED ONLY WHERE IT MATTERS. A pair with exactly one recorded
+    # result keeps the plain pair key, so every pairing that works today keeps
+    # working -- including across an event rename, where requiring the name to
+    # match would BREAK matching. Only a pair we already hold more than once
+    # has to name its event, which is precisely the rematch case.
+    _pair_rows = {}
+    for _, r in existing.iterrows():
+        if pd.notna(r.get("winner")):
+            _pair_rows.setdefault(_key(r["fighter_a"], r["fighter_b"]), []).append(r)
+    known_keys = {k for k, v in _pair_rows.items() if len(v) == 1}
+    known_event_keys = {
+        (str(r.get("event_name") or "").strip().lower(), k)
+        for k, v in _pair_rows.items() if len(v) > 1 for r in v
+    }
+    if any(len(v) > 1 for v in _pair_rows.values()):
+        print(f"[results_fetcher] {sum(1 for v in _pair_rows.values() if len(v) > 1)} pairing(s) "
+              f"have more than one recorded result -- matching those on event name as well")
     stats_missing_keys = {
         _key(r["fighter_a"], r["fighter_b"]) for _, r in existing.iterrows()
         if pd.notna(r.get("winner")) and not all(pd.notna(r.get(c)) for c in STAT_COLS)
     }
     card_keys = {_key(r["fighter_a"], r["fighter_b"]) for r in fight_cards_df.to_dict("records")}
     truly_missing = card_keys - known_keys
+    # A card row whose pair is multiply-recorded counts as known only if THIS
+    # event already has a row for it.
+    if known_event_keys:
+        _still = set()
+        for r in fight_cards_df.to_dict("records"):
+            k = _key(r["fighter_a"], r["fighter_b"])
+            if k not in truly_missing:
+                continue
+            ev = str(r.get("event_name") or "").strip().lower()
+            if (ev, k) not in known_event_keys:
+                _still.add(k)
+        truly_missing = _still
     # SECOND PASS on whatever exact matching could not place. A card row whose
     # loose key matches a result we already hold is the same bout written with
     # its name tokens the other way round, not a missing result -- see

@@ -181,18 +181,37 @@ def load(path: str = LEDGER_PATH) -> list[dict]:
         return [_coerce(r) for r in csv.DictReader(fh)]
 
 
-def committed_for(event_name: str | None, rows: list[dict]) -> list[dict]:
+def committed_for(event_name: str | None, rows: list[dict],
+                  event_date: str | None = None) -> list[dict]:
     """
     What select_card needs to know about money already on this card.
 
     Deliberately the minimum -- fight_id, axis, units -- because this is only
     ever used to spend budget and hold a slot, never to render anything. A
     voided play frees its budget back up; nothing is riding on it any more.
+
+    MATCHED ON THE DATE TOO, NOT THE NAME ALONE. card_discovery renames an
+    event automatically whenever the lineup changes ("same date, different
+    name -- replacing the old entry"), and play_id embeds event_name. After a
+    rename this returned NOTHING for the card, so select_card saw a fresh full
+    budget and wrote a SECOND set of plays for fights already backed -- at that
+    day's price, under new play_ids. grade_rows keys on the fighter pair alone,
+    so both rows then graded, and bankroll.apply_settled compounded both
+    because the ids differ. Reproduced on a copy of the real ledger: one 5U bet
+    at -625 became 10U staked returning +2.36U instead of +0.80U, and
+    check_plays_ledger passed throughout, because nothing was rewritten -- rows
+    were merely added.
+
+    A card's DATE does not change when its name does, so it is the stable half
+    of the identity. The name still matches on its own for any row written
+    before this file carried event_date.
     """
     out = []
     for r in rows:
         if event_name and r.get("event_name") != event_name:
-            continue
+            same_date = (event_date and str(r.get("event_date") or "").strip() == str(event_date).strip())
+            if not same_date:
+                continue
         if (r.get("result") or "").lower() == "void":
             continue
         try:

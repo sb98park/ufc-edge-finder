@@ -178,6 +178,26 @@ def record_slips(slips_by_tier: dict, event_name: str | None,
                         "combined_decimal_first", prior.get("combined_decimal"))
                 else:
                     row["combined_decimal_first"] = s.get("combined_decimal")
+                # GRADING SURVIVES A REPUBLISH. `row` is rebuilt from scratch
+                # every render, so a slip that had already settled lost its
+                # result, leg_states, legs_won, units_result, settled_decimal
+                # and graded_at the next time the builder happened to produce
+                # the same slip_id.
+                #
+                # This normally self-healed only by accident of ordering --
+                # record_slips runs before grade_pinned in the same build, so
+                # the wipe was usually repaired seconds later. It does NOT heal
+                # when the plays block throws: grade_pinned sits inside that
+                # try/except, so any failure there skips grading entirely while
+                # the wipe has already been written and committed.
+                #
+                # graded_at was also being rewritten on every render, which
+                # contradicts src/bankroll.py's documented assumption that it
+                # is written once.
+                for _settled_field in ("result", "leg_states", "legs_won",
+                                       "units_result", "settled_decimal", "graded_at"):
+                    if prior and prior.get(_settled_field) not in (None, ""):
+                        row[_settled_field] = prior[_settled_field]
                 existing[sid] = row
 
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
