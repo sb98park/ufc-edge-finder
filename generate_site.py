@@ -1269,10 +1269,22 @@ def main(tier: str = "member", output_path: str | None = None):
         _bank = bankroll_state.apply_settled(bankroll_state.load(), _all_now)
         bankroll_state.save(_bank)
         bankroll = bankroll_state.summarise(_bank)
-        plays_record = summarise_plays(_all_now)
         # Per-card, for the track record's Bets tab. A card missing from this
         # dict was graded before the ledger existed and keeps its old view.
         plays_events = plays_by_event(_all_now)
+        # THIS CARD'S RECORD, NOT THE RUNNING ONE. This was
+        # summarise_plays(_all_now) -- every play ever written -- rendered
+        # under a heading that says "This Week's Plays", beside a list that IS
+        # scoped to one event. It read 1-0 only because two plays existed in
+        # total; it would have become 3-1, then 6-2: a cumulative figure
+        # wearing a weekly label. The running view already has a home in the
+        # Record tab, which is where it belongs.
+        _pe = plays_events.get(plays_card.get("event_name")) or {}
+        plays_record = {
+            "won": _pe.get("won", 0), "lost": _pe.get("lost", 0),
+            "settled": _pe.get("settled", 0), "units": _pe.get("units", 0.0),
+            "staked": _pe.get("staked", 0.0), "roi_pct": _pe.get("roi_pct"),
+        } if _pe else None
         _shelved = len(plays_card.get("shelved") or [])
         _note = "" if plays_card["discretionary_on"] else f", {_shelved} shelved"
         print(f"[plays] {len(plays_card['plays'])} new, {len(plays_rows)} on the card, "

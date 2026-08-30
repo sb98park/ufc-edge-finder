@@ -8198,7 +8198,18 @@
   #}
 
   <div class="detail-section" data-section="plays">
-  <div class="standout-title" id="section-plays">{{ icon_slip() }} This Week's Plays</div>
+  {#- NAMED WITH ITS OWN CARD, and deliberately not with event_matchup. Plays
+      follow the CARD clock -- they stay on the concluded card until Monday --
+      while Reads, Locks and the Parlay follow the ANALYTICS clock and move to
+      the next card as soon as this one is over. For the day and a half those
+      two disagree, this heading is the only thing telling you the plays below
+      belong to a different event than the sections around them. Observed on
+      2026-08-30: Reads already read "Hooker vs. Parnasse" while this still
+      said "This Week's". -#}
+  {%- set _plays_matchup = (plays_card.event_name.split(':', 1)[1].strip()
+                            if plays_card and plays_card.event_name and ':' in plays_card.event_name
+                            else (plays_card.event_name if plays_card else None)) -%}
+  <div class="standout-title" id="section-plays">{{ icon_slip() }} Plays{% if _plays_matchup %} · {{ _plays_matchup }}{% endif %}</div>
 
   {% if bankroll and bankroll.settled %}
   {#- THE NUMBER THE WHOLE THING IS FOR. Units are the record's currency and
@@ -8357,7 +8368,7 @@
      and moonshot tiers, both now retired, so the name was answering a
      question nobody is asking. The subtitle argued for one slip rather than
      three, which is no longer a choice being made. #}
-  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} The Parlay</div>
+  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} The Parlay{% if event_matchup %} · {{ event_matchup }}{% endif %}</div>
   {#- "from picks the model favors" WAS NOT TRUE, and the slip on the card the
       day this changed proved it. Legs are ranked on _ranking_prob, which is
       90% the market's de-vigged line and 10% the model, so where the two
@@ -8373,7 +8384,7 @@
   {{ parlay_card(p, "bankroll", 1) }}
   {% endfor %}
   {% elif events and tier != 'free' %}
-  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} The Parlay</div>
+  <div class="parlay-section-title bankroll" id="section-bankroll">{{ icon_coins() }} The Parlay{% if event_matchup %} · {{ event_matchup }}{% endif %}</div>
   {{ empty_state(icon_coins(), "No parlay yet", "Not enough live-priced or model-projected legs on this card yet.") }}
   {% endif %}
 
