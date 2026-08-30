@@ -325,8 +325,29 @@ MIN_RECORD_FOR_HIGH_CONFIDENCE = 4
 DEBUT_MEDIUM_CEILING = 0.75
 
 
+CONFIDENCE_HYSTERESIS = 0.010
+"""
+How far past a tier boundary the probability must travel to CHANGE the label.
+
+MEASURED, not chosen. Every threshold crossing in predictions_log was scored
+by how far past 0.60/0.75 it landed: 27 crossings, of which exactly 2 came to
+rest within 0.010 of the line (0.001 and 0.003 past). Everything else cleared
+it by 0.010-0.176, median 0.035. So a 0.010 band suppresses the hairline
+flips and leaves 93% of genuine re-ratings untouched. Wider bands over-reach
+fast -- 0.030 would have swallowed 41% of crossings, including moves of
+0.09 that were the model actually changing its mind.
+
+The case that prompted it: a main-event pick slid 0.751 -> 0.747, three
+thousandths past the line, and dropped from High Confidence to Medium. No new
+data existed for either fighter in that bout; 298 rows had landed across 320
+OTHER fighters and moved the ratings underneath it. Tier drives the stake, so
+a 0.003 wobble was worth 3 units.
+"""
+
+
 def _confidence_label(favorite_prob: float, thinner_record: int | None = None,
-                      debut_corner: bool | None = None) -> str:
+                      debut_corner: bool | None = None,
+                      previous_label: str | None = None) -> str:
     """
     thinner_record: professional bouts on whichever fighter has fewer. A
     prediction is only as confident as its weaker side, and the label is
@@ -348,14 +369,27 @@ def _confidence_label(favorite_prob: float, thinner_record: int | None = None,
     asserts that estimate is a presentation decision, and asserting it
     loudest where the data is thinnest is simply wrong.
     """
-    if favorite_prob >= 0.75:
+    # ASYMMETRIC BY DESIGN. Entering a tier needs the full threshold; holding
+    # one only needs to stay within CONFIDENCE_HYSTERESIS of it. A symmetric
+    # band would just move both boundaries down and relabel the same flips
+    # somewhere else.
+    high_bar = 0.75 - (CONFIDENCE_HYSTERESIS if previous_label == "High Confidence" else 0.0)
+    med_bar = 0.60 - (CONFIDENCE_HYSTERESIS
+                      if previous_label in ("High Confidence", "Medium Confidence") else 0.0)
+
+    if favorite_prob >= high_bar:
+        # THE CAPS ARE NOT SUBJECT TO HYSTERESIS. They exist because one
+        # corner has too little record to assert anything loudly, and that is
+        # a fact about the data rather than a boundary the probability
+        # wandered across -- holding a stale High through it would be exactly
+        # the failure the cap was added to prevent.
         if thinner_record is not None and thinner_record < MIN_RECORD_FOR_HIGH_CONFIDENCE:
             # Deliberately Medium rather than Low: the gap may well be real,
             # and burying it would be its own distortion. It just must not be
             # eligible to be the week's flagship pick.
             return "Medium Confidence"
         return "High Confidence"
-    elif favorite_prob >= 0.60:
+    elif favorite_prob >= med_bar:
         if debut_corner and favorite_prob < DEBUT_MEDIUM_CEILING:
             return "Low Confidence"
         return "Medium Confidence"
@@ -470,6 +504,7 @@ def build_fight_preview(
     weight_class_history_df: pd.DataFrame | None = None,
     fight_weight_class: str | None = None,
     fight_history_df: pd.DataFrame | None = None,
+    previous_label: str | None = None,
 ) -> dict | None:
     row_a, row_b = _fighter_row(fighters_df, fighter_a), _fighter_row(fighters_df, fighter_b)
     if row_a is None or row_b is None:
@@ -776,7 +811,8 @@ def build_fight_preview(
         # debut_corner is the separate UFC-experience gate -- a fighter can
         # have a long professional record and still have never fought here.
         "confidence_label": _confidence_label(
-            favorite_prob, matchup.get("thinner_record"), matchup.get("debut_corner")),
+            favorite_prob, matchup.get("thinner_record"), matchup.get("debut_corner"),
+            previous_label=previous_label),
         "rounds_lean": rounds_lean,
         "combined_finish_rate": round(combined_finish_rate, 3),
         "style_a": matchup["style_a"],

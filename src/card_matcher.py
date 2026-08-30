@@ -626,6 +626,46 @@ def _canonical_fight_methods(rows: list[dict], fight: dict) -> list[dict]:
     return out or rows
 
 
+_LOGGED_LABELS: dict | None = None
+
+
+def _previous_label(fighter_a, fighter_b) -> str | None:
+    """
+    The confidence label predictions_log last recorded for this bout, or None.
+
+    Loaded once and cached. The log is read-only during a build, and
+    re-parsing the whole file for every fight on every card would be pure
+    waste. Keyed order-insensitively on the pair, because a card can be
+    re-scraped with the corners the other way round -- the same convention
+    the rest of the pipeline uses, and _normalize_name is applied so an
+    accent difference between sources cannot silently lose the prior label.
+
+    Fails to None on any error. Hysteresis that cannot find a previous label
+    simply does not apply, degrading to the behaviour that shipped before it
+    existed rather than to a wrong label.
+    """
+    global _LOGGED_LABELS
+    if _LOGGED_LABELS is None:
+        try:
+            from src.track_record import load_logged_predictions_by_key
+            raw = load_logged_predictions_by_key() or {}
+        except Exception as exc:
+            print(f"[card_matcher] no logged labels available for tier hysteresis "
+                  f"({exc}) -- tiers computed without it")
+            raw = {}
+        _LOGGED_LABELS = {}
+        for key, val in raw.items():
+            try:
+                a, b = key
+            except (TypeError, ValueError):
+                continue
+            label = (val or {}).get("confidence_label")
+            if label:
+                _LOGGED_LABELS[frozenset({_normalize_name(a), _normalize_name(b)})] = label
+    return _LOGGED_LABELS.get(
+        frozenset({_normalize_name(fighter_a), _normalize_name(fighter_b)}))
+
+
 def group_edges_by_card(
     edges_df: pd.DataFrame,
     cards_df: pd.DataFrame,
@@ -652,10 +692,19 @@ def group_edges_by_card(
         is_five_round = _is_five_round(row)
         if fighters_df is not None and effective_ratings is not None:
             try:
+                # THE LABEL THIS BOUT ALREADY CARRIES, for hysteresis. Read
+                # from predictions_log rather than recomputed, because that
+                # log is the only record of what was actually published, and
+                # it is frozen once a fight resolves -- so a decided bout
+                # cannot have its old tier re-derived from data its own result
+                # has already contaminated. None on a bout never logged, which
+                # is the right input: a first label has nothing to be sticky
+                # about.
                 preview = build_fight_preview(
                     row["fighter_a"], row["fighter_b"], fighters_df, effective_ratings, is_five_round=is_five_round,
                     weight_class_history_df=weight_class_history_df, fight_weight_class=row.get("weight_class"),
                     fight_history_df=fight_history_df,
+                    previous_label=_previous_label(row["fighter_a"], row["fighter_b"]),
                 )
             except Exception as e:
                 # One fight's preview failing -- bad roster data, a NaN slipping
