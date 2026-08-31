@@ -3013,6 +3013,25 @@
        genuinely raised. */
     box-shadow: var(--e1);
   }
+  /* THE MAIN EVENT SLOT, BEFORE THERE IS A MAIN EVENT. The UFC puts a
+     numbered card on sale months before it books a headliner -- UFC 332 sits
+     on the schedule with seven bouts, a co-main among them, and no main
+     event. The card body simply started at the co-main, which reads as a
+     fight we failed to fetch rather than one that does not exist yet.
+     Dashed and muted, matching .filter-empty, which is this page's existing
+     "nothing here yet" idiom rather than a new one invented for this.
+     NOT a <details>: there is nothing to expand, and every rule for the real
+     card is scoped to `details.fight-card`, so the box chrome is restated
+     here rather than inherited from a selector it would not match. */
+  .fight-tba {
+    background: var(--panel); border: 1px dashed var(--border);
+    border-radius: var(--r-lg); margin-bottom: 12px; padding: 14px 16px;
+  }
+  .fight-tba-title { font-size: var(--t-body); font-weight: 600; line-height: 1.25; }
+  .fight-tba-sub {
+    font-size: var(--t-small); color: var(--muted); line-height: 1.45; margin-top: 3px;
+  }
+
   /* Press feedback moved to the tint list below. scale(0.995) on a 343px card
      is 0.85px per side -- under the threshold where a transform reads as a
      press at all -- and this file's own rule says full-width rows should tint
@@ -8591,12 +8610,32 @@
       <span class="chevron">▶</span>
     </summary>
     <div class="future-event-body">
+      {#- A card with no headliner booked yet still HAS a main event slot, and
+          leaving it out made the list open on the co-main as though the top of
+          the card were missing. Rendered from the absence of a 'Main Event'
+          row rather than from a synthetic fight: a placeholder pushed through
+          event.fights would be counted by the teaser, the fight tally and
+          anything else that reads that list as real bouts. -#}
+      {%- set _has_main_event = event.fights
+            | selectattr('card_position', 'equalto', 'Main Event')
+            | list | length > 0 -%}
       {% for fight in event.fights %}
       {% if loop.first or fight.segment_label != loop.previtem.segment_label %}
       <div class="segment-divider">
         <span class="segment-divider-line"></span>
         <span class="segment-divider-label">{{ fight.segment_label }}</span>
         <span class="segment-divider-line"></span>
+      </div>
+      {% endif %}
+      {% if loop.first and not _has_main_event %}
+      <div class="fight-tba">
+        <div class="card-position">Main Event</div>
+        {#- "Not yet announced", not MAIN_EVENT_TBD. That string exists for
+            list rows that carry no badge of their own; here the badge above
+            already says Main Event, so reusing it would set "Main Event"
+            directly over "Main event TBD". -#}
+        <div class="fight-tba-title">Not yet announced</div>
+        <div class="fight-tba-sub">The UFC has not booked a headliner for this card yet. It will appear here, with a full read, the day it is announced.</div>
       </div>
       {% endif %}
       {{ render_fight_card(fight) }}
