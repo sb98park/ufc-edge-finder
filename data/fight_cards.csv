@@ -1,16 +1,15 @@
-event_name,event_date,card_position,weight_class,fighter_a,fighter_b,event_start_time_et,is_womens_division,event_location,event_main_card_time_et,replacement,replaced_fighter,cancelled,manually_added,bout_order
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Event,Bantamweight,Umar Nurmagomedov,Song Yadong,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,13
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Co-Main Event,Women's Strawweight,Yan Xiaonan,Denise Gomes,03:00,True,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,12
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Bantamweight,Aoriqileng,Kai Asakura,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,11
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Flyweight,Sumudaerji,Alex Perez,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,10
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Light Heavyweight,Liu Ce,Levi Rodrigues Jr.,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,9
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Flyweight,Bilal Hasan,Nilson Rojas,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,8
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Prelims,Flyweight,Namsrai Batbayar,Andre Lima,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,7
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Prelims,Flyweight,Rei Tsuruya,Kevin Borjas,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,6
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Prelims,Featherweight,Jack Jenkins,Sean Woodson,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,5
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Prelims,Bantamweight,Xiao Long,Francesco Nuzzi,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,4
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Prelims,Bantamweight,Lawrence Lui,Hector Santiago,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,3
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Prelims,Women's Strawweight,Jingnan Xiong,Julia Polastri,03:00,True,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,,,2
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Prelims,Welterweight,Ding Meng,Cam Nelson,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,True,Cameron Nelson,,,1
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Prelims,Welterweight,Ding Meng,Cameron Nelson,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,True,,
-UFC Fight Night: Nurmagomedov vs. Song,2026-08-29,Main Card,Light Heavyweight,Liu Ce,Junior Tafa,03:00,False,"Shanghai Oriental Sports Center, Shanghai, China",06:00,,,True,,
+event_name,event_date,card_position,weight_class,fighter_a,fighter_b,event_start_time_et,is_womens_division,event_location,event_main_card_time_et,replacement,replaced_fighter,cancelled,manually_added,_orphan_streak,bout_order
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Main Event,Lightweight,Dan Hooker,Salahdine Parnasse,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,14.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Co-Main Event,Lightweight,Farés Ziam,Axel Sola,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,13.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Main Card,Middleweight,Michael Page,Nursulton Ruziboev,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,12.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Main Card,Welterweight,Daniil Donchenko,Punahele Soriano,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,11.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Main Card,Featherweight,Morgan Charrière,Felipe Lima,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,10.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Main Card,Featherweight,Losene Keita,Muhammad Naimov,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,9.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Heavyweight,Mario Pinto,Ryan Spann,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,8.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Featherweight,Kurtis Campbell,Trevor Peek,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,7.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Light Heavyweight,Oumar Sy,Modestas Bukauskas,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,6.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Featherweight,Nathaniel Wood,Mairon Santos,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,5.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Flyweight,Michael Aljarouj,Fabia Sintes,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,4.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Women's Bantamweight,Nora Cornolle,Klaudia Syguła,12:00,True,"Accor Arena, Paris, France",15:00,,,,,,3.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Middleweight,Matthieu Letho Duclos,Luis Felipe Dias,12:00,False,"Accor Arena, Paris, France",15:00,,,,,,2.0
+UFC Fight Night: Hooker vs. Parnasse,2026-09-05,Prelims,Women's Strawweight,Delphine Benouaich,Sofia Montenegro,12:00,True,"Accor Arena, Paris, France",15:00,,,,,,1.0
