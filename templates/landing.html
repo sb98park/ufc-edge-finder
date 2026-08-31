@@ -1449,7 +1449,7 @@
                The UFC only appends "X vs. Y" to an event name once the
                headliner is signed, so a bare "UFC 332" carrying {{ c.fights }}
                read bouts means precisely this and nothing worse. #}
-            <span class="sm">{{ c.matchup or 'Main event TBD' }}</span>
+            <span class="sm">{{ c.matchup or MAIN_EVENT_TBD }}</span>
             <span class="sd">{{ c.date }}</span>
             {# The one number on the row that is a quantity rather than a
                label, so it is the one that counts. #}

@@ -6329,8 +6329,12 @@
         </div>
         <div class="hub-card-text">
           <div class="hub-card-label">This Weekend</div>
-          <div class="hub-card-stat">{{ events[0].event_name.split(':')[0].strip() }}</div>
-          <div class="hub-card-matchup">{{ events[0].event_name.split(':', 1)[1].strip() if ':' in events[0].event_name else '' }}</div>
+          <div class="hub-card-stat">{{ events[0].event_name|event_series }}</div>
+          {#- NEVER BLANK. This used to emit an empty div for a card with no
+              headliner booked, leaving a gap between the series and the fight
+              count. UFC 332 is on the schedule with seven bouts and no main
+              event; "Main event TBD" is the true statement. -#}
+          <div class="hub-card-matchup">{{ events[0].event_name|event_matchup }}</div>
           <div class="hub-card-sub">{{ events[0].fights|length }} fights · {{ events[0].event_date|friendly_date }}</div>
           {% if events[0].event_location %}<div class="hub-card-location">{{ icon_pin() }} {{ events[0].event_location }}</div>{% endif %}
         </div>
@@ -8206,9 +8210,7 @@
       belong to a different event than the sections around them. Observed on
       2026-08-30: Reads already read "Hooker vs. Parnasse" while this still
       said "This Week's". -#}
-  {%- set _plays_matchup = (plays_card.event_name.split(':', 1)[1].strip()
-                            if plays_card and plays_card.event_name and ':' in plays_card.event_name
-                            else (plays_card.event_name if plays_card else None)) -%}
+  {%- set _plays_matchup = (plays_card.event_name|event_label) if plays_card and plays_card.event_name else None -%}
   <div class="standout-title" id="section-plays">{{ icon_slip() }} Plays{% if _plays_matchup %} · {{ _plays_matchup }}{% endif %}</div>
 
   {% if bankroll and bankroll.settled %}

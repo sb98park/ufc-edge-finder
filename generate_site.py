@@ -116,6 +116,46 @@ OUTPUT_PATH = "docs/index.html"
 FREE_OUTPUT_PATH = "build/free.html"
 
 
+# One reader-facing string for "this card is real but has no headliner yet".
+# Defined once so the app and the landing page cannot drift apart.
+MAIN_EVENT_TBD = "Main event TBD"
+
+
+def split_event_name(name) -> tuple[str, str | None]:
+    """"UFC 331: Van vs. Pantoja 2" -> ("UFC 331", "Van vs. Pantoja 2").
+
+    Returns (series, matchup), with matchup None when no main event has been
+    announced. That is a NORMAL STATE, not missing data: the UFC puts a
+    numbered card on sale months before it names a headliner, and UFC 332 sits
+    on the schedule today with seven bouts booked -- including a co-main --
+    and no main event. Five places in this file and the two templates each
+    split the name themselves and each disagreed about what to do when there
+    was nothing after the colon: one printed the full name, one dropped the
+    eyebrow, one substituted a placeholder, and the app's hub card emitted a
+    literally empty div. Hence one function.
+
+    A MATCHUP CONTAINS "vs". "UFC Fight Night: Las Vegas" has a colon and no
+    headliner -- the tail is the venue, which the card already displays
+    separately from event_location, so reading it as a matchup would put the
+    city where two names belong. Treating a vs-less tail as unannounced can in
+    principle misfire on some future name that really is a matchup without the
+    word, and the failure is deliberately in the safe direction: we would show
+    "main event to be announced" for a card that has one, which under-claims,
+    rather than presenting a venue as a fight, which would be false.
+    """
+    # rstrip the separator too: a name that arrives as "UFC 333: " strips to
+    # "UFC 333:", which no longer contains ": " and would otherwise be handed
+    # back as a series with a dangling colon.
+    text = str(name or "").strip()
+    if ": " not in text:
+        return text.rstrip(": ").strip() or text, None
+    series, tail = text.split(": ", 1)
+    series, tail = series.strip(), tail.strip()
+    if not tail or " vs" not in tail.lower():
+        return (series if series else text), None
+    return series, tail
+
+
 def _format_friendly_date(date_str: str) -> str:
     """
     "2026-07-18" -> "Sat, Jul 18". Falls back to the raw string on a
@@ -979,8 +1019,8 @@ def main(tier: str = "member", output_path: str | None = None):
             units_shortlist_svg = build_units_timeseries_svg(_sl)
 
     event_short_name = (
-        analytics_source_event.split(":")[0].strip() if analytics_source_event
-        else events[0]["event_name"].split(":")[0].strip() if events
+        split_event_name(analytics_source_event)[0] if analytics_source_event
+        else split_event_name(events[0]["event_name"])[0] if events
         else "This Weekend"
     )
     # FULL name, matchup included. event_short_name cuts at the colon, so the
@@ -995,10 +1035,11 @@ def main(tier: str = "member", output_path: str | None = None):
     # Just the matchup. The prefix ("UFC Fight Night", "UFC 330") is either
     # generic or already implied, and including it pushed the Standout Props
     # heading onto two lines. The names are what identify the card.
-    event_matchup = (
-        event_full_name.split(":", 1)[1].strip()
-        if ":" in event_full_name else event_full_name
-    )
+    # Falls back to the series, not to a placeholder: this lands in
+    # "Clearest Reads . X", where "UFC 332" names the card perfectly well and
+    # "Clearest Reads . Main event TBD" would not.
+    _series, _match = split_event_name(event_full_name)
+    event_matchup = _match or _series or event_full_name
 
     # Countdown target: this weekend's tracked event if we have one, otherwise
     # the nearest future card. ET is UTC-4 (EDT) for all currently tracked
@@ -1611,6 +1652,17 @@ def main(tier: str = "member", output_path: str | None = None):
     # so a context-passed `tier` would read as Undefined inside exactly the
     # markup that needs to consult it, silently taking the member branch.
     env.globals["tier"] = tier
+    # ONE event-name split for both templates. See split_event_name: five
+    # copies of this logic disagreed about the unannounced case, and one of
+    # them rendered an empty div.
+    env.globals["MAIN_EVENT_TBD"] = MAIN_EVENT_TBD
+    env.filters["event_series"] = lambda n: split_event_name(n)[0]
+    # For a dedicated matchup line, which must never be blank.
+    env.filters["event_matchup"] = lambda n: split_event_name(n)[1] or MAIN_EVENT_TBD
+    # For "Section heading . X", where naming the card is the job and the
+    # series alone still does it.
+    env.filters["event_label"] = lambda n: (split_event_name(n)[1]
+                                            or split_event_name(n)[0])
     # The stake ladder in force TODAY, so the units caption states the
     # real numbers instead of a hardcoded copy that goes stale the first
     # time a stake changes -- which it now has.
@@ -2219,10 +2271,14 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
                                   ev.get('event_start_time_et', '19:00'))
             countdown_target_iso = _future_or_none(candidate)
             if countdown_target_iso:
-                _name = (ev.get("event_name") or "").strip()
-                countdown_matchup = _name
-                if ": " in _name:
-                    countdown_series, countdown_matchup = _name.split(": ", 1)
+                # The eyebrow is the series and the line below it is the
+                # matchup. Previously an unannounced card put its whole name
+                # in the matchup slot and left the eyebrow to fall back to a
+                # generic "Next card", so UFC 332 lost its own name from the
+                # one place a reader looks for it.
+                countdown_series, countdown_matchup = split_event_name(
+                    ev.get("event_name"))
+                countdown_matchup = countdown_matchup or MAIN_EVENT_TBD
                 break
     if not countdown_target_iso:
         countdown_series = countdown_matchup = None
@@ -2663,10 +2719,13 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         # "UFC 331: Van vs. Pantoja 2" -> badge "UFC 331", matchup the rest.
         # A numbered PPV and a Fight Night are different things to a reader and
         # the split is what makes the list scannable at a glance.
-        if ": " in _name:
-            _label, _match = _name.split(": ", 1)
-        else:
-            _label, _match = _name, ""
+        # LEFT AS None WHEN UNANNOUNCED, deliberately. This value feeds two
+        # slots: a list row, which substitutes MAIN_EVENT_TBD because it must
+        # never be blank, and a prose sentence, which reads "<label>, <matchup>,
+        # is N weeks away" and omits the clause entirely when there is nothing
+        # to name. Defaulting it here would have written "Fight Night, Main
+        # event TBD, is 10 weeks away". Truthful data, presentation decides.
+        _label, _match = split_event_name(_name)
         _label = _label.replace("UFC Fight Night", "Fight Night").replace("Noche UFC", "Noche")
         try:
             _d = dt.datetime.strptime(ev["event_date"], "%Y-%m-%d")
