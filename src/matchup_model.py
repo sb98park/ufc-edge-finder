@@ -292,6 +292,68 @@ def history_is_partial(row) -> bool:
         return False
 
 
+def reconcile_last_fight_from_history(fighters_df, fight_history_df):
+    """Move last_fight_date forward when the spine holds a more recent bout.
+
+    These two files disagree and nothing reconciled them. last_fight_date is
+    written by fighter_backfill (from ESPN, and only when the cell is empty)
+    and by results_fetcher (when a card we watched grades). Neither reads
+    fight_history.csv -- so a bout can be sitting in the spine while
+    fighters.csv still reports a fight from years earlier, and every
+    history-derived term goes on believing the older date.
+
+    Michael Aljarouj is the case that found this. ESPN's athlete eventlog has
+    two entries for him: a 2021 Brave CF loss and his upcoming UFC debut. His
+    real last fight was 2025-04-12. Correcting the spine alone would not have
+    helped, because nothing carried the correction across.
+
+    ONE-DIRECTIONAL, ON PURPOSE. This only ever moves the date FORWARD. Both
+    consumers of it (layoff_penalty, quick_return_penalty) only ever subtract
+    rating points, so a date that is too old manufactures ring rust that the
+    fighter has not earned, while a date that is too recent can at worst fail
+    to charge for a layoff that is real. Given a disagreement we cannot
+    adjudicate, the direction that under-punishes is the honest one.
+    """
+    if "last_fight_date" not in fighters_df.columns:
+        return fighters_df
+    hist = fight_history_df.copy()
+    hist["_d"] = pd.to_datetime(hist["date"], errors="coerce")
+    newest = {}
+    for col, other in (("fighter_a", "fighter_b"), ("fighter_b", "fighter_a")):
+        for name, opp, when, winner in zip(hist[col], hist[other], hist["_d"],
+                                           hist.get("winner", pd.Series([""] * len(hist)))):
+            if pd.isna(when):
+                continue
+            key = str(name).strip().lower()
+            if key not in newest or when > newest[key][0]:
+                # An NC still happened; the cage time is what layoff reads.
+                # NOT `winner or ""` -- a blank winner round-trips through the
+                # CSV as NaN, which is TRUTHY, so that idiom yields the string
+                # "nan" and grades every no contest as a loss (CLAUDE.md s4).
+                won = "" if pd.isna(winner) else str(winner).strip()
+                res = "NC" if not won else ("W" if won == str(name).strip() else "L")
+                newest[key] = (when, str(opp), res)
+
+    out = fighters_df.copy()
+    moved = 0
+    for i, row in out.iterrows():
+        hit = newest.get(str(row.get("name", "")).strip().lower())
+        if hit is None:
+            continue
+        when, opp, res = hit
+        held = pd.to_datetime(row.get("last_fight_date"), errors="coerce")
+        if pd.notna(held) and held >= when:
+            continue
+        out.at[i, "last_fight_date"] = when.date().isoformat()
+        out.at[i, "last_fight_opponent"] = opp
+        out.at[i, "last_fight_result"] = res
+        moved += 1
+    if moved:
+        print(f"[reconcile] {moved} fighter(s) had a more recent bout in the spine "
+              f"than in fighters.csv; last_fight_date moved forward")
+    return out
+
+
 def attach_history_coverage(fighters_df, fight_history_df):
     """
     Add a `history_coverage` column: bouts we hold / bouts they claim.
@@ -308,16 +370,26 @@ def attach_history_coverage(fighters_df, fight_history_df):
     same claim as complete, and history_is_partial reads NaN as "do not
     intervene".
 
+    ONLY DECIDED BOUTS COUNT, on both sides of the ratio. The denominator is
+    `wins + losses`, which excludes no contests and draws, so counting them in
+    the numerator compares different things and can exceed 1.0 -- Michael
+    Aljarouj's two no contests put him at 18/16 = 1.12, which reads as holding
+    more of his career than exists.
+
     Returns the frame; safe to call on a frame that already has the column.
     """
     if fighters_df is None or getattr(fighters_df, "empty", True):
         return fighters_df
     counts = {}
     if fight_history_df is not None and not getattr(fight_history_df, "empty", True):
+        hist = fight_history_df
+        if "winner" in hist.columns:
+            hist = hist[hist["winner"].notna()
+                        & hist["winner"].astype(str).str.strip().ne("")]
         for col in ("fighter_a", "fighter_b"):
-            if col not in fight_history_df.columns:
+            if col not in hist.columns:
                 continue
-            for n in fight_history_df[col].dropna().astype(str):
+            for n in hist[col].dropna().astype(str):
                 key = n.strip().lower()
                 counts[key] = counts.get(key, 0) + 1
 

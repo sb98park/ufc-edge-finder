@@ -21,6 +21,8 @@ import re
 
 import pandas as pd
 
+from src.elo import ufc_only
+
 from src.card_matcher import _normalize_name
 
 RESULTS_DETAIL_PATH = "data/ufc_fight_results.csv"
@@ -176,7 +178,14 @@ def detect_facts_for_fighter(name: str, history: pd.DataFrame, fighter_row, move
 
 
 def compute_fun_facts(card_fighter_names: list[str], fight_history_path: str, fighters_df: pd.DataFrame) -> list[dict]:
-    history = pd.read_csv(fight_history_path)
+    # UFC bouts only, for COMPARABILITY rather than for Elo's reasons. These
+    # facts are superlatives ranked against each other ("longest active KO
+    # streak on the card"), and the spine holds a complete career only for the
+    # handful of fighters whose regional record was entered by hand. Mixing
+    # the two would let one fighter's fuller record beat another's on nothing
+    # but data availability, which is exactly the kind of claim CLAUDE.md s7
+    # exists to stop.
+    history = ufc_only(pd.read_csv(fight_history_path))
     move_lookup = _load_move_details()
     by_norm = {_normalize_name(str(r["name"])): r for _, r in fighters_df.iterrows()}
     facts = []

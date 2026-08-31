@@ -157,7 +157,11 @@ def main():
     if not apply:
         print("\nDRY RUN -- nothing written. Re-run with --apply.")
         return
-    out = pd.concat([hist, pd.DataFrame(new_rows)], ignore_index=True).sort_values("date")
+    # kind="stable": pandas defaults to quicksort, which is NOT stable, so a
+    # plain sort_values("date") silently reshuffles rows WITHIN a date. Elo
+    # replays row by row, so that alone moved 271 fighters (Don Frye +23.8)
+    # with zero data change. Measured 2026-08-31.
+    out = pd.concat([hist, pd.DataFrame(new_rows)], ignore_index=True).sort_values("date", kind="stable")
     out.to_csv(HISTORY, index=False)
     print(f"\nWritten: {len(hist)} -> {len(out)} rows.")
     print("Re-run generate_site.py -- ratings, streaks and facts all read this.")

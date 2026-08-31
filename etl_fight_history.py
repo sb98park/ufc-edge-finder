@@ -104,7 +104,11 @@ def main():
         "fighter_b": decisive["Fighter_2"],
         "winner": decisive["Winner"],
         "method": decisive["Method"].map(map_method),
-    }).sort_values("date").reset_index(drop=True)
+    # kind="stable": pandas defaults to quicksort, which is NOT stable, so a
+    # plain sort_values("date") silently reshuffles rows WITHIN a date. Elo
+    # replays row by row, so that alone moved 271 fighters (Don Frye +23.8)
+    # with zero data change. Measured 2026-08-31.
+    }).sort_values("date", kind="stable").reset_index(drop=True)
     history.to_csv(FIGHT_HISTORY_PATH, index=False)
     print(f"Wrote {len(history)} fights to {FIGHT_HISTORY_PATH} ({history['date'].min()} -> {history['date'].max()})")
 

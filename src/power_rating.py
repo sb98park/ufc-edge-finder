@@ -13,6 +13,8 @@ fought anyone in our Elo graph yet.
 
 import pandas as pd
 
+from src.elo import ufc_only
+
 RATING_CENTER = 1500.0
 
 # How much of a NO-HISTORY fighter's record-derived rating to keep. 1.0 is
@@ -166,12 +168,18 @@ def build_effective_ratings(
     to mean something, blend toward Elo as that count grows. Otherwise, rely
     on the stats-based rating instead of the meaningless flat default.
     """
+    # CONNECTED history only -- the docstring's word, and it is load-bearing.
+    # Both numbers below are compared against, or blended with, Elo, which is
+    # built from the UFC-only subgraph. Counting a regional bout here while
+    # excluding it there makes the two disagree about the same fighter: it
+    # raises the blend weight toward an Elo that no extra fight informed.
+    connected = ufc_only(history_df)
     fight_counts = pd.concat([
-        history_df["fighter_a"] if "fighter_a" in history_df else pd.Series(dtype=str),
-        history_df["fighter_b"] if "fighter_b" in history_df else pd.Series(dtype=str),
+        connected["fighter_a"] if "fighter_a" in connected else pd.Series(dtype=str),
+        connected["fighter_b"] if "fighter_b" in connected else pd.Series(dtype=str),
     ]).value_counts()
 
-    streaks = _current_streaks(history_df)
+    streaks = _current_streaks(connected)
 
     effective = {}
     for _, row in fighters_df.iterrows():
