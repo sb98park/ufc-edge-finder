@@ -2728,33 +2728,6 @@
                         font-variant-numeric: tabular-nums; }
   .plays-record .pr-v.up { color: var(--pos, #3ddc84); }
   .plays-record .pr-v.down { color: var(--neg, #ff7a7a); }
-  /* THE BANKROLL CLOSES THE TAB, it does not lead it. It used to lead, on the
-     reasoning that it is the only figure answering "is this working" -- true,
-     but it answers that about EVERY play ever made, and it sat directly under
-     a heading naming one card and above a list scoped to that card. A running
-     figure in the position a reader reads as the current one is worse than a
-     missing figure. It keeps its accent: it is still the plays system's own
-     scoreboard, just placed after the plays rather than in front of them. */
-  .plays-bank {
-    margin: 14px 0 10px; padding: 12px 14px;
-    background: linear-gradient(135deg, rgba(212,175,55,.10), rgba(212,175,55,.02) 60%, transparent);
-    border: 1px solid rgba(212,175,55,.30); border-radius: var(--r-lg);
-  }
-  .plays-bank-title {
-    font-size: var(--t-micro); font-weight: 600; letter-spacing: 0.06em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
-  }
-  .plays-bank-row {
-    display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline;
-  }
-  .plays-bank-note {
-    font-size: var(--t-small); color: var(--muted); line-height: 1.45; margin-top: 8px;
-  }
-  .plays-bank .pb-k { font-size: var(--t-micro); color: var(--muted); display: block; }
-  .plays-bank .pb-v { font-size: 19px; font-weight: 700; color: var(--text);
-                      font-variant-numeric: tabular-nums; font-family: var(--font-display); }
-  .plays-bank .pb-v.up { color: var(--pos, #3ddc84); }
-  .plays-bank .pb-v.down { color: var(--neg, #ff7a7a); }
 
   .ml-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .ml-leg {
@@ -8345,38 +8318,6 @@
   </div>
   {% endif %}
 
-  {% if bankroll and bankroll.settled %}
-  {#- THE NUMBER THE WHOLE THING IS FOR. Units are the record's currency and
-      always will be; this is what those units have done to the bankroll they
-      are one per cent of. Compounding, so a unit is worth more after a good
-      run and less after a bad one -- which is the difference between a
-      flat-stake result and a bankroll.
-      LAST ON THE TAB, AND LABELLED RUNNING. It used to sit directly under a
-      heading that names one card, above content scoped to that card, which
-      made a since-inception figure read as this Saturday's result -- worst on
-      a week with no plays at all, where these were the only numbers on the
-      screen and the line below them said "No plays this week". This is the
-      same error that was already corrected one block down for plays_record,
-      which is genuinely per-card; the bankroll was left behind by that fix.
-      It stays on THIS tab rather than moving to Record, because Record leads
-      with the Units Tracker -- flat stakes on every pick, a different staking
-      system with a different number -- and this file already warns that
-      putting the two on one screen leaves them disagreeing every week with
-      the wrong one louder. Here it sits with the plays it actually measures,
-      after them. -#}
-  <div class="plays-bank">
-    <div class="plays-bank-title">Since the plays ledger opened</div>
-    <div class="plays-bank-row">
-      <div><span class="pb-k">Bankroll</span>
-        <span class="pb-v {{ 'up' if bankroll.growth_pct > 0 else 'down' }}">{{ '%.4f'|format(bankroll.multiple) }}&times;</span></div>
-      <div><span class="pb-k">Growth</span>
-        <span class="pb-v {{ 'up' if bankroll.growth_pct > 0 else 'down' }}">{{ '%+.1f'|format(bankroll.growth_pct) }}%</span></div>
-      <div><span class="pb-k">Worst drawdown</span>
-        <span class="pb-v">&minus;{{ '%.1f'|format(bankroll.max_drawdown_pct) }}%</span></div>
-    </div>
-    <div class="plays-bank-note">Every play ever staked, compounding &mdash; not this card. {{ bankroll.settled }} settled.</div>
-  </div>
-  {% endif %}
   </div>
 
   <div class="detail-section" data-section="locks">
