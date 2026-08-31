@@ -8595,6 +8595,11 @@
   <div class="section-title" id="section-future">{{ icon_calendar() }} Coming Up Next</div>
   <div class="parlay-subtitle">Verified upcoming UFC cards beyond this weekend, sourced from official event announcements. Live odds included where available; model projections always shown otherwise.</div>
   {% for event in future_events %}
+  {#- Hoisted: both the collapsed summary and the expanded body need to know
+      whether this card has a headliner booked. -#}
+  {%- set _has_main_event = event.fights
+        | selectattr('card_position', 'equalto', 'Main Event')
+        | list | length > 0 -%}
   <details class="future-event-card">
     <summary class="future-event-summary">
       <div class="future-event-summary-text">
@@ -8604,7 +8609,12 @@
         </div>
         {% if event.event_location %}<div class="hub-card-location">{{ icon_pin() }} {{ event.event_location }}</div>{% endif %}
         {% if event.fights %}
-        <div class="future-event-teaser">{{ event.fights[0].fighter_a }} vs. {{ event.fights[0].fighter_b }} · {{ event.fights|length }} fight{{ 's' if event.fights|length != 1 else '' }}</div>
+        {#- THIS SLOT MEANS "THE MAIN EVENT" on every other row, so filling it
+            from fights[0] regardless was not merely incomplete, it was wrong:
+            UFC 332 showed Figueiredo vs. Talbott, its CO-MAIN, and the Las
+            Vegas card showed a PRELIM. Scanning the collapsed list, both read
+            as headliners. Naming the absence is the only honest fill. -#}
+        <div class="future-event-teaser">{% if _has_main_event %}{{ event.fights[0].fighter_a }} vs. {{ event.fights[0].fighter_b }}{% else %}{{ MAIN_EVENT_TBD }}{% endif %} · {{ event.fights|length }} fight{{ 's' if event.fights|length != 1 else '' }}</div>
         {% endif %}
       </div>
       <span class="chevron">▶</span>
@@ -8616,9 +8626,6 @@
           row rather than from a synthetic fight: a placeholder pushed through
           event.fights would be counted by the teaser, the fight tally and
           anything else that reads that list as real bouts. -#}
-      {%- set _has_main_event = event.fights
-            | selectattr('card_position', 'equalto', 'Main Event')
-            | list | length > 0 -%}
       {% for fight in event.fights %}
       {% if loop.first or fight.segment_label != loop.previtem.segment_label %}
       <div class="segment-divider">
