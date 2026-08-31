@@ -1,23 +1,23 @@
 {
  "UFC Fight Night: Hooker vs. Parnasse": {
   "bankroll": {
-   "pinned_at": "2026-08-31T02:43:33+00:00",
+   "pinned_at": "2026-08-31T03:22:26+00:00",
    "identities": [
-    "[\"Morgan Charrière|Felipe Lima\", [{\"fighter\": \"Felipe Lima\", \"kind\": \"winner\"}]]",
+    "[\"Michael Page|Nursulton Ruziboev\", [{\"fighter\": \"Michael Page\", \"kind\": \"winner\"}]]",
     "[\"Delphine Benouaich|Sofia Montenegro\", [{\"fighter\": \"Delphine Benouaich\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
-      "label": "Felipe Lima ML",
-      "odds_display": "-192",
+      "label": "Michael Page ML",
+      "odds_display": "-175",
       "is_model": false,
-      "decimal_odds": 1.520833,
-      "fight_key": "Morgan Charrière|Felipe Lima",
+      "decimal_odds": 1.571429,
+      "fight_key": "Michael Page|Nursulton Ruziboev",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Felipe Lima"
+        "fighter": "Michael Page"
        }
       ],
       "source": "DraftKings"
@@ -39,15 +39,15 @@
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_19",
+     "card_17",
      "card_28"
     ],
-    "slip_id": "0e4c3a11cf2d",
-    "combined_decimal": 2.459619,
-    "combined_american": 146,
-    "combined_american_display": "+146",
-    "combined_prob": 0.4381,
-    "combined_prob_raw": 0.4161,
+    "slip_id": "9367ac19844c",
+    "combined_decimal": 2.541446,
+    "combined_american": 154,
+    "combined_american_display": "+154",
+    "combined_prob": 0.4053,
+    "combined_prob_raw": 0.3791,
     "venue": "DraftKings"
    }
   }
