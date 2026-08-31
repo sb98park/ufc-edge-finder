@@ -40,17 +40,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.fighter_backfill import (fetch_espn_fight_history, BASE_HEADERS,  # noqa: E402
                                   REQUEST_TIMEOUT)
 from src.results_fetcher import ESPN_SCOREBOARD_URL  # noqa: E402
+from src.card_matcher import fight_key  # noqa: E402
 
 HISTORY = "data/fight_history.csv"
 
 
-def fold(n):
-    s = unicodedata.normalize("NFKD", str(n)).encode("ascii", "ignore").decode()
-    return " ".join(s.lower().split())
-
-
+# Bout identity comes from src/card_matcher.fight_key -- ONE definition for
+# the whole spine. This file's own fold ignored punctuation, which is how
+# "Benoit Saint-Denis" and "Benoit Saint Denis" ended up as two bouts.
 def key(a, b, d):
-    return (frozenset({fold(a), fold(b)}), str(d)[:10])
+    return fight_key(a, b, d)
 
 
 def main():

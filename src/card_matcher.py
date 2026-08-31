@@ -106,7 +106,40 @@ def _normalize_name(name: str) -> str:
             pass
         name = str(name) if name is not None else ""
     normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
-    return re.sub(r"[^a-z0-9 ]", " ", normalized.lower()).strip()
+    # COLLAPSE THE RUNS THIS FUNCTION ITSELF CREATES. Substituting punctuation
+    # with a space turns "Ode' Osbourne" into "ode  osbourne" -- two spaces --
+    # which .strip() does not touch, so it never equalled "ode osbourne" and
+    # the two spellings compared as different fighters. " ".join(split())
+    # collapses internal runs as well as the ends.
+    #
+    # Measured before changing: across all 5,272 distinct names in
+    # fight_history.csv plus fighters.csv this merges exactly ONE group,
+    # {"Ode Osbourne", "Ode' Osbourne"}, who is one man. The change can only
+    # ever make two names compare EQUAL, which is the direction this function
+    # exists to move in.
+    return " ".join(re.sub(r"[^a-z0-9 ]", " ", normalized.lower()).split())
+
+
+def fight_key(fighter_a, fighter_b, date) -> tuple:
+    """The identity of one bout: an unordered folded pair plus its date.
+
+    THE ONE KEY FOR THE SPINE. Four write paths and the deduper each built
+    this themselves and three of them folded punctuation differently from
+    _normalize_name above, so "Benoit Saint-Denis" and "Benoit Saint Denis"
+    were one fighter to the card path and two to the dedupe path. The file
+    accumulated 231 double-written bouts that
+    `scripts/dedupe_fight_history.py` reported as clean, and src/elo.py
+    replays raw names, so each one was scored twice against a phantom node.
+    It moved the published probability on a main event by 3.3 points.
+
+    UNORDERED, because cards get re-scraped with the corners swapped. Dated,
+    because the pair alone carries no event and a rematch would collide with
+    the first meeting (CLAUDE.md s4). Callers that need a tolerance window
+    should compare against fight_key(a, b, date +/- 1 day) rather than
+    inventing their own key -- see dedupe_fight_history.
+    """
+    return (frozenset({_normalize_name(fighter_a), _normalize_name(fighter_b)}),
+            str(date)[:10])
 
 
 def load_fight_cards(path: str = "data/fight_cards.csv") -> pd.DataFrame:

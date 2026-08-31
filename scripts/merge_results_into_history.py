@@ -34,22 +34,41 @@ import os
 import sys
 import unicodedata
 
+import datetime as dt
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.card_matcher import fight_key   # noqa: E402
 
 HISTORY = "data/fight_history.csv"
 RESULTS = "data/fight_results.csv"
 
 
-def fold(name: str) -> str:
-    """Accent-insensitive key. Same folding used at every other join."""
-    s = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode()
-    return " ".join(s.lower().split())
-
-
+# Bout identity comes from src/card_matcher.fight_key -- ONE definition for
+# the whole spine. This file used to fold names without stripping punctuation,
+# so "Benoit Saint-Denis" and "Benoit Saint Denis" keyed differently and the
+# same bout was appended twice; 231 such rows had accumulated, and Elo scored
+# every one of them twice.
 def key(a, b, date) -> tuple:
-    # Unordered pair: the two sources disagree about which fighter is "a",
-    # and an ordered key would let the same fight in twice.
-    return (frozenset({fold(a), fold(b)}), str(date)[:10])
+    return fight_key(a, b, date)
+
+
+def _known(have: set, a, b, d) -> bool:
+    """Already in the spine, tolerating a one-day date difference.
+
+    ESPN dates in UTC, so a card starting 10pm ET is stamped the next day, and
+    date_added below is a scrape timestamp rather than an event date. Either
+    slips the date by one and a strict key would append a second copy of a
+    bout we already hold.
+    """
+    when = pd.to_datetime(d, errors="coerce")
+    if pd.isna(when):
+        return key(a, b, d) in have
+    for off in (-1, 0, 1):
+        if key(a, b, (when + dt.timedelta(days=off)).date().isoformat()) in have:
+            return True
+    return False
 
 
 def main():
@@ -63,10 +82,28 @@ def main():
     have = {key(r["fighter_a"], r["fighter_b"], r.get("date"))
             for _, r in hist.iterrows()}
 
+    # THE EVENT DATE IS NOT IN fight_results.csv. Its only date column is
+    # date_added -- the CI scrape timestamp -- and CI runs every ~5 minutes,
+    # so on a card that finishes after midnight ET the stamp lands on the
+    # following day and the bout entered the spine under the wrong date. It
+    # then failed the exact-date duplicate check and was written a second time.
+    # The card files carry the real event_date, and on card night the live
+    # card is always in one of them; a concluded card that has rolled off
+    # falls back to the stamp, with a line saying so rather than silently.
     date_col = next((c for c in ("event_date", "date", "date_added") if c in res.columns), None)
     if not date_col:
         print(f"No date column in {RESULTS}. Columns: {list(res.columns)}")
         return
+    event_dates = {}
+    for path in ("data/fight_cards.csv", "data/future_cards.csv"):
+        try:
+            cards = pd.read_csv(path)
+        except (OSError, pd.errors.EmptyDataError):
+            continue
+        if {"event_name", "event_date"} <= set(cards.columns):
+            for name, when in cards.groupby("event_name")["event_date"].first().items():
+                event_dates.setdefault(str(name), str(when)[:10])
+    fell_back = set()
 
     new_rows, skipped_known, skipped_nowinner = [], 0, 0
     for _, r in res.iterrows():
@@ -85,8 +122,11 @@ def main():
         if not a or not b or not (decisive or no_contest):
             skipped_nowinner += 1
             continue
-        d = str(r.get(date_col))[:10]
-        if key(a, b, d) in have:
+        d = event_dates.get(str(r.get("event_name")))
+        if d is None:
+            d = str(r.get(date_col))[:10]
+            fell_back.add(str(r.get("event_name")))
+        if _known(have, a, b, d):
             skipped_known += 1
             continue
         new_rows.append({
@@ -96,6 +136,9 @@ def main():
         })
         have.add(key(a, b, d))
 
+    if fell_back:
+        print(f"event date not on a tracked card, used the scrape stamp for "
+              f"{len(fell_back)} event(s): {sorted(fell_back)}")
     print(f"history rows      : {len(hist)}")
     print(f"recorded results  : {len(res)}")
     print(f"  already present : {skipped_known}")

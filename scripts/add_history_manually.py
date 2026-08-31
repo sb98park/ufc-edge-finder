@@ -43,7 +43,13 @@ Usage:
 import sys
 import unicodedata
 
+import os
+
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.card_matcher import fight_key   # noqa: E402
 
 HISTORY = "data/fight_history.csv"
 
@@ -149,13 +155,12 @@ NON_UFC = [
 ]
 
 
-def fold(n):
-    s = unicodedata.normalize("NFKD", str(n)).encode("ascii", "ignore").decode()
-    return " ".join(s.lower().split())
-
-
-def key(a, b, d):
-    return (frozenset({fold(a), fold(b)}), str(d)[:10])
+# Bout identity comes from src/card_matcher.fight_key -- ONE definition for
+# the whole spine (CLAUDE.md s4: do not add a thirteenth name fold). The local
+# fold here stripped accents but not punctuation, so it would have written a
+# second copy of any bout whose other spelling used a hyphen or apostrophe.
+def key(a, b, d) -> tuple:
+    return fight_key(a, b, d)
 
 
 def main():

@@ -156,5 +156,61 @@ one_ufc = build_effective_ratings(solo, elo_r, mixed.head(1))
 check("streak bonus counts connected wins only",
       abs(build_effective_ratings(solo, elo_r, mixed)["P"] - one_ufc["P"]) < 1e-9)
 
+# ------------------------------------------------- one fold for the spine
+# Every bout written into or read out of fight_history.csv must be identified
+# the same way. Four write paths each rolled their own fold, three of them
+# punctuation-blind, and 231 duplicate bouts accumulated that the deduper
+# reported as clean. Elo replays raw names, so each was scored twice.
+import datetime as dtm                                              # noqa: E402
+from src.card_matcher import _normalize_name, fight_key             # noqa: E402
+
+check("the fold collapses the runs it creates",
+      _normalize_name("Ode' Osbourne") == _normalize_name("Ode Osbourne") == "ode osbourne")
+check("punctuation and accents fold together",
+      _normalize_name("Benoît Saint Denis") == _normalize_name("Benoit Saint-Denis"))
+check("fight_key ignores corner order",
+      fight_key("A B", "C D", "2026-01-31") == fight_key("C D", "A B", "2026-01-31"))
+check("fight_key separates a rematch by date",
+      fight_key("A B", "C D", "2026-01-31") != fight_key("A B", "C D", "2027-01-31"))
+check("a NaN name does not raise", fight_key(float("nan"), "C D", "2026-01-31") is not None)
+
+# The shipped file must be free of duplicates under the real key, including
+# the one-day window that ESPN's UTC roll-over and CI scrape stamps produce.
+def _dup_count(df):
+    dates = pd.to_datetime(df["date"], errors="coerce")
+    seen, n = set(), 0
+    for i in dates.sort_values(kind="stable").index:
+        w = dates.loc[i]
+        if pd.isna(w):
+            continue
+        pair = fight_key(df.at[i, "fighter_a"], df.at[i, "fighter_b"], w)[0]
+        if any((pair, (w + dtm.timedelta(days=o)).date().isoformat()) in seen for o in (-1, 0, 1)):
+            n += 1
+        else:
+            seen.add((pair, w.date().isoformat()))
+    return n
+
+
+check("the shipped spine holds no duplicate bout", _dup_count(real) == 0)
+
+# A surviving row must never carry a winner spelled differently from its own
+# corners -- elo.py replays raw strings, so that would be a phantom node.
+_bad = 0
+for _r in real.itertuples(index=False):
+    _w = _normalize_name(getattr(_r, "winner", ""))
+    if not _w:
+        continue
+    if _w not in (_normalize_name(_r.fighter_a), _normalize_name(_r.fighter_b)):
+        _bad += 1
+check("no row names a winner who is not one of its two fighters", _bad == 0)
+
+# No spine write path may reintroduce a private punctuation-blind fold.
+import pathlib                                                      # noqa: E402
+for _p in ("scripts/dedupe_fight_history.py", "scripts/merge_results_into_history.py",
+           "scripts/add_history_manually.py", "scripts/backfill_history_from_espn.py"):
+    _src = pathlib.Path(_p).read_text(encoding="utf-8")
+    check(f"{_p} uses the shared key", "fight_key" in _src)
+    check(f"{_p} defines no fold of its own", "\ndef fold(" not in _src)
+
 print(f"test_spine_integrity: {ok} passed, {fail} failed")
 sys.exit(1 if fail else 0)
