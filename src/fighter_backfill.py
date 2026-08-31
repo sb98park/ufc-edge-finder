@@ -1458,6 +1458,47 @@ def _fuzzy_espn_match(target_norm: str, id_map: dict) -> str | None:
     return None
 
 
+# ESPN tags every bout in an athlete's eventsMap with a league. The UFC (and
+# Dana White's Contender Series, which it runs and whose graduates enter the
+# same rating pool) is league 3321, slug "ufc"; everything else -- Levels
+# Fight League, FightStar, Contenders, KSW -- is another id with no slug.
+# Verified on Mario Pinto: 4 bouts at 3321/ufc, 8 at 3359 including three on
+# 2023-03-11, a one-night regional tournament that is structurally impossible
+# in the UFC.
+_UFC_LEAGUE_IDS = {"3321"}
+_LEAGUE_IN_UID = re.compile(r"~l:(\d+)")
+_LEAGUE_IN_HREF = re.compile(r"/league/([a-z0-9_-]+)")
+
+
+def _promotion_of(rec: dict) -> str:
+    """"" for a UFC bout, else a label that ufc_only() will exclude.
+
+    BLANK MEANS UFC because every pre-existing row in fight_history.csv is
+    blank and src/elo.ufc_only reads it that way; inverting the default would
+    drop the entire spine out of the rating graph. So the burden is on this
+    function to LABEL the non-UFC ones, and a bout it cannot classify stays
+    blank -- the same failure mode we already had, not a worse one.
+    """
+    name = str(rec.get("name") or "").strip()
+    # THE ULTIMATE FIGHTER IS TWO DIFFERENT THINGS under one title, and ESPN
+    # files both outside league 3321. A Tournament Finale is a real UFC event
+    # on a UFC card and belongs in the graph; the house bouts -- "Semifinal",
+    # "Quarterfinal", "Elimination" -- are exhibitions that do not appear on
+    # official records at all, so excluding them is not merely acceptable, it
+    # is more correct than the blanket UFC treatment they had before.
+    if "ultimate fighter" in name.lower():
+        return "" if "finale" in name.lower() else name
+
+    for link in (rec.get("links") or []):
+        m = _LEAGUE_IN_HREF.search(str(link.get("href") or ""))
+        if m:
+            return "" if m.group(1) == "ufc" else (name or m.group(1))
+    m = _LEAGUE_IN_UID.search(str(rec.get("uid") or ""))
+    if m:
+        return "" if m.group(1) in _UFC_LEAGUE_IDS else (name or f"league {m.group(1)}")
+    return ""
+
+
 def fetch_espn_fight_history(athlete_id: str, fighter_name: str) -> list[dict]:
     """
     EVERY completed bout for a fighter, from the site athlete endpoint.
@@ -1529,6 +1570,7 @@ def fetch_espn_fight_history(athlete_id: str, fighter_name: str) -> list[dict]:
                 "date": date, "fighter_a": fighter_name,
                 "fighter_b": str(opp).strip(), "winner": "",
                 "method": method or ("Draw" if result in ("D", "DRAW", "TIE") else "NC"),
+                "promotion": _promotion_of(rec),
             })
             continue
         out.append({
@@ -1537,6 +1579,12 @@ def fetch_espn_fight_history(athlete_id: str, fighter_name: str) -> list[dict]:
             "fighter_b": str(opp).strip() if won else fighter_name,
             "winner": fighter_name if won else str(opp).strip(),
             "method": method,
+            # THE ROW THAT MADE ufc_only() A NO-OP. This path writes most of
+            # the spine and emitted no promotion key at all, so a fighter's
+            # KSW and regional-tournament bouts landed blank and read as UFC.
+            # 17 of 11,925 rows carried a promotion; every published streak was
+            # a career streak wearing a UFC label.
+            "promotion": _promotion_of(rec),
         })
     return out
 
