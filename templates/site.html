@@ -12765,7 +12765,10 @@
           try {
             const sr = await fetch(ref.replace(/^http:\/\//i, 'https://'),
                                    { signal: AbortSignal.timeout(8000) });
-            if (!sr.ok) continue;
+            // A 403/429/500 here is a FAILURE, not an absent method. Skipping
+            // without clearing `complete` let a rate-limited response be
+            // cached as though the card had no methods.
+            if (!sr.ok) { complete = false; continue; }
             const st = await sr.json();
             const res = st.result;
             if (res && res.displayName) {
@@ -12805,6 +12808,22 @@
                 // midpoint, which is wrong roughly half the time.
                 clock: String(st.displayClock || '').trim(),
               };
+            } else {
+              // NOT YET FOUGHT IS NOT DONE. A bout that has not started
+              // returns HTTP 200 with `result: {}` -- truthy, but with no
+              // displayName -- so this branch stored nothing while leaving
+              // `complete` true. Open the page any time before bout one and
+              // the EMPTY map was cached, and the early return at the top of
+              // this function then blocked every refetch for the life of the
+              // page: zero methods for the entire card. Reproduced against
+              // the real 2026-09-05 event, methods=0 on polls 1, 2 and 3.
+              //
+              // Worse than a blank method line, because gradeLeg returns
+              // `settling` for any fight that has a winner but no method, so
+              // every rounds/method/distance leg sat on the quiet dotted
+              // glyph all night -- a slip that had already LOST still looked
+              // alive, and one that had cashed never said so.
+              complete = false;
             }
           } catch (e) {
             /* one competition failing must not lose the rest -- but it must
@@ -12880,7 +12899,17 @@
                   // fetch rather than issuing its own.
                   fight.method_slug = _m.slug;
                   fight.end_round = _m.period;
-                  fight.went_distance = _m.isDecision;
+                  // MIRRORS src/parlay_grader._went_distance. isDecision is
+                  // /decision/i on the display name, which is FALSE for a
+                  // draw -- so a draw inverted the distance leg live exactly
+                  // as it did server-side: "Goes The Distance" showed LOST on
+                  // a fight the judges had just scored. A draw IS a judges'
+                  // decision. A no contest can be called at any moment, so it
+                  // is left null and the leg stays unresolved rather than
+                  // guessed.
+                  fight.went_distance =
+                    (_m.isDecision || /draw/i.test(_m.slug || '')) ? true
+                    : (/^(nc|no ?contest)$/i.test(_m.slug || '') ? null : false);
                   fight.end_clock = _m.clock;
                   gradeAllSlips();
                 }

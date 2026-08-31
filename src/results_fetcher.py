@@ -69,6 +69,8 @@ import re
 import time
 
 import pandas as pd
+
+from src.card_matcher import _normalize_name
 import requests
 from bs4 import BeautifulSoup
 
@@ -1265,6 +1267,22 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
         if pd.notna(first_date):
             event_date = str(first_date)
     roster_names_lower = {n.strip().lower() for n in pd.concat([fight_cards_df["fighter_a"], fight_cards_df["fighter_b"]])}
+    # THE SAME SET, FOLDED. The exact-lowercase guard below silently discarded
+    # completed bouts whose ESPN spelling differed from the card's by an accent
+    # or a hyphen. Replaying UFC 329: 14 results fetched, 11 synced -- Cong
+    # Wang ("Wang Cong"), Adrian Yanez ("Adrian Yanez" accented) and Benoit
+    # Saint-Denis ("Benoit Saint Denis") all vanished with no log line at all,
+    # unlike every other refusal in this module. Roughly one card in three
+    # loses a bout that way, which stalls card_result_coverage and holds every
+    # forward-looking section on the Monday backstop for an extra day and a
+    # half. Sept 5 carries Morgan Charriere.
+    # Two sets, both built from the canonical fold rather than a new one:
+    # accents/punctuation, and the same again with each name's own tokens
+    # sorted -- which is exactly what _loose_key below already does for the
+    # convergence set, and what catches ESPN's "Ce Liu" against our "Liu Ce".
+    _card_names = list(pd.concat([fight_cards_df["fighter_a"], fight_cards_df["fighter_b"]]))
+    roster_names_folded = {_normalize_name(n) for n in _card_names}
+    roster_names_sorted = {" ".join(sorted(_normalize_name(n).split())) for n in _card_names}
 
     scraped = []
     try:
@@ -1312,9 +1330,20 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     updated_count = 0
     fighters_synced = 0
 
+    skipped_off_card = []
     for r in scraped:
         key = _key(r["fighter_a"], r["fighter_b"])
-        if r["fighter_a"].strip().lower() not in roster_names_lower or r["fighter_b"].strip().lower() not in roster_names_lower:
+        on_card = all(
+            (n.strip().lower() in roster_names_lower)
+            or (_normalize_name(n) in roster_names_folded)
+            or (" ".join(sorted(_normalize_name(n).split())) in roster_names_sorted)
+            for n in (r["fighter_a"], r["fighter_b"])
+        )
+        if not on_card:
+            # NEVER SILENT. This was a bare `continue`, the only refusal in
+            # the module that printed nothing, so a dropped result looked
+            # identical to a card that simply had fewer bouts.
+            skipped_off_card.append(f"{r['fighter_a']} vs {r['fighter_b']}")
             continue
 
         stats = None
@@ -1354,6 +1383,12 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
                 existing.loc[mask, col] = val
             updated_count += 1
             print(f"[results_fetcher] backfilled stats for existing result: {r['fighter_a']} vs {r['fighter_b']}")
+
+    # UNCONDITIONAL, and outside the write. The case worth reporting is
+    # precisely the one where nothing synced because everything was dropped.
+    if skipped_off_card:
+        print(f"[results_fetcher] {len(skipped_off_card)} ESPN result(s) could not be "
+              f"matched to this card and were NOT recorded: {skipped_off_card}")
 
     if fighters_synced:
         try:

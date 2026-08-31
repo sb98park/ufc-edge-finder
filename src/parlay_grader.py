@@ -84,10 +84,34 @@ def load_results(path: str = RESULTS_PATH) -> dict:
             "method_slug": slug,
             "end_round": int(end_round) if end_round.isdigit() else None,
             "end_time": (r.get("end_time") or "").strip(),
-            "went_distance": slug == "decision",
+            # A DRAW WENT THE DISTANCE. `slug == "decision"` alone made this
+            # False for a draw, which does not merely fail to settle -- it
+            # INVERTS: "Goes The Distance" graded LOST and "Ends In Finish"
+            # graded WON on a fight the judges had just scored. A draw is a
+            # judges' decision; that is what a draw is.
+            #
+            # A NO CONTEST IS GENUINELY UNKNOWN and stays None. An NC can be
+            # called at any point -- an eye poke in round one or an overturned
+            # decision months later -- so the slug says nothing about length,
+            # and grade_condition returns unresolved on None rather than
+            # guessing. Roughly 1 card in 5 carries a draw or NC (158 of
+            # 8,859 bouts), so this is rare, not hypothetical.
+            "went_distance": _went_distance(slug, winner),
             "cancelled": False,
         }
     return fights
+
+
+def _went_distance(slug: str, winner: str):
+    """True / False / None -- None meaning we genuinely cannot tell."""
+    s = (slug or "").lower()
+    if "decision" in s or s == "dec":
+        return True
+    if "draw" in s:
+        return True                      # a draw IS a judges' decision
+    if s in ("nc", "no contest") or (not winner and not s):
+        return None                      # an NC can stop at any moment
+    return False
 
 
 def _elapsed_rounds(fight) -> float | None:
