@@ -1,18 +1,18 @@
 {
  "UFC Fight Night: Hooker vs. Parnasse": {
   "bankroll": {
+   "pinned_at": "2026-08-31T02:43:33+00:00",
    "identities": [
     "[\"Morgan Charrière|Felipe Lima\", [{\"fighter\": \"Felipe Lima\", \"kind\": \"winner\"}]]",
-    "[\"Mario Pinto|Ryan Spann\", [{\"fighter\": \"Mario Pinto\", \"kind\": \"winner\"}]]"
+    "[\"Delphine Benouaich|Sofia Montenegro\", [{\"fighter\": \"Delphine Benouaich\", \"kind\": \"winner\"}]]"
    ],
-   "pinned_at": "2026-08-30T01:16:12+00:00",
    "snapshot": {
     "legs": [
      {
       "label": "Felipe Lima ML",
-      "odds_display": "-210",
+      "odds_display": "-192",
       "is_model": false,
-      "decimal_odds": 1.47619,
+      "decimal_odds": 1.520833,
       "fight_key": "Morgan Charrière|Felipe Lima",
       "conditions": [
        {
@@ -20,35 +20,35 @@
         "fighter": "Felipe Lima"
        }
       ],
-      "source": "FanDuel"
+      "source": "DraftKings"
      },
      {
-      "label": "Mario Pinto ML",
-      "odds_display": "-280",
+      "label": "Delphine Benouaich ML",
+      "odds_display": "-162",
       "is_model": false,
-      "decimal_odds": 1.357143,
-      "fight_key": "Mario Pinto|Ryan Spann",
+      "decimal_odds": 1.617284,
+      "fight_key": "Delphine Benouaich|Sofia Montenegro",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Mario Pinto"
+        "fighter": "Delphine Benouaich"
        }
       ],
-      "source": "FanDuel"
+      "source": "DraftKings"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
      "card_19",
-     "card_21"
+     "card_28"
     ],
-    "slip_id": "e9bdd21736b3",
-    "combined_decimal": 2.003401,
-    "combined_american": 100,
-    "combined_american_display": "+100",
-    "combined_prob": 0.4562,
-    "combined_prob_raw": 0.4889,
-    "venue": "FanDuel"
+    "slip_id": "0e4c3a11cf2d",
+    "combined_decimal": 2.459619,
+    "combined_american": 146,
+    "combined_american_display": "+146",
+    "combined_prob": 0.4381,
+    "combined_prob_raw": 0.4161,
+    "venue": "DraftKings"
    }
   }
  }
