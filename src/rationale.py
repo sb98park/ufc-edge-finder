@@ -48,7 +48,12 @@ def _fighter_stats(fighters_df: pd.DataFrame, name: str) -> dict | None:
         "ko_loss_rate": (_get(r, "ko_losses", 0) / total_losses) if total_losses else 0.0,
         "sub_loss_rate": (_get(r, "sub_losses", 0) / total_losses) if total_losses else 0.0,
         "dec_loss_rate": (_get(r, "dec_losses", 0) / total_losses) if total_losses else 0.0,
-        "reach_in": _get(r, "reach_in", 70),
+        # Prefer the imputed reach over the bare 70 so this agrees with
+        # compute_stats_rating. Nothing consumes this key today; the point is
+        # that if something starts to, it cannot silently disagree with the
+        # rating it is supposed to be explaining.
+        "reach_in": _get(r, "reach_in", None) if pd.notna(_get(r, "reach_in", None))
+                    else _get(r, "reach_in_imputed", 70),
         "wins": int(r["wins"]),
         "losses": int(r["losses"]),
         "weight_class": r["weight_class"],

@@ -70,7 +70,7 @@ from src.card_matcher import (
     assign_canonical_fight_ids, group_unmatched_by_fight,
     is_pickable_market, price_is_fragile,
 )
-from src.power_rating import build_effective_ratings
+from src.power_rating import attach_imputed_reach, build_effective_ratings
 from src.odds_utils import (implied_prob_to_american, format_american_odds,
                             decimal_to_american)
 from src.parlay_builder import build_bankroll_builder_parlays
@@ -382,6 +382,7 @@ def main(tier: str = "member", output_path: str | None = None):
     # HOW MUCH OF EACH FIGHTER DO WE ACTUALLY HOLD. Compared against their own
     # claimed record, so the model can tell a genuine five-year layoff from a
     # career we only have one bout of -- see matchup_model.layoff_years.
+    fighters_df = attach_imputed_reach(fighters_df)
     fighters_df = reconcile_last_fight_from_history(fighters_df, history_df)
     fighters_df = attach_history_coverage(fighters_df, history_df)
     _thin = fighters_df["history_coverage"] < 0.60

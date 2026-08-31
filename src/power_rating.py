@@ -11,6 +11,7 @@ rate isn't rated identically to a 3-0 fighter just because neither has
 fought anyone in our Elo graph yet.
 """
 
+import numpy as np
 import pandas as pd
 
 from src.elo import ufc_only
@@ -54,6 +55,85 @@ RATING_CENTER = 1500.0
 DEBUT_RATING_SHRINK = 1.0
 
 
+# Below this many known reaches a division's own mean is noisier than the
+# roster mean and is not used.
+MIN_DIVISION_REACH = 8
+# Below this many fighters there is nothing to fit against at all.
+MIN_REACH_FIT = 30
+
+
+def attach_imputed_reach(fighters_df: pd.DataFrame) -> pd.DataFrame:
+    """Add `reach_in_imputed`: our best estimate for a reach we do not hold.
+
+    Only populated where reach_in is missing, so it can never override a real
+    measurement. Fitted from the roster on every call rather than frozen as
+    constants, so it tracks the roster instead of going stale.
+
+    MEASURED, leave-one-out against the 353 fighters whose reach we do hold
+    (scripts/validate_reach_fallback.py):
+
+        fallback          MAE      rating pts   worst case
+        flat 70          4.08 in      16.3       14.00 in
+        roster mean      3.78         15.1       13.09
+        division mean    2.48          9.9       12.40
+        height fit       1.54          6.2        5.07
+
+    Height carries this, not division: corr(height, reach) = 0.910, R2 0.828.
+    Division-conditioning works and is beaten by more than half its remaining
+    error by simply using the height already on file -- which we have for 15
+    of the 16 fighters currently missing a reach. Division mean is kept as the
+    backstop for the one who has neither.
+
+    THIS IS NOT JUSTIFIED ON OUTCOMES AND DOES NOT CLAIM TO BE. The paired
+    point-in-time run scored 92 fights -- the reach term is multiplied by zero
+    above four connected bouts, so 493 of 585 ablatable fights were ineligible
+    -- and at that size nothing separates, including an ORACLE arm given every
+    fighter's true reach (-0.00306 Brier, p=0.095). An oracle that cannot
+    clear significance means the harness is underpowered, not that reach is
+    worthless, and that power cannot be recovered later: outcome scoring needs
+    both corners on the current roster, and retired fighters never get one.
+
+    So this is decided as a measurement-quality question, which is what it is.
+    Both candidates are estimates of the same input the model has already
+    committed to using; one is wrong by 4.08 inches and the other by 1.54,
+    with a worst case of 5.07 against 14.00. Nothing is fitted to outcomes, so
+    there is nothing here to overfit.
+    """
+    if fighters_df is None or getattr(fighters_df, "empty", True):
+        return fighters_df
+    out = fighters_df.copy()
+    out["reach_in_imputed"] = np.nan
+    if "reach_in" not in out.columns or "height_in" not in out.columns:
+        return out
+
+    known = out.dropna(subset=["reach_in", "height_in"])
+    missing = out["reach_in"].isna()
+    if not missing.any() or len(known) < MIN_REACH_FIT:
+        return out
+
+    roster_mean = float(known["reach_in"].mean())
+    # A least-squares line needs spread in x. Without this guard a roster whose
+    # known heights happened to be near-identical yields a wildly extrapolating
+    # slope from numerical noise, applied to exactly the fighters we know least
+    # about. Fall through to the division mean instead of fitting garbage.
+    slope = intercept = None
+    if float(known["height_in"].std() or 0.0) >= 0.5:
+        slope, intercept = np.polyfit(known["height_in"], known["reach_in"], 1)
+    div = known.groupby(known["weight_class"].fillna("Unknown"))["reach_in"]
+    div_mean = {k: float(v) for k, v in div.mean().items()
+                if div.count()[k] >= MIN_DIVISION_REACH}
+
+    for i in out.index[missing]:
+        h = out.at[i, "height_in"]
+        if pd.notna(h) and slope is not None:
+            out.at[i, "reach_in_imputed"] = float(intercept + slope * float(h))
+        else:
+            wc = out.at[i, "weight_class"] if "weight_class" in out.columns else None
+            wc = "Unknown" if pd.isna(wc) else wc
+            out.at[i, "reach_in_imputed"] = div_mean.get(wc, roster_mean)
+    return out
+
+
 def compute_stats_rating(row: pd.Series) -> float:
     """
     A rough power rating on the same numeric scale as Elo (centered at 1500),
@@ -73,7 +153,23 @@ def compute_stats_rating(row: pd.Series) -> float:
     """
     wins = row["wins"] if pd.notna(row.get("wins")) else 0
     losses = row["losses"] if pd.notna(row.get("losses")) else 0
-    reach_in = row["reach_in"] if pd.notna(row.get("reach_in")) else 70
+    # REACH, AND WHY THE FALLBACK IS NOT NEUTRAL. The term below is
+    # 4.0 * (reach_in - 70), so 70 is its own centring constant: a missing
+    # reach contributes exactly zero, not something approximately right. The
+    # roster mean is 72.1 and division means run 64.1 (strawweight) to 77.8
+    # (heavyweight), so the flat value docks a heavyweight with no reach on
+    # file 33 points against one who has it, and over-credits a women's
+    # strawweight by 18. That error is systematic by division, so it never
+    # averages out across a card.
+    #
+    # reach_in_imputed is attached by attach_imputed_reach() and is only ever
+    # populated where reach_in is missing. Absent column -> 70, i.e. exactly
+    # the previous behaviour, which is what every caller that has not been
+    # given the frame still gets.
+    reach_in = row["reach_in"] if pd.notna(row.get("reach_in")) else None
+    if reach_in is None:
+        reach_in = (row["reach_in_imputed"]
+                    if pd.notna(row.get("reach_in_imputed")) else 70)
 
     # NO RECORD IS NOT A BAD RECORD. With wins = losses = 0 the two lines
     # below read as win_pct 0.0 and finish_rate 0.0 -- a fighter who lost
