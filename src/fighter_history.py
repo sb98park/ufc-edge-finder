@@ -51,6 +51,8 @@ from __future__ import annotations
 import csv
 import re
 import unicodedata
+
+from src.names import _normalize_name
 from collections import defaultdict
 from datetime import datetime
 
@@ -78,10 +80,22 @@ def fold_name(name) -> str:
     accented fighter silently resolves to nothing -- which is exactly the bug
     that left 13 roster fighters with no control-time data at all.
     """
+    # PUNCTUATION TOO, which this did not do while its own docstring called it
+    # "the same fold as the rest of the project". ufcstats writes "Benoit
+    # Saint Denis" and "Abdul Rakhman Yakhyaev"; fighters.csv carries the
+    # hyphens. Neither name is accented, so the diacritic machinery above was
+    # irrelevant -- a single hyphen was the whole gap, and it resolved both
+    # men to zero bouts. Abdul-Rakhman Yakhyaev is booked for UFC 333 and
+    # rendered a scouting drawer from 0 bouts when 3 exist, while
+    # has_measured_method_rates returned False and gated him out of method
+    # legs on a false premise.
+    #
+    # Delegates the punctuation/whitespace half to card_matcher, the canonical
+    # fold, rather than restating it -- but keeps _STROKE_FOLD first, because
+    # NFKD does not decompose the Scandinavian stroke and card_matcher would
+    # drop it.
     s = str(name).strip().translate(_STROKE_FOLD)
-    s = unicodedata.normalize("NFKD", s)
-    s = "".join(c for c in s if not unicodedata.combining(c))
-    return s.encode("ascii", "ignore").decode().lower()
+    return _normalize_name(s)
 
 
 def _landed(cell) -> int:

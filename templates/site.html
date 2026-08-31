@@ -7478,6 +7478,18 @@
     </div>
   {%- endmacro %}
 
+  {% macro main_event_tba() %}
+  <div class="fight-tba">
+    <div class="card-position">Main Event</div>
+    {#- "Not yet announced", not MAIN_EVENT_TBD. That string exists for list
+        rows that carry no badge of their own; here the badge above already
+        says Main Event, so reusing it would set "Main Event" directly over
+        "Main event TBD". -#}
+    <div class="fight-tba-title">Not yet announced</div>
+    <div class="fight-tba-sub">The UFC has not booked a headliner for this card yet. It will appear here, with a full read, the day it is announced.</div>
+  </div>
+  {% endmacro %}
+
   {% macro render_fight_card(fight, card_index=none) %}
   <details class="fight-card reveal-target{{ ' finished-row' if fight.result_label }}{{ ' fight-cancelled' if fight.cancelled }}" {% if card_index %}id="fight-{{ card_index }}"{% endif %} data-fight-key="{{ fight.fighter_a }}|{{ fight.fighter_b }}" data-confidence="{{ (fight.preview.confidence_label if fight.preview else '')|lower|replace(' confidence','') }}">
     <summary>
@@ -8000,12 +8012,22 @@
   </details>
   {% endif %}
 
+  {#- OUTSIDE the tier branch below. These were set inside the free-tier
+      arm, so a member build never executed them and the underdog
+      disclosure 120 lines down raised UndefinedError. -#}
+  {#- One binding for every cohort figure on this page, so the Reads prose and
+      the Record tab cannot drift apart again. -#}
+  {%- set _mpa = (track_record.market_position_accuracy if track_record else none) or {} -%}
+  {%- set _dog = _mpa.get('underdogs', {}) if _mpa else {} -%}
+  {%- set _agree_pct = (_mpa.get('favorites', {}).get('accuracy_pct') if _mpa else none) or 0 -%}
+  {%- set _cards = (track_record.units_stats.event_count if track_record and track_record.units_stats else none) or 0 -%}
   {% if not standout_props and tier == 'free' %}
   <div class="standout-title" id="section-standout">{{ icon_flame() }} Clearest Reads</div>
   {{ member_wall("The reads are for members",
      "The five fights the model reads most clearly and the market agrees on
-      &mdash; the cohort that has won 85% across 7 logged cards. The line
-      movement above stays free; what the model makes of it does not.") }}
+      &mdash; the cohort that has won " ~ _agree_pct ~ "% across " ~ _cards ~ "
+      logged cards. The line movement above stays free; what the model makes
+      of it does not.") }}
   {% endif %}
   {% if standout_props %}
   <div class="standout-title" id="section-standout">{{ icon_flame() }} Clearest Reads · {{ event_matchup }}</div>
@@ -8014,7 +8036,11 @@
       disagreements -- and that name promised edges the logged record does not
       support. These are the calls the model is most confident about among
       those the market also backs, which is a smaller and truer claim. -#}
-  <div class="parlay-subtitle">The five fights the model reads most clearly <em>and</em> the market agrees on — the cohort that has won 85% across 7 logged cards. Most price negative once the vig is charged: that is what a likely winner costs, not a reason to take it.</div>
+  {#- LIVE, NOT PROSE. These read "85% across 7 logged cards" while the Record
+      tab on this same page rendered 80.8% from compute_track_record(). A
+      hardcoded stat is true on the day it is typed and drifts every card
+      after; two numbers describing the same cohort must come from one place. -#}
+  <div class="parlay-subtitle">The five fights the model reads most clearly <em>and</em> the market agrees on — the cohort that has won {{ _agree_pct }}% across {{ _cards }} logged cards. Most price negative once the vig is charged: that is what a likely winner costs, not a reason to take it.</div>
   <div class="standout-grid">
     {% for p in standout_props %}
     {#- The heat-N class that used to live here was dead -- only tr.edge-heat-N
@@ -8108,11 +8134,12 @@
       <span class="chevron">▶</span>
     </summary>
     <div class="disagreement-warning">
-      Across 7 logged cards the model took the market underdog 23 times and won
-      <b>39.1%</b> of them — while the market's own price implied 36.1%, which is
-      almost exactly right. On the same cards, the fights where model and market
-      <em>agreed</em> won 85.2%. These are shown because the disagreement is real
-      and worth seeing, not because it has been profitable.
+      Across {{ _cards }} logged cards the model took the market underdog
+      {{ _dog.total }} times and won <b>{{ _dog.accuracy_pct }}%</b> of them —
+      while the market's own price implied {{ _dog.market_expected_pct }}%. On
+      the same cards, the fights where model and market <em>agreed</em> won
+      {{ _agree_pct }}%. These are shown because the disagreement is real and
+      worth seeing, not because it has been profitable.
     </div>
     {% for p in disagreement_props %}
     <div class="line-card" data-key="{{ p.fighter }}|{{ p.market }}">
@@ -8598,6 +8625,21 @@
           row rather than from a synthetic fight: a placeholder pushed through
           event.fights would be counted by the teaser, the fight tally and
           anything else that reads that list as real bouts. -#}
+      {#- THE SLOT BELONGS TO THE MAIN CARD. Keyed on loop.first alone, this
+          rendered "Main Event / Not yet announced" directly under the
+          PRELIMINARY CARD divider on a card whose only booked bout is a
+          prelim -- true of UFC Fight Night: Las Vegas today. It goes under a
+          MAIN CARD heading, and if the card has no main-card segment at all
+          the heading is emitted with it rather than borrowing the prelims'. -#}
+      {%- set _first_seg = (event.fights[0].segment_label if event.fights else '') -%}
+      {% if not _has_main_event and _first_seg != 'MAIN CARD' %}
+      <div class="segment-divider">
+        <span class="segment-divider-line"></span>
+        <span class="segment-divider-label">MAIN CARD</span>
+        <span class="segment-divider-line"></span>
+      </div>
+      {{ main_event_tba() }}
+      {% endif %}
       {% for fight in event.fights %}
       {% if loop.first or fight.segment_label != loop.previtem.segment_label %}
       <div class="segment-divider">
@@ -8606,16 +8648,8 @@
         <span class="segment-divider-line"></span>
       </div>
       {% endif %}
-      {% if loop.first and not _has_main_event %}
-      <div class="fight-tba">
-        <div class="card-position">Main Event</div>
-        {#- "Not yet announced", not MAIN_EVENT_TBD. That string exists for
-            list rows that carry no badge of their own; here the badge above
-            already says Main Event, so reusing it would set "Main Event"
-            directly over "Main event TBD". -#}
-        <div class="fight-tba-title">Not yet announced</div>
-        <div class="fight-tba-sub">The UFC has not booked a headliner for this card yet. It will appear here, with a full read, the day it is announced.</div>
-      </div>
+      {% if loop.first and not _has_main_event and fight.segment_label == 'MAIN CARD' %}
+      {{ main_event_tba() }}
       {% endif %}
       {{ render_fight_card(fight) }}
       {% endfor %}
@@ -12980,7 +13014,15 @@
         // Which fight is in the cage right now, for the live leg glyph. Set
         // before grading so a leg can read "live" on the same pass that its
         // fight starts.
-        liveFightKey = liveKey;
+        //
+        // BEHIND THE SAME GUARD as espnLiveKey two lines above, which it was
+        // not: a payload that did not cover our card at all wiped the live
+        // glyph while the banner correctly kept it. A null liveKey means
+        // "this payload told us nothing", not "nothing is live", and the two
+        // must not disagree about that.
+        if (liveKey !== null || sawOurEvent) {
+          liveFightKey = liveKey;
+        }
         if (changed || liveKey !== null) update();
         gradeAllSlips();
       }

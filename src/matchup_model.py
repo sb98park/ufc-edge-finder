@@ -25,6 +25,8 @@ import os
 
 import pandas as pd
 
+from src.elo import canonical_method
+
 # How many Elo-equivalent rating points a fully-realized stylistic
 # advantage is worth. Tuned to be meaningful but not dominate the base
 # rating gap entirely -- these are secondary signals, not the headline.
@@ -319,9 +321,12 @@ def reconcile_last_fight_from_history(fighters_df, fight_history_df):
     hist = fight_history_df.copy()
     hist["_d"] = pd.to_datetime(hist["date"], errors="coerce")
     newest = {}
+    _methods = (hist["method"] if "method" in hist.columns
+                else pd.Series([""] * len(hist), index=hist.index))
     for col, other in (("fighter_a", "fighter_b"), ("fighter_b", "fighter_a")):
-        for name, opp, when, winner in zip(hist[col], hist[other], hist["_d"],
-                                           hist.get("winner", pd.Series([""] * len(hist)))):
+        for name, opp, when, winner, method in zip(
+                hist[col], hist[other], hist["_d"],
+                hist.get("winner", pd.Series([""] * len(hist))), _methods):
             if pd.isna(when):
                 continue
             key = str(name).strip().lower()
@@ -332,7 +337,7 @@ def reconcile_last_fight_from_history(fighters_df, fight_history_df):
                 # "nan" and grades every no contest as a loss (CLAUDE.md s4).
                 won = "" if pd.isna(winner) else str(winner).strip()
                 res = "NC" if not won else ("W" if won == str(name).strip() else "L")
-                newest[key] = (when, str(opp), res)
+                newest[key] = (when, str(opp), res, method)
 
     out = fighters_df.copy()
     moved = 0
@@ -340,13 +345,25 @@ def reconcile_last_fight_from_history(fighters_df, fight_history_df):
         hit = newest.get(str(row.get("name", "")).strip().lower())
         if hit is None:
             continue
-        when, opp, res = hit
+        when, opp, res, method = hit
         held = pd.to_datetime(row.get("last_fight_date"), errors="coerce")
         if pd.notna(held) and held >= when:
             continue
         out.at[i, "last_fight_date"] = when.date().isoformat()
         out.at[i, "last_fight_opponent"] = opp
         out.at[i, "last_fight_result"] = res
+        # THE METHOD MUST TRAVEL WITH THE REST OF THE ROW. Moving the date,
+        # the opponent and the result while leaving the method behind
+        # published Axel Sola -- co-main of 2026-09-05 -- as "W by Decision
+        # (Unanimous) against Ismael Bonfim" when that bout was a submission;
+        # the method was lifted from a different fight four months earlier.
+        #
+        # Normalised on the way in, because quick_return_penalty matches
+        # ("KO/TKO", "SUB") EXACTLY and the spine holds 19 rows spelled
+        # "Submission". Writing that verbatim would have silently switched
+        # off a penalty that currently fires correctly.
+        if pd.notna(method) and str(method).strip():
+            out.at[i, "last_fight_method"] = canonical_method(str(method))
         moved += 1
     if moved:
         print(f"[reconcile] {moved} fighter(s) had a more recent bout in the spine "

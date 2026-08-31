@@ -962,7 +962,8 @@ def _favorite_won(pick_odds, correct: bool) -> bool | None:
     return correct if picked_favorite else not correct
 
 
-def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> dict | None:
+def compute_track_record(results_csv_path: str = "data/fight_results.csv",
+                         log_snapshot: bool = False) -> dict | None:
     """
     Joins logged predictions against recorded results. Returns None if there
     are no recorded results yet (honest empty state, not a fabricated stat).
@@ -1204,7 +1205,14 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv") -> di
     calibration = _compute_calibration(matched)
 
     accuracy_pct = round(correct_count / total * 100, 1)
-    sparkline = _log_and_load_accuracy_sparkline(correct_count, total, accuracy_pct)
+    # READING THE RECORD MUST NOT WRITE IT. This appended to
+    # data/accuracy_history.csv on every call, so a gate, a test or an audit
+    # script that merely asked for the record left churn in `git diff` that
+    # was not the caller's -- and four concurrent readers raced the
+    # read-modify-write and produced four rows. Only the build passes
+    # log_snapshot=True; everything else gets the sparkline read-only.
+    sparkline = _log_and_load_accuracy_sparkline(correct_count, total, accuracy_pct,
+                                                log_snapshot=log_snapshot)
 
     results_by_event = _group_results_by_event(matched)
 
@@ -1635,7 +1643,8 @@ def _build_event_summary(group: dict) -> dict:
 ACCURACY_HISTORY_PATH = "data/accuracy_history.csv"
 
 
-def _log_and_load_accuracy_sparkline(correct: int, total: int, accuracy_pct: float) -> list[float] | None:
+def _log_and_load_accuracy_sparkline(correct: int, total: int, accuracy_pct: float,
+                                     log_snapshot: bool = False) -> list[float] | None:
     """
     Appends today's accuracy snapshot to a small running history file, then
     returns the accuracy_pct series for a sparkline -- genuinely forward-
@@ -1651,7 +1660,8 @@ def _log_and_load_accuracy_sparkline(correct: int, total: int, accuracy_pct: flo
         with open(ACCURACY_HISTORY_PATH, newline="") as f:
             rows = list(csv.DictReader(f))
 
-    if not rows or int(rows[-1]["correct"]) != correct or int(rows[-1]["total"]) != total:
+    if log_snapshot and (not rows or int(rows[-1]["correct"]) != correct
+                         or int(rows[-1]["total"]) != total):
         rows.append({"date": today, "correct": str(correct), "total": str(total), "accuracy_pct": str(accuracy_pct)})
         with open(ACCURACY_HISTORY_PATH, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=["date", "correct", "total", "accuracy_pct"])

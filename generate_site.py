@@ -68,7 +68,7 @@ from src.prop_ledger import record_prop_prices
 from src.card_matcher import (
     load_fight_cards, group_edges_by_card, top_standout_props, top_disagreement_props, top_favorite_picks,
     assign_canonical_fight_ids, group_unmatched_by_fight,
-    is_pickable_market, price_is_fragile,
+    is_pickable_market, price_is_fragile, fight_key,
 )
 from src.power_rating import attach_imputed_reach, build_effective_ratings
 from src.odds_utils import (implied_prob_to_american, format_american_odds,
@@ -1001,7 +1001,8 @@ def main(tier: str = "member", output_path: str | None = None):
         for fight in event["fights"]:
             key = frozenset({fight["fighter_a"].strip().lower(), fight["fighter_b"].strip().lower()})
             fight["momentum"] = momentum_by_key.get(key)
-    track_record = compute_track_record()
+    # The build is the ONE caller that should extend the accuracy history.
+    track_record = compute_track_record(log_snapshot=True)
     calibration_svg = None
     units_sparkline_svg = None
     units_timeseries_svg = None
@@ -1065,9 +1066,12 @@ def main(tier: str = "member", output_path: str | None = None):
         # colon (rare, but it happens on newly-announced cards where ESPN has
         # only the series name) keeps the whole string as the matchup and
         # renders no eyebrow -- better than an eyebrow with nothing under it.
-        countdown_matchup = countdown_label
-        if ": " in countdown_label:
-            countdown_series, countdown_matchup = countdown_label.split(": ", 1)
+        # THE LAST RAW SPLIT. split_event_name is the one definition; this
+        # copy still read a venue as a matchup, so "UFC Fight Night: Las
+        # Vegas" would print the CITY in the slot reserved for two names,
+        # with "Meta APEX, Las Vegas" repeated directly beneath it.
+        countdown_series, countdown_matchup = split_event_name(countdown_label)
+        countdown_matchup = countdown_matchup or MAIN_EVENT_TBD
 
     # Attempt to auto-fetch any results not yet in fight_results.csv,
     # before matching results to fights below. Best-effort and silent on
@@ -2562,6 +2566,25 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
     if _held and _age_days(_held.get("chosen_on", "")) > _HOLD_MAX_AGE_DAYS:
         print(f"[landing] held chart retired at {_age_days(_held.get('chosen_on',''))}d old")
         _held = None
+
+    # A FINISHED FIGHT IS NOT A LIVE MARKET. Age was the only escape valve, so
+    # a chart chosen on 2026-08-24 was still being published under "Watch the
+    # market move, from open to bell" on 2026-08-31 -- two days AFTER Tsuruya
+    # beat Borjas, with the axis stopping a week short. Its replacement scored
+    # 7.1 against a 57.73 hold threshold, so nothing would have displaced it
+    # until the 45-day timer expired on 2026-10-08. This is the one card a
+    # prospective subscriber judges the live-odds feature by.
+    if _held:
+        try:
+            _res = pd.read_csv(f"{DATA_DIR}/fight_results.csv")
+            _settled = {fight_key(r["fighter_a"], r["fighter_b"], "")[0]
+                        for _, r in _res.iterrows()}
+            if fight_key(_held.get("fighter_a"), _held.get("fighter_b"), "")[0] in _settled:
+                print(f"[landing] held chart retired -- {_held.get('fighter_a')} vs "
+                      f"{_held.get('fighter_b')} has a recorded result")
+                _held = None
+        except (OSError, KeyError, pd.errors.EmptyDataError):
+            pass    # no results file yet is not a reason to drop a good chart
 
     if market_preview and _held:
         if market_preview["score"] > _held.get("score", 0) * _HOLD_MARGIN:

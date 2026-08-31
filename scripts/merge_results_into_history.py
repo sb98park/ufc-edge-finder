@@ -40,6 +40,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.card_matcher import fight_key   # noqa: E402
+from src.elo import canonical_method   # noqa: E402
 
 HISTORY = "data/fight_history.csv"
 RESULTS = "data/fight_results.csv"
@@ -132,7 +133,12 @@ def main():
         new_rows.append({
             "date": d, "fighter_a": a, "fighter_b": b,
             "winner": w if decisive else "",
-            "method": method,
+            # THE FILE FORMAT IS THE SHORT CODE. This wrote ESPN's phrasings
+            # ("Decision - Unanimous", "Submission") straight through, and
+            # elo.METHOD_K_MULTIPLIER is an exact-match dict -- so a knockout
+            # stored as "KO (Punches)" updated the rating with a 1.0
+            # multiplier instead of 1.25, i.e. as though it were a decision.
+            "method": canonical_method(method),
         })
         have.add(key(a, b, d))
 

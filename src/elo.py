@@ -15,6 +15,46 @@ METHOD_K_MULTIPLIER = {
     "DQ": 0.50,
 }
 
+
+def canonical_method(value) -> str:
+    """The STORED spelling of a method: KO/TKO, SUB, DEC, DQ, Draw, NC.
+
+    THE FILE FORMAT IS THE SHORT CODE. generate_site._method_display maps it
+    to prose at render time, and its docstring is explicit that "the stored
+    codes are what the model reads". Three writers ignored that and put ESPN's
+    phrasings straight into the data -- "Decision - Unanimous", "Submission",
+    "KO (Punches)" -- which are not wrong to a reader and are invisible to
+    everything that matches on the code:
+
+      * METHOD_K_MULTIPLIER above is an exact-match dict, so an unrecognised
+        phrasing falls through to 1.0 and a knockout updates the rating as
+        though it were a decision. 46 rows in fight_history.csv.
+      * matchup_model.quick_return_penalty fires only on ("KO/TKO", "SUB"),
+        so a fighter whose last loss is stored as "Submission" silently
+        stops taking the short-turnaround penalty.
+
+    Unrecognised input passes through unchanged rather than being forced into
+    a bucket -- an unknown method should look unknown, not like a decision.
+    """
+    if not isinstance(value, str) or not value.strip():
+        return value
+    v = value.strip()
+    low = v.lower()
+    if low in ("nc", "no contest", "overturned"):
+        return "NC"
+    if "draw" in low:
+        return "Draw"
+    if low.startswith("dq") or "disqualif" in low:
+        return "DQ"
+    if "dec" in low:
+        return "DEC"
+    if "sub" in low or "choke" in low or "armbar" in low or "kimura" in low:
+        return "SUB"
+    if "ko" in low or "tko" in low or "knockout" in low or "punch" in low:
+        return "KO/TKO"
+    return v
+
+
 # Experience-based adaptive K schedule (the core Glicko insight applied
 # minimally): a fighter's first few results should move their rating a
 # lot -- 1500 is a guess, not knowledge, and the fastest way out of a
