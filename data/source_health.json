@@ -1,18 +1,27 @@
 {
-  "at": "2026-09-01T21:27:52+00:00",
+  "at": "2026-09-01T22:02:42+00:00",
   "card_data_coverage": {
-    "carded_fighters": 156,
-    "checked_at": "2026-09-01T21:26:13+00:00",
+    "carded_fighters": 157,
+    "checked_at": "2026-09-01T22:01:17+00:00",
     "counts": {
-      "physicals": 4
+      "physicals": 5,
+      "record": 1
     },
-    "findings": []
+    "findings": [
+      {
+        "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart",
+        "event": "UFC Fight Night: Hooker vs. Parnasse",
+        "event_date": "2026-09-05",
+        "fighter": "Pavel Andrusca",
+        "severity": "record"
+      }
+    ]
   },
   "edges_two_way": {
     "best_book": {
-      "DraftKings": 47,
+      "DraftKings": 45,
       "FanDuel": 5,
-      "Polymarket": 112
+      "Polymarket": 114
     },
     "books_quoting": {
       "1.0": 140,
@@ -55,9 +64,9 @@
     }
   },
   "rows_by_source": {
-    "DraftKings": 52,
+    "DraftKings": 50,
     "FanDuel": 24,
-    "Polymarket": 372
+    "Polymarket": 382
   },
   "rundown_dates_requested": [
     "2026-09-05"
