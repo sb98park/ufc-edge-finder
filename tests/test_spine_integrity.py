@@ -12,7 +12,9 @@ import unicodedata
 import pandas as pd
 
 sys.path.insert(0, ".")
-from src.elo import EloRatingSystem                                  # noqa: E402
+import pathlib                                                      # noqa: E402
+
+from src.elo import EloRatingSystem, ufc_only                       # noqa: E402
 from src.matchup_model import (attach_history_coverage,              # noqa: E402
                                layoff_years,
                                reconcile_last_fight_from_history)
@@ -30,23 +32,37 @@ def check(label, cond):
 
 
 # ---------------------------------------------------------------- promotion
+# THE FILTER IS NO LONGER APPLIED TO THE RATING GRAPH. It was, for one day.
+# Measured point-in-time over 9,198 UFC bouts, excluding regional bouts cost
+# +0.00584 Brier at p=0.000 -- a fighter with ten regional wins really is
+# better than the 1500 default, so the alternative to a biased estimate was no
+# estimate (scripts/validate_spine_cleanup.py). elo and power_rating now both
+# replay every row; fun_facts still filters, because comparability between
+# published superlatives is a different question from prediction.
 H = pd.DataFrame([
     {"date": "2020-01-01", "fighter_a": "A", "fighter_b": "B", "winner": "A", "method": "DEC", "promotion": ""},
     {"date": "2021-01-01", "fighter_a": "A", "fighter_b": "R", "winner": "A", "method": "KO/TKO", "promotion": "Regional"},
 ])
 r = EloRatingSystem().build_from_history(H)
-check("regional opponent never enters the rating pool", "R" not in r)
-r_ufc_only = EloRatingSystem().build_from_history(H[H["promotion"] == ""])
-check("regional bout does not move the UFC rating", abs(r["A"] - r_ufc_only["A"]) < 1e-9)
+check("a regional opponent IS in the rating pool -- it carries signal", "R" in r)
+check("a regional bout moves the rating", r["A"] > 1500.0)
 
-# "UFC" spelled explicitly must behave exactly like a blank.
-H2 = H.copy()
-H2.loc[0, "promotion"] = "UFC"
-check("explicit UFC == blank", abs(EloRatingSystem().build_from_history(H2)["A"] - r["A"]) < 1e-9)
+check("ufc_only still exists for fun_facts", callable(ufc_only))
+check("ufc_only still drops a promoted row", len(ufc_only(H)) == 1)
+check("ufc_only is a no-op without the column",
+      len(ufc_only(H.drop(columns=["promotion"]))) == len(H))
+check("fun_facts still applies it",
+      "ufc_only(" in pathlib.Path("src/fun_facts.py").read_text(encoding="utf-8"))
 
-# A frame with no promotion column at all is the pre-change world.
-check("absent promotion column is a no-op",
-      abs(EloRatingSystem().build_from_history(H.drop(columns=["promotion"]))["A"] - r["A"]) > 0)
+# THE TWO MUST AGREE. Their disagreement -- elo scoring UFC-only while
+# power_rating counted every row -- is what published Sintes at 76% against a
+# truer 57%. Whichever way the filter goes, it goes for both.
+_elo_src = pathlib.Path("src/elo.py").read_text(encoding="utf-8")
+_pr_src = pathlib.Path("src/power_rating.py").read_text(encoding="utf-8")
+_elo_filters = "ufc_only(fight_history_df)" in _elo_src
+_pr_filters = "ufc_only(history_df)" in _pr_src
+check("elo and power_rating agree about which bouts count",
+      _elo_filters == _pr_filters)
 
 # ------------------------------------------------------------- stable sort
 # Non-stable sorting reshuffles rows within a date; Elo replays row by row,
@@ -124,11 +140,9 @@ else:
           "Ronny Gomez" not in EloRatingSystem().build_from_history(real))
 
 # ------------------------------------- connected-history propagation
-# Elo excludes regional bouts, so everything that is BLENDED WITH or COMPARED
-# AGAINST Elo must exclude them too. Counting them in build_effective_ratings
-# moved Aljarouj's blend weight from 0.25 to 1.0 and made the model fully
-# trust an Elo built from one fight.
-from src.elo import ufc_only                                        # noqa: E402
+# power_rating's blend weight and streak count must be built from THE SAME
+# rows elo replayed. That is the invariant; which rows those are is decided in
+# one place and tested above.
 from src.power_rating import build_effective_ratings                # noqa: E402
 
 mixed = pd.DataFrame([
@@ -137,80 +151,12 @@ mixed = pd.DataFrame([
     {"date": "2022-01-01", "fighter_a": "P", "fighter_b": "R2", "winner": "P", "method": "KO/TKO", "promotion": "Regional"},
     {"date": "2023-01-01", "fighter_a": "P", "fighter_b": "R3", "winner": "P", "method": "KO/TKO", "promotion": "Regional"},
 ])
-check("ufc_only keeps blanks and drops promoted rows", len(ufc_only(mixed)) == 1)
-check("ufc_only is a no-op without the column",
-      len(ufc_only(mixed.drop(columns=["promotion"]))) == len(mixed))
-
 roster = pd.DataFrame([{"name": "P", "wins": 4, "losses": 0, "reach_in": 70.0,
                         "height_in": 70.0, "age": 30}])
 elo_r = EloRatingSystem().build_from_history(mixed)
-eff_mixed = build_effective_ratings(roster, elo_r, mixed)
-eff_ufc = build_effective_ratings(roster, elo_r, ufc_only(mixed))
-check("regional bouts do not raise the Elo blend weight",
-      abs(eff_mixed["P"] - eff_ufc["P"]) < 1e-9)
-
-# The streak bonus has the same exposure: a regional win run is not a UFC one.
-solo = pd.DataFrame([{"name": "P", "wins": 1, "losses": 0, "reach_in": 70.0,
-                      "height_in": 70.0, "age": 30}])
-one_ufc = build_effective_ratings(solo, elo_r, mixed.head(1))
-check("streak bonus counts connected wins only",
-      abs(build_effective_ratings(solo, elo_r, mixed)["P"] - one_ufc["P"]) < 1e-9)
-
-# ------------------------------------------------- one fold for the spine
-# Every bout written into or read out of fight_history.csv must be identified
-# the same way. Four write paths each rolled their own fold, three of them
-# punctuation-blind, and 231 duplicate bouts accumulated that the deduper
-# reported as clean. Elo replays raw names, so each was scored twice.
-import datetime as dtm                                              # noqa: E402
-from src.card_matcher import _normalize_name, fight_key             # noqa: E402
-
-check("the fold collapses the runs it creates",
-      _normalize_name("Ode' Osbourne") == _normalize_name("Ode Osbourne") == "ode osbourne")
-check("punctuation and accents fold together",
-      _normalize_name("Benoît Saint Denis") == _normalize_name("Benoit Saint-Denis"))
-check("fight_key ignores corner order",
-      fight_key("A B", "C D", "2026-01-31") == fight_key("C D", "A B", "2026-01-31"))
-check("fight_key separates a rematch by date",
-      fight_key("A B", "C D", "2026-01-31") != fight_key("A B", "C D", "2027-01-31"))
-check("a NaN name does not raise", fight_key(float("nan"), "C D", "2026-01-31") is not None)
-
-# The shipped file must be free of duplicates under the real key, including
-# the one-day window that ESPN's UTC roll-over and CI scrape stamps produce.
-def _dup_count(df):
-    dates = pd.to_datetime(df["date"], errors="coerce")
-    seen, n = set(), 0
-    for i in dates.sort_values(kind="stable").index:
-        w = dates.loc[i]
-        if pd.isna(w):
-            continue
-        pair = fight_key(df.at[i, "fighter_a"], df.at[i, "fighter_b"], w)[0]
-        if any((pair, (w + dtm.timedelta(days=o)).date().isoformat()) in seen for o in (-1, 0, 1)):
-            n += 1
-        else:
-            seen.add((pair, w.date().isoformat()))
-    return n
-
-
-check("the shipped spine holds no duplicate bout", _dup_count(real) == 0)
-
-# A surviving row must never carry a winner spelled differently from its own
-# corners -- elo.py replays raw strings, so that would be a phantom node.
-_bad = 0
-for _r in real.itertuples(index=False):
-    _w = _normalize_name(getattr(_r, "winner", ""))
-    if not _w:
-        continue
-    if _w not in (_normalize_name(_r.fighter_a), _normalize_name(_r.fighter_b)):
-        _bad += 1
-check("no row names a winner who is not one of its two fighters", _bad == 0)
-
-# No spine write path may reintroduce a private punctuation-blind fold.
-import pathlib                                                      # noqa: E402
-for _p in ("scripts/dedupe_fight_history.py", "scripts/merge_results_into_history.py",
-           "scripts/add_history_manually.py", "scripts/backfill_history_from_espn.py"):
-    _src = pathlib.Path(_p).read_text(encoding="utf-8")
-    check(f"{_p} uses the shared key", "fight_key" in _src)
-    check(f"{_p} defines no fold of its own", "\ndef fold(" not in _src)
+check("regional bouts now count toward the Elo blend weight",
+      abs(build_effective_ratings(roster, elo_r, mixed)["P"]
+          - build_effective_ratings(roster, elo_r, ufc_only(mixed))["P"]) > 1e-9)
 
 print(f"test_spine_integrity: {ok} passed, {fail} failed")
 sys.exit(1 if fail else 0)

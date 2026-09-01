@@ -264,12 +264,13 @@ def build_effective_ratings(
     to mean something, blend toward Elo as that count grows. Otherwise, rely
     on the stats-based rating instead of the meaningless flat default.
     """
-    # CONNECTED history only -- the docstring's word, and it is load-bearing.
-    # Both numbers below are compared against, or blended with, Elo, which is
-    # built from the UFC-only subgraph. Counting a regional bout here while
-    # excluding it there makes the two disagree about the same fighter: it
-    # raises the blend weight toward an Elo that no extra fight informed.
-    connected = ufc_only(history_df)
+    # THE SAME ROWS ELO REPLAYED, which is now every bout including regional
+    # ones -- see the measurement in src/elo.build_from_history. These two must
+    # move together and always have: counting a bout here that Elo did not
+    # score raises the blend weight toward an Elo no extra fight informed,
+    # which is precisely what published Sintes at 76% against a truer 57%.
+    # It was their DISAGREEMENT that caused that, not the inclusion.
+    connected = history_df
     fight_counts = pd.concat([
         connected["fighter_a"] if "fighter_a" in connected else pd.Series(dtype=str),
         connected["fighter_b"] if "fighter_b" in connected else pd.Series(dtype=str),

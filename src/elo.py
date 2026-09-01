@@ -181,10 +181,28 @@ class EloRatingSystem:
         Every pre-existing row has a blank promotion and is treated as UFC,
         so this filter is a no-op against the spine as it stands.
         """
-        df = ufc_only(fight_history_df).copy()
-        dropped = len(fight_history_df) - len(df)
-        if dropped:
-            print(f"[elo] excluded {dropped} non-UFC row(s) from the rating graph")
+        # EVERY BOUT, INCLUDING REGIONAL ONES. This replayed ufc_only(...) for
+        # one day, on my argument that a regional opponent with no other
+        # results sits at the 1500 default so beating them scores like beating
+        # an average UFC fighter. That is a correct statement about BIAS and a
+        # wrong basis for a decision: the alternative to a biased estimate here
+        # is no estimate, and a fighter with ten regional wins really is better
+        # than 1500.
+        #
+        # Measured point-in-time over 9,198 UFC bouts
+        # (scripts/validate_spine_cleanup.py), all arms scored on the same
+        # fights: excluding them cost +0.00584 Brier at p=0.000. Weighting
+        # instead of excluding is monotonic in the weight -- 1.00 -> 0.23346,
+        # 0.50 -> 0.23551, 0.00 -> 0.24079 -- so there is no middle to tune,
+        # and the harm is LARGER where the classification is most complete,
+        # which rules out the partial-crawl explanation.
+        #
+        # ufc_only still exists and is still right for src/fun_facts, where the
+        # question is comparability between published claims rather than
+        # prediction. It must NOT be reintroduced here without also removing it
+        # from power_rating: the two disagreeing about which bouts count is
+        # what published Sintes at 76% against a truer 57%.
+        df = fight_history_df.copy()
         df["date"] = pd.to_datetime(df["date"])
         # kind="stable": pandas defaults to quicksort, which is NOT stable, so a
         # plain sort_values("date") silently reshuffles rows WITHIN a date. Elo
