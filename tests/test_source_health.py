@@ -86,8 +86,26 @@ finally:
     sh.PATH = _real
     shutil.rmtree(tmp, ignore_errors=True)
 
-check("the shipped health file is valid json with a parlay block",
-      isinstance(json.load(open("data/source_health.json")).get("parlay"), dict))
+# STRUCTURAL ONLY, NOT CONTENT. This asserted that the shipped
+# data/source_health.json carries a `parlay` block -- and it does after a
+# build, but data/ is reverted before committing so CI never sees one, and the
+# test suite is a HARD GATE. It failed every run and froze the site on stale
+# data, which is precisely what CLAUDE.md s2 says a gate must never do: fail
+# for something that legitimately varies rather than for a structural fault.
+#
+# The behaviour is already covered above against synthetic fixtures, which is
+# where behaviour belongs. All this checks is that whatever is committed is
+# readable and shaped like a health file -- true whether or not a build has
+# run since.
+_shipped = json.load(open("data/source_health.json"))
+check("the shipped health file is a json object", isinstance(_shipped, dict))
+check("every block in it is keyed by a string",
+      all(isinstance(k, str) for k in _shipped))
+if "parlay" in _shipped:
+    check("a shipped parlay block is well formed",
+          isinstance(_shipped["parlay"], dict)
+          and all(isinstance(v, dict) and "reason" in v
+                  for v in _shipped["parlay"].values()))
 
 print(f"test_source_health: {ok} passed, {fail} failed")
 sys.exit(1 if fail else 0)
