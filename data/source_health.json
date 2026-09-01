@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-01T03:06:51+00:00",
+  "at": "2026-09-01T03:41:45+00:00",
   "card_data_coverage": {
     "carded_fighters": 156,
-    "checked_at": "2026-09-01T03:05:54+00:00",
+    "checked_at": "2026-09-01T03:40:56+00:00",
     "counts": {
       "physicals": 4
     },
@@ -10,27 +10,27 @@
   },
   "edges_two_way": {
     "best_book": {
-      "DraftKings": 45,
-      "FanDuel": 9,
-      "Polymarket": 66
+      "DraftKings": 46,
+      "FanDuel": 8,
+      "Polymarket": 64
     },
     "books_quoting": {
-      "1.0": 96,
+      "1.0": 94,
       "2.0": 24
     },
-    "n": 120
+    "n": 118
   },
   "moneyline": {
     "best_book": {
-      "DraftKings": 19,
-      "FanDuel": 9,
-      "Polymarket": 38
+      "DraftKings": 20,
+      "FanDuel": 8,
+      "Polymarket": 36
     },
-    "n": 66,
+    "n": 64,
     "source": {
-      "DraftKings": 19,
-      "FanDuel": 9,
-      "Polymarket": 38
+      "DraftKings": 20,
+      "FanDuel": 8,
+      "Polymarket": 36
     }
   },
   "overround": {
@@ -45,7 +45,7 @@
   "rows_by_source": {
     "DraftKings": 54,
     "FanDuel": 24,
-    "Polymarket": 274
+    "Polymarket": 268
   },
   "rundown_dates_requested": [
     "2026-09-05"
@@ -53,13 +53,13 @@
   "rundown_key_set": true,
   "tracked_moneyline": {
     "best_book": {
-      "DraftKings": 19,
-      "FanDuel": 9
+      "DraftKings": 20,
+      "FanDuel": 8
     },
     "n": 28,
     "source": {
-      "DraftKings": 19,
-      "FanDuel": 9
+      "DraftKings": 20,
+      "FanDuel": 8
     }
   }
 }
