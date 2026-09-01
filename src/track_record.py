@@ -663,6 +663,28 @@ def _pair_key(fighter_a: str, fighter_b: str) -> frozenset:
     return frozenset({fighter_a.strip().lower(), fighter_b.strip().lower()})
 
 
+# A de-vigged consensus and the best bettable price differ by the vig plus a
+# little line shopping. Ten points is far beyond that and well inside the
+# 49-point gaps actually observed, so it separates "normal" from "wrong"
+# without needing to model either.
+FAIR_PRICE_TOLERANCE = 0.10
+
+
+def _fair_agrees_with_price(fair, odds) -> bool:
+    """False when a fair probability cannot belong to the price beside it."""
+    try:
+        fair = float(fair)
+        odds = float(odds)
+    except (TypeError, ValueError):
+        return True          # nothing to check against -- not evidence of a fault
+    if not math.isfinite(fair) or not math.isfinite(odds) or odds == 0:
+        return True
+    implied = american_to_implied_prob(odds)
+    if implied is None or not math.isfinite(implied):
+        return True
+    return abs(fair - implied) <= FAIR_PRICE_TOLERANCE
+
+
 def _clv_result(pick_odds, closing_odds,
                 pick_fair_prob=None, closing_fair_prob=None) -> dict | None:
     """
@@ -702,6 +724,30 @@ def _clv_result(pick_odds, closing_odds,
         return v if 0.0 < v < 1.0 else None
 
     pf, cf = _f(pick_fair_prob), _f(closing_fair_prob)
+
+    # A FAIR PROBABILITY MUST BE NEAR ITS OWN PRICE. The fair line is a
+    # cross-source de-vigged consensus while the American price is the single
+    # best bettable quote, so they are allowed to differ -- by the vig and a
+    # little line shopping, which is a couple of points, not fifty. When they
+    # disagree by more than FAIR_PRICE_TOLERANCE the fair column is not a
+    # de-vigged view of that price, it is a number belonging to some other
+    # market, and grading on it produces a CLV with no relationship to what
+    # the line did.
+    #
+    # Measured 2026-09-01 across 105 priced rows: 20 disagree by >10 points,
+    # all on cards from 2026-08-18 onward and none on the seven before it.
+    # Rei Tsuruya closed -800 (0.889 implied) carrying a fair of 0.449 and
+    # graded clv_pct = -38.3 on a line that had moved TOWARD the pick. The
+    # error ran against the site: regraded on the price basis the published
+    # record goes from 39/73 and -2.9pts to 42/73 and -0.38.
+    #
+    # This is a GUARD, not the fix. The bad value is written upstream, in
+    # whatever populates book_fair_prob on a Moneyline edge; it does not
+    # reproduce on the current single-source card, so the detector added
+    # alongside this records the inputs the next time it happens.
+    if pf is not None and cf is not None and not _fair_agrees_with_price(cf, closing_odds):
+        pf = cf = None
+
     if pf is not None and cf is not None:
         pick_prob, closing_prob, basis = pf, cf, "fair"
     else:

@@ -184,6 +184,26 @@ def compute_moneyline_edges(
             continue
         a, b, fair_a, fair_b, (best_a, book_a, n_a, px_a), (best_b, book_b, n_b, px_b) = shopped
 
+        # CATCH IT WHERE IT IS MADE, WITH ITS INPUTS. book_fair_prob is a
+        # cross-source de-vigged consensus and odds_american is the single
+        # best bettable quote, so they differ by the vig and a little line
+        # shopping -- a couple of points. Twenty rows in predictions_log
+        # disagree by more than fifty (Rei Tsuruya: fair 0.449 against a -800
+        # price implying 0.889), all on cards from 2026-08-18 onward, and the
+        # bad pair was only found months later by regrading the ledger.
+        # track_record now refuses to grade CLV on such a pair, but that is a
+        # guard; this is the only place the SOURCES are still in scope. It
+        # does not reproduce on a single-source card, so the next time it
+        # fires the log has to carry enough to diagnose it.
+        for _side, _fair, _px in ((a, fair_a, best_a), (b, fair_b, best_b)):
+            _imp = american_to_implied_prob(_px["odds_american"])
+            if _imp is not None and abs(_fair - _imp) > 0.10:
+                print(f"[edge_finder] INCOHERENT fair vs price on "
+                      f"{_side['selection']!r}: fair={_fair:.3f} "
+                      f"price={_px['odds_american']} implied={_imp:.3f} "
+                      f"price_source={_px.get('source')!r} "
+                      f"sources_quoting={[nm for nm, _ in by_source]}")
+
         matchup = None
         if fighters_df is not None:
             matchup = predict_matchup(a["selection"], b["selection"], fighters_df, elo_ratings, fight_history_df)
