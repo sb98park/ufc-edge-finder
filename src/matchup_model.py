@@ -1066,9 +1066,16 @@ def build_probability_waterfall(matchup: dict) -> dict | None:
     for c in collected:
         step(c["label"], c["why"], c["points"], key=c["key"])
     if matchup.get("adjustment_capped"):
+        # TWO LINES, NOT A PARAGRAPH. At 103 characters this was three times
+        # the longest other description and the only one the .wf-why clamp
+        # ever truncated -- and it cut at "so no...", exactly where the
+        # sentence was about to say WHY the cap exists, which is the only part
+        # a reader could not already infer from the label. The previous note
+        # in templates/site.html called it "a full sentence that cannot be
+        # shortened to one line"; that was true of ONE line, not of two.
         step("Adjustment cap",
-             f"total adjustment held to {ADJUSTMENT_TOTAL_CAP:.0f} rating points, so no pile-up "
-             f"of factors can outweigh the rating gap itself",
+             f"capped at {ADJUSTMENT_TOTAL_CAP:.0f} points so factors "
+             f"cannot outweigh the gap",
              applied_layer - raw_layer, kind="cap")
 
     favorite_prob = prob_a if favorite_is_a else 1.0 - prob_a

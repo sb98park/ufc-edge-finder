@@ -3524,11 +3524,21 @@
      The real fix was upstream: the seven longest strings in
      matchup_model.FACTORS were rewritten to fit 152px with at least 8px to
      spare, so on the current card nothing wraps at all and the height cost is
-     zero. The clamp stays as a floor, not a ceiling -- the adjustment-cap row
-     carries a full sentence that cannot be shortened to one line, and a
-     future factor will be written by someone who never read this comment.
-     Two lines then truncate, so a long string degrades to "most of it" rather
-     than to a silent ellipsis nobody on mobile can open. */
+     zero. The clamp stays as a floor, not a ceiling: a future factor will be
+     written by someone who never read this comment.
+
+     THE ADJUSTMENT-CAP ROW USED TO BE THE EXCEPTION, and this comment used to
+     say its sentence "cannot be shortened". That was true of ONE line and
+     assumed of two, and the second half was wrong: at 103 characters it
+     overran the clamp and truncated at "so no...", which is exactly where the
+     sentence was about to say WHY the cap exists -- the only part a reader
+     could not infer from the label. Degrading to "most of it" is only benign
+     if the part lost is the least important, and here it was the opposite.
+     It is now 55 characters and wraps to two full lines.
+
+     Every description is measured against this box in
+     tests/test_waterfall_copy.py, so the next long one fails a test instead
+     of shipping an ellipsis. */
   .wf-why { display: block; font-size: var(--t-micro); font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 1px;
             display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
             overflow: hidden; overflow-wrap: anywhere; }
