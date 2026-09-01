@@ -1050,6 +1050,36 @@ def _favorite_won(pick_odds, correct: bool) -> bool | None:
     return correct if picked_favorite else not correct
 
 
+def _band_of(pick: dict) -> str | None:
+    """The cohort a settled pick belongs to: its own published confidence tier.
+
+    THE NOTE SAYS "Picks at this confidence", so the cohort has to BE the
+    confidence shown two lines above it. It was not. The band was a separate
+    partition of the probability -- coinflip/lean/solid/strong cut at 55/65/75
+    -- which is neither the same boundaries as the tiers (60/75) nor the same
+    number of buckets, and it ROUNDED before comparing.
+
+    Umar Nurmagomedov, 2026-08-29: favorite_prob 0.747. The label reads the raw
+    number, 0.747 < 0.75, and correctly says Medium. The band read
+    round(0.747 * 100) = 75 and filed him under "strong". So a Medium pick that
+    lost was counted against the High cohort and carried its note -- "Picks at
+    this confidence are 20-2" under a row labelled Medium. Without him that
+    cohort is 20-1.
+
+    Two bugs in one line: the partition did not match the tiers, and rounding
+    moved a pick across a boundary the label had not crossed. The same
+    round-versus-threshold mismatch showed a 0.7490 fight as "75%" beside a
+    74% one labelled higher.
+
+    Uses confidence_label, which is what the row displays. A tier now carries
+    hysteresis and card-level monotonicity, so it is no longer a pure function
+    of the probability and cannot be re-derived from it here -- reading the
+    stored label is the only way the note and the badge can agree.
+    """
+    label = pick.get("confidence_label")
+    return label if isinstance(label, str) and label.strip() else None
+
+
 def compute_track_record(results_csv_path: str = "data/fight_results.csv",
                          log_snapshot: bool = False) -> dict | None:
     """
@@ -1157,11 +1187,9 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv",
     _bands = {}
     for m in matched:
         fp = m.get("favorite_prob")
-        if fp is None:
+        b = _band_of(m)
+        if b is None:
             continue
-        pct = round(float(fp) * 100)
-        b = ("coinflip" if pct < 55 else "lean" if pct < 65 else
-             "solid" if pct < 75 else "strong")
         w, n = _bands.get(b, (0, 0))
         _bands[b] = (w + (1 if m["correct"] else 0), n + 1)
 
@@ -1177,13 +1205,11 @@ def compute_track_record(results_csv_path: str = "data/fight_results.csv",
     # column, captured pre-fight. Until then the note carries the result and
     # the band and says nothing it cannot support.
     for m in matched:
-        fp = m.get("favorite_prob")
-        if fp is None:
+        b = _band_of(m)
+        if b is None:
             m["settled_note"] = None
+            m["band_note"] = None
             continue
-        pct = round(float(fp) * 100)
-        b = ("coinflip" if pct < 55 else "lean" if pct < 65 else
-             "solid" if pct < 75 else "strong")
         # ONLY THE PART THE ROW DOES NOT ALREADY SHOW. explain_settled's full
         # line opens with "Won by unanimous decision", and this row prints the
         # winner and the method two lines above -- restating them is the
