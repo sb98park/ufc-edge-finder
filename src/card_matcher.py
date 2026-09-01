@@ -645,6 +645,74 @@ def _previous_label(fighter_a, fighter_b) -> str | None:
         frozenset({_normalize_name(fighter_a), _normalize_name(fighter_b)}))
 
 
+# The order the tiers sit in, worst to best. Anything not in here is left
+# exactly as it is.
+_TIER_ORDER = ["Low Confidence", "Medium Confidence", "High Confidence"]
+
+
+def _enforce_tier_monotonicity(fights: list[dict]) -> None:
+    """A higher probability may never carry a lower tier than a lower one.
+
+    THE DEFECT THIS FIXES. Hysteresis lowers the bar for a fight that already
+    held a tier -- entering High costs 0.75, holding it costs 0.74 -- which is
+    right on its own and produces a card that contradicts itself when read.
+    On 2026-09-05: Daniil Donchenko at 0.7440 was High (held from last week)
+    while Mario Pinto at 0.7490 was Medium (entering, so he needed the full
+    0.75). A reader sees 75% labelled below 74% and concludes the tiers are
+    arbitrary. They are not, but the rule is invisible and the numbers beside
+    it say otherwise, which is the same thing from the outside.
+
+    Fixing the DISPLAY was the wrong instinct -- rounding 0.7490 down to 74%
+    would have hidden the contradiction without removing it, and two fights
+    showing 74% with different tiers is no better. A tier ladder that is not
+    monotonic in the probability is broken however it is rendered.
+
+    So the hysteresis still applies, and whatever bar it lowers is lowered for
+    the WHOLE CARD: if any fight is High at p, every fight at or above p is
+    High. The stickiness is preserved and the ladder stays readable.
+
+    Bounded by construction. CONFIDENCE_HYSTERESIS caps how far a held tier
+    can reach down, so the effective bar can never fall below 0.74 (High) or
+    0.59 (Medium) no matter how many fights are held.
+
+    A CAPPED FIGHT DOES NOT PULL ANYONE UP. _confidence_label demotes a fight
+    whose thinner corner has too few professional bouts, deliberately: that is
+    a statement about the data, not about the boundary. Such a fight is left
+    where the cap put it and is not used as evidence that the bar is lower --
+    otherwise a thin-record demotion would silently promote every fight above
+    it, which is the exact opposite of what the cap is for.
+    """
+    scored = []
+    for f in fights:
+        prev = f.get("preview") or {}
+        label = prev.get("confidence_label")
+        prob = prev.get("favorite_prob")
+        if label in _TIER_ORDER and isinstance(prob, (int, float)):
+            scored.append((float(prob), label, prev))
+    if len(scored) < 2:
+        return
+
+    # The lowest probability that actually earned each tier on this card.
+    floors = {}
+    for prob, label, prev in scored:
+        if prev.get("confidence_capped"):
+            continue
+        rank = _TIER_ORDER.index(label)
+        if rank > 0:
+            floors[rank] = min(floors.get(rank, prob), prob)
+
+    for prob, label, prev in scored:
+        if prev.get("confidence_capped"):
+            continue
+        best = _TIER_ORDER.index(label)
+        for rank, floor in floors.items():
+            if prob >= floor and rank > best:
+                best = rank
+        if best != _TIER_ORDER.index(label):
+            prev["confidence_label"] = _TIER_ORDER[best]
+            prev["confidence_lifted_from"] = label
+
+
 def group_edges_by_card(
     edges_df: pd.DataFrame,
     cards_df: pd.DataFrame,
@@ -1032,6 +1100,8 @@ def group_edges_by_card(
         events_map[key]["fights"].append(fight)
 
     events = list(events_map.values())
+    for _ev in events:
+        _enforce_tier_monotonicity(_ev["fights"])
     unmatched_df = pd.DataFrame(unmatched_rows) if unmatched_rows else pd.DataFrame()
     return events, unmatched_df
 

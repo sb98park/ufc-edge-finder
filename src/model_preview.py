@@ -397,6 +397,27 @@ def _confidence_label(favorite_prob: float, thinner_record: int | None = None,
         return "Low Confidence"
 
 
+def _confidence_capped(favorite_prob: float, thinner_record, debut_corner,
+                       previous_label: str | None = None) -> bool:
+    """True when the label was held DOWN by a data cap rather than by a bar.
+
+    card_matcher._enforce_tier_monotonicity needs to tell the two apart. A
+    fight demoted because one corner has too little record is a statement
+    about the data, and it must not be read as evidence that the card's bar is
+    lower -- otherwise a thin-record demotion would silently promote every
+    fight above it, which is the exact opposite of what the cap is for.
+    """
+    high_bar = 0.75 - (CONFIDENCE_HYSTERESIS if previous_label == "High Confidence" else 0.0)
+    med_bar = 0.60 - (CONFIDENCE_HYSTERESIS
+                      if previous_label in ("High Confidence", "Medium Confidence") else 0.0)
+    if favorite_prob >= high_bar:
+        return (thinner_record is not None
+                and thinner_record < MIN_RECORD_FOR_HIGH_CONFIDENCE)
+    if favorite_prob >= med_bar:
+        return bool(debut_corner) and favorite_prob < DEBUT_MEDIUM_CEILING
+    return False
+
+
 def _ordinal(n: int) -> str:
     """1st, 2nd, 3rd, 4th ... 11th/12th/13th are the exceptions."""
     if 10 <= n % 100 <= 20:
@@ -811,6 +832,13 @@ def build_fight_preview(
         # debut_corner is the separate UFC-experience gate -- a fighter can
         # have a long professional record and still have never fought here.
         "confidence_label": _confidence_label(
+            favorite_prob, matchup.get("thinner_record"), matchup.get("debut_corner"),
+            previous_label=previous_label),
+        # Whether that label was held down by a data cap rather than by a
+        # threshold -- see _confidence_capped and the monotonicity pass in
+        # card_matcher, which must not treat a capped fight as evidence about
+        # where the card's bar sits.
+        "confidence_capped": _confidence_capped(
             favorite_prob, matchup.get("thinner_record"), matchup.get("debut_corner"),
             previous_label=previous_label),
         "rounds_lean": rounds_lean,
