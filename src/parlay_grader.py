@@ -39,6 +39,7 @@ published read paid is evidence, and evidence on this site is public.
 """
 
 import csv
+import datetime as dt
 
 from src.parlay_ledger import LEDGER_PATH, load, write_graded
 
@@ -297,27 +298,122 @@ def grade_slips(rows: list[dict], fights: dict, now: str,
     return changed
 
 
+# Same window plays_ledger uses, and for the same reason -- see void_stale
+# there. Two days after a card, anything still unresolved is not "pending".
+VOID_AFTER_DAYS = 2
+
+
+def void_stale_slips(rows: list[dict], now: str, days: int = VOID_AFTER_DAYS) -> list[dict]:
+    """Void committed slips still open days after their card, and say why.
+
+    A leg whose fight produces no result row leaves grade_condition returning
+    None forever, so the slip never settles. load_results stamps every fight
+    `cancelled: False` and there is no cancellation map here, so a scratched
+    bout, a late opponent change or a name that did not fold all look
+    identical to "not fought yet".
+
+    A book voids the whole market on an opponent change -- the bet was on a
+    matchup that no longer exists -- so the slip resolves to void rather than
+    being settled against whoever turned up, exactly as plays_ledger does.
+
+    Only slips carrying `pinned_at` are touched: an unpinned slip was never
+    committed to and has no business acquiring a result.
+
+    Returns the rows it changed, so a silent void cannot look like a clean
+    card.
+    """
+    changed = []
+    try:
+        today = dt.date.fromisoformat(str(now)[:10])
+    except (TypeError, ValueError):
+        return changed
+    for r in rows:
+        if not r.get("pinned_at") or (r.get("result") or "").strip():
+            continue
+        stamp = str(r.get("last_seen") or r.get("first_seen") or "")[:10]
+        try:
+            when = dt.date.fromisoformat(stamp)
+        except (TypeError, ValueError):
+            continue
+        if (today - when).days <= days:
+            continue
+        r["result"] = "void"
+        r["units_result"] = 0.0
+        r["graded_at"] = now
+        r["void_reason"] = (f"a leg never produced a result {days + 1}+ days after the "
+                            f"card -- scratched fight or opponent change, which voids "
+                            f"the market")
+        changed.append(r)
+    return changed
+
+
 def grade_pinned(pins: dict, now: str, path: str = LEDGER_PATH,
                  results_path: str = RESULTS_PATH) -> int:
     """
-    Grade only the slips a card is committed to, and write the ledger back.
+    Grade the slips a card was COMMITTED to, and write the ledger back.
 
     `pins` is data/pinned_parlays.json as loaded by src.parlay_pin.
+
+    WHY THE PIN ALONE IS NOT ENOUGH. Grading only the currently-pinned slips
+    is the right rule -- the ledger's own note says grading every published
+    slip would answer a question nobody acted on -- but the pin file holds ONE
+    event at a time and rotates when the next card is pinned. A slip was
+    therefore gradeable only during the week its card was live, and the moment
+    the pin moved on it became permanently ungradeable. All 199 slips on file
+    carry no result at all, across three cards, and the public parlay record
+    they feed has been empty the whole time.
+
+    So the commitment is now recorded ON THE SLIP, once, the first time it is
+    seen pinned: `pinned_at`, copied from the pin's own timestamp so it says
+    when the commitment was made rather than when this function noticed. Any
+    slip carrying that stamp stays gradeable forever, and the rule the design
+    intended -- grade what was committed, ignore the rest -- finally holds
+    beyond a single week.
+
+    THE THREE CARDS ALREADY ON FILE CANNOT BE RECOVERED. Nothing recorded
+    which of their slips was pinned, and pinned_parlays.json keeps no history,
+    so there is no honest way to reconstruct it. They stay ungraded rather
+    than being graded wholesale, which would publish a record of slips the
+    card was never committed to.
     """
-    wanted = set()
-    for tiers in (pins or {}).values():
-        for entry in (tiers or {}).values():
-            sid = ((entry or {}).get("snapshot") or {}).get("slip_id")
-            if sid:
-                wanted.add(sid)
-    if not wanted:
-        return 0
     rows = load(path)
     if not rows:
         return 0
+
+    # slip_id -> the pin's own timestamp, so the stamp is the commitment time.
+    pinned_now = {}
+    for tiers in (pins or {}).values():
+        for entry in (tiers or {}).values():
+            entry = entry or {}
+            sid = (entry.get("snapshot") or {}).get("slip_id")
+            if sid:
+                pinned_now[sid] = entry.get("pinned_at") or now
+
+    stamped = 0
+    for r in rows:
+        sid = r.get("slip_id")
+        if sid in pinned_now and not r.get("pinned_at"):
+            r["pinned_at"] = pinned_now[sid]
+            stamped += 1
+
+    wanted = {r.get("slip_id") for r in rows if r.get("pinned_at")}
+    if not wanted:
+        if stamped:
+            write_graded(rows, path)
+        return 0
+
     changed = grade_slips(rows, load_results(results_path), now, only_slip_ids=wanted)
-    if changed:
+    voided = void_stale_slips(rows, now)
+    if changed or stamped or voided:
         write_graded(rows, path)
+    if voided:
+        print(f"[parlay_grader] voided {len(voided)} committed slip(s) whose card "
+              f"is over and whose legs never resolved: "
+              f"{[r.get('slip_id') for r in voided][:5]}")
+    if stamped:
+        print(f"[parlay_grader] recorded the pin on {stamped} slip(s) so they "
+              f"stay gradeable after the pin rotates")
+    if changed:
         print(f"[parlay_grader] settled {changed} pinned slip(s)")
     return changed
 

@@ -294,11 +294,30 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
     """
     decided_keys = decided_keys or set()
     existing = {}
+    # A SECOND INDEX ON THE FIGHTERS ALONE, because the event name is not
+    # stable and the frozen fields depend on finding the prior row.
+    #
+    # ESPN renames a card when its headliner changes -- "UFC Fight Night:
+    # Ankalaev vs. Rountree Jr." became "... vs. Guskov" on fight day. The
+    # lookup below keys on (event_name, fighter_a, fighter_b), so every bout
+    # on that card missed its own prior row, `capturing_pick_odds_now` went
+    # true, and pick_odds / pick_fair_prob / pick_confidence_label were
+    # RE-FROZEN at the fight-day price for 13 bouts. Two examples: 295 -> 261
+    # and 220 -> 230. That is a CLAUDE.md s1 violation committed by a rename
+    # nobody made. The 16 rows under the old name are then unreachable: they
+    # never match a result, so they never grade.
+    #
+    # The pair alone would collide on a rematch (CLAUDE.md s4), so it is only
+    # consulted when the exact key misses AND the pair is not already decided
+    # -- a rematch's earlier meeting is graded and therefore in decided_keys.
+    by_pair = {}
     if os.path.exists(PREDICTIONS_LOG_PATH):
         with open(PREDICTIONS_LOG_PATH, newline="") as f:
             for row in csv.DictReader(f):
                 key = (row["event_name"], row["fighter_a"], row["fighter_b"])
                 existing[key] = _backfill_legacy_fair_probs(row)
+                by_pair.setdefault(_pair_key(row["fighter_a"], row["fighter_b"]),
+                                   []).append(existing[key])
 
     for event in events:
         for fight in event.get("fights", []):
@@ -315,6 +334,27 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
             opponent_name = fight["fighter_b"] if preview["favorite"] == fight["fighter_a"] else fight["fighter_a"]
             current_opponent_odds = _favorite_moneyline_odds(fight, opponent_name)
             prior = existing.get(key)
+            renamed_from = None
+            if prior is None and fighter_key not in decided_keys:
+                # Same two fighters, different event string: a rename, not a
+                # new fight. Take the OLDEST row so the frozen fields are the
+                # ones first published, not the ones a later rename captured.
+                _cands = by_pair.get(fighter_key) or []
+                if len(_cands) == 1:
+                    prior = _cands[0]
+                elif _cands:
+                    prior = min(_cands, key=lambda r: str(r.get("last_updated") or ""))
+                if prior is not None:
+                    # MIGRATE THE ROW, DO NOT ADD A SECOND ONE. Writing under
+                    # the new event name while leaving the old row in place is
+                    # how 16 unreachable rows accumulated on one renamed card:
+                    # they match no result, so they never grade, and they grow
+                    # by a full card every time ESPN changes a headliner.
+                    renamed_from = (prior.get("event_name"), prior.get("fighter_a"),
+                                    prior.get("fighter_b"))
+                    print(f"[track_record] card renamed: {prior.get('event_name')!r} -> "
+                          f"{fight['event_name']!r} for {fight['fighter_a']} vs "
+                          f"{fight['fighter_b']}; keeping the frozen fields")
 
             # pick_odds is set ONCE -- the first time we see a live price for
             # this fight's favorite -- and never overwritten after that, so
@@ -437,6 +477,8 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
                 "pick_falsifier": ((prior.get("pick_falsifier") if prior and prior.get("pick_falsifier") else None)
                                    or preview.get("pick_falsifier") or ""),
             }
+            if renamed_from and renamed_from != key:
+                existing.pop(renamed_from, None)
 
     _assign_locks_of_week(existing, events, decided_keys)
 
