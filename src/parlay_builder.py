@@ -670,6 +670,30 @@ def _combine(pieces: tuple[dict, ...]) -> dict:
     }
 
 
+def _record_reason(label: str, reason: str, detail: dict) -> None:
+    """Write why this tier produced no slip into the committed health file.
+
+    Keyed per tier under one `parlay` block, so bankroll and lotto can each
+    say their own thing without overwriting the other -- and merged through
+    src.source_health so neither erases anybody else's keys.
+    """
+    try:
+        from src.source_health import record, PATH
+        import json as _json
+        block = {}
+        try:
+            with open(PATH, encoding="utf-8") as fh:
+                block = (_json.load(fh) or {}).get("parlay") or {}
+        except (OSError, ValueError):
+            block = {}
+        if not isinstance(block, dict):
+            block = {}
+        block[str(label)] = dict(detail, reason=reason)
+        record("parlay", block)
+    except Exception as exc:                      # noqa: BLE001
+        print(f"[{label}] reason not recorded ({exc}) -- continuing")
+
+
 def _find_parlays(
     pieces: list[dict],
     leg_counts: tuple[int, ...],
@@ -734,6 +758,18 @@ def _find_parlays(
         if reference_only:
             print(f"[{label}] no slip: {reference_only} leg(s) priced only on a "
                   f"reference line, which is not a book you can bet at")
+        # THE REASON OUTLIVES THE LOG. The section renders "Not enough
+        # live-priced or model-projected legs on this card yet" -- generic
+        # where the real answer is specific, and the specific one existed only
+        # as a print in a CI log nobody can read afterwards. A week with no
+        # parlay is a legitimate outcome; the point is being able to tell that
+        # apart from a feed being down.
+        _record_reason(label, "no bettable venue", {
+            "reference_only_legs": reference_only,
+            "detail": (f"{reference_only} leg(s) priced only on a reference line, "
+                       f"which is not a book you can bet at") if reference_only else
+                      "no venue recorded on any leg",
+        })
         return []
     if len(by_venue) > 1:
         print(f"[{label}] venues available: "
@@ -824,9 +860,22 @@ def _find_parlays(
               f"(need >= {min(leg_counts)} distinct fights). "
               f"Closest miss: {best_miss['combined_american_display'] if best_miss else 'none tried'} "
               f"(target: {min_american:+.0f}{'+' if max_american is None else f' to {max_american:+.0f}'})")
+        _record_reason(label, "no combination met the target", {
+            "eligible_pieces": len(eligible),
+            "distinct_fights": distinct_fights,
+            "distinct_fights_needed": min(leg_counts),
+            "closest_miss": (best_miss["combined_american_display"] if best_miss else None),
+            "target": (f"{min_american:+.0f}"
+                       + ("+" if max_american is None else f" to {max_american:+.0f}")),
+        })
         return []
 
-    return _select_spread(results, max_results)
+    # RECORD THE GOOD OUTCOME TOO, or last week's "no parlay" reason sits in
+    # the health file beside a card that has one, which is worse than silence.
+    _selected = _select_spread(results, max_results)
+    _record_reason(label, "built", {"slips": len(_selected),
+                                    "combinations_considered": len(results)})
+    return _selected
 
 
 def _select_spread(results: list[dict], max_results: int) -> list[dict]:

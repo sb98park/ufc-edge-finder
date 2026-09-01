@@ -90,25 +90,17 @@ def _record_source_health(pm_rows, rd_rows, dates) -> None:
         # coverage report both live here too. A health file that erases the
         # other half of its own health is worse than no file: it reads as
         # "nothing to report".
-        payload = {}
-        try:
-            with open("data/source_health.json", encoding="utf-8") as fh:
-                payload = json.load(fh)
-        except (OSError, ValueError):
-            pass
-        if not isinstance(payload, dict):
-            payload = {}
-        payload.update({
-            "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "rows_by_source": dict(sorted(counts.items())),
-            "rundown_key_set": bool(os.environ.get("RUNDOWN_API_KEY")),
-            "rundown_dates_requested": list(dates or []),
-        })
-        os.makedirs("data", exist_ok=True)
-        with open("data/source_health.json", "w", encoding="utf-8") as fh:
-            json.dump(payload, fh, indent=2, sort_keys=True)
-            fh.write("\n")
-        print(f"[source_health] {payload['rows_by_source']}")
+        # THROUGH THE SHARED WRITER. The merge that stops this erasing
+        # everybody else's keys used to live inline here and nowhere else, so
+        # every new reporter had to rediscover the rule -- and the first
+        # version of this function did not, deleting six other blocks on every
+        # props fetch. src.source_health.record owns it now.
+        from src.source_health import record
+        by_source = dict(sorted(counts.items()))
+        record("rows_by_source", by_source)
+        record("rundown_key_set", bool(os.environ.get("RUNDOWN_API_KEY")))
+        record("rundown_dates_requested", list(dates or []))
+        print(f"[source_health] {by_source}")
     except Exception as exc:
         print(f"[source_health] not written ({exc}) -- continuing")
 
