@@ -40,6 +40,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.matchup_model import HISTORY_COVERAGE_FLOOR   # noqa: E402
+from src.names import _normalize_name                 # noqa: E402
 
 FIGHTERS = "data/fighters.csv"
 HISTORY = "data/fight_history.csv"
@@ -57,6 +58,33 @@ STALE_LAST_FIGHT_YEARS = 1.0
 
 def _fold(n) -> str:
     return str(n).strip().lower()
+
+
+def _split_identities(fighters) -> list:
+    """Roster rows that look like one fighter under two spellings.
+
+    Folding cannot catch a middle name -- "jose miguel delgado" and "jose
+    delgado" differ by a whole token, and matching on first+last alone would
+    merge two different people. So this REPORTS candidates rather than acting
+    on them, and a confirmed one gets a line in src/names.NAME_ALIASES.
+
+    Jose Delgado is why. He sat in fighters.csv twice, in fight_history under
+    both spellings as two separate Elo nodes, and in ufc_fight_stats under only
+    one -- so the card pointed at a fighter with no stats and 14 of his 18
+    bouts. Found by the owner noticing an empty scouting drawer four days out,
+    which is exactly the discovery route this file exists to replace.
+    """
+    names = [str(n) for n in fighters["name"].dropna()]
+    tok = {n: _normalize_name(n).split() for n in names}
+    out = []
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            ta, tb = tok[a], tok[b]
+            if not ta or not tb or ta == tb:
+                continue
+            if ta[0] == tb[0] and ta[-1] == tb[-1] and (set(ta) <= set(tb) or set(tb) <= set(ta)):
+                out.append((a, b))
+    return out
 
 
 def main() -> int:
@@ -158,6 +186,13 @@ def main() -> int:
 
     counts = Counter(f["severity"] for f in findings)
     print(f"[coverage] {len(carded)} fighter(s) on upcoming cards")
+
+    _split = _split_identities(fighters)
+    if _split:
+        print(f"\n  SPLIT IDENTITY ({len(_split)}) -- two roster rows that look like one fighter;")
+        print( "                    confirm and add to src/names.NAME_ALIASES")
+        for a, b in _split:
+            print(f"    {a!r} / {b!r}")
     if not findings:
         print("[coverage] every one of them has a full history and complete physicals")
     for sev in ("history", "layoff", "record", "physicals"):

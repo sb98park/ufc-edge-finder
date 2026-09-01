@@ -39,6 +39,8 @@ import unicodedata
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+
+from src.names import canonical_name
 import requests
 
 from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, is_placeholder_fighter_name
@@ -934,7 +936,14 @@ def _fetch_espn_full_card(event_name: str, event_date: str) -> list[dict]:
 
         rows.append({
             "event_name": event_name, "event_date": event_date, "card_position": card_position,
-            "weight_class": weight_class, "fighter_a": a_name, "fighter_b": b_name,
+            # CANONICALISED ON THE WAY IN, or this file re-imports the split.
+            # ESPN calls one man "Jose Miguel Delgado" while our stats, our
+            # spine and our graded record all call him "Jose Delgado" -- so a
+            # card written straight from ESPN pointed at a fighter with no
+            # per-bout stats and half an Elo history. Fixing the data without
+            # fixing the writer would have lasted until the next refresh.
+            "weight_class": weight_class,
+            "fighter_a": canonical_name(a_name), "fighter_b": canonical_name(b_name),
             "event_start_time_et": None,  # filled in below once the earliest prelims time is known
             "is_womens_division": is_womens, "event_location": event_location,
         })

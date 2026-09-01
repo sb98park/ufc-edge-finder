@@ -19,6 +19,48 @@ import unicodedata
 import pandas as pd
 
 
+
+# CANONICAL SPELLINGS for fighters the sources genuinely disagree about, where
+# no fold can bridge the gap. Folding handles accents, punctuation and token
+# order; it cannot handle a MIDDLE NAME, because "jose miguel delgado" and
+# "jose delgado" differ by a whole token and matching on first+last alone
+# would happily merge two different people.
+#
+# Jose Delgado, found 2026-09-01 by the owner noticing an empty scouting
+# drawer on the Noche card. He was split across every file at once:
+# fight_history held 4 bouts under one spelling and 14 under the other -- two
+# separate nodes in the Elo graph for one man -- while all 22 rows of his
+# per-bout striking and grappling stats sat under the spelling nothing on the
+# card pointed at. His rating was built from 14 of 18 bouts and his drawer
+# from none.
+#
+# Deliberately a short explicit list rather than a cleverer fold. Across all
+# 369 roster rows this is the ONLY such pair (369 distinct folded names), so
+# the cost of being explicit is one line and the cost of being clever is
+# merging two real fighters. scripts/check_card_data_coverage.py reports new
+# candidates rather than leaving the next one to be found by chance.
+NAME_ALIASES = {
+    "jose miguel delgado": "Jose Delgado",
+}
+
+
+def canonical_name(name) -> str:
+    """The spelling this project stores, for a name a source spells otherwise.
+
+    Returns the input unchanged when there is no alias, so it is safe to call
+    on the way in from any source.
+    """
+    if name is None:
+        return name
+    text = str(name).strip()
+    if not text:
+        return name
+    key = " ".join(re.sub(r"[^a-z0-9 ]", " ",
+                          unicodedata.normalize("NFKD", text)
+                          .encode("ascii", "ignore").decode().lower()).split())
+    return NAME_ALIASES.get(key, text)
+
+
 def _normalize_name(name: str) -> str:
     """
     Strips accents and standardizes punctuation so minor spelling differences
@@ -51,7 +93,16 @@ def _normalize_name(name: str) -> str:
     # {"Ode Osbourne", "Ode' Osbourne"}, who is one man. The change can only
     # ever make two names compare EQUAL, which is the direction this function
     # exists to move in.
-    return " ".join(re.sub(r"[^a-z0-9 ]", " ", normalized.lower()).split())
+    folded = " ".join(re.sub(r"[^a-z0-9 ]", " ", normalized.lower()).split())
+    # An alias resolves to the canonical spelling, then folds -- so every
+    # fold-based lookup in the project (the scouting drawer, method rates,
+    # fight_key, coverage) sees one fighter where the sources see two.
+    alias = NAME_ALIASES.get(folded)
+    if alias:
+        return " ".join(re.sub(r"[^a-z0-9 ]", " ",
+                               unicodedata.normalize("NFKD", alias)
+                               .encode("ascii", "ignore").decode().lower()).split())
+    return folded
 
 
 def fight_key(fighter_a, fighter_b, date) -> tuple:
