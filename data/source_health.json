@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-01T17:55:19+00:00",
+  "at": "2026-09-01T18:30:18+00:00",
   "card_data_coverage": {
     "carded_fighters": 156,
-    "checked_at": "2026-09-01T17:54:05+00:00",
+    "checked_at": "2026-09-01T18:28:50+00:00",
     "counts": {
       "physicals": 4
     },
@@ -44,7 +44,7 @@
   },
   "parlay": {
     "bankroll/DraftKings": {
-      "combinations_considered": 5,
+      "combinations_considered": 6,
       "reason": "built",
       "slips": 1
     },
@@ -57,7 +57,7 @@
   "rows_by_source": {
     "DraftKings": 54,
     "FanDuel": 24,
-    "Polymarket": 312
+    "Polymarket": 313
   },
   "rundown_dates_requested": [
     "2026-09-05"
