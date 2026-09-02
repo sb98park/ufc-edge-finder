@@ -867,6 +867,15 @@ def build_fight_preview(
         "underdog": underdog,
         "likely_method": likely_method,
         "likely_method_rate": round(method_rates[likely_method], 3),
+        # THE FIGHT'S OWN ODDS OF ENDING EARLY, which is a different question
+        # from how the favourite most likely wins and routinely gives the
+        # opposite impression. On 2026-09-05, five of fifteen fights read
+        # "<favourite> by Decision" while the model put the FIGHT more likely
+        # than not to be finished -- Parnasse's decision is the biggest single
+        # route at 32.4%, and the fight still ends early 54% of the time.
+        # Both statements are true; only showing the first is what makes the
+        # card look like it always predicts decisions.
+        "fight_finish_prob": round(float(_md.get("ko", 0.0)) + float(_md.get("sub", 0.0)), 3),
         # Thinner record passed through so the label can refuse "High
         # Confidence" on a matchup where one corner has no career to read.
         # Taken from the matchup rather than recomputed, so the label and the
