@@ -3271,6 +3271,7 @@
     border: 1px solid rgba(255,255,255,0.10);
     font-variant-numeric: tabular-nums; white-space: nowrap;
   }
+  .pick-method-alt { color: var(--muted); font-size: var(--t-micro); font-variant-numeric: tabular-nums; }
   .pick-method-rate { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.92em; }
   .conf-cap-note {
     flex-basis: 100%;   /* row-gap on .model-pick-badge already spaces it */
@@ -7661,7 +7662,21 @@
            the owner as "it usually picks decision", which it does, because
            Decision is the single largest bucket in a sport that goes to the
            judges 47% of the time. #}
-        <span class="pick-method">by {{ fight.preview.likely_method }}{% if fight.preview.likely_method_rate %} <span class="pick-method-rate">{{ (fight.preview.likely_method_rate * 100)|round|int }}%</span>{% endif %}</span>
+        {# THE SHARE OF HIS OWN WINS, not of all outcomes. The absolute reads
+           as a claim about the fight and invites the wrong complement: "by
+           Decision 32%" was taken to mean 68% by finish, when 32% was
+           Parnasse's decision path out of EVERYTHING -- its complement
+           includes Hooker winning, and his real finish path was 31.6%.
+           Divided by his win probability the pair sums to one and answers
+           "given he wins, how?".
+
+           The finish share is spelled out whenever the named route is
+           Decision, because that is the comparison being made and 51/49 is a
+           coin flip the single word hides. #}
+        <span class="pick-method">by {{ fight.preview.likely_method }}{% if fight.preview.likely_method_share %} <span class="pick-method-rate" title="Share of {{ fight.preview.favorite }}'s winning outcomes, not of the whole fight.">{{ (fight.preview.likely_method_share * 100)|round|int }}% of his wins</span>{% endif %}</span>
+        {% if fight.preview.favorite_finish_share and 'Decision' in (fight.preview.likely_method or '') %}
+        <span class="pick-method-alt" title="The rest of {{ fight.preview.favorite }}'s winning outcomes.">finish {{ (fight.preview.favorite_finish_share * 100)|round|int }}%</span>
+        {% endif %}
         {# Only when the two readings disagree. Saying "54% to end early"
            beside a Decision call is the whole point; saying it beside a
            KO/TKO call is noise. #}

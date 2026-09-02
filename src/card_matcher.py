@@ -866,9 +866,20 @@ def group_edges_by_card(
                     if r.get("fighter") == fav and ": " in r.get("market", "")
                 ]
                 if fav_rows:
-                    fight["preview"]["likely_method"] = max(fav_rows, key=lambda t: t[1])[0]
-                    fight["preview"]["likely_method_rate"] = round(
-                        max(fav_rows, key=lambda t: t[1])[1], 3)
+                    _top = max(fav_rows, key=lambda t: t[1])
+                    fight["preview"]["likely_method"] = _top[0]
+                    fight["preview"]["likely_method_rate"] = round(_top[1], 3)
+                    # AND THE SHARES, recomputed from the same rows the table
+                    # renders. This block overrides the preview's own headline
+                    # (see the comment above), so leaving the shares behind
+                    # would pair a method from the projection with a share
+                    # from a different grid -- the exact drift this override
+                    # exists to prevent.
+                    _tot = sum(v for _, v in fav_rows)
+                    if _tot > 0:
+                        fight["preview"]["likely_method_share"] = round(_top[1] / _tot, 3)
+                        fight["preview"]["favorite_finish_share"] = round(
+                            sum(v for k, v in fav_rows if "ecision" not in k) / _tot, 3)
 
             max_line = 4.5 if is_five_round else 2.5
 

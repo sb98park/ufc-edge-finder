@@ -867,6 +867,22 @@ def build_fight_preview(
         "underdog": underdog,
         "likely_method": likely_method,
         "likely_method_rate": round(method_rates[likely_method], 3),
+        # THE SAME ROUTE AS A SHARE OF HIS OWN WINS, because the absolute is
+        # unreadable next to it. likely_method_rate is 0.324 for Parnasse --
+        # his decision path out of ALL outcomes -- and the owner reasonably
+        # read "by Decision 32%" as implying 68% by finish. It does not: the
+        # complement of 32% is everything else INCLUDING HOOKER WINNING, and
+        # his actual finish path is 31.6%.
+        #
+        # Divided by his win probability the two numbers become a pair that
+        # sums to one and answers the question a reader is really asking --
+        # given he wins, how? For Parnasse that is 50.6% decision, 49.4%
+        # finish: the headline was calling a coin flip by 0.8 points.
+        "likely_method_share": (round(method_rates[likely_method] / favorite_prob, 3)
+                                if favorite_prob else None),
+        "favorite_finish_share": (round(
+            (method_rates["KO/TKO"] + method_rates["Submission"]) / favorite_prob, 3)
+            if favorite_prob else None),
         # THE FIGHT'S OWN ODDS OF ENDING EARLY, which is a different question
         # from how the favourite most likely wins and routinely gives the
         # opposite impression. On 2026-09-05, five of fifteen fights read
