@@ -74,9 +74,35 @@ them mean anything.
 SO PARNASSE STAYS GENERIC, and that is the honest outcome rather than the
 satisfying one. The model reading a 23-2 KSW champion as the average
 lightweight looks wrong and is, on this evidence, still better than the
-alternative. If his method line is to improve it will have to come from
-somewhere other than his own career totals -- opponent quality, or UFC-adjacent
-promotions treated separately from the regional circuit.
+alternative.
+
+THE OBVIOUS NEXT IDEA IS OUT OF REACH, and this is written down so nobody
+spends a day rediscovering it. The natural refinement is to stop treating
+"not UFC" as one bucket and give the major promotions -- Bellator, KSW, PFL,
+ONE, RIZIN, Cage Warriors, LFA, Invicta, Brave, ACB -- their own tier, on the
+theory that a KSW title run transfers where a small-hall record does not.
+Counted before building it:
+
+    named non-UFC bouts in the spine                2,497
+    classifiable as a major promotion                 727  (29%)
+    fallback corners on UFC bouts since 2015         4,886
+    ...with 3+ prior MAJOR bouts                       260  (5.3%)
+    UFC bouts such a tier could move, 2015+            203
+    of those HELD OUT after the cutoff                  59
+
+Fifty-nine fights. The effect this file measured on the career arms is about
+0.005 in log loss; separating it from noise needs several hundred. The idea is
+not refuted -- it is unmeasurable on the data we hold, which is a different
+thing and must not be reported as the first.
+
+It becomes testable only if the promotion field gets much denser: it is
+populated on 2,497 of 11,709 spine rows, and blank means UFC by convention
+(see elo.ufc_only), so "we did not record it" and "it was a UFC fight" are the
+same value. Checked while here, and that conflation is NOT currently biting --
+Parnasse, Andrusca and Aljarouj carry named promotions on every one of their
+bouts. The 622 rows ufc_only calls UFC that miss a UFCStats match are the
+UFCStats file lagging (its latest event is 2026-08-15, the spine runs to
+08-29), not mislabelling.
 
 WHAT THIS DOES NOT COVER. Scoring is the fight-level finish probability, not
 the three-way split or the per-fighter grid. And the roster-coverage confound
