@@ -3671,6 +3671,10 @@
   .momentum-arrow.up { background: #10251a; color: var(--green); }
   .momentum-arrow.down { background: #2a1414; color: var(--red); }
   .pick-method { color: var(--muted); }
+  /* Basis 100% with no height: it consumes the rest of the line and forces
+     the next item onto a fresh one, without occupying any of it. Keeping
+     margin-left:auto on the pill below then still right-aligns it there. */
+  .pick-rowbreak { flex-basis: 100%; height: 0; margin: 0; }
   .pick-confidence {
     margin-left: auto; font-size: var(--t-micro); font-weight: 600; text-transform: uppercase;
     letter-spacing: 0.4px; padding: 3px 8px; border-radius: var(--r-md);
@@ -7638,6 +7642,13 @@
         </span>
         {% endif %}
         <span class="pick-method">by {{ fight.preview.likely_method }}</span>
+        {# A ZERO-HEIGHT FLEX BREAK, so the tier always starts a new row.
+           Without it the row broke on NAME LENGTH: "Axel Sola by Decision"
+           left room for the pill and "Salahdine Parnasse by Decision" did
+           not, so two cards on one screen had different heights for no reason
+           a reader could see. Reported as the boxes looking uneven, which is
+           exactly what it was. #}
+        <span class="pick-rowbreak" aria-hidden="true"></span>
         <span class="pick-confidence">{{ fight.preview.confidence_label }}</span>
         {# A capped label reads as a contradiction without this: 78% next to
            Medium Confidence, with nothing saying the cap is about the
