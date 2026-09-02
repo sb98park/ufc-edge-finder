@@ -1,14 +1,21 @@
 {
-  "at": "2026-09-02T12:21:16+00:00",
+  "at": "2026-09-02T12:35:19+00:00",
   "card_data_coverage": {
     "carded_fighters": 159,
-    "checked_at": "2026-09-02T12:20:02+00:00",
+    "checked_at": "2026-09-02T12:33:47+00:00",
     "counts": {
-      "history": 2,
-      "physicals": 5,
-      "record": 1
+      "history": 3,
+      "physicals": 5
     },
     "findings": [
+      {
+        "detail": "0 of 8 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Hooker vs. Parnasse",
+        "event_date": "2026-09-05",
+        "fighter": "Pavel Andrusca",
+        "last_fight_date": "2026-07-23",
+        "severity": "history"
+      },
       {
         "detail": "20 of 34 bouts in fight_history (59%) -- layoff, form and Elo all read a partial sample",
         "event": "UFC Fight Night: Allen vs. Duncan",
@@ -24,13 +31,6 @@
         "fighter": "Christian Leroy Duncan",
         "last_fight_date": "2026-07-18",
         "severity": "history"
-      },
-      {
-        "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart",
-        "event": "UFC Fight Night: Hooker vs. Parnasse",
-        "event_date": "2026-09-05",
-        "fighter": "Pavel Andrusca",
-        "severity": "record"
       }
     ]
   },
