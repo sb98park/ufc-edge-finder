@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-02T13:09:51+00:00",
+  "at": "2026-09-02T13:52:38+00:00",
   "card_data_coverage": {
     "carded_fighters": 159,
-    "checked_at": "2026-09-02T13:08:40+00:00",
+    "checked_at": "2026-09-02T13:51:14+00:00",
     "counts": {
       "history": 3,
       "physicals": 5
@@ -37,8 +37,8 @@
   "edges_two_way": {
     "best_book": {
       "DraftKings": 42,
-      "FanDuel": 12,
-      "Polymarket": 86
+      "FanDuel": 14,
+      "Polymarket": 84
     },
     "books_quoting": {
       "1.0": 108,
@@ -49,13 +49,13 @@
   "moneyline": {
     "best_book": {
       "DraftKings": 19,
-      "FanDuel": 7,
+      "FanDuel": 9,
       "Polymarket": 28
     },
-    "n": 54,
+    "n": 56,
     "source": {
       "DraftKings": 19,
-      "FanDuel": 7,
+      "FanDuel": 9,
       "Polymarket": 28
     }
   },
@@ -75,14 +75,14 @@
       "slips": 1
     },
     "bankroll/FanDuel": {
-      "combinations_considered": 6,
+      "combinations_considered": 13,
       "reason": "built",
       "slips": 1
     }
   },
   "rows_by_source": {
     "DraftKings": 52,
-    "FanDuel": 34,
+    "FanDuel": 36,
     "Polymarket": 264
   },
   "rundown_dates_requested": [
@@ -187,31 +187,31 @@
         "date": "2026-09-05",
         "event": "UFC Fight Night: Hooker vs. Parnasse",
         "fights": 15,
-        "gap_p90": -0.0131,
-        "market_p90": 0.7499,
+        "gap_p90": -0.0128,
+        "market_p90": 0.7496,
         "model_p90": 0.7368,
-        "priced": 14,
+        "priced": 15,
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-09-02T13:12:58+00:00",
+    "checked_at": "2026-09-02T13:55:41+00:00",
     "equivalent_floor": 0.723,
     "floor_in_force": 0.78,
-    "gap_move": -0.0555,
+    "gap_move": -0.0554,
     "trailing_cards": 6,
-    "trailing_gap_p90": -0.0409,
+    "trailing_gap_p90": -0.0408,
     "trailing_selectivity": 0.1,
     "verdict": "watch"
   },
   "tracked_moneyline": {
     "best_book": {
       "DraftKings": 19,
-      "FanDuel": 7
+      "FanDuel": 9
     },
-    "n": 26,
+    "n": 28,
     "source": {
       "DraftKings": 19,
-      "FanDuel": 7
+      "FanDuel": 9
     }
   }
 }
