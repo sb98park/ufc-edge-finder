@@ -87,6 +87,24 @@ def _split_identities(fighters) -> list:
     return out
 
 
+
+def _fold(n):
+    from src.card_matcher import _normalize_name
+    return _normalize_name(str(n))
+
+
+def _espn_ids(path: str = "data/espn_athlete_ids.csv") -> dict:
+    """Folded name -> ESPN id, so a 0-0 finding can say if it is fixable."""
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        return {}
+    if "name" not in df.columns or "espn_id" not in df.columns:
+        return {}
+    return {_fold(r["name"]): str(r["espn_id"]).strip()
+            for _, r in df.iterrows() if str(r.get("espn_id") or "").strip()}
+
+
 def main() -> int:
     try:
         fighters = pd.read_csv(FIGHTERS)
@@ -147,11 +165,27 @@ def main() -> int:
                     "last_fight_date": str(row.get("last_fight_date") or ""),
                 })
         elif claimed == 0:
+            # SAY WHETHER IT IS FIXABLE. This finding fired correctly for
+            # Pavel Andrusca and told nobody anything they could act on: his
+            # ESPN id was in data/espn_athlete_ids.csv the whole time, so the
+            # answer was one lookup away, and the card published him 0-0
+            # against a fighter it then held at Medium Confidence for it.
+            # fill_from_espn_id_map now repairs that case during the build,
+            # which means anything still reported here is either genuinely
+            # unsourceable or a lookup that failed -- and those want
+            # different responses.
+            aid = _espn_ids().get(_fold(name))
+            fixable = (f"ESPN id {aid} is on file and the build's id-map pass "
+                       f"did not fill it -- check that lookup"
+                       if aid else
+                       "no ESPN id on file either; add one to "
+                       "data/espn_athlete_ids.csv if a profile exists")
             findings.append({
                 "severity": "record",
                 "fighter": name, "event": event, "event_date": when,
-                "detail": "recorded 0-0 -- either a true debutant or a record "
-                          "we never sourced; power_rating cannot tell them apart",
+                "detail": f"recorded 0-0 -- either a true debutant or a record "
+                          f"we never sourced; power_rating cannot tell them "
+                          f"apart. {fixable}",
             })
 
         # 2. A LAST FIGHT OLDER THAN THE GRACE PERIOD, on a partial history.

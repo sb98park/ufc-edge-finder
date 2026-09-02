@@ -1789,3 +1789,132 @@ def fill_last_fight_methods(fighters_path: str = "data/fighters.csv",
     print(f"[methods] filled {filled} method(s), completed {completed} partial "
           f"last-fight record(s) from history; {still_missing} still unknown")
     return filled
+
+
+ESPN_ID_MAP_PATH = "data/espn_athlete_ids.csv"
+
+
+def _espn_id_map(path: str = ESPN_ID_MAP_PATH) -> dict:
+    """Folded fighter name -> ESPN athlete id, or {} if unreadable."""
+    try:
+        df = pd.read_csv(path)
+    except (FileNotFoundError, pd.errors.EmptyDataError, OSError):
+        return {}
+    if "name" not in df.columns or "espn_id" not in df.columns:
+        return {}
+    return {_normalize_name(str(r["name"])): str(r["espn_id"]).strip()
+            for _, r in df.iterrows() if str(r.get("espn_id") or "").strip()}
+
+
+def _record_is_unknown(row) -> bool:
+    """
+    True when this roster row carries NO usable career record.
+
+    0-0 COUNTS AS UNKNOWN, and that is the whole point. A fighter with a
+    genuine 0-0 professional record cannot be booked on a UFC card, so the
+    pair only ever means "nobody filled this in" -- but it is stored as two
+    real integers, so every consumer reads it as a fact. thinner_record goes
+    to 0 and caps the fight's confidence; `max(int(wins), 1)` turns into a
+    denominator of 1 and every method rate blows up.
+
+    This is the third appearance of the same failure. Terrance Chatman went
+    into 2026-08-22 recorded 0-0 when he was 5-1, which crowned his opponent
+    Lock of the Week. Pavel Andrusca went onto the 2026-09-05 card recorded
+    0-0 when ESPN had him 8-0 with the id in our own map.
+    """
+    for col in ("wins", "losses"):
+        v = row.get(col)
+        if v is None or (isinstance(v, float) and v != v):
+            return True
+    return int(row.get("wins") or 0) == 0 and int(row.get("losses") or 0) == 0
+
+
+def fill_from_espn_id_map(fighters_path: str = "data/fighters.csv",
+                          card_paths: tuple[str, ...] = ("data/fight_cards.csv", "data/future_cards.csv"),
+                          id_map_path: str = ESPN_ID_MAP_PATH) -> int:
+    """
+    Last resort for a booked fighter the scoreboard pass never reached.
+
+    WHY THIS IS SEPARATE, same reason fill_missing_last_fights is:
+    backfill_fighters only sees a fighter who turns up as a competitor inside
+    a scoreboard event it matched BY NAME, and its `unmatched` branch does
+    nothing but print. A LATE REPLACEMENT is exactly the fighter that branch
+    reports and exactly the fighter nobody looks at -- he is added after the
+    card stopped being a future card, so ESPN's scoreboard entry for that
+    event may not carry him at all.
+
+    data/espn_athlete_ids.csv already holds 2,700+ name-to-id pairs and
+    src/ never once read it -- only scripts/ did. So the id needed to fix
+    Andrusca was sitting in the repo while the card published him as 0-0.
+
+    ONLY FILLS WHAT IS MISSING, with one deliberate exception: a 0-0 record
+    is treated as missing (see _record_is_unknown) and IS overwritten. Every
+    other non-null cell is left exactly as it is. Never raises.
+    """
+    try:
+        fighters = pd.read_csv(fighters_path)
+    except (FileNotFoundError, pd.errors.EmptyDataError, OSError):
+        return 0
+    booked = set()
+    for p in card_paths:
+        try:
+            c = pd.read_csv(p)
+        except (FileNotFoundError, pd.errors.EmptyDataError, OSError):
+            continue
+        for col in ("fighter_a", "fighter_b"):
+            if col in c.columns:
+                booked |= {str(n) for n in c[col].dropna() if not is_placeholder_fighter_name(n)}
+    if not booked:
+        return 0
+
+    ids = _espn_id_map(id_map_path)
+    if not ids:
+        return 0
+
+    filled = 0
+    for name in sorted(booked):
+        match = fighters[fighters["name"].astype(str) == name]
+        if match.empty:
+            continue
+        i = match.index[0]
+        row = fighters.loc[i]
+        if not _record_is_unknown(row):
+            continue
+        aid = ids.get(_normalize_name(name))
+        if not aid:
+            print(f"[fighter_backfill] {name!r} is booked with no usable record and no ESPN id in "
+                  f"{id_map_path} -- cannot fill from this source")
+            continue
+        try:
+            physical, _ = _fetch_espn_athlete_detail(aid)
+            methods = _fetch_espn_method_records(aid)
+        except Exception as e:
+            print(f"[fighter_backfill] ESPN id-map lookup failed for {name!r} (id {aid}): {e}")
+            continue
+
+        w, l = methods.pop("_career_w", None), methods.pop("_career_l", None)
+        vals = {}
+        if w is not None and l is not None and (w or l):
+            vals["wins"], vals["losses"] = int(w), int(l)
+        for k, v in (methods or {}).items():
+            if v is not None:
+                vals[k] = v
+        # Physical only where we hold nothing; the record above is the one
+        # thing allowed to correct an existing value.
+        for k, v in (physical or {}).items():
+            cur = row.get(k)
+            if v is not None and (cur is None or (isinstance(cur, float) and cur != cur)):
+                vals[k] = v
+        if not vals:
+            continue
+        for col, val in vals.items():
+            if col not in fighters.columns:
+                fighters[col] = pd.NA
+            fighters = _safe_set_cell(fighters, i, col, val)
+        filled += 1
+        print(f"[fighter_backfill] filled {name!r} from ESPN id {aid} "
+              f"(scoreboard never matched him): {', '.join(sorted(vals))}")
+
+    if filled:
+        fighters.to_csv(fighters_path, index=False)
+    return filled

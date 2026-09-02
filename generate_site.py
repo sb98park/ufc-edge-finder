@@ -103,7 +103,7 @@ from src.track_record import (
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
 from src.card_discovery import discover_and_append_new_cards, normalize_existing_card_order, resync_tracked_card_order, deduplicate_tracked_fights
-from src.fighter_backfill import backfill_fighters, fill_missing_last_fights, ensure_roster_rows, fill_last_fight_methods
+from src.fighter_backfill import backfill_fighters, fill_missing_last_fights, ensure_roster_rows, fill_last_fight_methods, fill_from_espn_id_map
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
 from src.units_chart import build_units_timeseries_svg
@@ -377,6 +377,17 @@ def main(tier: str = "member", output_path: str | None = None):
             backfill_fighters(f"{DATA_DIR}/fighters.csv", _cards)
         except Exception as e:
             print(f"[generate_site] fighter backfill failed for {_cards}, continuing: {e}")
+
+    # LAST RESORT, after the scoreboard passes have had their go. A late
+    # replacement is added once the card has stopped being a future card, so
+    # ESPN's scoreboard entry for that event may never carry him -- which is
+    # how Pavel Andrusca published as 0-0 on 2026-09-05 while ESPN had him
+    # 8-0 and his id sat in data/espn_athlete_ids.csv the whole time.
+    try:
+        fill_from_espn_id_map(f"{DATA_DIR}/fighters.csv",
+                              (f"{DATA_DIR}/fight_cards.csv", f"{DATA_DIR}/future_cards.csv"))
+    except Exception as e:
+        print(f"[generate_site] ESPN id-map backfill failed, continuing: {e}")
 
     # Runs regardless of whether backfill_fighters took its early return --
     # that early exit is precisely why fighters on future cards kept ending
