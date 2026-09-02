@@ -26,6 +26,7 @@ import os
 import pandas as pd
 
 from src.elo import canonical_method
+from src.names import canonical_name
 
 # How many Elo-equivalent rating points a fully-realized stylistic
 # advantage is worth. Tuned to be meaningful but not dominate the base
@@ -1637,6 +1638,27 @@ def predict_matchup(
     and correcting it is below the noise floor. If a future baseline moves it,
     flattening five-rounders is the direction to try.
     """
+    # ONE SPELLING BEFORE ANY LOOKUP. The two lines below match the roster by
+    # exact string equality, and base_r_a/base_r_b below read the ratings by
+    # exact dict key. Both MISS SILENTLY -- an unrecognised name is an empty
+    # frame and a defaulted 1500, never an error -- so a fighter arriving
+    # under a second spelling is indistinguishable from an unknown fighter.
+    #
+    # Not hypothetical. Merging Jose Delgado's split identity canonicalised
+    # fight_history and the roster, which is where elo's keys come from, but
+    # the odds feed still quotes him "Jose Miguel Delgado" and nothing
+    # rewrote it on the way in. That published the Noche main event at Silva
+    # 77.4% -- 1713 against a defaulted 1500 -- where the model holding his
+    # real 1681 says 48.7%, and left six method rows summing to 156.2%
+    # because edge_finder cannot reconcile a grid against a None matchup.
+    #
+    # Here rather than at each caller: this function is the single door every
+    # one of them goes through, and canonical_name is a no-op for every name
+    # not in NAME_ALIASES, so it costs one dict lookup and closes the class
+    # rather than the instance.
+    fighter_a = canonical_name(fighter_a)
+    fighter_b = canonical_name(fighter_b)
+
     match_a = fighters_df[fighters_df["name"] == fighter_a]
     match_b = fighters_df[fighters_df["name"] == fighter_b]
     if match_a.empty or match_b.empty:
@@ -1675,6 +1697,12 @@ def predict_matchup(
     fights_a = int(_get(row_a, "wins", 0)) + int(_get(row_a, "losses", 0))
     fights_b = int(_get(row_b, "wins", 0)) + int(_get(row_b, "losses", 0))
     thinner_record = min(fights_a, fights_b)
+    # WHICH corner is the thin one. thinner_record alone can say the label was
+    # capped but not who caused it, and a reader looking at "78% / Medium"
+    # cannot act on the first without the second. Ties resolve to A
+    # arbitrarily -- when both corners are equally thin, naming either is
+    # equally true and the caller only uses this to write one name.
+    thinner_corner = fighter_a if fights_a <= fights_b else fighter_b
 
     # IS EITHER CORNER DEBUTING? Distinct from thinner_record, which counts
     # PROFESSIONAL bouts: Anthony Wint is 7-0 as a pro and clears that floor
@@ -1686,12 +1714,20 @@ def predict_matchup(
     # None when no history was supplied, so a caller that cannot know this
     # gates off rather than silently reading every fighter as a debutant.
     debut_corner = None
+    debut_corner_name = None
     if fight_history_df is not None and not fight_history_df.empty:
         tracked = pd.concat([
             fight_history_df.get("fighter_a", pd.Series(dtype=str)),
             fight_history_df.get("fighter_b", pd.Series(dtype=str)),
         ]).value_counts()
-        debut_corner = int(tracked.get(fighter_a, 0)) == 0 or int(tracked.get(fighter_b, 0)) == 0
+        a_undebuted = int(tracked.get(fighter_a, 0)) == 0
+        b_undebuted = int(tracked.get(fighter_b, 0)) == 0
+        debut_corner = a_undebuted or b_undebuted
+        # WHICH corner, for callers that need to name him. Same exact-string
+        # lookup as the flag itself on purpose: deriving the name any other
+        # way could disagree with the boolean it explains. If both corners are
+        # undebuted, A is named -- the flag cannot distinguish them either.
+        debut_corner_name = fighter_a if a_undebuted else (fighter_b if b_undebuted else None)
     uncertainty = UNCERTAINTY_BASE / math.sqrt(thinner_record + 1)
     prob_low = max(0.01, prob_a - uncertainty)
     prob_high = min(0.99, prob_a + uncertainty)
@@ -1705,7 +1741,9 @@ def predict_matchup(
         # The uncertainty band below is already derived from this; until now
         # nothing downstream could see the number the band was built from.
         "thinner_record": thinner_record,
+        "thinner_corner": thinner_corner,
         "debut_corner": debut_corner,
+        "debut_corner_name": debut_corner_name,
         "prob_low": prob_low,
         "prob_high": prob_high,
         "base_rating_a": base_r_a,

@@ -83,5 +83,41 @@ hist = build_fighter_history(["Jose Miguel Delgado"])
 check("the scouting drawer resolves an aliased fighter",
       len(hist.get(fold_name("Jose Miguel Delgado")) or []) > 0)
 
+# ===== THE RAW-KEYED LOOKUPS, WHICH THE FOLD DOES NOT REACH =====
+# The alias made every fold-based lookup resolve, and that was mistaken for
+# the whole job. predict_matchup matches the roster by EXACT string equality
+# and reads elo by EXACT dict key, and both miss silently -- an unknown name
+# is an empty frame and a defaulted 1500 rating, never an error.
+#
+# So canonicalising the spine and the roster, without canonicalising what the
+# ODDS FEED calls him, published the Noche main event at 77.4% off a defaulted
+# rating where the real one says 48.7%. Synthetic fixtures on purpose: this
+# must keep testing the mechanism after the live card moves on.
+from src.matchup_model import predict_matchup
+
+if NAME_ALIASES:
+    alias_raw, alias_canon = next(iter(NAME_ALIASES.items()))
+    other = "Zzz Testfighter"
+    roster = pd.DataFrame([
+        {"name": alias_canon, "weight_class": "Featherweight", "wins": 12, "losses": 2,
+         "height_inches": 68.0, "reach_inches": 70.0, "slpm": 4.0, "sapm": 3.0,
+         "strike_accuracy_pct": 50.0, "td_accuracy_pct": 40.0, "td_defense_pct": 60.0},
+        {"name": other, "weight_class": "Featherweight", "wins": 10, "losses": 3,
+         "height_inches": 69.0, "reach_inches": 71.0, "slpm": 4.2, "sapm": 3.1,
+         "strike_accuracy_pct": 51.0, "td_accuracy_pct": 41.0, "td_defense_pct": 61.0},
+    ])
+    ratings = {alias_canon: 1680.0, other: 1713.0}   # keyed canonically, as elo builds them
+
+    canon_side = predict_matchup(other, alias_canon, roster, ratings)
+    alias_side = predict_matchup(other, alias_raw, roster, ratings)
+    check("an aliased name still resolves to a matchup", alias_side is not None)
+    check("the aliased spelling predicts identically to the canonical one",
+          canon_side is not None and alias_side is not None
+          and abs(canon_side["prob_a"] - alias_side["prob_a"]) < 1e-12)
+    check("the returned matchup echoes the canonical spelling",
+          alias_side is not None and alias_side["fighter_b"] == alias_canon)
+    check("the aliased name does not fall back to the default rating",
+          alias_side is not None and abs(alias_side["prob_a"] - 0.5) > 1e-6)
+
 print(f"test_name_aliases: {ok} passed, {fail} failed")
 sys.exit(1 if fail else 0)

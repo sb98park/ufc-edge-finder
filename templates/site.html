@@ -3232,28 +3232,34 @@
   .replacement-badge {
     color: #c3c8d2; font-size: var(--t-micro); font-weight: 600; text-transform: uppercase;
     background: var(--panel2); border: 1px solid rgba(255,255,255,0.10);
-    border-radius: var(--r-lg); padding: 2px 7px; display: inline-flex; align-items: center; gap: 3px;
+    border-radius: var(--r-lg); padding: 2px 7px; display: inline-flex; align-items: center;
     margin-bottom: 3px;
-    white-space: normal; max-width: 100%; box-sizing: border-box; overflow-wrap: break-word;
+    white-space: nowrap; max-width: 100%; box-sizing: border-box;
   }
-  /* 9px badge type; the icon has to come down to match or it drags the
-     pill taller than .card-position and the two stop looking like siblings. */
-  .replacement-badge .inline-icon { width: 11px; height: 11px; flex: none; }
-  /* THE CAP WAS WIDER THAN THE COLUMN. All three badges here carried
-     max-width: 116px while .matchup-vs is clamp(88px, 27%, 98px) with
-     overflow: hidden -- so a badge that used its allowance overflowed and had
-     its right border sliced off. 100% cannot exceed whatever the column is.
-     THE LABEL ALSO HAS TO BE ABLE TO SHRINK, and only this badge needs it.
-     "Co-Main Event" and "Title Fight" have spaces to wrap at; "Replacement"
-     is one unbreakable eleven-character word in about seventy pixels. The
-     overflow-wrap above never fired on it because the text was an anonymous
-     FLEX item, and a flex item's min-width defaults to auto -- it will not go
-     below its intrinsic width, so the word held the pill open regardless of
-     any cap. A real span with min-width: 0 is what lets the wrap happen.
-     Hyphenated rather than chopped: REPLACE-MENT reads as typography,
-     REPLACEM-ENT reads as a bug. */
-  .replacement-badge > span {
-    min-width: 0; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto;
+  /* NO ICON ON THIS ONE, AND THAT IS THE FIX. Measured at 375px, where
+     .matchup-vs bottoms out at exactly 88px with overflow: hidden:
+
+         label "REPLACEMENT" on one line   68.5px
+         icon 11 + gap 3                   14.0px
+         padding 7+7, border 1+1           16.0px
+                                          -------
+                                           98.5px  in an 88px column
+
+     So it could never fit, and the previous fix here made it HYPHENATE
+     instead -- REPLACE-MENT across two lines, which is what it was reported
+     as. Trimming padding does not reach: icon at 4px padding still measures
+     88.0px, i.e. still clipped. Dropping the icon measures 84.5px and fits
+     with 3.5px to spare, so nowrap above is safe rather than a clip risk.
+
+     The word is the information; the swap glyph was decoration costing 14px
+     of an 88px column. Title Fight and Co-Main Event keep their icons -- they
+     have spaces to wrap at and are not up against this. */
+  /* Sits on its own line under the badge row: it is a full sentence, and
+     inline it would compete with the pick itself for the eye. Muted because
+     it qualifies the label rather than being a second claim. */
+  .conf-cap-note {
+    flex-basis: 100%;   /* row-gap on .model-pick-badge already spaces it */
+    font-size: var(--t-micro); color: var(--muted); line-height: 1.45;
   }
   .no-edges { color: var(--muted); font-size: var(--t-body); padding: 0 16px 14px; }
 
@@ -7530,7 +7536,7 @@
                per-fighter part of this lives in the MODEL, via the
                short_notice flag on the incoming fighter only. #}
             {% if fight.replacement %}
-            <div class="replacement-badge" {% if fight.replaced_fighter %}title="Replaces {{ fight.replaced_fighter }}"{% endif %} lang="en">{{ icon_swap() }}<span>Replacement</span></div>
+            <div class="replacement-badge" {% if fight.replaced_fighter %}title="Replaces {{ fight.replaced_fighter }}"{% endif %} lang="en">Replacement</div>
             {% endif %}
           </div>
           {% if fight.result_label %}
@@ -7633,6 +7639,12 @@
         {% endif %}
         <span class="pick-method">by {{ fight.preview.likely_method }}</span>
         <span class="pick-confidence">{{ fight.preview.confidence_label }}</span>
+        {# A capped label reads as a contradiction without this: 78% next to
+           Medium Confidence, with nothing saying the cap is about the
+           OPPONENT'S data rather than the pick. Reported from a real card. #}
+        {% if fight.preview.confidence_cap_reason %}
+        <span class="conf-cap-note">{{ fight.preview.confidence_cap_reason }}</span>
+        {% endif %}
         {% if fight.is_lock_of_week %}<span class="lock-badge celebratable">{{ icon_lock() }} Lock of the Week</span>{% endif %}
       </div>
       {% endif %}

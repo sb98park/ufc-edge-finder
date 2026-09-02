@@ -17,14 +17,22 @@ from src.fight_format import is_five_round as _is_five_round, scheduled_rounds a
 from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob, devig_single_sided, american_to_decimal
 from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
 from .ufc_method_rates import rates_or_prior
+from .names import canonical_name
 from .matchup_model import (predict_matchup, compute_divisional_method_priors,
                             blend_method_probability, divisional_prior_for, _get,
                             normalize_division)
 
 
 def _fold_name(t):
-    """Lowercase + strip diacritics for cross-source name matching."""
+    """Lowercase + strip diacritics for cross-source name matching.
+
+    canonical_name FIRST, because folding cannot reach a middle name. This
+    helper is one of the several folds in the project and it silently did not
+    resolve aliases, so _find_fighter below returned empty for a fighter who
+    IS on the roster under his canonical spelling -- see _reconciled.
+    """
     import unicodedata
+    t = canonical_name(t)
     return "".join(ch for ch in unicodedata.normalize("NFKD", str(t).lower())
                    if not unicodedata.combining(ch)).strip()
 
@@ -314,7 +322,19 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
     def _reconciled(fight_id, name_a, name_b):
         if fight_id in _grid_cache:
             return _grid_cache[fight_id]
-        ra, rb = _find_fighter(fighters_df, name_a), _find_fighter(fighters_df, name_b)
+        # TWO SPELLINGS, EACH WITH ONE JOB. The odds feed's spelling KEYS the
+        # result, because every caller below looks the grid up by
+        # row["selection"], which is the feed's. The canonical spelling does
+        # every LOOKUP -- roster, ratings, method rates -- because those are
+        # keyed off fight_history and fighters.csv.
+        #
+        # Conflating them is what published the Noche main event wrong: the
+        # feed quotes "Jose Miguel Delgado", the roster and elo hold "Jose
+        # Delgado", so ra came back empty, `out` stayed None, and every method
+        # row silently fell through to the unreconciled per-fighter blend --
+        # six rows summing to 156.2% instead of 100%.
+        canon_a, canon_b = canonical_name(name_a), canonical_name(name_b)
+        ra, rb = _find_fighter(fighters_df, canon_a), _find_fighter(fighters_df, canon_b)
         out = None
         if not ra.empty and not rb.empty:
             a, b = ra.iloc[0], rb.iloc[0]
@@ -325,7 +345,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
             # his own win probability by ~2.5pp.
             # This is the third time two predict_matchup calls with different
             # arguments have produced disagreeing numbers on the same page.
-            matchup = predict_matchup(name_a, name_b, fighters_df, elo_ratings, fight_history_df)
+            matchup = predict_matchup(canon_a, canon_b, fighters_df, elo_ratings, fight_history_df)
             if matchup:
                 # FITTED seed, matching model_preview exactly -- one source
                 # for the shape, as the totals already share one reconciler.
@@ -364,10 +384,10 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
                         opp_sub_lost=p_sl,
                         elo_gap=g,
                     )
-                seeds = [_seed(a, b, name_a, name_b), _seed(b, a, name_b, name_a)]
-                koa, sua, kla, sla = rates_or_prior(name_a, divisional_priors, _wcls(a))
-                kob, sub_, klb, slb = rates_or_prior(name_b, divisional_priors, _wcls(b))
-                gap = abs(elo_ratings.get(name_a, 1500) - elo_ratings.get(name_b, 1500)) / 400.0 if elo_ratings else 0.0
+                seeds = [_seed(a, b, canon_a, canon_b), _seed(b, a, canon_b, canon_a)]
+                koa, sua, kla, sla = rates_or_prior(canon_a, divisional_priors, _wcls(a))
+                kob, sub_, klb, slb = rates_or_prior(canon_b, divisional_priors, _wcls(b))
+                gap = abs(elo_ratings.get(canon_a, 1500) - elo_ratings.get(canon_b, 1500)) / 400.0 if elo_ratings else 0.0
                 dist = method_probabilities(
                     ko_press=koa * klb + kob * kla, sub_press=sua * slb + sub_ * sla,
                     ko_rate_sum=koa + kob, sub_rate_sum=sua + sub_,

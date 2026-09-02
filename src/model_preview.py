@@ -418,6 +418,48 @@ def _confidence_capped(favorite_prob: float, thinner_record, debut_corner,
     return False
 
 
+def _confidence_cap_reason(favorite_prob: float, thinner_record, thinner_corner,
+                           debut_corner, previous_label: str | None = None,
+                           debut_corner_name=None) -> str:
+    """One short sentence naming WHY the label sits below its probability.
+
+    Reported by the owner against a real card: Nathaniel Wood read 78% and the
+    badge said Medium Confidence, with nothing on the page between the two
+    numbers to reconcile them. The cap was correct -- his opponent had been a
+    late replacement with no record on file, which is exactly the case
+    MIN_RECORD_FOR_HIGH_CONFIDENCE exists for -- but an unexplained cap is
+    indistinguishable from a bug, and it had already cost one round of
+    "is the model broken?".
+
+    "ON FILE" IS DELIBERATE, not hedging. thinner_record counts wins+losses
+    off the roster row, so a fighter missing from fighters.csv entirely reads
+    0 the same way a genuine 0-0 debutant does. Both must cap, so the label is
+    right either way -- but only one of them means the man has never fought,
+    and this string must not assert the stronger claim.
+
+    Empty string when nothing capped the label, so the caller can render on
+    truthiness alone.
+    """
+    if not _confidence_capped(favorite_prob, thinner_record, debut_corner, previous_label):
+        return ""
+    high_bar = 0.75 - (CONFIDENCE_HYSTERESIS if previous_label == "High Confidence" else 0.0)
+    who = str(thinner_corner).strip() if thinner_corner else ""
+    if favorite_prob >= high_bar:
+        if not thinner_record:
+            return f"Held at Medium: no record on file for {who}" if who else \
+                   "Held at Medium: no record on file for one corner"
+        bouts = "bout" if thinner_record == 1 else "bouts"
+        return (f"Held at Medium: only {thinner_record} pro {bouts} on file for {who}"
+                if who else f"Held at Medium: only {thinner_record} pro {bouts} on file for one corner")
+    # NOT thinner_corner here. That is the fewest PRO bouts; this branch is
+    # about UFC experience, and they are different questions that routinely
+    # name different fighters -- a 20-fight regional veteran debuting against
+    # a 5-fight UFC prospect is the thicker record AND the debutant.
+    debutant = str(debut_corner_name).strip() if debut_corner_name else ""
+    return (f"Held at Low: no UFC bouts on file for {debutant}" if debutant
+            else "Held at Low: one corner has no UFC bouts on file")
+
+
 def _ordinal(n: int) -> str:
     """1st, 2nd, 3rd, 4th ... 11th/12th/13th are the exceptions."""
     if 10 <= n % 100 <= 20:
@@ -841,6 +883,13 @@ def build_fight_preview(
         "confidence_capped": _confidence_capped(
             favorite_prob, matchup.get("thinner_record"), matchup.get("debut_corner"),
             previous_label=previous_label),
+        # The same fact as a sentence the card can show. See
+        # _confidence_cap_reason: the flag alone told the monotonicity pass
+        # what it needed and told the reader nothing.
+        "confidence_cap_reason": _confidence_cap_reason(
+            favorite_prob, matchup.get("thinner_record"), matchup.get("thinner_corner"),
+            matchup.get("debut_corner"), previous_label=previous_label,
+            debut_corner_name=matchup.get("debut_corner_name")),
         "rounds_lean": rounds_lean,
         "combined_finish_rate": round(combined_finish_rate, 3),
         "style_a": matchup["style_a"],
