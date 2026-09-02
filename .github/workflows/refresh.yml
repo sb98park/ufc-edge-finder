@@ -223,7 +223,7 @@ jobs:
           # log ageing out. Michael Aljarouj was priced off 1 of his 16 bouts
           # and nothing said so -- a human found it on Tapology by chance.
           echo "::group::card_data_coverage"
-          python scripts/check_card_data_coverage.py || true
+          python scripts/run_step.py card_data_coverage -- python scripts/check_card_data_coverage.py
           echo "::endgroup::"
           exit $fail
 
@@ -240,7 +240,7 @@ jobs:
         # what forgetting looks like.
         #
         # No network: reads a file the previous run already wrote.
-        run: python scripts/merge_results_into_history.py --apply || true
+        run: python scripts/run_step.py merge_results -- python scripts/merge_results_into_history.py --apply
 
       - name: Grade recorded prop quotes against results
         if: steps.cadence.outputs.build == 'yes'
@@ -266,7 +266,7 @@ jobs:
         #
         # No network. Reports a thin sample and says so until a few hundred
         # settle, which is the honest state for roughly the next year.
-        run: python3 scripts/grade_prop_prices.py || true
+        run: python3 scripts/run_step.py grade_prop_prices -- python3 scripts/grade_prop_prices.py
 
       - name: Backfill history gaps from ESPN
         # 2, down from 4. Not because 4 was too long for this script, but
@@ -298,7 +298,7 @@ jobs:
         # NON-BLOCKING deliberately. ESPN returns 403 after a burst of calls,
         # and a throttled backfill must not stop the site publishing odds and
         # results. It retries with backoff and reports the block clearly.
-        run: python scripts/backfill_history_from_espn.py --apply || true
+        run: python scripts/run_step.py backfill_history -- python scripts/backfill_history_from_espn.py --apply
 
       - name: Backfill per-fight ESPN stats for carded fighters
         # 2, down from 4, for the reason given on the step above and in the
@@ -339,7 +339,7 @@ jobs:
         # NON-BLOCKING like the history backfill above, and for the same
         # reason: ESPN 403s under bursts, and a throttled stats fetch must
         # not stop the site publishing odds and results.
-        run: python scripts/backfill_espn_fight_stats.py --cards --missing-only --apply || true
+        run: python scripts/run_step.py backfill_fight_stats -- python scripts/backfill_espn_fight_stats.py --cards --missing-only --apply
 
       - name: Generate site
         # 10, up from 6. This one genuinely MUST fail the job if it breaks --
@@ -423,7 +423,7 @@ jobs:
         # lock of the weeks in the future cards".
         run: |
           echo "::group::scale_drift"
-          python scripts/check_scale_drift.py || true
+          python scripts/run_step.py scale_drift -- python scripts/check_scale_drift.py
           echo "::endgroup::"
           # REPORT ONLY -- no --apply, deliberately and permanently. This one
           # would edit data/predictions_log.csv, and section 1 puts that in
@@ -436,8 +436,30 @@ jobs:
           # rename migration cannot cover -- it short-circuits on
           # decided_keys before reaching it.
           echo "::group::orphaned_event_rows"
-          python scripts/clean_orphaned_event_rows.py || true
+          python scripts/run_step.py orphaned_event_rows -- python scripts/clean_orphaned_event_rows.py
           echo "::endgroup::"
+
+      - name: Publish non-blocking step health to the run summary
+        # THE POINT OF THE WHOLE MECHANISM. Recording a dead step into
+        # source_health.json is only half a fix -- something has to SHOW it,
+        # and the run summary is what the Actions tab and the mobile app
+        # render, which is where a five-minute cron actually gets read.
+        #
+        # always(), for the same reason the lint summary uses it: the run
+        # where a step died is exactly the run whose summary must not go
+        # missing.
+        if: always() && steps.cadence.outputs.build == 'yes'
+        run: |
+          {
+            echo "## Non-blocking steps"
+            echo ""
+            echo "These run with their failures suppressed so a dead feed cannot"
+            echo "freeze the site. Suppressed is not unwatched."
+            echo ""
+            echo '```'
+            python scripts/run_step.py --report 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish the lint result to the run summary
         # Same pattern as crosscheck.yml, and for the same reason: the run
