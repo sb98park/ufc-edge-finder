@@ -41,6 +41,25 @@ import pandas as pd
 # candidates rather than leaving the next one to be found by chance.
 NAME_ALIASES = {
     "jose miguel delgado": "Jose Delgado",
+    # ONE BOUT EACH, WRITTEN TWICE. Found by sweeping the spine for a fighter
+    # holding two bouts within a day of each other against opponents whose
+    # names differ only at the tail -- a shape no real card produces. In every
+    # case below the minor spelling contributes NO date the major one lacks,
+    # so it is a second write of the same fight and folding it in loses
+    # nothing. Checked one at a time; the counts are bouts held under each.
+    #
+    # NO FOLD CAN REACH THESE. "Jr."/"Junior" and a fighter's nickname are not
+    # accents or punctuation, and the rule that would catch them is a
+    # similarity threshold -- the fuzzy matching this project refuses because
+    # it merges real people. An explicit line each is the honest way to say it.
+    "marcio alexandre jr": "Marcio Alexandre Junior",   # 1 vs 3, sole date shared
+    "alvaro herrera": "Alvaro Herrera Mendoza",         # 1 vs 4, sole date shared
+    "antonio carlos jr": "Antonio Carlos Junior",       # 1 vs 12, one day apart
+    "michael aswell jr": "Michael Aswell",              # 2 vs 16, both dates shared
+    # The NICKNAME is canonical here, which reads wrong and is right: the
+    # roster row and 46 spine bouts already carry "Pitbull", so that is the
+    # spelling elo is keyed by. Canonical means "what the data uses".
+    "patricio freire": "Patricio Pitbull",              # 2 vs 46, both dates shared
 }
 
 
