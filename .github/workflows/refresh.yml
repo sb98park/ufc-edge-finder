@@ -405,6 +405,27 @@ jobs:
           set -o pipefail
           python scripts/lint_site.py 2>&1 | tee lint.txt
 
+      - name: Is the probability scale still what the thresholds assume?
+        if: steps.cadence.outputs.build == 'yes'
+        # AFTER the build, unlike card_data_coverage above, because it reads
+        # data/predictions_log.csv and generate_site.py is what writes this
+        # card's rows into it. Before the build it would judge the scale on a
+        # log one card stale.
+        #
+        # NOT a gate, and never make it one: a moving scale is information,
+        # and section 2 is explicit that a gate must not fail for a number
+        # that legitimately moved. Its findings land in data/source_health.json
+        # a few steps below, where they get committed and outlive the log.
+        #
+        # This is the alarm for the failure that reached the owner instead:
+        # LOCK_OF_WEEK_MIN_PROB stayed at 0.82 for six weeks while the model's
+        # top end compressed underneath it, and it surfaced as "I don't see
+        # lock of the weeks in the future cards".
+        run: |
+          echo "::group::scale_drift"
+          python scripts/check_scale_drift.py || true
+          echo "::endgroup::"
+
       - name: Publish the lint result to the run summary
         # Same pattern as crosscheck.yml, and for the same reason: the run
         # summary is what the Actions tab and the mobile app show, so a
