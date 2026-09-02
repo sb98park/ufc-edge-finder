@@ -29,6 +29,7 @@ Usage:
 """
 
 import os
+import datetime as dt
 import sys
 import time
 import unicodedata
@@ -41,6 +42,7 @@ from src.fighter_backfill import (fetch_espn_fight_history, BASE_HEADERS,  # noq
                                   REQUEST_TIMEOUT)
 from src.results_fetcher import ESPN_SCOREBOARD_URL  # noqa: E402
 from src.card_matcher import fight_key  # noqa: E402
+from src.names import _normalize_name  # noqa: E402
 
 HISTORY = "data/fight_history.csv"
 
@@ -50,6 +52,73 @@ HISTORY = "data/fight_history.csv"
 # "Benoit Saint-Denis" and "Benoit Saint Denis" ended up as two bouts.
 def key(a, b, d):
     return fight_key(a, b, d)
+
+
+# A NAME fold, which is a different question from a BOUT key and needs its own
+# call. Deleting this file's local fold() and pointing bout identity at
+# fight_key left the two name-folding call sites below still calling the
+# deleted name -- so this script raised NameError on EVERY run from 2026-08-31,
+# and CI invokes it with `|| true`, so nothing said a word for two days while
+# fight_history quietly stopped being topped up.
+#
+# _normalize_name rather than a fresh local fold: it is the project's one
+# name fold and it resolves NAME_ALIASES, so a fighter carrying a middle name
+# in ESPN's payload resolves to the spelling the roster uses.
+def fold(n):
+    return _normalize_name(str(n))
+
+
+# A ONE-DAY WINDOW, WHICH fight_key's OWN DOCSTRING ASKS CALLERS TO USE:
+# "Callers that need a tolerance window should compare against fight_key(a, b,
+# date +/- 1 day) rather than inventing their own key". This one did not, and
+# tested the exact date only.
+#
+# ESPN dates a card by its UTC start, so a Saturday-night US event lands on
+# Sunday in the payload and the same bout we already hold reads as new. On a
+# 27-fighter sample that was 22 of 36 candidate bouts -- ~60% duplicates. With
+# CI running this file with --apply, fixing the NameError above WITHOUT this
+# would have re-created the 231 double-written bouts that the spine cleanup on
+# 2026-08-31 removed, and src/elo.py replays raw names, so each duplicate is
+# scored twice against a phantom node.
+def _same_day_bout(by_fighter, anchor, d):
+    """
+    Does this fighter ALREADY have a bout on (or beside) this date?
+
+    A SECOND DUPLICATE CLASS, which the +-1 day window above does not reach.
+    The spine holds opponent names that an older import truncated -- "Sylvain
+    Sommerei", "Alexandre Guille", "Franck Lebouyon" -- where ESPN sends
+    "Sommereisen", "Guillemant", "LeBouyonnec". The pair key cannot match
+    those, so each one re-appends as a new bout. It put Michael Aljarouj on 24
+    spine rows against a 13-3 record, history_coverage 1.375, and
+    tests/test_spine_integrity.py is what caught it.
+
+    NOT SOLVED BY FUZZIER NAMES. "Leno Rodrigo"/"Lennon Rodrigo" and
+    "Kanguichev"/"Kanguichiev" are not prefixes of each other, so the rule
+    that covers them is a similarity threshold -- and CLAUDE.md is explicit
+    that this project does not do that, because it conflates real people.
+
+    So this declines instead of deciding. A fighter with a bout already on
+    that date is ambiguous, and an ambiguous bout is REPORTED, NEVER
+    APPENDED. It costs the occasional genuine same-night tournament bout,
+    which is a far cheaper error than a phantom Elo node scored twice.
+    """
+    try:
+        day = dt.date.fromisoformat(str(d)[:10])
+    except (ValueError, TypeError):
+        return False
+    held = by_fighter.get(fold(anchor), set())
+    return any(abs((day - h).days) <= 1 for h in held)
+
+
+def _seen(have, a, b, d):
+    try:
+        day = dt.date.fromisoformat(str(d)[:10])
+    except (ValueError, TypeError):
+        return key(a, b, d) in have
+    for off in (-1, 0, 1):
+        if key(a, b, (day + dt.timedelta(days=off)).isoformat()) in have:
+            return True
+    return False
 
 
 def main():
@@ -127,20 +196,61 @@ def main():
         print("  (no ids -- check the per-date lines above for the reason)")
     print()
 
-    new_rows, no_id = [], []
+    # THE SCOREBOARD IS NOT THE ONLY PLACE AN ID LIVES. data/espn_athlete_ids.csv
+    # holds 2,785 name-to-id pairs and this script never read it, so a fighter
+    # the scoreboard does not list -- a late replacement, added after his card
+    # stopped being a future card -- was unreachable even when we had his id.
+    # Pavel Andrusca went onto 2026-09-05 with 0 of his 8 bouts in the spine
+    # for exactly this reason. Scoreboard ids still win: they came from the
+    # card being backfilled.
+    try:
+        _disk = pd.read_csv("data/espn_athlete_ids.csv")
+        _added = 0
+        for _, _r in _disk.iterrows():
+            _k = fold(_r["name"])
+            if _k not in id_map and str(_r.get("espn_id") or "").strip():
+                id_map[_k] = str(_r["espn_id"]).strip()
+                _added += 1
+        print(f"  + {_added} id(s) from data/espn_athlete_ids.csv not on the scoreboard")
+    except (OSError, pd.errors.EmptyDataError, KeyError) as _e:
+        print(f"  (no on-disk id map: {_e})")
+
+    # Every date each fighter already has a bout on, for the ambiguity guard.
+    by_fighter = {}
+    for _, _r in hist.iterrows():
+        try:
+            _d = dt.date.fromisoformat(str(_r["date"])[:10])
+        except (ValueError, TypeError):
+            continue
+        for _side in ("fighter_a", "fighter_b"):
+            by_fighter.setdefault(fold(_r[_side]), set()).add(_d)
+
+    new_rows, no_id, ambiguous = [], [], []
     for n in sorted(names):
         aid = id_map.get(fold(n))
         if not aid:
             no_id.append(n)
             continue
         for row in fetch_espn_fight_history(aid, n):
-            k = key(row["fighter_a"], row["fighter_b"], row["date"])
-            if k in have:
+            if _seen(have, row["fighter_a"], row["fighter_b"], row["date"]):
                 continue
-            have.add(k)
+            if _same_day_bout(by_fighter, n, row["date"]):
+                ambiguous.append((n, row["date"], row["fighter_a"], row["fighter_b"]))
+                continue
+            have.add(key(row["fighter_a"], row["fighter_b"], row["date"]))
             new_rows.append(row)
         time.sleep(0.2)
 
+    if ambiguous:
+        print(f"\nHELD BACK -- {len(ambiguous)} bout(s) whose fighter already has one that day.")
+        print("  Almost always the same bout under a differently-spelled opponent; "
+              "appending would double-score it in elo. Not appended, listed so a "
+              "human can reconcile the spelling:")
+        for who, d, a, b in sorted(ambiguous)[:10]:
+            print(f"    {d}  {who}: {a} vs {b}")
+        if len(ambiguous) > 10:
+            print(f"    ... and {len(ambiguous) - 10} more")
+        print()
     if no_id:
         print(f"no ESPN id for: {sorted(no_id)[:8]}\n")
     print(f"history rows : {len(hist)}")
