@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-02T12:46:00+00:00",
+  "at": "2026-09-02T13:09:51+00:00",
   "card_data_coverage": {
     "carded_fighters": 159,
-    "checked_at": "2026-09-02T12:44:47+00:00",
+    "checked_at": "2026-09-02T13:08:40+00:00",
     "counts": {
       "history": 3,
       "physicals": 5
@@ -38,13 +38,13 @@
     "best_book": {
       "DraftKings": 42,
       "FanDuel": 12,
-      "Polymarket": 84
+      "Polymarket": 86
     },
     "books_quoting": {
-      "1.0": 106,
+      "1.0": 108,
       "2.0": 32
     },
-    "n": 138
+    "n": 140
   },
   "moneyline": {
     "best_book": {
@@ -83,12 +83,126 @@
   "rows_by_source": {
     "DraftKings": 52,
     "FanDuel": 34,
-    "Polymarket": 258
+    "Polymarket": 264
   },
   "rundown_dates_requested": [
     "2026-09-05"
   ],
   "rundown_key_set": true,
+  "scale_drift": {
+    "baseline_cards": 6,
+    "baseline_gap_p90": 0.0146,
+    "baseline_selectivity": 0.1932,
+    "cards": [
+      {
+        "clearing_floor": 3,
+        "date": "2026-07-11",
+        "event": "UFC 329: McGregor vs. Holloway 2",
+        "fights": 14,
+        "gap_p90": -0.0062,
+        "market_p90": 0.8175,
+        "model_p90": 0.8113,
+        "priced": 14,
+        "selectivity": 0.2143
+      },
+      {
+        "clearing_floor": 1,
+        "date": "2026-07-18",
+        "event": "UFC Fight Night: Du Plessis vs. Usman",
+        "fights": 13,
+        "gap_p90": 0.0115,
+        "market_p90": 0.7391,
+        "model_p90": 0.7506,
+        "priced": 12,
+        "selectivity": 0.0769
+      },
+      {
+        "clearing_floor": 5,
+        "date": "2026-07-25",
+        "event": "UFC Fight Night: Ankalaev vs. Guskov",
+        "fights": 16,
+        "gap_p90": 0.047,
+        "market_p90": 0.834,
+        "model_p90": 0.881,
+        "priced": 13,
+        "selectivity": 0.3125
+      },
+      {
+        "clearing_floor": 3,
+        "date": "2026-08-01",
+        "event": "UFC Fight Night: Medi\u0107 vs. Rodriguez",
+        "fights": 16,
+        "gap_p90": 0.0095,
+        "market_p90": 0.8025,
+        "model_p90": 0.812,
+        "priced": 16,
+        "selectivity": 0.1875
+      },
+      {
+        "clearing_floor": 3,
+        "date": "2026-08-08",
+        "event": "UFC Fight Night: Gamrot vs Salkilld",
+        "fights": 14,
+        "gap_p90": 0.0501,
+        "market_p90": 0.745,
+        "model_p90": 0.7951,
+        "priced": 13,
+        "selectivity": 0.2143
+      },
+      {
+        "clearing_floor": 2,
+        "date": "2026-08-15",
+        "event": "UFC 330: Makhachev vs. Machado Garry",
+        "fights": 15,
+        "gap_p90": -0.0244,
+        "market_p90": 0.815,
+        "model_p90": 0.7906,
+        "priced": 13,
+        "selectivity": 0.1333
+      },
+      {
+        "clearing_floor": 0,
+        "date": "2026-08-22",
+        "event": "UFC Fight Night: Hernandez vs. Rodrigues",
+        "fights": 14,
+        "gap_p90": -0.1709,
+        "market_p90": 0.8695,
+        "model_p90": 0.6986,
+        "priced": 14,
+        "selectivity": 0.0
+      },
+      {
+        "clearing_floor": 1,
+        "date": "2026-08-29",
+        "event": "UFC Fight Night: Nurmagomedov vs. Song",
+        "fights": 16,
+        "gap_p90": -0.0965,
+        "market_p90": 0.811,
+        "model_p90": 0.7145,
+        "priced": 15,
+        "selectivity": 0.0625
+      },
+      {
+        "clearing_floor": 0,
+        "date": "2026-09-05",
+        "event": "UFC Fight Night: Hooker vs. Parnasse",
+        "fights": 15,
+        "gap_p90": -0.0131,
+        "market_p90": 0.7499,
+        "model_p90": 0.7368,
+        "priced": 14,
+        "selectivity": 0.0
+      }
+    ],
+    "checked_at": "2026-09-02T13:12:58+00:00",
+    "equivalent_floor": 0.723,
+    "floor_in_force": 0.78,
+    "gap_move": -0.0555,
+    "trailing_cards": 6,
+    "trailing_gap_p90": -0.0409,
+    "trailing_selectivity": 0.1,
+    "verdict": "watch"
+  },
   "tracked_moneyline": {
     "best_book": {
       "DraftKings": 19,
