@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-02T09:42:31+00:00",
+  "at": "2026-09-02T10:17:43+00:00",
   "card_data_coverage": {
     "carded_fighters": 159,
-    "checked_at": "2026-09-02T09:41:12+00:00",
+    "checked_at": "2026-09-02T10:16:11+00:00",
     "counts": {
       "history": 2,
       "physicals": 5,
@@ -83,7 +83,7 @@
   "rows_by_source": {
     "DraftKings": 52,
     "FanDuel": 28,
-    "Polymarket": 258
+    "Polymarket": 256
   },
   "rundown_dates_requested": [
     "2026-09-05"
