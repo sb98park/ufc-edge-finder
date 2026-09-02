@@ -17,24 +17,28 @@ from src.fight_format import is_five_round as _is_five_round, scheduled_rounds a
 from .odds_utils import american_to_implied_prob, implied_prob_to_american, remove_vig_two_way, edge_percent, kelly_fraction, market_blended_prob, devig_single_sided, american_to_decimal
 from .method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
 from .ufc_method_rates import rates_or_prior
-from .names import canonical_name
+from .names import canonical_name, _normalize_name
 from .matchup_model import (predict_matchup, compute_divisional_method_priors,
                             blend_method_probability, divisional_prior_for, _get,
                             normalize_division)
 
 
 def _fold_name(t):
-    """Lowercase + strip diacritics for cross-source name matching.
+    """Cross-source name matching -- delegated, not reimplemented.
 
-    canonical_name FIRST, because folding cannot reach a middle name. This
-    helper is one of the several folds in the project and it silently did not
-    resolve aliases, so _find_fighter below returned empty for a fighter who
-    IS on the roster under his canonical spelling -- see _reconciled.
+    This was a local lowercase-and-strip-accents helper, and being local is
+    exactly what kept breaking it. It missed NAME_ALIASES until yesterday, and
+    it still missed stroked letters today: "Klaudia Sygula" from the odds feed
+    against "Klaudia Syguła" on the roster folded to two different strings, so
+    _find_fighter returned empty, _reconciled built no grid, and her six
+    method rows summed to 145.6%.
+
+    src/names._normalize_name is the project's one fold and already handles
+    both. It is also stricter -- it collapses punctuation, so "Saint-Denis"
+    and "Saint Denis" match here now as well. That direction only ever turns a
+    miss into a hit, which is what this function is for.
     """
-    import unicodedata
-    t = canonical_name(t)
-    return "".join(ch for ch in unicodedata.normalize("NFKD", str(t).lower())
-                   if not unicodedata.combining(ch)).strip()
+    return _normalize_name(t)
 
 
 def _find_fighter(fighters_df, name):
@@ -393,11 +397,19 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
                     ko_rate_sum=koa + kob, sub_rate_sum=sua + sub_,
                     durability=kla + klb, elo_gap=gap,
                 )
+                # KEYED ON THE FOLD, not the raw feed spelling. The grid is
+                # built from props' fighter_a/fighter_b and read back below by
+                # row["selection"], and those two fields can arrive from
+                # DIFFERENT sources -- one quoting "Klaudia Syguła", the other
+                # "Klaudia Sygula". The lookup then missed and every method row
+                # silently fell through to the unreconciled per-fighter blend,
+                # which is why her six rows summed to 101.8% with both KO rows
+                # priced and neither reconciled.
                 out = {
-                    name_a: dict(zip(("KO/TKO", "SUB", "DEC"),
+                    _fold_name(name_a): dict(zip(("KO/TKO", "SUB", "DEC"),
                                      reconcile_fighter_methods(seeds[0], seeds[1],
                                                                matchup["prob_a"], matchup["prob_b"], dist)[0])),
-                    name_b: dict(zip(("KO/TKO", "SUB", "DEC"),
+                    _fold_name(name_b): dict(zip(("KO/TKO", "SUB", "DEC"),
                                      reconcile_fighter_methods(seeds[0], seeds[1],
                                                                matchup["prob_a"], matchup["prob_b"], dist)[1])),
                 }
@@ -423,8 +435,9 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
             # of the same prior-informed blend already trusted for the
             # individual KO/SUB props, rather than inventing a separate
             # "finish" prior from scratch.
-            if _grid and row["selection"] in _grid:
-                model_p = _grid[row["selection"]]["KO/TKO"] + _grid[row["selection"]]["SUB"]
+            _sel = _fold_name(row["selection"])
+            if _grid and _sel in _grid:
+                model_p = _grid[_sel]["KO/TKO"] + _grid[_sel]["SUB"]
             else:
                 model_p = _blended_method_prob(f, opp_stats, "KO/TKO") + _blended_method_prob(f, opp_stats, "SUB")
             model_p = min(0.97, model_p)  # same sanity ceiling style used elsewhere in this module
@@ -441,8 +454,9 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
             # Reconciled value when available, so this row agrees with the
             # moneyline and with the fight-level split. The raw blend stays as
             # a fallback for fights the reconciler can't build a grid for.
-            if _grid and row["selection"] in _grid:
-                model_p = _grid[row["selection"]][row["selection_method"]]
+            _sel = _fold_name(row["selection"])
+            if _grid and _sel in _grid:
+                model_p = _grid[_sel][row["selection_method"]]
             else:
                 model_p = _blended_method_prob(f, opp_stats, row["selection_method"])
 

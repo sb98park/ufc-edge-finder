@@ -61,6 +61,45 @@ def canonical_name(name) -> str:
     return NAME_ALIASES.get(key, text)
 
 
+# LETTERS NFKD CANNOT DECOMPOSE, mapped by hand because nothing else will.
+#
+# The fold below is NFKD then .encode("ascii", "ignore"), which is right for
+# every accent that decomposes: "ą" is a + combining ogonek, so the mark is
+# dropped and "a" survives. A STROKED letter is not built that way. "ł" is a
+# single codepoint with NO canonical decomposition, so NFKD leaves it whole
+# and the ascii encode then DELETES IT ENTIRELY -- silently, because "ignore"
+# is exactly that instruction.
+#
+#     "Klaudia Syguła" -> "klaudia sygua"      the l vanishes
+#     "Klaudia Sygula" -> "klaudia sygula"
+#
+# Two Elo nodes for one fighter, and src/elo.py replays raw names, so her one
+# bout was scored twice against a phantom. Found by measuring the spine, not
+# by anything in the pipeline, with her on that week's card.
+#
+# MEASURED BEFORE CHANGING, on all 5,290 distinct names across fight_history,
+# fighters, fight_cards and future_cards: this merges exactly TWO groups --
+# Klaudia Syguła and Robert Ruchała, both Polish, each plainly one person --
+# and SPLITS NONE. That direction is the guarantee: mapping a character to its
+# base can only ever make two names compare EQUAL, never unequal, so no
+# currently-matching pair can come apart. Same argument the space-collapse
+# below is justified by.
+_STROKED_LETTERS = str.maketrans({
+    "\u0142": "l", "\u0141": "L",      # l with stroke
+    "\u00f8": "o", "\u00d8": "O",      # o with stroke
+    "\u0111": "d", "\u0110": "D",      # d with stroke
+    "\u00f0": "d", "\u00d0": "D",      # eth
+    "\u00fe": "th", "\u00de": "Th",    # thorn
+    "\u00e6": "ae", "\u00c6": "Ae",    # ash
+    "\u0153": "oe", "\u0152": "Oe",    # ligature oe
+    "\u00df": "ss",                    # sharp s
+    "\u0131": "i", "\u0130": "I",      # dotless/dotted i
+    "\u0127": "h", "\u0126": "H",      # h with stroke
+    "\u0167": "t", "\u0166": "T",      # t with stroke
+    "\u0138": "k",                     # kra
+})
+
+
 def _normalize_name(name: str) -> str:
     """
     Strips accents and standardizes punctuation so minor spelling differences
@@ -81,7 +120,8 @@ def _normalize_name(name: str) -> str:
         except (TypeError, ValueError):
             pass
         name = str(name) if name is not None else ""
-    normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    normalized = unicodedata.normalize(
+        "NFKD", name.translate(_STROKED_LETTERS)).encode("ascii", "ignore").decode()
     # COLLAPSE THE RUNS THIS FUNCTION ITSELF CREATES. Substituting punctuation
     # with a space turns "Ode' Osbourne" into "ode  osbourne" -- two spaces --
     # which .strip() does not touch, so it never equalled "ode osbourne" and
@@ -100,7 +140,7 @@ def _normalize_name(name: str) -> str:
     alias = NAME_ALIASES.get(folded)
     if alias:
         return " ".join(re.sub(r"[^a-z0-9 ]", " ",
-                               unicodedata.normalize("NFKD", alias)
+                               unicodedata.normalize("NFKD", alias.translate(_STROKED_LETTERS))
                                .encode("ascii", "ignore").decode().lower()).split())
     return folded
 

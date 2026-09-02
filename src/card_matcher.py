@@ -1046,13 +1046,25 @@ def group_edges_by_card(
                     # it is the one made coherent with the fight's own method
                     # distribution -- so the edge rows adopt it rather than the
                     # cards being taught to read somewhere else.
+                    # THE FALLBACK KEY IS FOLDED, for the same reason every
+                    # other key touched today is: rows and edges can carry two
+                    # feeds' spellings of one fighter. Raw, the KO/TKO row for
+                    # "Klaudia Sygula" never found its reconciled twin under
+                    # "Klaudia Syguła", so the priced value stayed and the
+                    # KO/TKO column read 16.9 + 14.7 = 31.6 against a
+                    # fight-level 29.8 -- the last 1.8 points of a six-row
+                    # total that would not come to 100.
+                    def _mkey(d):
+                        return d.get("clob_token_id") or (
+                            str(d.get("market") or ""),
+                            _normalize_name(d.get("selection") or d.get("fighter")))
                     _by_key = {}
                     for _r in rows:
-                        _k = _r.get("clob_token_id") or (_r.get("market"), _r.get("selection"))
+                        _k = _mkey(_r)
                         if _k:
                             _by_key[_k] = _r
                     for _e in fight.get("edges") or []:
-                        _k = _e.get("clob_token_id") or (_e.get("market"), _e.get("selection"))
+                        _k = _mkey(_e)
                         _fixed = _by_key.get(_k)
                         if not _fixed:
                             continue
@@ -1075,6 +1087,7 @@ def group_edges_by_card(
                 elif gid == "fighter":
                     rows = group_fighter_props(
                         rows, fight.get("fighter_a", ""), fight.get("fighter_b", ""))
+                rows = _dedupe_market_rows(rows)
                 if not rows:
                     continue
                 groups.append({
@@ -1110,6 +1123,50 @@ LOW_SAMPLE_THRESHOLD = 6  # career fights below this = flagged as limited data
 
 
 
+def _dedupe_market_rows(rows: list) -> list:
+    """
+    One row per (market, selection), where the selection is FOLDED.
+
+    THE FEED CARRIES BOTH SPELLINGS. data/odds_snapshot.json holds
+    "Klaudia Sygula|Total Rounds Under 2.5|fair" from one source and
+    "Klaudia Sygu\u0142a|Total Rounds Under 2.5|book" from another, because the
+    two feeds disagree about a Polish stroked l. Every key downstream compared
+    the RAW string, so both attached and the card printed the same line twice:
+
+        FAIL [round-monotonic] Under 1.5 and Under 1.5 are both 30.1%
+        FAIL [method-coherence] six method rows sum to 145.6%, not 100%
+
+    THIS BUG WAS ALWAYS HERE AND COULD NOT FIRE. While the fold deleted the
+    stroked l outright, the two spellings folded DIFFERENTLY, so only one ever
+    matched the card and the duplicate had nowhere to land. Fixing the fold in
+    src/names.py is what let them both through -- a latent fault surfaced by a
+    correct change, which is the third time that has happened this week.
+
+    Priced beats unpriced, matching the rule the fight-level method group
+    already uses: a model-only row carries strictly less information than one
+    with a real line. Two priced rows keep the first, which is arbitrary but
+    deterministic.
+    """
+    # THE SIDE IS NOT ALWAYS UNDER "selection". compute_method_edges emits
+    # {"market": "Method: KO/TKO", "fighter": <name>} with no selection key at
+    # all, so keying on selection alone folded every method row to "" and
+    # collapsed all six into three -- deleting one fighter's entire method
+    # column and his moneyline with it. Caught by reading the rendered rows
+    # rather than by trusting the lint pass, which went green on the wreckage
+    # because three coherent rows sum no worse than six.
+    out, seen = [], {}
+    for r in rows:
+        side = r.get("selection") or r.get("fighter") or r.get("label") or r.get("market")
+        key = (str(r.get("market") or ""), _normalize_name(side))
+        prev = seen.get(key)
+        if prev is None:
+            seen[key] = len(out)
+            out.append(r)
+        elif r.get("has_line") and not out[prev].get("has_line"):
+            out[prev] = r
+    return out
+
+
 def group_fighter_props(rows: list, fighter_a: str, fighter_b: str) -> list:
     """
     Reorder the Fighter props rows so each fighter's routes sit together under
@@ -1135,11 +1192,18 @@ def group_fighter_props(rows: list, fighter_a: str, fighter_b: str) -> list:
     def is_moneyline(r):
         return str(r.get("market") or "").strip().lower() == "moneyline"
 
+    # FOLDED, because the row's fighter comes from the ODDS FEED and the two
+    # names come from the CARD. They disagree about a Polish stroked l, so
+    # Klaudia Syguła's KO/TKO row matched neither corner: it fell out of both
+    # blocks and rendered as a bare "Klaudia Sygula — KO/TKO" among rows whose
+    # prefix had been stripped and moved to a subhead.
+    _fa, _fb = _normalize_name(fighter_a), _normalize_name(fighter_b)
+
     def owner(r):
-        f = str(r.get("fighter") or "").strip()
-        if f == fighter_a:
+        f = _normalize_name(r.get("fighter"))
+        if f and f == _fa:
             return "a"
-        if f == fighter_b:
+        if f and f == _fb:
             return "b"
         return None
 
@@ -1147,6 +1211,8 @@ def group_fighter_props(rows: list, fighter_a: str, fighter_b: str) -> list:
         """The row label with the fighter's name taken off the front."""
         label = str(r.get("label") or r.get("market") or "").strip()
         f = str(r.get("fighter") or "").strip()
+        # The label was built from the FEED's spelling, so strip that one --
+        # not the card's, which is what owner() above resolves to.
         if f and label.startswith(f):
             rest = label[len(f):].lstrip()
             for sep in ("\u2014", "-", ":"):

@@ -26,7 +26,7 @@ import os
 import pandas as pd
 
 from src.elo import canonical_method
-from src.names import canonical_name
+from src.names import canonical_name, _normalize_name
 
 # How many Elo-equivalent rating points a fully-realized stylistic
 # advantage is worth. Tuned to be meaningful but not dominate the base
@@ -1589,6 +1589,48 @@ def recent_form_adjustment(
     return fighter_signal(fighter_a) - fighter_signal(fighter_b)
 
 
+def _roster_row(fighters_df, name):
+    """The roster row for a fighter: exact name, then the folded name."""
+    exact = fighters_df[fighters_df["name"] == name]
+    if not exact.empty:
+        return exact
+    folded = _normalize_name(name)
+    if not folded:
+        return exact
+    return fighters_df[fighters_df["name"].map(_normalize_name) == folded]
+
+
+_RATING_FOLD_CACHE = {}
+
+
+def _rating_of(effective_ratings, name, default: float = 1500.0) -> float:
+    """
+    A fighter's rating by exact key, then by folded key.
+
+    elo replays the spine's RAW strings, so this dict is keyed however the
+    spine spells each man. A caller holding a feed's spelling misses and gets
+    the default -- silently, because dict.get has no other mode. That default
+    is 1500, i.e. "average fighter", which is why the failure reads as a
+    plausible number rather than an error.
+
+    The folded index is cached against the dict's identity and size: rebuilding
+    it per call would fold every rating on the card for every fight.
+    """
+    if not effective_ratings:
+        return default
+    if name in effective_ratings:
+        return effective_ratings[name]
+    ck = (id(effective_ratings), len(effective_ratings))
+    idx = _RATING_FOLD_CACHE.get(ck)
+    if idx is None:
+        idx = {}
+        for k, v in effective_ratings.items():
+            idx.setdefault(_normalize_name(k), v)
+        _RATING_FOLD_CACHE.clear()          # one card at a time; never grows
+        _RATING_FOLD_CACHE[ck] = idx
+    return idx.get(_normalize_name(name), default)
+
+
 def predict_matchup(
     fighter_a: str, fighter_b: str,
     fighters_df: pd.DataFrame,
@@ -1659,14 +1701,39 @@ def predict_matchup(
     fighter_a = canonical_name(fighter_a)
     fighter_b = canonical_name(fighter_b)
 
-    match_a = fighters_df[fighters_df["name"] == fighter_a]
-    match_b = fighters_df[fighters_df["name"] == fighter_b]
+    # EXACT FIRST, THEN THE FOLD. canonical_name above resolves the explicit
+    # alias table and nothing else, so it fixed Jose Delgado's middle name and
+    # left every accent variant exactly where it was: the odds feed quotes
+    # "Klaudia Sygula" while the roster, the spine and the card all hold
+    # "Klaudia Syguła", so this returned None and edge_finder could not
+    # reconcile her method grid -- six rows summing to 145.6%.
+    #
+    # A FOLD FALLBACK CAN ONLY TURN "not found" INTO "found". It cannot break
+    # a match that already succeeds, because the exact test runs first and
+    # wins. That is the same one-directional argument _normalize_name's own
+    # docstring uses, and it is why this is safe to do at the single door
+    # every caller passes through rather than at each feed.
+    match_a = _roster_row(fighters_df, fighter_a)
+    match_b = _roster_row(fighters_df, fighter_b)
     if match_a.empty or match_b.empty:
         return None
     row_a, row_b = match_a.iloc[0], match_b.iloc[0]
 
-    base_r_a = effective_ratings.get(fighter_a, 1500.0)
-    base_r_b = effective_ratings.get(fighter_b, 1500.0)
+    # ADOPT THE ROSTER'S SPELLING FOR THE REST OF THIS FUNCTION. Folding at
+    # each lookup is not enough: style_matchup_adjustment and
+    # recent_form_adjustment below filter fight_history by EXACT name, and
+    # they take these variables. Left alone, "Klaudia Sygula" from the feed
+    # found her roster row and her rating but not one of her bouts, so the
+    # same fighter scored 0.5701 under the feed's spelling and 0.5556 under
+    # the card's -- a silent disagreement rather than a miss, which is worse.
+    #
+    # One rebinding here fixes every downstream lookup at once, and it is the
+    # roster's spelling because that is what fighters.csv, fight_history and
+    # elo's keys all agree on.
+    fighter_a, fighter_b = str(row_a["name"]), str(row_b["name"])
+
+    base_r_a = _rating_of(effective_ratings, fighter_a)
+    base_r_b = _rating_of(effective_ratings, fighter_b)
 
     # Prefer the caller's card-specific division when they have it (the
     # actual booked weight class for this fight) over fighters_df's own
