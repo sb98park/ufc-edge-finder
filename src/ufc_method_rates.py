@@ -52,6 +52,7 @@ rates (DURABILITY_SCALE, the method grid, the divisional priors above).
 from __future__ import annotations
 
 import csv
+import datetime as _dt
 import os
 import unicodedata
 
@@ -251,6 +252,148 @@ def has_measured_method_rates(name, table: dict | None = None,
 def rates_or_prior(name, priors: dict, weight_class, table: dict | None = None):
     """UFC rates where they exist, the divisional prior where they don't."""
     got = ufc_method_rates(name, table)
+    if got is not None:
+        return got
+    return divisional_fallback_rates(priors, weight_class)
+
+
+# ---------------------------------------------------------------- point in time
+
+EVENTS = "data/ufc_event_details.csv"
+_DATED_CACHE = None
+_DATED_KEY = None
+
+
+def load_dated_ufc_bouts(path: str = RESULTS, events_path: str = EVENTS) -> dict:
+    """
+    {folded name: [(date, is_win, kind), ...]} ascending, over decided UFC bouts.
+
+    THE SAME PARSE AS load_ufc_records, deliberately sharing _method_kind, the
+    W/L outcome gate and _fold. A validation harness that re-derives the
+    serving path measures its own re-derivation: the first attempt at this
+    scored AUC 0.804 against the production model's 0.720, which is a backtest
+    beating the live model and therefore a receipt for leakage, not a result.
+
+    The only thing added is a DATE, which ufc_fight_results.csv does not carry
+    -- it lives in ufc_event_details.csv, joined on EVENT.
+
+    A BOUT WHOSE EVENT IS NOT IN THAT FILE IS DROPPED, because a bout that
+    cannot be placed in time cannot be windowed by one. Measured at 27 of
+    8,859 rows (0.30%), on three events -- two recent cards the event file has
+    not caught up with, and one Road to UFC. So a fighter who fought on one of
+    those carries a denominator one or two short of production's, which
+    tests/test_pit_method_rates.py measures rather than assumes: everyone else
+    must match to the last decimal.
+
+    Cached on both files' mtime and size, like the undated table.
+    """
+    global _DATED_CACHE, _DATED_KEY
+    try:
+        key = tuple((p, os.stat(p).st_mtime_ns, os.stat(p).st_size)
+                    for p in (path, events_path))
+    except OSError:
+        key = (path, events_path, None)
+    if _DATED_CACHE is not None and _DATED_KEY == key:
+        return _DATED_CACHE
+
+    # NORMALISED TO ISO ON THE WAY IN. ufc_event_details.csv writes
+    # "August 15, 2026", and the windowing below compares date STRINGS -- so
+    # left raw, "August..." sorts above every 4-digit year and the very first
+    # bout looks later than any cutoff. Every fighter then read as having no
+    # UFC history at all, which is a silent None rather than an error, and the
+    # harness would have scored a model that knew nothing.
+    dates: dict[str, str] = {}
+    try:
+        with open(events_path, encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                ev, dt = str(row.get("EVENT", "")).strip(), str(row.get("DATE", "")).strip()
+                if not ev or not dt:
+                    continue
+                try:
+                    dates[ev] = _dt.datetime.strptime(dt, "%B %d, %Y").strftime("%Y-%m-%d")
+                except ValueError:
+                    # Already ISO, or a shape this does not know. An unparsed
+                    # date is dropped below rather than guessed at.
+                    dates[ev] = dt if len(dt) >= 10 and dt[4] == "-" else ""
+    except FileNotFoundError:
+        dates = {}
+
+    out: dict[str, list] = {}
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                parts = [p.strip() for p in str(row.get("BOUT", "")).split(" vs. ")]
+                if len(parts) != 2:
+                    continue
+                outcome = str(row.get("OUTCOME", "")).strip()
+                if outcome == "W/L":
+                    winner, loser = parts
+                elif outcome == "L/W":
+                    loser, winner = parts
+                else:
+                    continue
+                when = dates.get(str(row.get("EVENT", "")).strip())
+                if not when:
+                    continue          # undateable bout cannot be placed in time
+                kind = _method_kind(row.get("METHOD"))
+                out.setdefault(_fold(winner), []).append((when, True, kind))
+                out.setdefault(_fold(loser), []).append((when, False, kind))
+    except FileNotFoundError:
+        out = {}
+    for v in out.values():
+        v.sort(key=lambda t: t[0])
+
+    _DATED_CACHE, _DATED_KEY = out, key
+    return out
+
+
+def ufc_method_rates_as_of(name, when, table: dict | None = None,
+                           min_fights: int = MIN_UFC_FIGHTS):
+    """
+    ufc_method_rates restricted to bouts STRICTLY BEFORE `when`.
+
+    Same tuple, same denominator (fights, not wins), same min_fights gate and
+    the same None-means-unknown contract, so a caller can swap one for the
+    other and change nothing but the window.
+
+    `when` is compared as an ISO date string, which is what both files store
+    and what sorts correctly without parsing 17,000 dates per call.
+    """
+    tbl = table if table is not None else load_dated_ufc_bouts()
+    key = _fold(name)
+    bouts = tbl.get(key)
+    if bouts is None:
+        # Same token-order fallback as the undated lookup, and only after an
+        # exact miss, for the same UFCStats family-name-first reason.
+        want = " ".join(sorted(key.split()))
+        for k, v in tbl.items():
+            if " ".join(sorted(k.split())) == want:
+                bouts = v
+                break
+    if not bouts:
+        return None
+    cut = str(when)[:10]
+    fights = ko_w = sub_w = ko_l = sub_l = 0
+    for d, won, kind in bouts:
+        if d[:10] >= cut:
+            break                      # sorted, so nothing later can qualify
+        fights += 1
+        if kind == "ko":
+            ko_w += won
+            ko_l += not won
+        elif kind == "sub":
+            sub_w += won
+            sub_l += not won
+    if fights < min_fights:
+        return None
+    n = float(fights)
+    return (ko_w / n, sub_w / n, ko_l / n, sub_l / n)
+
+
+def rates_or_prior_as_of(name, when, priors: dict, weight_class,
+                         table: dict | None = None):
+    """rates_or_prior with the clock wound back. Same fallback, same halving."""
+    got = ufc_method_rates_as_of(name, when, table)
     if got is not None:
         return got
     return divisional_fallback_rates(priors, weight_class)

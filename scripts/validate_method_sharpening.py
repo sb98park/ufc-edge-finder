@@ -53,48 +53,48 @@ temperature that swings between them is visible rather than averaged away.
 Bootstrap is the paired sign-flip CLUSTERED BY EVENT: one card's finishes
 share a referee whose stoppage threshold moves every fight on it.
 
-THE ANSWER SO FAR IS "THIS HARNESS IS NOT READY", AND THAT IS THE FINDING.
+THE ANSWER IS NO: SHARPENING BUYS NOTHING.
 
-Run it two ways and it reverses, each time at p = 0.000 over 103 event
-clusters:
+    T minimising log loss on the fit half   0.75
+    d.logloss on the held-out half          -0.00115
+    sign-flip p, 103 event clusters          0.456
 
-    method rates from          mean P(finish)   best T      says
-    rates_or_prior (today's)        0.519        0.55       SHARPEN hard
-    raw point-in-time counts        0.699        1.30       FLATTEN hard
+An interior optimum -- not a grid edge -- and a gain indistinguishable from
+noise. The model's method probabilities are already about as sharp as they
+should be, and no temperature ships.
 
-Production sits at 0.529 against a 0.529 base rate, so NEITHER arm reproduces
-it, and both optima sit on a grid edge -- the sign of a transform absorbing a
-defect rather than finding a setting.
+GETTING THERE TOOK THREE ATTEMPTS AND TWO OF THEM WERE THE HARNESS, which is
+the part worth keeping:
 
-    Run 1 LEAKS. rates_or_prior reads today's UFC method rates, which include
-    the scored fight and everything after it, so a man who later became a
-    finisher carries a high KO rate at every bout of his career. It scored
-    AUC 0.804 against the production model's measured 0.720. A backtest
-    beating the live model is not a good result; it is a receipt for leakage,
-    and the sharpening looked wonderful because what it sharpened was partly
-    the answer.
+    method rates from          mean P(finish)   best T   d.logloss        p
+    rates_or_prior (today's)        0.519        0.55      -0.040     0.000
+    raw point-in-time counts        0.699        1.30      -0.044     0.000
+    rates_or_prior_as_of            0.518        0.75      -0.001     0.456
 
-    Run 2 DISCARDS THE SHRINKAGE. Point-in-time counts are honest but raw, and
-    rates_or_prior does not serve raw rates -- it blends toward a divisional
-    prior. A 2-0 fighter with two knockouts reads a 100% KO rate, ko_press
-    goes through the roof (the [method_model] clipping warnings are that
-    happening thousands of times), and the model over-predicts finishes by 17
-    points. Flattening then wins for the same reason sharpening won before.
+The first LEAKED: reading today's table let a fighter's later career into his
+own past fights, and it scored AUC 0.804. The second removed the leak and
+threw away production's shrinkage with it, so a 2-0 fighter with two knockouts
+became a 100% finisher and the model over-predicted finishes by 17 points.
+Both produced p = 0.000 -- in OPPOSITE directions. Two contradictory findings
+at the same significance is how you learn the significance belongs to the
+harness.
 
-WHAT IT NEEDS BEFORE IT CAN ANSWER ANYTHING: point-in-time method rates WITH
-production's shrinkage -- a rates_or_prior that takes counts as of a date
-instead of reading the current file. Until then the sweep measures the
-harness. It is committed unfinished, with the numbers above, so the next
-attempt starts from the trap rather than walking into it.
+The third uses src.ufc_method_rates.rates_or_prior_as_of: production's own
+lookup with a clock on it, sharing its denominator, its min_fights gate and
+its half-the-divisional-prior fallback. Wound past every bout it reproduces
+production exactly, fighter by fighter, which
+tests/test_pit_method_rates.py asserts rather than assumes.
 
-The roster-coverage cut -- the confound that sank the win-probability
-temperature in validate_probability_calibration -- could not even be run: only
-497 of 8,494 scored fights have both corners on the current roster, and the
-held-out split leaves 186/311. So the one check that would distinguish "the
-model is miscalibrated" from "the backtest is malnourished" has no sample.
+WHAT THIS STILL CANNOT SEE. The harness omits fight_history_df, silencing
+recent form, and uses raw elo instead of build_effective_ratings, so it runs
+thinner than production and its AUC of 0.601 is a ceiling for THIS harness,
+not a measurement of the model. And the roster-coverage cut -- the confound
+that sank the win-probability temperature in
+validate_probability_calibration -- still cannot run: 497 of 8,494 scored
+fights have both corners on the current roster, splitting 186/311.
 
-NOTHING SHIPPED. No temperature is applied anywhere; method_model is
-unchanged.
+So "no temperature" is well supported for the fight-level finish probability
+and does not extend to the three-way split or to the per-fighter grid.
 
 Usage:  python3 scripts/validate_method_sharpening.py
 """
@@ -110,34 +110,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.matchup_model import predict_matchup, compute_divisional_method_priors  # noqa: E402
 from src.method_model import method_probabilities  # noqa: E402
-from src.ufc_method_rates import rates_or_prior  # noqa: E402
+from src.ufc_method_rates import rates_or_prior_as_of  # noqa: E402
 from src.names import _normalize_name  # noqa: E402
 from scripts.pit_roster import build_fight_index, roster_as_of  # noqa: E402
 
 CUTOFF = "2024-01-01"
 GRID = [0.55, 0.65, 0.75, 0.85, 0.95, 1.00, 1.05, 1.15, 1.30]
 BOOTSTRAP = 3000
-# UFC all-time, 8,741 fights: the fallback when a corner has no wins or no
-# losses on record yet.
-BASE_KO, BASE_SUB = 0.332, 0.197
-
-
-def _pit_rates(row):
-    """(own KO rate, own SUB rate, KO-lost rate, SUB-lost rate) as of the date.
-
-    Denominators are wins for the win-side rates and losses for the loss-side
-    ones, matching how rates_or_prior defines them. A fighter with no wins (or
-    no losses) yet falls back to the pooled base rate rather than to zero --
-    zero is a claim, and "we have not seen one" is not.
-    """
-    w = max(int(row.get("wins") or 0), 0)
-    l = max(int(row.get("losses") or 0), 0)
-    ko_w, sub_w = float(row.get("ko_wins") or 0), float(row.get("sub_wins") or 0)
-    ko_l, sub_l = float(row.get("ko_losses") or 0), float(row.get("sub_losses") or 0)
-    return (ko_w / w if w else BASE_KO,
-            sub_w / w if w else BASE_SUB,
-            ko_l / l if l else BASE_KO,
-            sub_l / l if l else BASE_SUB)
 
 
 def sharpen(p, T):
@@ -215,8 +194,23 @@ def main() -> int:
                 # record_as_of already accumulates the method splits from
                 # bouts strictly before the date, which is the same quantity
                 # without the future in it.
-                ko_a, sub_a, kl_a, sl_a = _pit_rates(ra)
-                ko_b, sub_b, kl_b, sl_b = _pit_rates(rb)
+                # THE SERVING PATH WITH A CLOCK ON IT. rates_or_prior_as_of
+                # is production's own lookup restricted to bouts strictly
+                # before this date -- same denominator, same min_fights gate,
+                # same half-the-divisional-prior fallback. Winding it past
+                # every bout reproduces production exactly, which
+                # tests/test_pit_method_rates.py asserts fighter by fighter.
+                #
+                # Neither of the first two attempts did this. One read today's
+                # table and leaked the scored fight into its own features
+                # (AUC 0.804 against production's 0.720); the other used raw
+                # point-in-time counts and threw the shrinkage away, so a 2-0
+                # fighter with two knockouts became a 100% finisher.
+                def _wc(row):
+                    v = row.get("weight_class")
+                    return None if v is None or (isinstance(v, float) and v != v) else str(v).strip()
+                ko_a, sub_a, kl_a, sl_a = rates_or_prior_as_of(a, when, priors, _wc(ra))
+                ko_b, sub_b, kl_b, sl_b = rates_or_prior_as_of(b, when, priors, _wc(rb))
                 gap = abs(eff.get(a, 1500) - eff.get(b, 1500)) / 400.0
                 md = method_probabilities(
                     ko_press=ko_a * kl_b + ko_b * kl_a,
@@ -247,6 +241,33 @@ def main() -> int:
     print(f"   model mean P(finish) {d.p.mean():.3f}   observed {d.y.mean():.3f}")
     print(f"   spread: min {d.p.min():.3f}  p25 {d.p.quantile(.25):.3f}  "
           f"p75 {d.p.quantile(.75):.3f}  max {d.p.max():.3f}")
+    # THE FIDELITY CHECK, printed every run because it is what caught the leak.
+    #
+    # 0.804 was the first version of this harness, reading today's method rates
+    # so that a fighter's later career leaked into his own past fights. That is
+    # the number to stay well under.
+    #
+    # THE 0.720 OFTEN QUOTED FOR "PRODUCTION" IS NOT A CLEAN BENCHMARK, and
+    # saying so here is the point of this comment. It was measured by running
+    # today's model over the 102 already-graded fights, which reads their
+    # results through exactly the same rates -- the same leak, smaller sample.
+    # A point-in-time run scoring below it is not necessarily starved; the
+    # comparison is unfair to the honest arm.
+    #
+    # What a low number here WOULD mean is the failure
+    # validate_probability_calibration documents: a harness fed less than
+    # production is, whose "miscalibration" is the backtest's and not the
+    # model's. This one omits fight_history_df (silencing recent form) and
+    # uses raw elo rather than build_effective_ratings, so treat ~0.60 as this
+    # harness's own ceiling until those are threaded through.
+    pos, neg = d.p[d.y == 1].to_numpy(), d.p[d.y == 0].to_numpy()
+    if len(pos) and len(neg):
+        order = np.argsort(np.concatenate([pos, neg]))
+        ranks = np.empty(len(order), dtype=float)
+        ranks[order] = np.arange(1, len(order) + 1)
+        auc = (ranks[:len(pos)].sum() - len(pos) * (len(pos) + 1) / 2) / (len(pos) * len(neg))
+        print(f"   AUC {auc:.3f}   (>=0.80 means leakage; the 0.720 quoted for production "
+              f"was itself measured on graded fights and is not clean)")
 
     for label, sub in (("ALL", d), ("BOTH CORNERS ON ROSTER", d[d.full])):
         if len(sub) < 200:
