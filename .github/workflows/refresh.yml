@@ -425,6 +425,19 @@ jobs:
           echo "::group::scale_drift"
           python scripts/check_scale_drift.py || true
           echo "::endgroup::"
+          # REPORT ONLY -- no --apply, deliberately and permanently. This one
+          # would edit data/predictions_log.csv, and section 1 puts that in
+          # the owner's hands: a pass that quietly deletes published rows is
+          # the thing that rule exists to forbid. It says what it found; a
+          # human runs it with --apply and records why.
+          #
+          # It has something to find whenever ESPN renames a card AFTER that
+          # card has graded, which is the one window log_predictions' own
+          # rename migration cannot cover -- it short-circuits on
+          # decided_keys before reaching it.
+          echo "::group::orphaned_event_rows"
+          python scripts/clean_orphaned_event_rows.py || true
+          echo "::endgroup::"
 
       - name: Publish the lint result to the run summary
         # Same pattern as crosscheck.yml, and for the same reason: the run
