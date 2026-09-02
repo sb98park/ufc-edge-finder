@@ -98,11 +98,52 @@ LOCK_OF_WEEK_MAX = 3  # cap, not a target -- a card with only one real standout 
 # worse wore the label purely because of which card it landed on. A floor
 # makes "lock" mean something absolute; the cap then keeps a stacked card
 # from crowning six of them.
-# 0.82 chosen from the user's real predictions_log across 5 cards: it keeps
-# 7 locks, drops the two weakest (76.9%, 79.1%), and leaves 2 of 5 cards
-# with none -- which is the point, not a cost. Provisional on a small
-# sample (13 High Confidence picks); revisit once more locks have resolved.
-LOCK_OF_WEEK_MIN_PROB = 0.82
+# 0.78, RE-DERIVED. 0.82 was chosen across 5 cards on 13 High Confidence
+# picks and flagged provisional; nine cards later the owner noticed locks had
+# stopped appearing at all, and the revisit says the number was never wrong --
+# THE SCALE MOVED UNDER IT.
+#
+# The model's top end compressed while the market's did not. Per card, over
+# the nine cards with logged prices:
+#
+#     model p90   Spearman rho -0.67, p = 0.050
+#     market p90  Spearman rho +0.00, p = 1.000
+#
+# The matchups did not get tighter -- on Hernandez vs. Rodrigues the market's
+# p90 was 0.870, the HIGHEST of any card, and the model's was 0.699. Ruled out
+# as a coverage artefact: the shrink is LARGEST at 10+ recorded bouts (+0.053
+# vs +0.005 at 0-2), so it is the structural Elo compression already recorded
+# at MAX_MODEL_DISAGREEMENT, not thin data.
+#
+# THE FLOOR WAS ALSO NOT SEPARATING ANYTHING. On all 102 graded picks, frozen
+# at publication so this is out-of-sample:
+#
+#     0.75-0.82  (floor REJECTED)   12/13   model said 0.789
+#     >=0.82     (floor ACCEPTED)    8/8    model said 0.862
+#
+# Above 0.75 the model is 20-1 against 17.1 expected wins (p = 0.081), spread
+# across all 8 graded cards rather than carried by one. It is UNDER-confident
+# at the top -- it says 82% and delivers 95% -- which is the opposite of what
+# raising a floor assumes.
+#
+# WHERE 0.78 COMES FROM, and why not lower. Two independent estimates of what
+# 0.82 MEANT when chosen, restated on today's scale: matching its selectivity
+# (10.6% of picks over the first six cards) puts it at 0.734, and the measured
+# p90 drift of ~0.07 puts it at 0.75. The rolling equivalent slides 0.817 ->
+# 0.767 -> 0.734. But High Confidence BEGINS at 0.75, so a floor there is a
+# no-op that collapses the two tiers back into one -- the exact thing this
+# constant was added to prevent. 0.78 keeps real daylight above the tier
+# boundary and sits deliberately above what pure drift-matching suggests.
+#
+# NOT SET FROM A UNITS BACKTEST. Only 12 graded High Confidence picks carry a
+# price and they went 12/12, so no floor in this range has a losing pick to
+# penalise it and the sweep recommends 0.70. That is a sample that cannot
+# answer the question, not evidence for a lower number.
+#
+# Forward-only: _assign_locks_of_week skips decided fights, so nothing already
+# graded is re-crowned. Revisit when the drift measurement has more than nine
+# cards behind it.
+LOCK_OF_WEEK_MIN_PROB = 0.78
 
 
 def _loose_name(name: str) -> tuple:
