@@ -1085,6 +1085,50 @@ def group_edges_by_card(
                             if _f in _fixed:
                                 _e[_f] = _fixed[_f]
                 elif gid == "fighter":
+                    # THE PRICED METHOD ROWS ADOPT THE PROJECTION'S GRID, for
+                    # exactly the reason the rounds branch above does it, and
+                    # this branch never did.
+                    #
+                    # TWO grids exist for one fight and BOTH ARE INTERNALLY
+                    # COHERENT. edge_finder._reconciled builds one for the
+                    # priced rows; model_preview builds another for the
+                    # model-only rows. Each sums to 1.000 on its own. The table
+                    # then took KO/TKO from the first and Submission/Decision
+                    # from the second, because "priced rows win" is decided per
+                    # row with no view of the set:
+                    #
+                    #     KO sum, edge_finder grid   0.3157
+                    #     KO sum, projection grid    0.2980   <- also the
+                    #        "Fight ends by KO/TKO" row rendered inches below
+                    #     difference                +0.0177   = the 1.8 points
+                    #
+                    # Mixing two coherent grids gives an incoherent one, and
+                    # the six rows summed to 101.8% however carefully either
+                    # half was computed. Neither grid was wrong; the seam was.
+                    #
+                    # The projection wins because it is what the fight-level
+                    # rows and the headline method already read from -- see the
+                    # SINGLE SOURCE comment above. Prices, EV and edge stay on
+                    # the row untouched; only the model probability is aligned.
+                    if projection:
+                        _proj = {}
+                        for _r in projection.get("method_rows", []) or []:
+                            _k = _method_row_key(_r)
+                            if _k:
+                                _proj[_k] = _r.get("model_prob")
+                        for _r in rows:
+                            _k = _method_row_key(_r)
+                            if _k and _proj.get(_k) is not None:
+                                _r["model_prob"] = _proj[_k]
+                        # AND BACK ONTO fight["edges"], because generate_site
+                        # builds the standout and disagreement cards from that
+                        # separate list -- the same trap the rounds branch
+                        # documents, where one market printed two numbers on
+                        # one page.
+                        for _e in fight.get("edges") or []:
+                            _k = _method_row_key(_e)
+                            if _k and _proj.get(_k) is not None:
+                                _e["model_prob"] = _proj[_k]
                     rows = group_fighter_props(
                         rows, fight.get("fighter_a", ""), fight.get("fighter_b", ""))
                 rows = _dedupe_market_rows(rows)
@@ -1165,6 +1209,31 @@ def _dedupe_market_rows(rows: list) -> list:
         elif r.get("has_line") and not out[prev].get("has_line"):
             out[prev] = r
     return out
+
+
+def _method_row_key(d):
+    """(method, folded fighter) for a per-fighter method row, or None.
+
+    Spans two spellings of the same market: model_preview writes
+    "Method: Submission" and edge_finder writes "Method: SUB", so a raw string
+    key matches KO/TKO by luck and nothing else. The fighter is folded for the
+    usual reason -- the odds feed and the card disagree about a Polish stroked
+    l, among others.
+    """
+    m = str(d.get("market") or "")
+    if ":" in m:
+        m = m.split(":", 1)[1]
+    m = m.strip().upper()
+    if "KO" in m or "TKO" in m:
+        kind = "KO"
+    elif "SUB" in m:
+        kind = "SUB"
+    elif "DEC" in m:
+        kind = "DEC"
+    else:
+        return None
+    who = _normalize_name(d.get("selection") or d.get("fighter"))
+    return (kind, who) if who else None
 
 
 def group_fighter_props(rows: list, fighter_a: str, fighter_b: str) -> list:
