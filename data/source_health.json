@@ -1,71 +1,45 @@
 {
-  "at": "2026-09-02T13:52:38+00:00",
+  "at": "2026-09-02T14:07:59+00:00",
   "card_data_coverage": {
     "carded_fighters": 159,
-    "checked_at": "2026-09-02T13:51:14+00:00",
+    "checked_at": "2026-09-02T14:03:26+00:00",
     "counts": {
-      "history": 3,
       "physicals": 5
     },
-    "findings": [
-      {
-        "detail": "0 of 8 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Hooker vs. Parnasse",
-        "event_date": "2026-09-05",
-        "fighter": "Pavel Andrusca",
-        "last_fight_date": "2026-07-23",
-        "severity": "history"
-      },
-      {
-        "detail": "20 of 34 bouts in fight_history (59%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Allen vs. Duncan",
-        "event_date": "2026-10-10",
-        "fighter": "Brendan Allen",
-        "last_fight_date": "2026-06-06",
-        "severity": "history"
-      },
-      {
-        "detail": "10 of 17 bouts in fight_history (59%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Allen vs. Duncan",
-        "event_date": "2026-10-10",
-        "fighter": "Christian Leroy Duncan",
-        "last_fight_date": "2026-07-18",
-        "severity": "history"
-      }
-    ]
+    "findings": []
   },
   "edges_two_way": {
     "best_book": {
-      "DraftKings": 42,
-      "FanDuel": 14,
+      "DraftKings": 40,
+      "FanDuel": 16,
       "Polymarket": 84
     },
     "books_quoting": {
-      "1.0": 108,
-      "2.0": 32
+      "1.0": 110,
+      "2.0": 30
     },
     "n": 140
   },
   "moneyline": {
     "best_book": {
-      "DraftKings": 19,
-      "FanDuel": 9,
+      "DraftKings": 17,
+      "FanDuel": 11,
       "Polymarket": 28
     },
     "n": 56,
     "source": {
-      "DraftKings": 19,
-      "FanDuel": 9,
+      "DraftKings": 17,
+      "FanDuel": 11,
       "Polymarket": 28
     }
   },
   "overround": {
     "in_force": {
       "prop": 1.2,
-      "two_way": 1.0594
+      "two_way": 1.0595
     },
     "measured": {
-      "two_way": 1.0594
+      "two_way": 1.0595
     }
   },
   "parlay": {
@@ -75,15 +49,15 @@
       "slips": 1
     },
     "bankroll/FanDuel": {
-      "combinations_considered": 13,
+      "combinations_considered": 6,
       "reason": "built",
       "slips": 1
     }
   },
   "rows_by_source": {
-    "DraftKings": 52,
+    "DraftKings": 50,
     "FanDuel": 36,
-    "Polymarket": 264
+    "Polymarket": 260
   },
   "rundown_dates_requested": [
     "2026-09-05"
@@ -187,31 +161,31 @@
         "date": "2026-09-05",
         "event": "UFC Fight Night: Hooker vs. Parnasse",
         "fights": 15,
-        "gap_p90": -0.0128,
+        "gap_p90": -0.015,
         "market_p90": 0.7496,
-        "model_p90": 0.7368,
+        "model_p90": 0.7346,
         "priced": 15,
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-09-02T13:55:41+00:00",
+    "checked_at": "2026-09-02T14:13:30+00:00",
     "equivalent_floor": 0.723,
     "floor_in_force": 0.78,
-    "gap_move": -0.0554,
+    "gap_move": -0.0558,
     "trailing_cards": 6,
-    "trailing_gap_p90": -0.0408,
+    "trailing_gap_p90": -0.0412,
     "trailing_selectivity": 0.1,
     "verdict": "watch"
   },
   "tracked_moneyline": {
     "best_book": {
-      "DraftKings": 19,
-      "FanDuel": 9
+      "DraftKings": 17,
+      "FanDuel": 11
     },
     "n": 28,
     "source": {
-      "DraftKings": 19,
-      "FanDuel": 9
+      "DraftKings": 17,
+      "FanDuel": 11
     }
   }
 }
