@@ -512,7 +512,8 @@ def main(tier: str = "member", output_path: str | None = None):
         set_measured_overrounds(_measured)
         print(f"[vig] measured overrounds {_measured}")
 
-        edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings, history_df)
+        edges_df = find_all_edges(upcoming_df, fighters_df, elo_ratings, history_df,
+                                  weight_class_history_df)
         # RECORD THE DERIVABLE-MARKET QUOTES, so the one open question left
         # -- whether a two-way Double Chance / goes-the-distance market is
         # loose enough to beat -- becomes answerable in a few months instead

@@ -275,7 +275,8 @@ def compute_moneyline_edges(
 
 def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
                          elo_ratings: dict[str, float] | None = None,
-                         fight_history_df: pd.DataFrame | None = None) -> pd.DataFrame:
+                         fight_history_df: pd.DataFrame | None = None,
+                         weight_class_history_df: pd.DataFrame | None = None) -> pd.DataFrame:
     """
     Method-of-victory props (KO/TKO, Submission, Decision). Prior-informed
     blend: starts at the DIVISIONAL baseline rate for that method (a
@@ -323,7 +324,7 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
     # One computation, shared with model_preview via method_model.
     _grid_cache = {}
 
-    def _reconciled(fight_id, name_a, name_b):
+    def _reconciled(fight_id, name_a, name_b, fight_weight_class=None):
         if fight_id in _grid_cache:
             return _grid_cache[fight_id]
         # TWO SPELLINGS, EACH WITH ONE JOB. The odds feed's spelling KEYS the
@@ -425,7 +426,12 @@ def compute_method_edges(upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame,
         # find the opponent to factor in their specific vulnerability
         opponent_name = row["fighter_b"] if row["selection"] == row["fighter_a"] else row["fighter_a"]
         opp_stats = _find_fighter(fighters_df, opponent_name)
-        _grid = _reconciled(row["fight_id"], row["fighter_a"], row["fighter_b"])
+        _grid = _reconciled(row["fight_id"], row["fighter_a"], row["fighter_b"],
+                            (str(row.get("weight_class")).strip() or None)
+                            if row.get("weight_class") is not None
+                            and not (isinstance(row.get("weight_class"), float)
+                                     and row.get("weight_class") != row.get("weight_class"))
+                            else None)
 
         if row["selection_method"] == "FINISH":
             # "Wins by finish" = KO/TKO or SUB -- these are mutually
@@ -1008,10 +1014,12 @@ def attach_fight_meta(edges_df: pd.DataFrame, fight_list_df: pd.DataFrame) -> pd
 def find_all_edges(
     upcoming_df: pd.DataFrame, fighters_df: pd.DataFrame, elo_ratings: dict[str, float],
     fight_history_df: pd.DataFrame | None = None,
+    weight_class_history_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     frames = [
         compute_moneyline_edges(upcoming_df, elo_ratings, fighters_df, fight_history_df),
-        compute_method_edges(upcoming_df, fighters_df, elo_ratings, fight_history_df),
+        compute_method_edges(upcoming_df, fighters_df, elo_ratings, fight_history_df,
+                             weight_class_history_df),
         compute_total_rounds_edges(upcoming_df, fighters_df, elo_ratings),
         compute_goes_the_distance_edges(upcoming_df, fighters_df, elo_ratings),
         compute_round_betting_edges(upcoming_df, fighters_df),
