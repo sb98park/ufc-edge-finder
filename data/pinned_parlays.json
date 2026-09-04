@@ -1,32 +1,32 @@
 {
  "UFC Fight Night: Hooker vs. Parnasse": {
   "bankroll": {
-   "pinned_at": "2026-08-31T03:22:26+00:00",
+   "pinned_at": "2026-09-04T20:51:30+00:00",
    "identities": [
-    "[\"Michael Page|Nursulton Ruziboev\", [{\"fighter\": \"Michael Page\", \"kind\": \"winner\"}]]",
+    "[\"Nathaniel Wood|Pavel Andrusca\", [{\"fighter\": \"Nathaniel Wood\", \"kind\": \"winner\"}]]",
     "[\"Delphine Benouaich|Sofia Montenegro\", [{\"fighter\": \"Delphine Benouaich\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
-      "label": "Michael Page ML",
-      "odds_display": "-176",
+      "label": "Nathaniel Wood ML",
+      "odds_display": "-278",
       "is_model": false,
-      "decimal_odds": 1.568182,
-      "fight_key": "Michael Page|Nursulton Ruziboev",
+      "decimal_odds": 1.359712,
+      "fight_key": "Nathaniel Wood|Pavel Andrusca",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Michael Page"
+        "fighter": "Nathaniel Wood"
        }
       ],
-      "source": "FanDuel"
+      "source": "DraftKings"
      },
      {
       "label": "Delphine Benouaich ML",
-      "odds_display": "-144",
+      "odds_display": "-142",
       "is_model": false,
-      "decimal_odds": 1.694444,
+      "decimal_odds": 1.704225,
       "fight_key": "Delphine Benouaich|Sofia Montenegro",
       "conditions": [
        {
@@ -34,21 +34,21 @@
         "fighter": "Delphine Benouaich"
        }
       ],
-      "source": "FanDuel"
+      "source": "DraftKings"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_2",
+     "card_9",
      "card_13"
     ],
-    "slip_id": "6949bc790c85",
-    "combined_decimal": 2.657197,
-    "combined_american": 166,
-    "combined_american_display": "+166",
-    "combined_prob": 0.4038,
-    "combined_prob_raw": 0.3791,
-    "venue": "FanDuel"
+    "slip_id": "0c39d224aedb",
+    "combined_decimal": 2.317256,
+    "combined_american": 132,
+    "combined_american_display": "+132",
+    "combined_prob": 0.4086,
+    "combined_prob_raw": 0.3729,
+    "venue": "DraftKings"
    }
   }
  }
