@@ -10,9 +10,9 @@
     "legs": [
      {
       "label": "Michael Page ML",
-      "odds_display": "-170",
+      "odds_display": "-176",
       "is_model": false,
-      "decimal_odds": 1.588235,
+      "decimal_odds": 1.568182,
       "fight_key": "Michael Page|Nursulton Ruziboev",
       "conditions": [
        {
@@ -20,13 +20,13 @@
         "fighter": "Michael Page"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      },
      {
       "label": "Delphine Benouaich ML",
-      "odds_display": "-148",
+      "odds_display": "-144",
       "is_model": false,
-      "decimal_odds": 1.675676,
+      "decimal_odds": 1.694444,
       "fight_key": "Delphine Benouaich|Sofia Montenegro",
       "conditions": [
        {
@@ -34,7 +34,7 @@
         "fighter": "Delphine Benouaich"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      }
     ],
     "has_model_legs": false,
@@ -43,12 +43,12 @@
      "card_13"
     ],
     "slip_id": "6949bc790c85",
-    "combined_decimal": 2.661367,
+    "combined_decimal": 2.657197,
     "combined_american": 166,
     "combined_american_display": "+166",
     "combined_prob": 0.3987,
     "combined_prob_raw": 0.3791,
-    "venue": "DraftKings"
+    "venue": "FanDuel"
    }
   }
  }
