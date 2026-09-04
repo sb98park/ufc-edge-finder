@@ -10,9 +10,9 @@
     "legs": [
      {
       "label": "Nathaniel Wood ML",
-      "odds_display": "-278",
+      "odds_display": "-300",
       "is_model": false,
-      "decimal_odds": 1.359712,
+      "decimal_odds": 1.333333,
       "fight_key": "Nathaniel Wood|Pavel Andrusca",
       "conditions": [
        {
@@ -20,13 +20,13 @@
         "fighter": "Nathaniel Wood"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      },
      {
       "label": "Delphine Benouaich ML",
-      "odds_display": "-142",
+      "odds_display": "-144",
       "is_model": false,
-      "decimal_odds": 1.704225,
+      "decimal_odds": 1.694444,
       "fight_key": "Delphine Benouaich|Sofia Montenegro",
       "conditions": [
        {
@@ -34,7 +34,7 @@
         "fighter": "Delphine Benouaich"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      }
     ],
     "has_model_legs": false,
@@ -43,12 +43,12 @@
      "card_13"
     ],
     "slip_id": "0c39d224aedb",
-    "combined_decimal": 2.317256,
-    "combined_american": 132,
-    "combined_american_display": "+132",
+    "combined_decimal": 2.259259,
+    "combined_american": 126,
+    "combined_american_display": "+126",
     "combined_prob": 0.4086,
     "combined_prob_raw": 0.3729,
-    "venue": "DraftKings"
+    "venue": "FanDuel"
    }
   }
  }
