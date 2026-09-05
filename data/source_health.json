@@ -1,17 +1,17 @@
 {
-  "at": "2026-09-04T23:26:32+00:00",
+  "at": "2026-09-05T01:16:03+00:00",
   "card_data_coverage": {
     "carded_fighters": 159,
-    "checked_at": "2026-09-04T23:21:18+00:00",
+    "checked_at": "2026-09-05T01:09:33+00:00",
     "counts": {
-      "physicals": 5
+      "physicals": 2
     },
     "findings": []
   },
   "edges_two_way": {
     "best_book": {
-      "DraftKings": 34,
-      "FanDuel": 30,
+      "DraftKings": 33,
+      "FanDuel": 31,
       "Polymarket": 88
     },
     "books_quoting": {
@@ -22,14 +22,14 @@
   },
   "moneyline": {
     "best_book": {
-      "DraftKings": 15,
-      "FanDuel": 13,
+      "DraftKings": 14,
+      "FanDuel": 14,
       "Polymarket": 26
     },
     "n": 54,
     "source": {
-      "DraftKings": 15,
-      "FanDuel": 13,
+      "DraftKings": 14,
+      "FanDuel": 14,
       "Polymarket": 26
     }
   },
@@ -57,7 +57,7 @@
   "rows_by_source": {
     "DraftKings": 56,
     "FanDuel": 52,
-    "Polymarket": 308
+    "Polymarket": 310
   },
   "rundown_dates_requested": [
     "2026-09-05"
@@ -161,44 +161,44 @@
         "date": "2026-09-05",
         "event": "UFC Fight Night: Hooker vs. Parnasse",
         "fights": 15,
-        "gap_p90": -0.015,
+        "gap_p90": -0.0146,
         "market_p90": 0.7496,
-        "model_p90": 0.7346,
+        "model_p90": 0.735,
         "priced": 15,
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-09-04T23:26:31+00:00",
+    "checked_at": "2026-09-05T01:16:03+00:00",
     "equivalent_floor": 0.723,
     "floor_in_force": 0.78,
-    "gap_move": -0.0558,
+    "gap_move": -0.0557,
     "trailing_cards": 6,
-    "trailing_gap_p90": -0.0412,
+    "trailing_gap_p90": -0.0411,
     "trailing_selectivity": 0.1,
     "verdict": "watch"
   },
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 4.4,
+      "duration_s": 5.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-04T23:22:04+00:00",
+      "last_ok": "2026-09-05T01:10:46+00:00",
       "ok": true,
-      "ran_at": "2026-09-04T23:22:04+00:00"
+      "ran_at": "2026-09-05T01:10:46+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 41.0,
+      "duration_s": 66.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-04T23:22:00+00:00",
+      "last_ok": "2026-09-05T01:10:41+00:00",
       "ok": true,
-      "ran_at": "2026-09-04T23:22:00+00:00"
+      "ran_at": "2026-09-05T01:10:41+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -207,9 +207,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-04T23:21:18+00:00",
+      "last_ok": "2026-09-05T01:09:33+00:00",
       "ok": true,
-      "ran_at": "2026-09-04T23:21:18+00:00"
+      "ran_at": "2026-09-05T01:09:33+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
@@ -218,31 +218,31 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-04T23:21:19+00:00",
+      "last_ok": "2026-09-05T01:09:34+00:00",
       "ok": true,
-      "ran_at": "2026-09-04T23:21:19+00:00"
+      "ran_at": "2026-09-05T01:09:34+00:00"
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.8,
+      "duration_s": 1.1,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-04T23:21:18+00:00",
+      "last_ok": "2026-09-05T01:09:34+00:00",
       "ok": true,
-      "ran_at": "2026-09-04T23:21:18+00:00"
+      "ran_at": "2026-09-05T01:09:34+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-04T23:26:32+00:00",
+      "last_ok": "2026-09-05T01:16:03+00:00",
       "ok": true,
-      "ran_at": "2026-09-04T23:26:32+00:00"
+      "ran_at": "2026-09-05T01:16:03+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -251,20 +251,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-04T23:26:31+00:00",
+      "last_ok": "2026-09-05T01:16:03+00:00",
       "ok": true,
-      "ran_at": "2026-09-04T23:26:31+00:00"
+      "ran_at": "2026-09-05T01:16:03+00:00"
     }
   },
   "tracked_moneyline": {
     "best_book": {
-      "DraftKings": 15,
-      "FanDuel": 13
+      "DraftKings": 14,
+      "FanDuel": 14
     },
     "n": 28,
     "source": {
-      "DraftKings": 15,
-      "FanDuel": 13
+      "DraftKings": 14,
+      "FanDuel": 14
     }
   }
 }
