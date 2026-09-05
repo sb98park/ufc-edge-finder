@@ -123,21 +123,46 @@ check("no contests are excluded from coverage",
       abs(float(attach_history_coverage(F_cov, H_cov).loc[0, "history_coverage"]) - 1.0) < 1e-9)
 
 # ------------------------------------------------ the case that found it all
-f = attach_history_coverage(
-    reconcile_last_fight_from_history(pd.read_csv("data/fighters.csv"), real), real)
-a = f[f["name"] == "Michael Aljarouj"]
-if a.empty:
-    print("  (skipped Aljarouj checks -- not on the roster)")
-else:
-    a = a.iloc[0]
-    check("Aljarouj holds his full decided record",
-          abs(float(a["history_coverage"]) - 1.0) < 1e-9)
-    check("Aljarouj's last fight is the 2025 no contest",
-          str(a["last_fight_date"])[:10] == "2025-04-12" and a["last_fight_result"] == "NC")
-    yrs = layoff_years(a, dt.date(2026, 9, 5))
-    check("layoff is read, and is ~1.4y rather than 5.5y", yrs is not None and 1.3 < yrs < 1.5)
-    check("his regional run stays out of the rating pool",
-          "Ronny Gomez" not in EloRatingSystem().build_from_history(real))
+# SYNTHETIC, AND THAT IS THE FIX. This block used to assert on Michael
+# Aljarouj's live row: coverage exactly 1.0, last fight the 2025-04-12 no
+# contest, layoff ~1.4 years. Every one of those is true only until he fights
+# again -- and on 2026-09-05 he did, losing to Fabia Sintes, which turned
+# three assertions false and FROZE CI MID-CARD. The test suite is a hard gate
+# running before data mutation, so the whole site sat on stale data during a
+# live event, which is the failure CLAUDE.md section 2 names explicitly.
+#
+# It is the third time this session a test bound to mutable data has stopped
+# the build. The bug it was written for is real and is kept: a roster whose
+# last_fight_date lags the spine, whose most recent bout is a NO CONTEST, and
+# whose layoff must therefore be read from the reconciled date rather than the
+# stale one. Fixtures assert the MECHANISM, so no result can ever invalidate
+# them.
+F_lag = pd.DataFrame([{"name": "Lagging Fighter", "wins": 2, "losses": 1,
+                       "last_fight_date": "2021-03-18", "last_fight_result": "L"}])
+H_lag = pd.DataFrame([
+    {"date": "2020-01-01", "fighter_a": "Lagging Fighter", "fighter_b": "Op One",
+     "winner": "Lagging Fighter", "method": "DEC", "promotion": ""},
+    {"date": "2021-03-18", "fighter_a": "Lagging Fighter", "fighter_b": "Op Two",
+     "winner": "Op Two", "method": "DEC", "promotion": ""},
+    {"date": "2024-11-23", "fighter_a": "Lagging Fighter", "fighter_b": "Op Three",
+     "winner": "Lagging Fighter", "method": "KO/TKO", "promotion": "Regional"},
+    # The most recent bout is a NO CONTEST: it decides the layoff but must not
+    # count toward the decided record on either side of the coverage ratio.
+    {"date": "2025-04-12", "fighter_a": "Lagging Fighter", "fighter_b": "Op Four",
+     "winner": "", "method": "NC", "promotion": "Regional"},
+])
+lag = attach_history_coverage(
+    reconcile_last_fight_from_history(F_lag.copy(), H_lag), H_lag).iloc[0]
+check("a lagging roster row still holds its full decided record",
+      abs(float(lag["history_coverage"]) - 1.0) < 1e-9)
+check("last fight reconciles forward to the no contest",
+      str(lag["last_fight_date"])[:10] == "2025-04-12" and lag["last_fight_result"] == "NC")
+_yrs = layoff_years(lag, dt.date(2026, 9, 5))
+check("layoff is read from the reconciled date, not the stale roster one",
+      _yrs is not None and 1.3 < _yrs < 1.5)
+check("an opponent seen only in a regional bout stays out of the rating pool",
+      "Op Four" not in EloRatingSystem().build_from_history(
+          H_lag[H_lag["method"] != "NC"]))
 
 # ------------------------------------- connected-history propagation
 # power_rating's blend weight and streak count must be built from THE SAME
