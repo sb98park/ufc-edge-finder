@@ -6854,9 +6854,16 @@
     {% endif %}
     </div>
     {% for group in track_record.results_by_event %}
-    <div class="seg-pane" id="tr-event-{{ loop.index0 }}">
-      {%- set bets = (plays_events or {}).get(group.event_name) -%}
-      <div class="event-summary-card{{ ' has-bets' if bets }}"{% if bets %} data-card-tabs{% endif %}>
+    {%- set bets = (plays_events or {}).get(group.event_name) -%}
+    {#- data-card-tabs SCOPES THE TAB JS, and it has to sit on the wrapper, not
+        on the summary card. "Every Pick" is a SIBLING of .event-summary-card,
+        so with the attribute one level down, tab.closest('[data-card-tabs]')
+        stopped short of it: the JS toggled the two panels inside the summary
+        card and never saw the pick list at all, which therefore rendered
+        under BOTH tabs. "Bets 1-0" then listed every fight on the card,
+        identical to All calls -- the exact thing the tabs exist to separate. -#}
+    <div class="seg-pane" id="tr-event-{{ loop.index0 }}"{% if bets %} data-card-tabs{% endif %}>
+      <div class="event-summary-card{{ ' has-bets' if bets }}">
         <div class="event-summary-name">{{ group.event_name }}</div>
         {% if bets %}
         {#- TWO RECORDS, TWO TABS, AND BOTH HEADLINE FIGURES ARE ON THE LABELS.
@@ -7015,6 +7022,12 @@
         {% endif %}
         {% if bets %}</div>{% endif %}
       </div>
+      {#- SECOND HALF OF THE calls PANEL. Same panel name as the one inside the
+          summary card, because the JS hides EVERY [data-ct-panel] under the
+          wrapper whose name does not match -- two elements can carry one tab.
+          Conditional, since a card with no plays has no tabs to hide behind
+          and must render this unconditionally. -#}
+      {% if bets %}<div data-ct-panel="calls" hidden>{% endif %}
       {% if group.summary.lock_picks %}
       <div class="lock-of-week-block">
         <div class="lock-of-week-title">
@@ -7088,6 +7101,7 @@
         </div>
         {% endfor %}
       </div>
+      {% if bets %}</div>{% endif %}
     </div>
     {% endfor %}
     {% else %}
