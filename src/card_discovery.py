@@ -321,6 +321,32 @@ def deduplicate_tracked_fights(future_cards_path: str = "data/future_cards.csv")
     return removed
 
 
+def _bump_orphan_streak(row) -> int:
+    """
+    Increment a row's consecutive-missing counter, tolerating NaN.
+
+    NOT `int(row.get("_orphan_streak", 0))`. A CSV column is not sparse: once
+    ANY row carries a streak, every other row gets an empty cell, which reads
+    back as NaN. NaN is PRESENT, so the .get default never fires, and
+    int(NaN) raises (CLAUDE.md s4).
+
+    The counter was the small half of that bug. The exception propagated out
+    of resync_tracked_card_order into the catch-all at its call site, so the
+    whole resync -- fight ORDER against ESPN included, which is the point of
+    the function -- was skipped on every run behind "continuing without it".
+
+    Lives out here, rather than inline, so the regression test can bind to
+    the real coercion instead of a copy of it.
+    """
+    streak = row.get("_orphan_streak", 0)
+    try:
+        streak = int(float(streak))
+    except (TypeError, ValueError):
+        streak = 0          # NaN, "", or junk -- all mean "not orphaned before"
+    row["_orphan_streak"] = streak + 1
+    return row["_orphan_streak"]
+
+
 def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") -> int:
     """
     Self-healing pass, complementary to normalize_existing_card_order
@@ -628,7 +654,7 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
             still_within_grace, exceeded_grace = [], []
             for r in genuinely_orphaned:
                 mutated = True
-                r["_orphan_streak"] = int(r.get("_orphan_streak", 0)) + 1
+                _bump_orphan_streak(r)
                 (exceeded_grace if r["_orphan_streak"] > ORPHAN_STREAK_LIMIT else still_within_grace).append(r)
             if exceeded_grace:
                 # Also cancelled-not-dropped now, for the same reason as
