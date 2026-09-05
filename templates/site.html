@@ -2690,10 +2690,22 @@
     display: grid; place-items: center; font-size: 11px; font-weight: 700;
     background: rgba(255,255,255,.05); color: var(--muted);
   }
-  .play.pl-won .play-mark { background: rgba(61,220,132,.16); color: var(--pos, #3ddc84); }
-  .play.pl-lost .play-mark { background: rgba(255,122,122,.14); color: var(--neg, #ff7a7a); }
-  .play.pl-open { opacity: .82; }
-  .play.pl-void { opacity: .5; }
+  /* .cb-row IS LISTED EXPLICITLY, and leaving it out is what made the card
+     Bets tab render a settled play's tick in plain grey. The Plays section
+     builds its rows as .play; the per-card Bets tab builds the same marker
+     as .cb-row, so `.play.pl-won` simply never matched there and the mark
+     fell through to the neutral .play-mark base. Same bug wore two faces:
+     a won bet had no green and a lost one had no red.
+     --green/--red, not --pos/--neg: --pos is not defined in this file at
+     all, so those rules were riding a hardcoded fallback that happened to
+     equal --green. These now use the same token as .track-result-icon,
+     which is the checkmark being matched. */
+  .play.pl-won .play-mark,
+  .cb-row.pl-won .play-mark { background: rgba(61,220,132,.16); color: var(--green); }
+  .play.pl-lost .play-mark,
+  .cb-row.pl-lost .play-mark { background: rgba(255,92,92,.15); color: var(--red); }
+  .play.pl-open, .cb-row.pl-open { opacity: .82; }
+  .play.pl-void, .cb-row.pl-void { opacity: .5; }
   .runner {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     margin: 0 0 10px; padding: 12px 14px; border-radius: var(--r-lg);
