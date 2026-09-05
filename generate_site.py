@@ -1473,33 +1473,52 @@ def main(tier: str = "member", output_path: str | None = None):
         # total; it would have become 3-1, then 6-2: a cumulative figure
         # wearing a weekly label. The running view already has a home in the
         # Record tab, which is where it belongs.
-        # THE UNITS TRACKER RUNS ON PLAYS, NOT ON PUBLISHED PICKS.
+        # THE UNITS TRACKER IS A HYBRID, BECAUSE THE STAKING RULE CHANGED.
         #
-        # It used to plot units_stats.running_total: every graded pick in all
-        # four tiers, scored at the tier ladder. That is 104 picks and +62.49U,
-        # and it was rendered with a dollar figure -- "$6,249 at $100 a unit" --
-        # for money that was never risked. The ladder stakes Lock of the Week
-        # and High Confidence only (card_plays._LADDER_TIERS,
-        # DISCRETIONARY_PLAYS = False), so the actual staked record through
-        # 2026-09-05 is ONE settled play: Rei Tsuruya at -625, +0.80U on 5U.
+        # Until 2026-08-29 every published pick was staked at its tier size --
+        # Low, Medium, High and Lock alike -- and that is a real record of a
+        # real rule, worth +63.44U over seven cards. From 2026-08-29 the
+        # ladder narrowed to Lock of the Week and High Confidence only
+        # (card_plays._LADDER_TIERS, DISCRETIONARY_PLAYS = False), and from
+        # that card on the plays ledger is the record.
         #
-        # The card-level view already drew this line correctly -- last week's
-        # card reads "Bets 1-0" beside "All calls 11-3" -- and the overall
-        # tracker contradicted it. Owner's call, made explicitly, to make the
-        # tracker mean the same thing the Bets tab does.
+        # An earlier version of this pointed the WHOLE tracker at the ledger
+        # and wiped the first seven cards down to a single play. That was
+        # wrong in the way that matters most: it restated history to match a
+        # rule history was never run under. The curve has to change slope at
+        # the changeover, not restart at it.
         #
-        # NOT A RESTATEMENT. Nothing in predictions_log or plays_ledger is
-        # rewritten and the all-picks series is still computed; this changes
-        # which of the two the tracker plots. Ordered by graded_at so the curve
-        # steps in settlement order, with event_date as the fallback for any
-        # row graded before that stamp existed.
+        # PICKS BEFORE THE DATE, PLAYS FROM IT. No pick after the changeover
+        # is counted at a tier stake it was never given, and no play before it
+        # exists to count -- the ledger starts there, which is why the date is
+        # read off the ledger rather than hardcoded twice.
+        _ledger_dates = [str(r.get("event_date") or "") for r in _all_now
+                         if str(r.get("event_date") or "")]
+        _changeover = min(_ledger_dates) if _ledger_dates else "9999-12-31"
+
+        _pre = [m for m in (track_record or {}).get("results", [])
+                if m.get("units_result") is not None
+                and m.get("unit_size") is not None
+                and str(m.get("date_added") or "")[:10] < _changeover]
+        _pre.sort(key=lambda m: (str(m.get("date_added") or ""), str(m.get("event_name") or "")))
+
         _settled = [r for r in _all_now
                     if str(r.get("result") or "").strip()
                     and str(r.get("result")).strip().lower() != "void"]
         _settled.sort(key=lambda r: (str(r.get("graded_at") or ""),
                                      str(r.get("event_date") or "")))
+
         _run = [0.0]
         _pts = [None]
+        for _m in _pre:
+            _u = float(_m.get("units_result") or 0.0)
+            _run.append(round(_run[-1] + _u, 2))
+            _pts.append({
+                "fight": f'{_m.get("fighter_a")} vs {_m.get("fighter_b")}',
+                "pick": _m.get("predicted_favorite"), "units": round(_u, 2),
+                "won": bool(_m.get("correct")),
+                "tier": _m.get("confidence_label") or "",
+            })
         for _r in _settled:
             try:
                 _u = float(_r.get("units_result") or 0.0)
@@ -1512,13 +1531,19 @@ def main(tier: str = "member", output_path: str | None = None):
                 "won": str(_r.get("result") or "").strip().lower() == "won",
                 "tier": _r.get("tier") or "",
             })
-        _st_staked = sum(float(r.get("units") or 0) for r in _settled)
+        _pre_staked = sum(float(m.get("unit_size") or 0) for m in _pre)
+        _play_staked = sum(float(r.get("units") or 0) for r in _settled)
+        _tot_staked = _pre_staked + _play_staked
         staked_units = {
             "total_units": round(_run[-1], 2),
-            "settled": len(_settled),
-            "staked": round(_st_staked, 2),
-            "event_count": len({r.get("event_name") for r in _settled}),
-            "roi_pct": (round(_run[-1] / _st_staked * 100, 1) if _st_staked else None),
+            "entries": len(_pre) + len(_settled),
+            "picks_before": len(_pre),
+            "plays_since": len(_settled),
+            "changeover": _changeover,
+            "staked": round(_tot_staked, 2),
+            "event_count": len({m.get("event_name") for m in _pre}
+                               | {r.get("event_name") for r in _settled}),
+            "roi_pct": (round(_run[-1] / _tot_staked * 100, 1) if _tot_staked else None),
             "running_total": _run,
             "running_points": _pts,
         }

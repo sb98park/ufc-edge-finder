@@ -3261,6 +3261,7 @@
     flex-basis: 100%;   /* row-gap on .model-pick-badge already spaces it */
     font-size: var(--t-micro); color: var(--muted); line-height: 1.45;
   }
+  .units-changeover { display: inline-block; margin-top: 4px; opacity: 0.85; }
   .units-tier-caption {
     font-size: var(--t-micro); color: var(--muted); line-height: 1.45;
     margin: 12px 0 6px; text-align: left;
@@ -6583,7 +6584,7 @@
         The tracker now reads from the plays ledger so the two agree.
         Falls back to nothing rather than to the old series when no play has
         settled -- a tracker with no bets in it should be absent, not a zero. -#}
-    {% if staked_units and staked_units.settled %}
+    {% if staked_units and staked_units.entries %}
     <div class="units-block">
       <div class="units-title">{{ icon_coins() }} Units Tracker</div>
       <div class="units-headline {{ 'positive' if staked_units.total_units >= 0 else 'negative' }}"
@@ -6603,7 +6604,8 @@
         At $100 a unit, that's <strong id="units-dollar-figure">{{ '+' if staked_units.total_units >= 0 else '-' }}${{ '{:,.0f}'.format(staked_units.total_units | abs * 100) }}</strong>
       </div>
       <div class="units-sub">
-        {{ staked_units.settled }} play{{ 's' if staked_units.settled != 1 }} settled across {{ staked_units.event_count }} fight card{{ 's' if staked_units.event_count != 1 }} &middot; {{ '%g'|format(staked_units.staked) }}U staked
+        {{ staked_units.entries }} stake{{ 's' if staked_units.entries != 1 }} across {{ staked_units.event_count }} fight card{{ 's' if staked_units.event_count != 1 }} &middot; {{ '%g'|format(staked_units.staked) }}U staked
+        {%- if staked_units.plays_since %}<br><span class="units-changeover">{{ staked_units.picks_before }} at the old all-tier ladder, then {{ staked_units.plays_since }} play{{ 's' if staked_units.plays_since != 1 }} since {{ staked_units.changeover }} when staking narrowed to Lock and High Confidence</span>{% endif %}
         {% if staked_units.roi_pct is not none %}<span class="units-roi {{ 'positive' if staked_units.roi_pct >= 0 else 'negative' }}"> · ROI {{ '+' if staked_units.roi_pct >= 0 else '' }}{{ staked_units.roi_pct }}%</span>{% endif %}
       </div>
       {% if staked_units_svg %}
