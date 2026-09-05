@@ -1,30 +1,13 @@
 {
-  "at": "2026-09-05T22:36:39+00:00",
+  "at": "2026-09-05T22:51:31+00:00",
   "card_data_coverage": {
     "carded_fighters": 167,
-    "checked_at": "2026-09-05T22:29:31+00:00",
+    "checked_at": "2026-09-05T22:45:31+00:00",
     "counts": {
-      "history": 2,
       "physicals": 5,
       "record": 2
     },
     "findings": [
-      {
-        "detail": "8 of 25 bouts in fight_history (32%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 332",
-        "event_date": "2026-10-03",
-        "fighter": "Natalia Silva",
-        "last_fight_date": "2026-01-24",
-        "severity": "history"
-      },
-      {
-        "detail": "1 of 11 bouts in fight_history (9%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 332",
-        "event_date": "2026-10-03",
-        "fighter": "Wang Cong",
-        "last_fight_date": "2026-07-11",
-        "severity": "history"
-      },
       {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "Noche UFC: Silva vs. Delgado",
@@ -43,12 +26,12 @@
   },
   "edges_two_way": {
     "best_book": {
-      "Polymarket": 66
+      "Polymarket": 68
     },
     "books_quoting": {
-      "1.0": 66
+      "1.0": 68
     },
-    "n": 66
+    "n": 68
   },
   "moneyline": {
     "best_book": {
@@ -90,7 +73,7 @@
     }
   },
   "rows_by_source": {
-    "Polymarket": 109
+    "Polymarket": 112
   },
   "rundown_dates_requested": [
     "2026-09-05"
@@ -201,7 +184,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-09-05T22:36:38+00:00",
+    "checked_at": "2026-09-05T22:51:31+00:00",
     "equivalent_floor": 0.723,
     "floor_in_force": 0.78,
     "gap_move": -0.0557,
@@ -213,58 +196,58 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 53.2,
+      "duration_s": 5.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-05T22:31:21+00:00",
+      "last_ok": "2026-09-05T22:46:42+00:00",
       "ok": true,
-      "ran_at": "2026-09-05T22:31:21+00:00"
+      "ran_at": "2026-09-05T22:46:42+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 54.8,
+      "duration_s": 64.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-05T22:30:28+00:00",
+      "last_ok": "2026-09-05T22:46:37+00:00",
       "ok": true,
-      "ran_at": "2026-09-05T22:30:28+00:00"
+      "ran_at": "2026-09-05T22:46:37+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
-      "duration_s": 0.8,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-05T22:29:31+00:00",
+      "last_ok": "2026-09-05T22:45:31+00:00",
       "ok": true,
-      "ran_at": "2026-09-05T22:29:31+00:00"
+      "ran_at": "2026-09-05T22:45:31+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 0.9,
+      "duration_s": 0.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-05T22:29:33+00:00",
+      "last_ok": "2026-09-05T22:45:32+00:00",
       "ok": true,
-      "ran_at": "2026-09-05T22:29:33+00:00"
+      "ran_at": "2026-09-05T22:45:32+00:00"
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 1.2,
+      "duration_s": 0.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-05T22:29:32+00:00",
+      "last_ok": "2026-09-05T22:45:31+00:00",
       "ok": true,
-      "ran_at": "2026-09-05T22:29:32+00:00"
+      "ran_at": "2026-09-05T22:45:31+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
@@ -273,20 +256,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-05T22:36:39+00:00",
+      "last_ok": "2026-09-05T22:51:31+00:00",
       "ok": true,
-      "ran_at": "2026-09-05T22:36:39+00:00"
+      "ran_at": "2026-09-05T22:51:31+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-05T22:36:38+00:00",
+      "last_ok": "2026-09-05T22:51:31+00:00",
       "ok": true,
-      "ran_at": "2026-09-05T22:36:38+00:00"
+      "ran_at": "2026-09-05T22:51:31+00:00"
     }
   },
   "tracked_moneyline": {
