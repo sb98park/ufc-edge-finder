@@ -432,6 +432,15 @@
      has to move with it -- .cd-right carries a border-LEFT for the side-by-side
      view, which would sit across the wrong edge once stacked. */
   .countdown-card.is-concluded { flex-direction: column; gap: 12px; }
+  /* .cd-left NEEDS THIS EXPLICITLY. The card sets align-items:center, which in
+     the row layout centres the two columns vertically -- but once
+     flex-direction flips to column that same property governs the CROSS axis,
+     which is now horizontal, so .cd-left collapsed to its content width and
+     sat centred: 205px of a 343px card, with the result text still wrapping
+     inside it. .cd-right already carried align-self:stretch and so looked
+     correct, which is what made the remaining squeeze read as a text problem
+     rather than an alignment one. */
+  .countdown-card.is-concluded .cd-left { align-self: stretch; }
   .countdown-card.is-concluded .cd-right {
     flex-direction: row; align-self: stretch; justify-content: center;
     flex-wrap: wrap; gap: 14px;
@@ -12428,9 +12437,15 @@
       // "tight" came from: a 33-character matchup wrapping inside 166px of
       // usable width. Stacking gives the result the full width and turns the
       // tally into a strip beneath it, which is the natural reading order
-      // after a card anyway. Only the two CARD-OVER states set this; the
-      // mid-card "FIGHT CONCLUDED" view still has a next fight to count down
-      // to and keeps its columns.
+      // after a card anyway.
+      // THERE ARE THREE CARD-OVER STATES, not two: JUST HAPPENED
+      // (daysSinceEvent >= 1), CARD CONCLUDED (every result confirmed) and
+      // CARD LIKELY CONCLUDED (past the last fight's estimated end). This
+      // comment said "two", and the third shipped without the call --
+      // stacking worked all week and then reverted to squeezed columns on
+      // the one night anyone was watching. All three set it now.
+      // The mid-card "FIGHT CONCLUDED" view is deliberately NOT one of them:
+      // it still has a next fight to count down to, so it keeps its columns.
       const cdCard = document.querySelector('.countdown-card');
       function setConcludedLayout(on) {
         if (cdCard) cdCard.classList.toggle('is-concluded', !!on);
@@ -12736,6 +12751,11 @@
 
         if (cardOver) {
           boxes.style.display = 'none';
+          // THE THIRD CARD-OVER STATE, and the one that was missed. It is
+          // also the longest-lived: it holds from the last fight's estimated
+          // end until daysSinceEvent flips, so it is what anyone opening the
+          // page late on a fight night actually sees.
+          setConcludedLayout(true);
           liveHeader.style.display = 'flex';
           liveMacroText.textContent = 'CARD LIKELY CONCLUDED';
           liveMicro.textContent = 'Check the Track Record section once results are posted.';
