@@ -6921,10 +6921,26 @@
             <div class="event-summary-value">{{ group.summary.accuracy_pct }}%</div>
             <div class="event-summary-label">Accuracy</div>
           </div>
+          {#- THE DENOMINATOR HAS TO BE ON THE LABEL WHEN THERE IS NO BETS TAB.
+              This figure is every published call scored at the tier ladder,
+              which is NOT what gets wagered -- the plays ladder stakes Lock
+              and High Confidence only. With the tabs present that distinction
+              is carried by the tab itself: "Bets" beside "All calls". Without
+              them the same number renders bare under the word "Units", and
+              mid-card on 2026-09-05 that read as a placed wager on a LOW
+              CONFIDENCE pick -- reported as "our model picks are being
+              wagered with units again".
+              The tabs are absent because summarise_by_event returns SETTLED
+              plays only, and that filter is a paywall boundary rather than a
+              tidiness one (see its docstring): tonight's two staked plays had
+              not fought, so publishing them here would push unsettled model
+              output into the free payload. So the fix is the label, not the
+              filter -- and the tabs return on their own the moment a play
+              settles. -#}
           {% if group.summary.units is not none %}
           <div class="event-summary-stat">
             <div class="event-summary-value {{ 'positive' if group.summary.units >= 0 else 'negative' }}">{{ '+' if group.summary.units >= 0 else '' }}{{ group.summary.units }}U</div>
-            <div class="event-summary-label">Units</div>
+            <div class="event-summary-label">{% if bets %}Units{% else %}Units &middot; not staked{% endif %}</div>
           </div>
           {% endif %}
           <div class="event-summary-stat">
@@ -7043,7 +7059,10 @@
               the louder one. Dropped only on cards the ledger covers; every
               card graded before it keeps its pills exactly as published. -#}
           {% if r.units_result is not none and not bets %}
-          <div class="units-pick-badge {{ 'positive' if r.units_result >= 0 else 'negative' }}">{{ '+' if r.units_result >= 0 else '' }}{{ r.units_result }}U</div>
+          {#- Same denominator problem as the card summary above: this renders
+              only in the no-Bets-tab fallback, so nothing else on the row says
+              the figure is the tier ladder rather than a placed bet. -#}
+          <div class="units-pick-badge {{ 'positive' if r.units_result >= 0 else 'negative' }}" title="Scored at this pick's tier size. Not staked -- the plays ladder backs Lock and High Confidence only.">{{ '+' if r.units_result >= 0 else '' }}{{ r.units_result }}U</div>
           {% endif %}
         </div>
         {% endfor %}
