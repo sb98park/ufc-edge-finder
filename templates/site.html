@@ -3261,6 +3261,10 @@
     flex-basis: 100%;   /* row-gap on .model-pick-badge already spaces it */
     font-size: var(--t-micro); color: var(--muted); line-height: 1.45;
   }
+  .units-tier-caption {
+    font-size: var(--t-micro); color: var(--muted); line-height: 1.45;
+    margin: 12px 0 6px; text-align: left;
+  }
   .no-edges { color: var(--muted); font-size: var(--t-body); padding: 0 16px 14px; }
 
   /* The !important on font-size and font-weight was dead weight: .vs-text,
@@ -6571,13 +6575,21 @@
          already accounts for BOTH price and conviction, which is what the
          tiered staking exists to express. Hit rate can't distinguish a
          string of -300 favourites from genuine edge; units can. #}
-    {% if track_record.units_stats %}
+    {#- PLAYS, NOT PICKS. This block plotted every graded call at its tier
+        size -- 104 picks, +62.49U, with "$6,249 at $100 a unit" under it --
+        for money that was never staked. The ladder backs Lock of the Week and
+        High Confidence only, so the real staked record is what the card-level
+        "Bets" tab already showed: one settled play last week, Rei Tsuruya.
+        The tracker now reads from the plays ledger so the two agree.
+        Falls back to nothing rather than to the old series when no play has
+        settled -- a tracker with no bets in it should be absent, not a zero. -#}
+    {% if staked_units and staked_units.settled %}
     <div class="units-block">
       <div class="units-title">{{ icon_coins() }} Units Tracker</div>
-      <div class="units-headline {{ 'positive' if track_record.units_stats.total_units >= 0 else 'negative' }}"
+      <div class="units-headline {{ 'positive' if staked_units.total_units >= 0 else 'negative' }}"
            id="units-headline"
-           data-total="{{ track_record.units_stats.total_units }}">
-        <span id="units-figure">{{ '+' if track_record.units_stats.total_units >= 0 else '' }}{{ track_record.units_stats.total_units }}</span><span class="units-suffix">U</span>
+           data-total="{{ staked_units.total_units }}">
+        <span id="units-figure">{{ '+' if staked_units.total_units >= 0 else '' }}{{ staked_units.total_units }}</span><span class="units-suffix">U</span>
         {# No kicker beside the figure. The denominator concern that put one
            here is already answered two lines below -- ".units-sub" states
            "N picks priced across M fight cards" on every render -- so the
@@ -6588,13 +6600,13 @@
          figure is what lands instantly -- and it's stated as an explicit
          hypothetical at a named unit size, never as realised profit. #}
       <div class="units-dollars">
-        At $100 a unit, that's <strong id="units-dollar-figure">{{ '+' if track_record.units_stats.total_units >= 0 else '-' }}${{ '{:,.0f}'.format(track_record.units_stats.total_units | abs * 100) }}</strong>
+        At $100 a unit, that's <strong id="units-dollar-figure">{{ '+' if staked_units.total_units >= 0 else '-' }}${{ '{:,.0f}'.format(staked_units.total_units | abs * 100) }}</strong>
       </div>
       <div class="units-sub">
-        {{ track_record.units_stats.eligible_count }} pick{{ 's' if track_record.units_stats.eligible_count != 1 }} priced across {{ track_record.units_stats.event_count }} fight card{{ 's' if track_record.units_stats.event_count != 1 }}
-        {% if track_record.units_stats.roi_pct is not none %}<span class="units-roi {{ 'positive' if track_record.units_stats.roi_pct >= 0 else 'negative' }}"> · ROI {{ '+' if track_record.units_stats.roi_pct >= 0 else '' }}{{ track_record.units_stats.roi_pct }}%</span>{% endif %}
+        {{ staked_units.settled }} play{{ 's' if staked_units.settled != 1 }} settled across {{ staked_units.event_count }} fight card{{ 's' if staked_units.event_count != 1 }} &middot; {{ '%g'|format(staked_units.staked) }}U staked
+        {% if staked_units.roi_pct is not none %}<span class="units-roi {{ 'positive' if staked_units.roi_pct >= 0 else 'negative' }}"> · ROI {{ '+' if staked_units.roi_pct >= 0 else '' }}{{ staked_units.roi_pct }}%</span>{% endif %}
       </div>
-      {% if units_timeseries_svg %}
+      {% if staked_units_svg %}
       {# Payload in a SCRIPT TAG, not an attribute. It was in
          data-points='...' with single quotes, so the first fighter with an
          apostrophe in their name -- an O'Malley, a D'Angelo -- closed the
@@ -6605,14 +6617,21 @@
          inert. tojson still escapes < and & , so it can't break out of the
          tag either. #}
       <div class="chart-block units-chart-wrap">
-        <script type="application/json" id="units-scrub-points">{{ track_record.units_stats.running_points | tojson }}</script>
-        {{ units_timeseries_svg | safe }}
+        <script type="application/json" id="units-scrub-points">{{ staked_units.running_points | tojson }}</script>
+        {{ staked_units_svg | safe }}
         {# Readout sits ABOVE the chart, where the eye already is after
            reading the big number -- Robinhood puts it there for the same
            reason. Empty until a scrub starts. #}
         <div class="scrub-readout" id="scrub-readout" aria-hidden="true"></div>
       </div>
       {% endif %}
+      {#- A DIFFERENT QUANTITY FROM THE HEADLINE ABOVE, and it has to say so.
+          The figure at the top is now the plays ledger: staked money. This
+          table is every PUBLISHED pick at its tier size, Medium and Low
+          included, neither of which is ever backed. Left unlabelled the two
+          sit in one block and the reader reconciles them into a single wrong
+          number -- which is the confusion the whole change is fixing. -#}
+      <div class="units-tier-caption">Every published pick at its tier size &mdash; not staked. The ladder backs Lock and High Confidence only.</div>
       <div class="units-tier-breakdown">
         {% for tier, stats in track_record.units_stats.by_tier.items() %}
         <div class="units-tier-row">

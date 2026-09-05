@@ -1376,6 +1376,7 @@ def main(tier: str = "member", output_path: str | None = None):
     plays_card = {"event_name": None, "plays": [], "passed": [], "dropped": [],
                   "total_units": 0.0, "new_units": 0.0, "fights_considered": 0}
     plays_rows, plays_record, bankroll = [], None, None
+    staked_units, staked_units_svg = None, None
     plays_events = {}
     # PUBLISHED, NOT PLAYED. Graded slips only -- summarise drops everything
     # ungraded -- so this carries no read on a fight that has not happened and
@@ -1472,6 +1473,58 @@ def main(tier: str = "member", output_path: str | None = None):
         # total; it would have become 3-1, then 6-2: a cumulative figure
         # wearing a weekly label. The running view already has a home in the
         # Record tab, which is where it belongs.
+        # THE UNITS TRACKER RUNS ON PLAYS, NOT ON PUBLISHED PICKS.
+        #
+        # It used to plot units_stats.running_total: every graded pick in all
+        # four tiers, scored at the tier ladder. That is 104 picks and +62.49U,
+        # and it was rendered with a dollar figure -- "$6,249 at $100 a unit" --
+        # for money that was never risked. The ladder stakes Lock of the Week
+        # and High Confidence only (card_plays._LADDER_TIERS,
+        # DISCRETIONARY_PLAYS = False), so the actual staked record through
+        # 2026-09-05 is ONE settled play: Rei Tsuruya at -625, +0.80U on 5U.
+        #
+        # The card-level view already drew this line correctly -- last week's
+        # card reads "Bets 1-0" beside "All calls 11-3" -- and the overall
+        # tracker contradicted it. Owner's call, made explicitly, to make the
+        # tracker mean the same thing the Bets tab does.
+        #
+        # NOT A RESTATEMENT. Nothing in predictions_log or plays_ledger is
+        # rewritten and the all-picks series is still computed; this changes
+        # which of the two the tracker plots. Ordered by graded_at so the curve
+        # steps in settlement order, with event_date as the fallback for any
+        # row graded before that stamp existed.
+        _settled = [r for r in _all_now
+                    if str(r.get("result") or "").strip()
+                    and str(r.get("result")).strip().lower() != "void"]
+        _settled.sort(key=lambda r: (str(r.get("graded_at") or ""),
+                                     str(r.get("event_date") or "")))
+        _run = [0.0]
+        _pts = [None]
+        for _r in _settled:
+            try:
+                _u = float(_r.get("units_result") or 0.0)
+            except (TypeError, ValueError):
+                _u = 0.0
+            _run.append(round(_run[-1] + _u, 2))
+            _pts.append({
+                "fight": f'{_r.get("fighter_a")} vs {_r.get("fighter_b")}',
+                "pick": _r.get("selection"), "units": round(_u, 2),
+                "won": str(_r.get("result") or "").strip().lower() == "won",
+                "tier": _r.get("tier") or "",
+            })
+        _st_staked = sum(float(r.get("units") or 0) for r in _settled)
+        staked_units = {
+            "total_units": round(_run[-1], 2),
+            "settled": len(_settled),
+            "staked": round(_st_staked, 2),
+            "event_count": len({r.get("event_name") for r in _settled}),
+            "roi_pct": (round(_run[-1] / _st_staked * 100, 1) if _st_staked else None),
+            "running_total": _run,
+            "running_points": _pts,
+        }
+        if len(_run) >= 2:
+            staked_units_svg = build_units_timeseries_svg(_run)
+
         _pe = plays_events.get(plays_card.get("event_name")) or {}
         plays_record = {
             "won": _pe.get("won", 0), "lost": _pe.get("lost", 0),
@@ -2016,6 +2069,7 @@ def main(tier: str = "member", output_path: str | None = None):
         calibration_svg=calibration_svg,
         units_sparkline_svg=units_sparkline_svg,
         units_timeseries_svg=units_timeseries_svg,
+        staked_units=staked_units, staked_units_svg=staked_units_svg,
         bankroll_parlays=bankroll_parlays,
         model_legs=model_legs,
         notable_movements=notable_movements,

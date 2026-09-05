@@ -146,6 +146,15 @@ FREE_CONTEXT = (
     # to audit what the model has already done before being asked for money.
     "track_record", "calibration_svg", "units_sparkline_svg",
     "units_timeseries_svg", "plays_record", "countdown_confidence_counts",
+    # SETTLED PLAYS ONLY, by the same rule as plays_events below: the running
+    # curve is built in generate_site from ledger rows that already carry a
+    # result, and an unsettled or voided row never reaches it. That filter is
+    # what makes this free rather than a leak -- an ungraded play is a stake
+    # on a fight that has not happened, which is the model layer. These two
+    # replaced units_timeseries_svg as what the Units Tracker plots, so the
+    # headline is money actually risked rather than every published pick
+    # scored at its tier size.
+    "staked_units", "staked_units_svg",
     # Settled bets only, expressed as a multiple of where it started. It
     # carries no pick and no currency -- see src/bankroll for why it is a
     # ratio rather than a sum.
