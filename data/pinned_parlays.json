@@ -1,3 +1,56 @@
 {
+ "Noche UFC: Silva vs. Delgado": {
+  "bankroll": {
+   "pinned_at": "2026-09-06T00:01:30+00:00",
+   "identities": [
+    "[\"Manon Fiorot|Alexa Grasso\", [{\"fighter\": \"Manon Fiorot\", \"kind\": \"winner\"}]]",
+    "[\"JJ Aldrich|Regina Tarin\", [{\"fighter\": \"Regina Tarin\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Manon Fiorot ML",
+      "odds_display": "-218",
+      "is_model": false,
+      "decimal_odds": 1.458716,
+      "fight_key": "Manon Fiorot|Alexa Grasso",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Manon Fiorot"
+       }
+      ],
+      "source": "DraftKings"
+     },
+     {
+      "label": "Regina Tarin ML",
+      "odds_display": "-265",
+      "is_model": false,
+      "decimal_odds": 1.377358,
+      "fight_key": "JJ Aldrich|Regina Tarin",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Regina Tarin"
+       }
+      ],
+      "source": "DraftKings"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_73",
+     "card_82"
+    ],
+    "slip_id": "ff898b55d6a8",
+    "combined_decimal": 2.009174,
+    "combined_american": 101,
+    "combined_american_display": "+101",
+    "combined_prob": 0.4585,
+    "combined_prob_raw": 0.4612,
+    "venue": "DraftKings"
+   }
+  }
+ },
  "UFC Fight Night: Hooker vs. Parnasse": {}
 }
