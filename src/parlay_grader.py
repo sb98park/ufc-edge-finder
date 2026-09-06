@@ -330,6 +330,10 @@ def void_stale_slips(rows: list[dict], now: str, days: int = VOID_AFTER_DAYS) ->
     for r in rows:
         if not r.get("pinned_at") or (r.get("result") or "").strip():
             continue
+        # A superseded slip is not "still open" -- it stopped being the
+        # commitment before the card, so it must not collect a void either.
+        if r.get("superseded_at"):
+            continue
         stamp = str(r.get("last_seen") or r.get("first_seen") or "")[:10]
         try:
             when = dt.date.fromisoformat(stamp)
@@ -382,12 +386,16 @@ def grade_pinned(pins: dict, now: str, path: str = LEDGER_PATH,
 
     # slip_id -> the pin's own timestamp, so the stamp is the commitment time.
     pinned_now = {}
-    for tiers in (pins or {}).values():
-        for entry in (tiers or {}).values():
+    # (event, tier) -> the slip_id standing there RIGHT NOW, used to retire
+    # whatever used to hold that slot. See the supersession pass below.
+    holder_now = {}
+    for event, tiers in (pins or {}).items():
+        for tier, entry in (tiers or {}).items():
             entry = entry or {}
             sid = (entry.get("snapshot") or {}).get("slip_id")
             if sid:
                 pinned_now[sid] = entry.get("pinned_at") or now
+                holder_now[(event, tier)] = sid
 
     stamped = 0
     for r in rows:
@@ -396,7 +404,40 @@ def grade_pinned(pins: dict, now: str, path: str = LEDGER_PATH,
             r["pinned_at"] = pinned_now[sid]
             stamped += 1
 
-    wanted = {r.get("slip_id") for r in rows if r.get("pinned_at")}
+    # A RE-PIN RETIRES THE SLIP IT REPLACED.
+    #
+    # pinned_at is deliberately never cleared -- that is what keeps a slip
+    # gradeable after the pin rotates to the next card, which is the whole
+    # reason the stamp exists. But it also means a pin that moves WITHIN a
+    # card leaves two slips stamped for the same (event, tier), and both then
+    # grade. On 2026-09-05 that produced a 1-1 parlay record from a single
+    # card: Wood+Benouaich held the slot from 09-04 20:55, Page+Benouaich
+    # replaced it at 09-05 10:03, and the ledger settled BOTH -- one dead at
+    # -1.00 and one cashed at +1.54. Only one of them was ever the standing
+    # commitment, so only one of them is a bet anybody could have placed.
+    #
+    # Recorded here, at the moment the swap is observed, rather than derived
+    # later: the pin file keeps no history and is emptied once the card ends,
+    # so after the fact there is nothing left to reconstruct it from. That is
+    # the same failure that left three earlier cards permanently ungradeable.
+    #
+    # Superseded is NOT void. A void is a bet that existed and got refunded;
+    # this is a bet that stopped existing before the card, so it takes no
+    # result and no units at all -- it simply leaves the record.
+    superseded = 0
+    for r in rows:
+        if not r.get("pinned_at") or (r.get("result") or "").strip():
+            continue
+        if r.get("superseded_at"):
+            continue
+        holder = holder_now.get((r.get("event"), r.get("tier")))
+        if holder and holder != r.get("slip_id"):
+            r["superseded_at"] = now
+            r["superseded_by"] = holder
+            superseded += 1
+
+    wanted = {r.get("slip_id") for r in rows
+              if r.get("pinned_at") and not r.get("superseded_at")}
     if not wanted:
         if stamped:
             write_graded(rows, path)
@@ -413,6 +454,10 @@ def grade_pinned(pins: dict, now: str, path: str = LEDGER_PATH,
     if stamped:
         print(f"[parlay_grader] recorded the pin on {stamped} slip(s) so they "
               f"stay gradeable after the pin rotates")
+    if superseded:
+        print(f"[parlay_grader] retired {superseded} slip(s) replaced by a later "
+              f"pin on the same card -- they were not the standing commitment "
+              f"and will not be graded")
     if changed:
         print(f"[parlay_grader] settled {changed} pinned slip(s)")
     return changed
