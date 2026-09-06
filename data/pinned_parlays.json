@@ -1,54 +1,54 @@
 {
  "Noche UFC: Silva vs. Delgado": {
   "bankroll": {
-   "pinned_at": "2026-09-06T00:01:30+00:00",
+   "pinned_at": "2026-09-06T22:34:53+00:00",
    "identities": [
-    "[\"Manon Fiorot|Alexa Grasso\", [{\"fighter\": \"Manon Fiorot\", \"kind\": \"winner\"}]]",
-    "[\"JJ Aldrich|Regina Tarin\", [{\"fighter\": \"Regina Tarin\", \"kind\": \"winner\"}]]"
+    "[\"Yousri Belgaroui|Djorden Santos\", [{\"fighter\": \"Yousri Belgaroui\", \"kind\": \"winner\"}]]",
+    "[\"Rafa Garcia|Rongzhu\", [{\"fighter\": \"Rafa Garcia\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
-      "label": "Manon Fiorot ML",
-      "odds_display": "-225",
+      "label": "Yousri Belgaroui ML",
+      "odds_display": "-800",
       "is_model": false,
-      "decimal_odds": 1.444444,
-      "fight_key": "Manon Fiorot|Alexa Grasso",
+      "decimal_odds": 1.125,
+      "fight_key": "Yousri Belgaroui|Djorden Santos",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Manon Fiorot"
+        "fighter": "Yousri Belgaroui"
        }
       ],
-      "source": "FanDuel"
+      "source": "DraftKings"
      },
      {
-      "label": "Regina Tarin ML",
-      "odds_display": "-290",
+      "label": "Rafa Garcia ML",
+      "odds_display": "+142",
       "is_model": false,
-      "decimal_odds": 1.344828,
-      "fight_key": "JJ Aldrich|Regina Tarin",
+      "decimal_odds": 2.42,
+      "fight_key": "Rafa Garcia|Rongzhu",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Regina Tarin"
+        "fighter": "Rafa Garcia"
        }
       ],
-      "source": "FanDuel"
+      "source": "DraftKings"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_73",
-     "card_82"
+     "card_78",
+     "card_80"
     ],
-    "slip_id": "ff898b55d6a8",
-    "combined_decimal": 1.942529,
-    "combined_american": -106,
-    "combined_american_display": "-106",
-    "combined_prob": 0.4651,
-    "combined_prob_raw": 0.4612,
-    "venue": "FanDuel"
+    "slip_id": "38c6ba4c0db7",
+    "combined_decimal": 2.7225,
+    "combined_american": 172,
+    "combined_american_display": "+172",
+    "combined_prob": 0.5493,
+    "combined_prob_raw": 0.3289,
+    "venue": "DraftKings"
    }
   }
  },
