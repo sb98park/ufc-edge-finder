@@ -20,13 +20,13 @@
         "fighter": "Manon Fiorot"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      },
      {
       "label": "Regina Tarin ML",
-      "odds_display": "-265",
+      "odds_display": "-245",
       "is_model": false,
-      "decimal_odds": 1.377358,
+      "decimal_odds": 1.408163,
       "fight_key": "JJ Aldrich|Regina Tarin",
       "conditions": [
        {
@@ -34,7 +34,7 @@
         "fighter": "Regina Tarin"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      }
     ],
     "has_model_legs": false,
@@ -43,12 +43,12 @@
      "card_82"
     ],
     "slip_id": "ff898b55d6a8",
-    "combined_decimal": 1.989518,
-    "combined_american": -101,
-    "combined_american_display": "-101",
-    "combined_prob": 0.4567,
+    "combined_decimal": 2.034014,
+    "combined_american": 103,
+    "combined_american_display": "+103",
+    "combined_prob": 0.4543,
     "combined_prob_raw": 0.4612,
-    "venue": "DraftKings"
+    "venue": "FanDuel"
    }
   }
  },
