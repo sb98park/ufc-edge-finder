@@ -46,7 +46,8 @@ from src.striking_profile import (build_zone_index, zone_profile, position_profi
 # the number outright rather than plotting it among five others.
 MIN_CHIP_FIGHTS = 5
 MAX_CHIPS = 3
-from src.method_model import method_probabilities, reconcile_fighter_methods, method_given_win, finish_share_before
+from src.method_model import (method_probabilities, reconcile_fighter_methods,
+                              method_given_win, finish_share_before, headline_method)
 
 
 def _fighter_row(fighters_df: pd.DataFrame, name: str) -> pd.Series | None:
@@ -647,7 +648,12 @@ def build_fight_preview(
     )
     _fav_idx = 0 if favorite == fighter_a else 1
     method_rates = dict(zip(["KO/TKO", "Submission", "Decision"], _grid[_fav_idx]))
-    likely_method = max(method_rates, key=method_rates.get)
+    # Decided on finish-vs-decision first, then on which finish -- a three-way
+    # argmax named "decision" on a third of the fights where this same grid
+    # said a finish was likelier. card_matcher overrides this from the
+    # projection anyway; both call the one helper so they cannot disagree.
+    likely_method, _likely_rate = headline_method(
+        method_rates["KO/TKO"], method_rates["Submission"], method_rates["Decision"])
 
     combined_finish_rate = (
         (_get(row_a, "ko_wins", 0) + _get(row_a, "sub_wins", 0)) / max(int(row_a["wins"]), 1)

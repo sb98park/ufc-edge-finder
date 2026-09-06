@@ -526,3 +526,44 @@ def finish_share_before(line: float, scheduled_rounds: int = 3, division=None) -
     if line - full >= 0.5 and full < len(shares):
         total += shares[full] * 0.5
     return min(total, 1.0)
+
+
+def headline_method(ko: float, sub: float, dec: float) -> tuple[str, float]:
+    """
+    Which method to NAME in "<fighter> to win by <method>", and its rate.
+
+    NOT a three-way argmax, which is what this used to be. Argmax maximises
+    the chance of naming the exactly-right method, but the headline sits
+    directly above a table that also prints P(finish), and on a third of the
+    fights it contradicted it:
+
+        measured across the 93 fights priced on 2026-09-06
+          labelled "by decision"                            69 (74%)
+          ...where the grid says P(finish) > P(decision)     23 (33% of those)
+
+    Salahdine Parnasse was one: KO 28.8%, SUB 13.7%, DEC 39.9%. Decision is
+    the largest single cell, so argmax named it -- while the same card
+    printed "Fight ends by Decision 45.6%" against 54.5% for a finish. The
+    headline told the reader decision and the table told them finish.
+
+    This is the same failure as the goes_distance_prob split that priced
+    P(finish) two incompatible ways: one quantity, two answers, on one
+    screen. So the rule is decided on the exhaustive pair FIRST -- finish
+    versus decision, which is what "Ends In Finish" is a real market on --
+    and only then, if it is a finish, on which kind.
+
+    NOT A FITTED CHANGE, and deliberately so. The 2026-07/09 window ran
+    finish-heavy by ~15pp (scripts/validate_method_base_rate.py), so any
+    rule tuned to name finishes more often would score well on it for
+    reasons that have nothing to do with being right. This one is chosen on
+    coherence with the published grid, not on hit rate, and the underlying
+    probabilities are untouched.
+
+    Naming the finish TYPE rather than "by finish" keeps the existing
+    grammar and keeps the label gradeable against the same three outcomes
+    the record already scores.
+    """
+    finish = ko + sub
+    if dec >= finish:
+        return "Decision", dec
+    return ("KO/TKO", ko) if ko >= sub else ("Submission", sub)

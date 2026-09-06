@@ -15,7 +15,7 @@ import pandas as pd
 from src.rationale import explain_edge, explain_favorite_pick
 from src.model_preview import build_fight_preview, build_full_market_projection
 from src.matchup_model import normalize_division
-from src.method_model import finish_share_before
+from src.method_model import finish_share_before, headline_method
 from src.fight_format import is_five_round as _is_five_round, scheduled_rounds as _scheduled_rounds
 from src.odds_utils import implied_prob_to_american, format_american_odds, kelly_fraction
 # _two_numbers is edge_finder's single definition of the edge/EV/vig triple.
@@ -866,9 +866,15 @@ def group_edges_by_card(
                     if r.get("fighter") == fav and ": " in r.get("market", "")
                 ]
                 if fav_rows:
-                    fight["preview"]["likely_method"] = max(fav_rows, key=lambda t: t[1])[0]
-                    fight["preview"]["likely_method_rate"] = round(
-                        max(fav_rows, key=lambda t: t[1])[1], 3)
+                    # headline_method, not max(): the three-way argmax named
+                    # "decision" on a third of the fights where this very
+                    # projection said a finish was likelier. See its docstring.
+                    _r = {m: v for m, v in fav_rows}
+                    _name, _rate = headline_method(
+                        _r.get("KO/TKO", 0.0), _r.get("Submission", 0.0),
+                        _r.get("Decision", 0.0))
+                    fight["preview"]["likely_method"] = _name
+                    fight["preview"]["likely_method_rate"] = round(_rate, 3)
 
             max_line = 4.5 if is_five_round else 2.5
 
