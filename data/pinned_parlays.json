@@ -1,32 +1,32 @@
 {
  "Noche UFC: Silva vs. Delgado": {
   "bankroll": {
-   "pinned_at": "2026-09-06T22:34:53+00:00",
+   "pinned_at": "2026-09-07T12:43:35+00:00",
    "identities": [
-    "[\"Yousri Belgaroui|Djorden Santos\", [{\"fighter\": \"Yousri Belgaroui\", \"kind\": \"winner\"}]]",
+    "[\"Drakkar Klose|Tommy Gantt\", [{\"fighter\": \"Tommy Gantt\", \"kind\": \"winner\"}]]",
     "[\"Rafa Garcia|Rongzhu\", [{\"fighter\": \"Rafa Garcia\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
-      "label": "Yousri Belgaroui ML",
-      "odds_display": "-800",
+      "label": "Tommy Gantt ML",
+      "odds_display": "-520",
       "is_model": false,
-      "decimal_odds": 1.125,
-      "fight_key": "Yousri Belgaroui|Djorden Santos",
+      "decimal_odds": 1.192308,
+      "fight_key": "Drakkar Klose|Tommy Gantt",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Yousri Belgaroui"
+        "fighter": "Tommy Gantt"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      },
      {
       "label": "Rafa Garcia ML",
-      "odds_display": "+145",
+      "odds_display": "+134",
       "is_model": false,
-      "decimal_odds": 2.45,
+      "decimal_odds": 2.34,
       "fight_key": "Rafa Garcia|Rongzhu",
       "conditions": [
        {
@@ -34,21 +34,21 @@
         "fighter": "Rafa Garcia"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_8",
+     "card_9",
      "card_10"
     ],
-    "slip_id": "3f824f5726bd",
-    "combined_decimal": 2.75625,
-    "combined_american": 176,
-    "combined_american_display": "+176",
-    "combined_prob": 0.5569,
-    "combined_prob_raw": 0.3289,
-    "venue": "DraftKings"
+    "slip_id": "31795c57fb8f",
+    "combined_decimal": 2.79,
+    "combined_american": 179,
+    "combined_american_display": "+179",
+    "combined_prob": 0.5266,
+    "combined_prob_raw": 0.3453,
+    "venue": "FanDuel"
    }
   }
  },
