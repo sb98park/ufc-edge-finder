@@ -549,12 +549,30 @@ def _classify_and_parse_market(market: dict, event_title: str) -> list[dict]:
     # it is worse than showing nothing: the model then computes an "edge"
     # against a 50% that no one is actually offering, and a 30% projection
     # looks like a -20% edge when there is no market to be wrong about.
+    # A TOLERANCE, NOT AN EXACT MATCH. This test was `< 1e-9` and let the
+    # thing it was written to stop straight through. Untraded markets do not
+    # all sit at a clean 0.5: on UFC 331 Pantoja vs Van, every one of the 26
+    # props had ZERO volume and $4-40 of liquidity, and they quoted 0.5/0.5,
+    # 0.51/0.49 and 0.505/0.495. Only the exact ones were caught. The rest
+    # reached the page as -102fair / -104fair / -106fair and the model
+    # differenced against them, publishing edges from -37.6% to +10.4% on
+    # markets nobody had touched -- 36 such rows on one build, 8 of them
+    # positive, which is the shape that reads as value.
+    #
+    # VOLUME IS STILL THE DISCRIMINATOR and stays at zero deliberately. A
+    # market maker quoting 0.67/0.33 with $7.5k of liquidity and no trades
+    # yet is an opinion worth carrying; a book pinned at ~0.5 with $8 behind
+    # it is a placeholder. Keeping the volume condition also leaves genuinely
+    # thin but TRADED markets alone -- the Pantoja moneyline ($831) and the
+    # Vera moneyline ($1,700) are untouched by this.
+    _UNTRADED_BAND = 0.02
     _untouched = (
-        abs(price_a - 0.5) < 1e-9 and abs(price_b - 0.5) < 1e-9
+        abs(price_a - 0.5) <= _UNTRADED_BAND and abs(price_b - 0.5) <= _UNTRADED_BAND
         and float(market.get("volumeNum") or market.get("volume") or 0) <= 0
     )
     if _untouched:
-        print(f"[polymarket] skipping untraded market (0.5/0.5, no volume): {question[:70]!r}")
+        print(f"[polymarket] skipping untraded market "
+              f"({price_a:.3f}/{price_b:.3f}, no volume): {question[:70]!r}")
         return []
 
     price_sum = price_a + price_b
