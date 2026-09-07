@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-06T23:16:48+00:00",
+  "at": "2026-09-07T00:01:54+00:00",
   "card_data_coverage": {
     "carded_fighters": 138,
-    "checked_at": "2026-09-06T23:10:51+00:00",
+    "checked_at": "2026-09-06T23:55:47+00:00",
     "counts": {
       "physicals": 5,
       "record": 2
@@ -28,13 +28,13 @@
     "best_book": {
       "DraftKings": 40,
       "FanDuel": 6,
-      "Polymarket": 76
+      "Polymarket": 72
     },
     "books_quoting": {
-      "1.0": 100,
+      "1.0": 96,
       "2.0": 22
     },
-    "n": 122
+    "n": 118
   },
   "moneyline": {
     "best_book": {
@@ -78,7 +78,7 @@
   "rows_by_source": {
     "DraftKings": 44,
     "FanDuel": 24,
-    "Polymarket": 188
+    "Polymarket": 174
   },
   "rundown_dates_requested": [
     "2026-09-12"
@@ -189,7 +189,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-09-06T23:16:47+00:00",
+    "checked_at": "2026-09-07T00:01:54+00:00",
     "equivalent_floor": 0.723,
     "floor_in_force": 0.78,
     "gap_move": -0.0557,
@@ -201,80 +201,80 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 4.9,
+      "duration_s": 5.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-06T23:11:45+00:00",
+      "last_ok": "2026-09-06T23:56:56+00:00",
       "ok": true,
-      "ran_at": "2026-09-06T23:11:45+00:00"
+      "ran_at": "2026-09-06T23:56:56+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 46.7,
+      "duration_s": 62.8,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-06T23:11:40+00:00",
+      "last_ok": "2026-09-06T23:56:51+00:00",
       "ok": true,
-      "ran_at": "2026-09-06T23:11:40+00:00"
+      "ran_at": "2026-09-06T23:56:51+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
-      "duration_s": 0.7,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-06T23:10:51+00:00",
+      "last_ok": "2026-09-06T23:55:47+00:00",
       "ok": true,
-      "ran_at": "2026-09-06T23:10:51+00:00"
+      "ran_at": "2026-09-06T23:55:47+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 0.9,
+      "duration_s": 0.6,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-06T23:10:53+00:00",
+      "last_ok": "2026-09-06T23:55:48+00:00",
       "ok": true,
-      "ran_at": "2026-09-06T23:10:53+00:00"
+      "ran_at": "2026-09-06T23:55:48+00:00"
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 1.2,
+      "duration_s": 0.6,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-06T23:10:52+00:00",
+      "last_ok": "2026-09-06T23:55:47+00:00",
       "ok": true,
-      "ran_at": "2026-09-06T23:10:52+00:00"
+      "ran_at": "2026-09-06T23:55:47+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-06T23:16:48+00:00",
+      "last_ok": "2026-09-07T00:01:54+00:00",
       "ok": true,
-      "ran_at": "2026-09-06T23:16:48+00:00"
+      "ran_at": "2026-09-07T00:01:54+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-06T23:16:47+00:00",
+      "last_ok": "2026-09-07T00:01:54+00:00",
       "ok": true,
-      "ran_at": "2026-09-06T23:16:47+00:00"
+      "ran_at": "2026-09-07T00:01:54+00:00"
     }
   },
   "tracked_moneyline": {
