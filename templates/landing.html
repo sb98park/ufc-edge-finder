@@ -1109,7 +1109,7 @@
       <div><b data-roll>{{ tr.accuracy_pct }}%</b><span>Hit rate</span></div>
       {% if tr.clv_stats %}<div><b class="up" data-roll>{{ tr.clv_stats.beat_pct }}%</b><span>Beat the closing line</span></div>{% endif %}
       <div><b class="up" data-roll>{{ '%+.2f'|format(tr.units_stats.by_tier['Lock of the Week'].units) }}U</b><span>Lock of the Week {{ tr.lock_record.correct }}/{{ tr.lock_record.total }}</span></div>
-      <div><b data-roll>{{ tr.total }}</b><span>Fights graded, all tiers</span></div>
+      <div><b data-roll>{{ tr.total }}</b><span>Fights graded, all tiers{% if tr.units_stats.eligible_count and tr.units_stats.eligible_count != tr.total %} &middot; {{ tr.units_stats.eligible_count }} priced{% endif %}</span></div>
     </div>
     {# THIS WAS A SEPARATE BOX WITH A GOLD BAR DOWN ITS LEFT EDGE, floating
        between the record and the section below it. The bar was the only thing
@@ -1352,7 +1352,14 @@
   {% if landing_facts %}
   <div class="actband">
     <div class="ab-rail">
-      <div><b class="up">{{ '%+.2f'|format(tr.units_stats.total_units) }}U</b><span>all {{ tr.units_stats.eligible_count }} picks</span></div>
+      {#- "all N picks" AND "N+1 Fights graded" SIT ON ONE PAGE, and they are
+          different numbers for a real reason: a units figure needs a published
+          price, and one graded pick has none (Miles Johns, Gamrot vs Salkilld,
+          no odds captured). So 116 fights are graded and 115 of them can be
+          priced. Both are correct; "all" was the problem, because it claims
+          completeness against a denominator the reader can see is one short.
+          Naming the denominator costs a word and removes the discrepancy. -#}
+      <div><b class="up">{{ '%+.2f'|format(tr.units_stats.total_units) }}U</b><span>{{ tr.units_stats.eligible_count }} priced picks</span></div>
       {% if tr.clv_stats %}<div><b class="up">{{ tr.clv_stats.beat_pct }}%</b><span>beat the close</span></div>{% endif %}
       <div><b>{{ '%+.1f'|format(tr.units_stats.roi_pct) }}%</b><span>ROI</span></div>
     </div>
