@@ -907,13 +907,14 @@ def group_edges_by_card(
                                    if not _ud.combining(ch)).strip()
 
                 def _key(fighter, market):
-                    f = _fold(fighter)
-                    if " vs " in f:
-                        # Order-independent: the two sources disagree on which
-                        # fighter comes first, so a positional key duplicated
-                        # every fight-level row.
-                        f = " vs ".join(sorted(p.strip() for p in f.split(" vs ")))
-                    return (f, _fold(market))
+                    # _fight_side_key, not the local _fold: this key decides
+                    # whether a projection row is a duplicate of a priced one,
+                    # and _fold only strips accents. It matched corner order
+                    # but not name VARIANTS, so the "Jose Miguel Delgado" and
+                    # "Jose Delgado" spellings of one fight read as two and the
+                    # projection row was appended alongside the priced row it
+                    # was meant to be recognised as.
+                    return (_fight_side_key(fighter), _fold(market))
 
                 live_pairs = {_key(e.get("fighter", ""), e.get("market", ""))
                               for e in fight["edges"]}
@@ -1173,6 +1174,37 @@ LOW_SAMPLE_THRESHOLD = 6  # career fights below this = flagged as limited data
 
 
 
+def _fight_side_key(side) -> str:
+    """
+    Order- and variant-independent key for a row's side.
+
+    A fight-level row carries its side as "A vs B", and _normalize_name was
+    being applied to that WHOLE string. The middle-name rule inside it only
+    fires on a bare name, so "Jean Silva vs Jose Miguel Delgado" and
+    "Jean Silva vs Jose Delgado" -- the priced feed's spelling and the
+    projection's -- normalised to two different keys and both survived
+    dedupe. The card printed every rounds line twice at identical
+    probabilities, and lint caught it as
+
+        FAIL [round-monotonic] Under 3.5 and Under 3.5 are both 53.9%
+
+    which reads like two lines disagreeing and is actually one line
+    duplicated.
+
+    Splitting first means each half goes through the existing fold on its
+    own, so the middle name drops the way it already does everywhere else.
+    NOT a thirteenth name helper (CLAUDE.md s4) -- it is _normalize_name,
+    applied at the right granularity.
+
+    Sorted, because the two sources also disagree about which corner leads.
+    """
+    s = str(side or "")
+    parts = re.split(r"\s+vs\.?\s+", s, flags=re.I)
+    if len(parts) != 2:
+        return _normalize_name(s)
+    return " vs ".join(sorted(_normalize_name(p) for p in parts))
+
+
 def _dedupe_market_rows(rows: list) -> list:
     """
     One row per (market, selection), where the selection is FOLDED.
@@ -1207,7 +1239,7 @@ def _dedupe_market_rows(rows: list) -> list:
     out, seen = [], {}
     for r in rows:
         side = r.get("selection") or r.get("fighter") or r.get("label") or r.get("market")
-        key = (str(r.get("market") or ""), _normalize_name(side))
+        key = (str(r.get("market") or ""), _fight_side_key(side))
         prev = seen.get(key)
         if prev is None:
             seen[key] = len(out)
