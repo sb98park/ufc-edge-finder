@@ -1085,8 +1085,19 @@
          occupy the same slot, so a scrub costs no layout and the card does not
          grow a permanently empty line to hold a label that is usually blank. #}
       <div class="cap-slot">
-        <p class="curve-cap">Locks and high confidence only, at the stakes above &mdash;
-           {{ tr.units_stats.shortlist_count }} picks, {{ '%.0f'|format(tr.units_stats.shortlist_staked) }}U risked</p>
+        {#- "RISKED" WAS THE WRONG WORD and this is a paid product's headline
+            claim, so it matters. The figure scores every published Lock and
+            High Confidence pick at the ladder stakes, but live staking only
+            began at the changeover -- 3 of these 23 were actually placed. The
+            rest are scored picks, and saying "risked" asserts money down that
+            never was.
+            Same distinction the app's Units Tracker already draws, in the same
+            terms, so a reader who subscribes meets one story rather than two. -#}
+        <p class="curve-cap">Locks and high confidence only, scored at the stakes above &mdash;
+           {{ tr.units_stats.shortlist_count }} picks, {{ '%.0f'|format(tr.units_stats.shortlist_staked) }}U
+           {%- if staked_units and staked_units.changeover and staked_units.changeover < '9999' %}.
+           Live staking began {{ staked_units.changeover }}; earlier picks are scored, not placed
+           {%- endif %}</p>
         <p class="scrub-readout" id="landing-scrub-readout" aria-hidden="true"></p>
       </div>
       <div class="curve">{{ units_timeseries_svg | safe }}</div>

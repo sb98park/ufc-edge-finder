@@ -2150,7 +2150,7 @@ def main(tier: str = "member", output_path: str | None = None):
             _write_landing(env, track_record, units_shortlist_svg or units_timeseries_svg,
                            events, future_events, generated_at_short,
                            countdown_target_iso, landing_facts, updated_snapshot,
-                           countdown_series, countdown_matchup)
+                           countdown_series, countdown_matchup, staked_units)
         except Exception as exc:                      # never break the main build
             print(f"[landing] skipped: {exc}")
 
@@ -2264,7 +2264,7 @@ def _display_name(folded: str, names: list[str]) -> str:
 
 def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short,
                    countdown_target_iso=None, landing_facts=None, odds_snapshot=None,
-                   countdown_series=None, countdown_matchup=None):
+                   countdown_series=None, countdown_matchup=None, staked_units=None):
     """
     docs/welcome.html -- the marketing page.
 
@@ -2922,6 +2922,11 @@ def _write_landing(env, track_record, units_svg, events, future_events, generate
         ),
         tr=track_record,
         shortlist=shortlist,
+        # The landing page claims a units figure to people deciding whether to
+        # pay, so it needs the same changeover the app's Units Tracker carries.
+        # Without it the curve reads as a placed-bet record, which for every
+        # pick before the changeover it is not.
+        staked_units=staked_units,
         units_timeseries_svg=units_svg,
         demo_graded=graded,
         demo_upcoming=upcoming,
