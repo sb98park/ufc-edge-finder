@@ -2151,8 +2151,30 @@ def main(tier: str = "member", output_path: str | None = None):
                            events, future_events, generated_at_short,
                            countdown_target_iso, landing_facts, updated_snapshot,
                            countdown_series, countdown_matchup, staked_units)
+            _record_landing_health(True, None)
         except Exception as exc:                      # never break the main build
-            print(f"[landing] skipped: {exc}")
+            # STILL NOT FATAL -- the app is the product and a broken hero must
+            # not freeze it (s2: a non-zero gate freezes everything on stale
+            # data). But this used to be one quiet line and nothing else, and
+            # the page it leaves behind is the SALES PITCH, so the failure has
+            # to say what it costs.
+            #
+            # It cost something real: threading staked_units through raised
+            # NameError here, the build exited 0, and docs/welcome.html kept an
+            # older claim that a deploy would have shipped while every local
+            # check passed.
+            import traceback as _tb
+            _age = ""
+            try:
+                _m = os.path.getmtime("docs/welcome.html")
+                _h = (dt.datetime.now().timestamp() - _m) / 3600.0
+                _age = (f" -- docs/welcome.html is now STALE, last written "
+                        f"{_h:.1f}h ago; a deploy will publish that older copy")
+            except OSError:
+                _age = " -- docs/welcome.html does not exist; the deploy has no landing page"
+            print(f"[landing] FAILED, page NOT rebuilt: {exc}{_age}")
+            print(_tb.format_exc().rstrip())
+            _record_landing_health(False, exc)
 
     # LEGAL PAGES. Rendered every build so the "last updated" date is honest
     # rather than a hardcoded string that quietly ages, and so the three pages
@@ -2260,6 +2282,53 @@ def _display_name(folded: str, names: list[str]) -> str:
         if fh_fold_name(n) == folded:
             return n
     return folded.title()
+
+
+def _record_landing_health(ok: bool, error: str | None) -> None:
+    """
+    Write the landing build's outcome into source_health's `steps` block.
+
+    The landing render sits behind a catch-all so a broken marketing page
+    cannot freeze a site real money is staked against. That is the right
+    call and is not changing. What was wrong is that the catch-all was the
+    ONLY consequence: it printed one line, the build exited 0, and
+    docs/welcome.html kept whatever an earlier run had left there. A
+    staked-units claim went stale that way and would have deployed.
+
+    So this reuses the mechanism scripts/run_step.py already built for
+    exactly this shape of problem -- a step allowed to fail that must not
+    fail silently. `consecutive_failures` and `last_ok` are what separate
+    "flaked once" from "broken since Tuesday", which is the distinction
+    that decides whether anyone needs to act.
+
+    record() REPLACES the key it is given, so the other steps are read and
+    merged rather than clobbered. Never raises: a diagnostic that takes the
+    build down is worse than the thing it was diagnosing.
+    """
+    try:
+        from src.source_health import record, PATH as _HEALTH_PATH
+        blob = {}
+        try:
+            with open(_HEALTH_PATH, encoding="utf-8") as fh:
+                blob = json.load(fh)
+        except (OSError, ValueError):
+            pass
+        steps = blob.get("steps") if isinstance(blob, dict) else None
+        steps = steps if isinstance(steps, dict) else {}
+        prev = steps.get("landing") if isinstance(steps.get("landing"), dict) else {}
+        now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+        steps["landing"] = {
+            "ok": bool(ok),
+            "exit_code": 0 if ok else 1,
+            "error": None if ok else str(error)[:400],
+            "in_flight": False,
+            "killed_previous_run": False,
+            "last_ok": now if ok else prev.get("last_ok"),
+            "consecutive_failures": 0 if ok else int(prev.get("consecutive_failures") or 0) + 1,
+        }
+        record("steps", steps)
+    except Exception:                             # noqa: BLE001 -- see docstring
+        pass
 
 
 def _write_landing(env, track_record, units_svg, events, future_events, generated_at_short,
