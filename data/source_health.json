@@ -1,20 +1,13 @@
 {
-  "at": "2026-09-07T18:35:41+00:00",
+  "at": "2026-09-07T18:48:36+00:00",
   "card_data_coverage": {
     "carded_fighters": 138,
-    "checked_at": "2026-09-07T18:31:43+00:00",
+    "checked_at": "2026-09-07T18:43:50+00:00",
     "counts": {
       "physicals": 5,
-      "record": 2
+      "record": 1
     },
     "findings": [
-      {
-        "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
-        "event": "Noche UFC: Silva vs. Delgado",
-        "event_date": "2026-09-12",
-        "fighter": "Sean King",
-        "severity": "record"
-      },
       {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "UFC Fight Night: Buckley vs. Malott",
@@ -81,7 +74,7 @@
   "rows_by_source": {
     "DraftKings": 46,
     "FanDuel": 24,
-    "Polymarket": 159
+    "Polymarket": 163
   },
   "rundown_dates_requested": [
     "2026-09-12"
@@ -203,7 +196,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-09-07T18:35:41+00:00",
+    "checked_at": "2026-09-07T18:48:36+00:00",
     "equivalent_floor": 0.699,
     "floor_in_force": 0.78,
     "gap_move": -0.0769,
@@ -215,25 +208,25 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 5.0,
+      "duration_s": 5.1,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-07T18:32:34+00:00",
+      "last_ok": "2026-09-07T18:44:43+00:00",
       "ok": true,
-      "ran_at": "2026-09-07T18:32:34+00:00"
+      "ran_at": "2026-09-07T18:44:43+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 43.7,
+      "duration_s": 45.6,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-07T18:32:29+00:00",
+      "last_ok": "2026-09-07T18:44:38+00:00",
       "ok": true,
-      "ran_at": "2026-09-07T18:32:29+00:00"
+      "ran_at": "2026-09-07T18:44:38+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -242,20 +235,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-07T18:31:43+00:00",
+      "last_ok": "2026-09-07T18:43:50+00:00",
       "ok": true,
-      "ran_at": "2026-09-07T18:31:43+00:00"
+      "ran_at": "2026-09-07T18:43:50+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 0.7,
+      "duration_s": 0.8,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-07T18:31:45+00:00",
+      "last_ok": "2026-09-07T18:43:52+00:00",
       "ok": true,
-      "ran_at": "2026-09-07T18:31:45+00:00"
+      "ran_at": "2026-09-07T18:43:52+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -263,41 +256,41 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-07T18:33:52+00:00",
+      "last_ok": "2026-09-07T18:46:29+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.7,
+      "duration_s": 1.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-07T18:31:44+00:00",
+      "last_ok": "2026-09-07T18:43:52+00:00",
       "ok": true,
-      "ran_at": "2026-09-07T18:31:44+00:00"
+      "ran_at": "2026-09-07T18:43:52+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-07T18:35:41+00:00",
+      "last_ok": "2026-09-07T18:48:36+00:00",
       "ok": true,
-      "ran_at": "2026-09-07T18:35:41+00:00"
+      "ran_at": "2026-09-07T18:48:36+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-07T18:35:41+00:00",
+      "last_ok": "2026-09-07T18:48:36+00:00",
       "ok": true,
-      "ran_at": "2026-09-07T18:35:41+00:00"
+      "ran_at": "2026-09-07T18:48:36+00:00"
     }
   },
   "tracked_moneyline": {
