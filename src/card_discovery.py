@@ -321,6 +321,38 @@ def deduplicate_tracked_fights(future_cards_path: str = "data/future_cards.csv")
     return removed
 
 
+# How long a tracked bout must be missing from ESPN before it is treated as
+# scrapped rather than as a gap in the feed. BOTH have to be satisfied: the
+# streak proves the fetches were real successes, the hours prove it is not a
+# blip. Module scope so tests bind to the shipped values rather than a copy --
+# the count alone was meaningless at a "*/5" cadence and cancelled a live
+# fight, which is the whole reason the hours exist.
+ORPHAN_STREAK_LIMIT = 3
+ORPHAN_GRACE_HOURS = 24
+
+
+def _hours_since(stamp, now_iso) -> float:
+    """
+    Hours between an ISO stamp and now, or 0.0 if it cannot be read.
+
+    0.0 on a bad stamp is the SAFE default here: the caller uses this to
+    decide whether a bout has been missing long enough to cancel, so an
+    unreadable timestamp must read as "not long enough" rather than
+    "forever". Never raises -- a clock helper that throws would take down
+    the resync it is guarding.
+    """
+    try:
+        a = dt.datetime.fromisoformat(str(stamp))
+        b = dt.datetime.fromisoformat(str(now_iso))
+    except (TypeError, ValueError):
+        return 0.0
+    if a.tzinfo is None:
+        a = a.replace(tzinfo=dt.timezone.utc)
+    if b.tzinfo is None:
+        b = b.replace(tzinfo=dt.timezone.utc)
+    return max(0.0, (b - a).total_seconds() / 3600.0)
+
+
 def _bump_orphan_streak(row) -> int:
     """
     Increment a row's consecutive-missing counter, tolerating NaN.
@@ -650,12 +682,42 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
             # consecutive successful resyncs each row has been missing for,
             # and only keep extending the conservative benefit of the
             # doubt up to a real threshold.
-            ORPHAN_STREAK_LIMIT = 3
+            # THE GRACE IS A DURATION, NOT A FETCH COUNT.
+            #
+            # A count alone is meaningless at this cadence. refresh.yml is
+            # cron "*/5" and the resync runs every build, so "more than 3
+            # consecutive resyncs" is about TWENTY MINUTES of ESPN not
+            # listing a bout -- and ESPN routinely serves a partial prelim
+            # card that long while an event is still being built out.
+            #
+            # That threshold had never actually executed: _bump_orphan_streak
+            # raised on NaN every run until 2026-09-05, so the counter never
+            # advanced past 1 and this branch was dead. Its first live action
+            # was to cancel Ramiro Jimenez vs Rodrigo Vera on the 09-12 Noche
+            # card -- a bout Polymarket had active, accepting orders, with
+            # $130k of liquidity behind it. A false cancellation pulls a fight
+            # off the card and strands a published pick, so the cost is not
+            # symmetric with waiting a day.
+            #
+            # Both conditions now have to hold: the streak proves the fetches
+            # were real successes, and the elapsed time proves it is not a
+            # blip. A genuine scratch stays absent for days and is still
+            # caught well before the card.
+            _now_iso = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
             still_within_grace, exceeded_grace = [], []
             for r in genuinely_orphaned:
                 mutated = True
                 _bump_orphan_streak(r)
-                (exceeded_grace if r["_orphan_streak"] > ORPHAN_STREAK_LIMIT else still_within_grace).append(r)
+                # Stamped on first sight. A row that predates this field gets
+                # the stamp now, which restarts its clock -- deliberately the
+                # safe direction, since the alternative is cancelling on a
+                # streak that was accumulated under the old rule.
+                if not str(r.get("_orphan_since") or "").strip():
+                    r["_orphan_since"] = _now_iso
+                _elapsed_h = _hours_since(r.get("_orphan_since"), _now_iso)
+                _ripe = (r["_orphan_streak"] > ORPHAN_STREAK_LIMIT
+                         and _elapsed_h >= ORPHAN_GRACE_HOURS)
+                (exceeded_grace if _ripe else still_within_grace).append(r)
             if exceeded_grace:
                 # Also cancelled-not-dropped now, for the same reason as
                 # above. This path stays behind the streak grace because,
@@ -669,6 +731,7 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
                     newly_cancelled.append((str(r["fighter_a"]).strip(), str(r["fighter_b"]).strip()))
                 print(f"[card_discovery] {len(exceeded_grace)} previously-tracked fight(s) for {event_name!r} "
                       f"missing from ESPN's current card across {ORPHAN_STREAK_LIMIT}+ consecutive successful "
+                      f"resyncs AND {ORPHAN_GRACE_HOURS}+ hours "
                       f"resyncs now -- no longer treating as a transient gap, marking CANCELLED: "
                       f"{[(r['fighter_a'], r['fighter_b']) for r in exceeded_grace]}")
             if still_within_grace:
