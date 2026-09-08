@@ -29,6 +29,78 @@ from src.card_matcher import _normalize_name
 from src.rationale import explain_settled as _explain_settled, falsifier_fired as _falsifier_fired
 
 PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
+
+# A bin thinner than this cannot say anything at all, so it is not even
+# tested -- which also keeps it out of the family-wise correction below,
+# where counting untestable bins would only make a real signal harder to see.
+MIN_BIN_FOR_DRIFT = 10
+DRIFT_ALPHA = 0.05
+def _warn_calibration_drift(points) -> None:
+    """
+    Say something only when a bin's gap is bigger than chance across ALL bins.
+
+    THE OLD RULE FIRED ON A FIXED 15 POINTS AT n>=10, and its own comment
+    conceded that 15pp at n=10 sits inside plausible binomial noise. Two
+    things followed. It oscillated: the 50-60% bin tripped it at 15.2pp on
+    n=46 and fell silent at 13.6pp on n=50, having learned nothing in
+    between. And it ignored that four or five bins are tested every run --
+    with the worst bin at |z|=1.93, the chance of SOME bin looking that
+    extreme by luck alone is about 0.20.
+
+    One warning in five being real is not a warning. This week produced four
+    failures whose only symptom was a misleading line in a build log, and a
+    detector that is wrong four times out of five trains the reader to skip
+    the line that finally matters.
+
+    So: a binomial z per bin, then a family-wise correction for the number of
+    bins actually tested, and it speaks only when that corrected p is below
+    0.05. On the current record nothing qualifies, which is the honest
+    answer -- every apparent method and calibration signal measured this week
+    turned out to be inside noise at n=116.
+
+    Log-only, as before. The user-facing summary covers the aggregate.
+    """
+    tested = [p for p in points if p["n"] >= MIN_BIN_FOR_DRIFT]
+    k = len(tested)
+    if not k:
+        return
+    for p in tested:
+        pred, act, n = p["predicted"], p["actual"], p["n"]
+        se = math.sqrt(max(pred * (1.0 - pred), 1e-9) / n)
+        z = (act - pred) / se
+        per_bin = 2.0 * (1.0 - 0.5 * (1.0 + math.erf(abs(z) / math.sqrt(2.0))))
+        family = 1.0 - (1.0 - per_bin) ** k
+        if family >= DRIFT_ALPHA:
+            continue
+        direction = "OVERconfident" if act < pred else "UNDERconfident"
+        print(f"[track_record] CALIBRATION DRIFT: {p['_lo']:.0%}-{min(p['_hi'], 1.0):.0%} bin is "
+              f"{direction} -- predicted avg {pred:.1%} but actual win rate {act:.1%} over "
+              f"n={n} picks (z={z:+.2f}, p={family:.3f} after correcting for {k} bins tested). "
+              f"This one is unlikely to be luck.")
+
+
+def _frozen_method_probs(prior, preview) -> dict:
+    """
+    p_ko / p_sub / p_dec for the row, keeping whatever was logged first.
+
+    Returns blanks when the method model declined to produce a grid. It
+    returns None on a missing feature rather than substituting a default, and
+    a fabricated 0.0 would read as "the model thinks this cannot happen"
+    instead of "we never asked" -- a distinction the whole point of these
+    columns depends on.
+    """
+    if prior and str(prior.get("p_dec") or "").strip():
+        return {k: prior.get(k) or "" for k in ("p_ko", "p_sub", "p_dec")}
+    md = (preview or {}).get("method_distribution")
+    if not isinstance(md, dict):
+        return {"p_ko": "", "p_sub": "", "p_dec": ""}
+    out = {}
+    for col, key in (("p_ko", "ko"), ("p_sub", "sub"), ("p_dec", "decision")):
+        v = md.get(key)
+        out[col] = round(float(v), 4) if isinstance(v, (int, float)) else ""
+    return out
+
+
 FIELDNAMES = [
     "event_name", "fighter_a", "fighter_b", "favorite", "favorite_prob",
     "confidence_label", "likely_method", "pick_odds", "closing_odds", "opponent_odds",
@@ -50,6 +122,25 @@ FIELDNAMES = [
     # as High Confidence on 2026-08-18, logged at 0.747 and about to grade as
     # a two-unit Medium pick.
     "pick_confidence_label",
+    # THE METHOD PROBABILITIES THE LABEL WAS THE ARGMAX OF, frozen with it.
+    #
+    # likely_method alone cannot answer the only question that matters about
+    # the method model -- whether its PROBABILITIES are calibrated -- because
+    # it is the largest cell, not the model's opinion. That gap produced two
+    # confident, wrong reports in one week: "the model over-predicts
+    # decisions" (it says ~50% against a 46.9% base rate) and "it never
+    # predicts submissions" (16.5% against 19.8%). Both were the argmax, and
+    # neither could be checked properly because the cells were never stored.
+    #
+    # Three columns make mean-predicted-vs-observed answerable once enough
+    # fights have graded. THEY CANNOT BE BACKFILLED: regenerating them later
+    # would run the model against ratings that already absorbed the result,
+    # the same contamination the frozen pick fields exist to prevent. Blank
+    # on every row logged before this column existed, which is correct.
+    #
+    # Fight-level, not per-fighter -- the three sum to 1 and are the quantity
+    # a base rate can be compared against.
+    "p_ko", "p_sub", "p_dec",
     "favorite_prob_history", "last_updated", "is_lock_of_week", "voided",
     # THE RISK THE BLURB NAMED, captured pre-fight. Every pick's commentary
     # ends by naming the strongest thing arguing against it; after the fight
@@ -517,6 +608,12 @@ def log_predictions(events: list[dict], generated_at: str, decided_keys: set | N
                 # about.
                 "pick_falsifier": ((prior.get("pick_falsifier") if prior and prior.get("pick_falsifier") else None)
                                    or preview.get("pick_falsifier") or ""),
+                # SET ONCE, like pick_odds and pick_falsifier above, and for
+                # the same reason: these are the claim as it was published.
+                # _md is None when a feature is missing -- method_model
+                # returns None rather than substituting a default -- so a
+                # blank here means "not computed", never "zero".
+                **_frozen_method_probs(prior, preview),
             }
             if renamed_from and renamed_from != key:
                 existing.pop(renamed_from, None)
@@ -684,20 +781,12 @@ def _compute_calibration(matched: list[dict]) -> dict | None:
             "actual": round(actual_rate, 3),
             "n": len(bucket),
         })
-        # Operator-facing drift warning (log only, not site copy -- the
-        # user-facing summary below already covers the aggregate story).
-        # Fires per-bin when the actual win rate lands more than 15
-        # points from the average stated confidence, with n>=10 so a
-        # couple of unlucky results in a thin bucket doesn't cry wolf.
-        # 15pp at n=10 is still within plausible binomial noise, so this
-        # is a "look at this" nudge, not a statistical verdict -- but
-        # it's exactly the early-drift signal that previously had no way
-        # to surface anywhere except manually eyeballing the chart.
-        if len(bucket) >= 10 and abs(actual_rate - predicted_avg) > 0.15:
-            direction = "OVERconfident" if actual_rate < predicted_avg else "UNDERconfident"
-            print(f"[track_record] CALIBRATION DRIFT: {lo:.0%}-{min(hi,1.0):.0%} bin is {direction} "
-                  f"-- predicted avg {predicted_avg:.1%} but actual win rate {actual_rate:.1%} "
-                  f"over n={len(bucket)} picks. Worth a look if this persists across refreshes.")
+        points[-1]["_lo"], points[-1]["_hi"] = lo, hi
+
+    _warn_calibration_drift(points)
+    for p in points:
+        p.pop("_lo", None)
+        p.pop("_hi", None)
 
     total_n = sum(p["n"] for p in points)
     weighted_gap = sum((p["actual"] - p["predicted"]) * p["n"] for p in points) / total_n if total_n else 0
