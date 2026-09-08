@@ -1573,14 +1573,35 @@ def main(tier: str = "member", output_path: str | None = None):
         } if _pe else None
         _shelved = len(plays_card.get("shelved") or [])
         _note = "" if plays_card["discretionary_on"] else f", {_shelved} shelved"
+        # plays_record IS None ON A CARD WITH NO SETTLED PLAYS -- it is built
+        # `... if _pe else None` twelve lines up -- and this line subscripted
+        # it anyway. So on any quiet card the diagnostic itself raised
+        # TypeError, the except below caught it, and the build printed
+        #
+        #   [plays] failed, section will be empty: 'NoneType' object is not
+        #   subscriptable
+        #
+        # which is FALSE. Every plays_* variable is assigned before this
+        # point, so the section rendered correctly; only the log line died.
+        # The cost was not cosmetic: the message is indistinguishable from a
+        # real failure of this section, it was read as one for days, and a
+        # genuine break here would have said exactly the same thing.
+        _rec = (f"record {plays_record['won']}-{plays_record['lost']} "
+                f"({plays_record['units']:+.2f}U)") if plays_record else "no settled plays yet"
+        _bank = (f", bankroll {bankroll['multiple']:.4f}x") if bankroll else ""
         print(f"[plays] {len(plays_card['plays'])} new, {len(plays_rows)} on the card, "
-              f"{plays_card['total_units']}U committed{_note}; record "
-              f"{plays_record['won']}-{plays_record['lost']} "
-              f"({plays_record['units']:+.2f}U), bankroll {bankroll['multiple']:.4f}x")
+              f"{plays_card['total_units']}U committed{_note}; {_rec}{_bank}")
     except Exception as e:
         # A broken plays section must not take the site down with it. Every
         # other section on this page is older and has a record behind it.
-        print(f"[plays] failed, section will be empty: {e}")
+        #
+        # The traceback is printed because without it this handler cannot be
+        # told apart from the one above it: for days the only symptom of a
+        # crashing LOG LINE was a message claiming the SECTION had failed,
+        # and there was no way to see which from the output.
+        import traceback as _tb
+        print(f"[plays] failed, section may be incomplete: {e}")
+        print(_tb.format_exc().rstrip())
 
     # Results coverage, for This Weekend's card specifically -- surfaced
     # both as a step summary (visible directly in the GitHub Actions run
