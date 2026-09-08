@@ -77,6 +77,9 @@ MODEL_ROW_FIELDS = frozenset({
 # card. Emptied rather than removed, so the template's `{% for %}` loops and
 # `| length` calls keep working and simply render nothing.
 MEMBER_ONLY_CONTEXT = (
+    # Operational state, not model output -- but it names failing internals
+    # and stranded picks, which is the owner's business and nobody else's.
+    "health_alerts",
     "lock_picks",
     # THE PLAYS THEMSELVES ARE THE PRODUCT. plays_card and plays_rows are
     # this weekend's staked bets -- the single most valuable model output on

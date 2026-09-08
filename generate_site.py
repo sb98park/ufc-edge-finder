@@ -6,6 +6,7 @@ disagreements. Run by GitHub Actions on a schedule; can also run locally:
     ODDS_API_KEY=your_key python generate_site.py
 """
 
+import csv
 import datetime as dt
 import json
 import argparse
@@ -52,6 +53,7 @@ from src.rationale import set_card_cohort
 from jinja2 import Environment, FileSystemLoader
 
 from src import tiering
+from src.names import _normalize_name
 
 from src.elo import EloRatingSystem
 from src.fighter_history import build_fighter_history, fold_name as fh_fold, summarise as fh_summarise
@@ -1013,6 +1015,14 @@ def main(tier: str = "member", output_path: str | None = None):
     # instant to subtract from. UTC with an explicit offset so Date.parse is
     # unambiguous in every viewer's timezone.
     generated_at_iso = _now_et.astimezone(dt.timezone.utc).isoformat(timespec="seconds")
+
+    # Read back what the build already recorded, and put it where the owner
+    # looks. See build_health_alerts -- the routing is the whole change.
+    try:
+        health_alerts = build_health_alerts(cards_df)
+    except Exception as _e:                       # never break the build to report on it
+        print(f"[health] alert build failed, continuing: {_e}")
+        health_alerts = []
     momentum_by_key = load_momentum_by_key()
     for event in events:
         for fight in event["fights"]:
@@ -2111,6 +2121,7 @@ def main(tier: str = "member", output_path: str | None = None):
         generated_at_time_only=generated_at_time_only,
         generated_at_date=generated_at_date,
         generated_at_iso=generated_at_iso,
+        health_alerts=health_alerts,
         tier="member",
     )
 
@@ -2288,6 +2299,86 @@ def _display_name(folded: str, names: list[str]) -> str:
         if fh_fold_name(n) == folded:
             return n
     return folded.title()
+
+
+def build_health_alerts(cards_df, predictions_path: str = f"{DATA_DIR}/predictions_log.csv") -> list:
+    """
+    The operational things a human should know before reading the numbers.
+
+    WHY THIS EXISTS. Three failures in three days surfaced only as silence:
+    a fight wrongly cancelled at 04:08, a landing page that stopped
+    rebuilding while the build exited 0, and a hard test gate that held the
+    refresh down for eleven hours. Every one of them WAS recorded --
+    source_health's `steps` block has carried step outcomes since it was
+    built, and run_step.py --report prints them. It prints them to the
+    GitHub Actions run summary, which is the one place nobody opens.
+
+    So this reads the same record and puts it where the owner already
+    looks. Nothing new is measured; the routing is the whole change.
+
+    Two classes, because they failed in two different ways:
+
+      steps      a suppressed step that keeps failing. `|| true` is correct
+                 -- a dead ESPN feed must not freeze a site real money is
+                 staked against -- but suppressed is not unwatched, and
+                 consecutive_failures is what separates "flaked once" from
+                 "broken since Tuesday".
+
+      cancelled  a fight marked cancelled that still carries a published
+                 pick. On 2026-09-07 the orphan branch cancelled a live
+                 bout with $130k of liquidity behind it, and the only trace
+                 anywhere was one line in a CI log.
+
+    Returns [] when everything is fine, and the template renders nothing --
+    a panel that is always present is a panel nobody reads.
+    """
+    alerts = []
+    try:
+        with open(f"{DATA_DIR}/source_health.json", encoding="utf-8") as fh:
+            steps = (json.load(fh) or {}).get("steps") or {}
+    except (OSError, ValueError):
+        steps = {}
+    for name in sorted(steps):
+        s = steps.get(name) or {}
+        streak = int(s.get("consecutive_failures") or 0)
+        if streak < 1:
+            continue
+        last_ok = str(s.get("last_ok") or "")[:16].replace("T", " ") or "never"
+        alerts.append({
+            "kind": "step",
+            "severe": streak >= 3,          # run_step.FAILURE_STREAK_ALARM
+            "text": f"{name} has failed {streak} run{'s' if streak != 1 else ''} in a row",
+            "detail": f"last succeeded {last_ok}"
+                      + (f" \u00b7 {str(s.get('error'))[:90]}" if s.get("error") else ""),
+        })
+
+    # A cancelled fight is normal. A cancelled fight we already published a
+    # pick on is a thing to look at, because the pick is stranded.
+    try:
+        picked = set()
+        with open(predictions_path, newline="", encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                a, b = str(r.get("fighter_a") or ""), str(r.get("fighter_b") or "")
+                if a and b and not str(r.get("voided") or "").strip().lower().startswith("t"):
+                    picked.add(frozenset({_normalize_name(a), _normalize_name(b)}))
+    except (OSError, ValueError):
+        picked = set()
+    if picked is not None and cards_df is not None and not cards_df.empty:
+        for _, row in cards_df.iterrows():
+            if str(row.get("cancelled", "")).strip().lower() != "true":
+                continue
+            a, b = str(row.get("fighter_a") or ""), str(row.get("fighter_b") or "")
+            if not a or not b:
+                continue
+            if frozenset({_normalize_name(a), _normalize_name(b)}) not in picked:
+                continue
+            alerts.append({
+                "kind": "cancelled",
+                "severe": True,
+                "text": f"{a} vs {b} is marked cancelled but has a published pick",
+                "detail": f"{row.get('event_name', '')} \u00b7 verify before the card",
+            })
+    return alerts
 
 
 def _record_landing_health(ok: bool, error: str | None) -> None:

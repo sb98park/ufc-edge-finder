@@ -421,6 +421,17 @@
      block is site-only, so it stays here. */
   .meta-row.is-stale #build-stamp { color: var(--accent); font-weight: 600; }
   .meta-row.is-frozen #build-stamp { color: var(--red); font-weight: 700; }
+  /* HEALTH STRIP. Renders only when something is wrong -- a panel that is
+     always there is a panel nobody reads, which is how the run summary
+     failed. Sits directly under the build stamp because it answers the same
+     question: can I trust what is below this line right now. */
+  .health-strip { margin: -8px 0 16px; display: flex; flex-direction: column; gap: 6px; }
+  .health-item { display: flex; gap: 8px; align-items: baseline;
+    font-size: var(--t-small); line-height: 1.5;
+    border-left: 2px solid var(--accent); padding: 4px 0 4px 9px; }
+  .health-item.severe { border-left-color: var(--red); }
+  .health-item b { color: var(--text); font-weight: 600; }
+  .health-item span { color: var(--muted); }
   .meta-row.is-stale .live-dot-sm,
   .meta-row.is-frozen .live-dot-sm { animation: none; opacity: .45; }
   /* Two rails, hairline between them: what is happening on the left, what
@@ -6251,6 +6262,18 @@
           title="Prices refreshing live. Model numbers are as of the build time shown beside this."></span>
     <span id="build-stamp">Updated {{ generated_at_short }}</span>
   </div>
+
+  {#- Absent entirely when the list is empty. build_health_alerts returns []
+      on a healthy build, so this costs a clean page nothing. -#}
+  {% if health_alerts %}
+  <div class="health-strip" role="status" aria-label="Build health">
+    {% for a in health_alerts %}
+    <div class="health-item{{ ' severe' if a.severe }}">
+      <b>{{ a.text }}</b>{% if a.detail %} <span>{{ a.detail }}</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <div class="countdown-card" data-target="{{ countdown_target_iso }}" data-schedule="{{ fight_schedule_json | e }}" data-just-concluded="{{ just_concluded_json | e }}" data-days-since-event="{{ days_since_event }}" data-results-coverage="{{ results_coverage | tojson | e if results_coverage else 'null' }}" data-espn-live-key="{{ espn_live_fight_key_json | e }}">
     <div class="cd-left">
