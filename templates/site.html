@@ -412,6 +412,17 @@
   }
   .meta-row { font-size: var(--t-small); color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
   .meta-sep { color: var(--border); margin: 0 2px; }
+  /* STALE BUILD. The row above already carries the build time, but a
+     timestamp is passive -- "Updated 7:19 AM" reads the same whether it is
+     four minutes or eleven hours old, and on 2026-09-07 it sat eleven hours
+     stale while a hard test gate held the pipeline down. Colour is what makes
+     the difference legible without being read. --red/--accent are the site's
+     own semantic tokens; landing.html disagrees about --red (s6) and this
+     block is site-only, so it stays here. */
+  .meta-row.is-stale #build-stamp { color: var(--accent); font-weight: 600; }
+  .meta-row.is-frozen #build-stamp { color: var(--red); font-weight: 700; }
+  .meta-row.is-stale .live-dot-sm,
+  .meta-row.is-frozen .live-dot-sm { animation: none; opacity: .45; }
   /* Two rails, hairline between them: what is happening on the left, what
      the model thinks of it on the right. The card used to be centre-aligned
      with two flanking blocks that were display:none below the tablet
@@ -6226,6 +6237,7 @@
      tell you the pipeline broke, and freshness needs to be visible before you
      read the numbers, not after. #}
   <div class="meta-row"
+       data-build-iso="{{ generated_at_iso }}"
        data-build-date="{{ generated_at_date }}"
        data-full="Updated {{ generated_at_short }}"
        data-short="Updated {{ generated_at_time_only }}">
@@ -10193,6 +10205,53 @@
         });
       });
     }
+    /* SAY SO WHEN THE BUILD IS OLD.
+       The refresh is a 5-minute cron, so a page much older than that means
+       the pipeline stopped -- and a stopped pipeline CANNOT REPORT ITS OWN
+       FAILURE. Every other health signal in this project is written by the
+       build, so the one failure mode that silences all of them is the one
+       nothing covered. On 2026-09-07 a hard test gate held CI down for
+       eleven hours and the only symptom anywhere was an absence of commits.
+       The page itself is the last reporter left standing, because the
+       browser is the only thing that knows what time it is now.
+
+       THRESHOLDS COME FROM THE MEASURED BACKSTOP, not from taste. The
+       Cloudflare Worker fires every 5 minutes, but if it is down the GitHub
+       `schedule` backstop takes over and refresh.yml records that measured
+       at gaps of 43-137 minutes. So 3 hours clears the worst legitimate gap
+       with room to spare and still catches a real freeze eight hours sooner
+       than a human would; 12 hours is unambiguous breakage. */
+    function initBuildFreshness() {
+      var row = document.querySelector('.meta-row[data-build-iso]');
+      var stamp = document.getElementById('build-stamp');
+      if (!row || !stamp) return;
+      var built = Date.parse(row.getAttribute('data-build-iso'));
+      if (!built) return;                       /* unparseable: say nothing */
+      var STALE_H = 3, FROZEN_H = 12;
+      function paint() {
+        var hours = (Date.now() - built) / 3600000;
+        if (hours < 0) return;                  /* viewer clock behind: not our story */
+        var frozen = hours >= FROZEN_H, stale = hours >= STALE_H;
+        row.classList.toggle('is-stale', stale && !frozen);
+        row.classList.toggle('is-frozen', frozen);
+        if (!stale) return;
+        var age = hours < 24 ? Math.round(hours) + 'h' : Math.round(hours / 24) + 'd';
+        /* The number carries it. No exclamation, no advice -- whoever reads
+           this can already tell whether it matters to them. */
+        stamp.textContent = (row.getAttribute('data-full') || stamp.textContent)
+                            + ' \u00b7 ' + age + ' old';
+        stamp.setAttribute('title', 'The build that produced these numbers ran ' + age
+                                    + ' ago. The refresh normally runs every 5 minutes.');
+      }
+      paint();                                  /* synchronously first (s6) */
+      setInterval(paint, 60000);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initBuildFreshness);
+    } else {
+      initBuildFreshness();
+    }
+
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initSegControls);
     } else {

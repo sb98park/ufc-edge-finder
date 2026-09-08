@@ -1008,6 +1008,11 @@ def main(tier: str = "member", output_path: str | None = None):
     # client picks, because "today" is the READER's today, not the builder's.
     generated_at_time_only = _now_et.strftime("%-I:%M %p ET")
     generated_at_date = _now_et.strftime("%Y-%m-%d")
+    # MACHINE-READABLE, because only the browser knows "now". The displayed
+    # stamp is a local-format string; the staleness check needs an absolute
+    # instant to subtract from. UTC with an explicit offset so Date.parse is
+    # unambiguous in every viewer's timezone.
+    generated_at_iso = _now_et.astimezone(dt.timezone.utc).isoformat(timespec="seconds")
     momentum_by_key = load_momentum_by_key()
     for event in events:
         for fight in event["fights"]:
@@ -2105,6 +2110,7 @@ def main(tier: str = "member", output_path: str | None = None):
         generated_at_short=generated_at_short,
         generated_at_time_only=generated_at_time_only,
         generated_at_date=generated_at_date,
+        generated_at_iso=generated_at_iso,
         tier="member",
     )
 

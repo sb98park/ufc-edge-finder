@@ -200,7 +200,11 @@ FREE_CONTEXT = (
 
     # BUILD PLUMBING. Timestamps, the tier flag itself, error states, and
     # coverage reporting. No model output anywhere in here.
-    "generated_at", "generated_at_date", "generated_at_short",
+    # generated_at_iso is the same instant as generated_at_short, in a form
+    # the browser can subtract. It reveals nothing about the model -- and a
+    # free reader looking at a frozen page deserves to be told it is frozen
+    # exactly as much as a member does.
+    "generated_at", "generated_at_date", "generated_at_iso", "generated_at_short",
     "generated_at_time_only", "live_error", "results_coverage", "source",
     "tier", "unmatched", "whats_new_snapshot",
 )
