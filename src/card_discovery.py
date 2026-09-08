@@ -316,8 +316,61 @@ def deduplicate_tracked_fights(future_cards_path: str = "data/future_cards.csv")
             deduped.append(r)
         kept_groups.append(pd.DataFrame(deduped))
 
+    df = pd.concat(kept_groups, ignore_index=True) if kept_groups else df
+
+    # ---- THE SAME CARD UNDER TWO NAMES -------------------------------------
+    # Everything above groups by event_name, so it only ever sees duplicates
+    # WITHIN one event. A card that gets renamed produces the other shape:
+    # every fight present exactly once under each of two names, which is
+    # invisible to a per-event pass.
+    #
+    # ESPN published UFC 332 as "UFC 332" and later as "UFC 332: Silva vs.
+    # Wang" once the main event was set. Both survived, and all twelve fights
+    # were tracked twice. backfill_fighters matches by event name and appends
+    # per event, so it staged Khaos Williams and Roberto Soldic once per name
+    # in a single pass -- two duplicate roster rows, which tripped the
+    # one-row-per-fighter test and froze the refresh for eleven hours on
+    # 2026-09-07.
+    #
+    # THE DATE IS WHAT MAKES THIS SAFE. Fight identity here is
+    # frozenset({a, b}) and carries no event (s4), so on its own it cannot
+    # tell a rematch from a duplicate -- but nobody fights twice in one day.
+    # Same date plus the same pair is the same bout, whatever the card is
+    # called, and two genuinely different events on one date do not share
+    # fighters.
+    #
+    # WHICH NAME SURVIVES is not arbitrary here, unlike the pass above: a
+    # rename EXTENDS the provisional name ("UFC 332" -> "UFC 332: Silva vs.
+    # Wang"), so the longer name that starts with the shorter one is the
+    # current one. When neither extends the other this leaves both alone
+    # rather than guessing, because that is no longer a rename and merging
+    # two real cards would be far worse than tracking one twice.
+    if "event_date" in df.columns and not df.empty:
+        renamed = {}
+        for date, day in df.groupby("event_date", sort=False):
+            names = [n for n in dict.fromkeys(day["event_name"].astype(str)) if n]
+            for short in names:
+                for long in names:
+                    if long == short or not long.startswith(short):
+                        continue
+                    if long[len(short):len(short) + 1] not in (":", " ", "-"):
+                        continue
+                    # Only when they actually describe the same fights.
+                    a = {_loose_key(r) for r in day[day["event_name"] == short].to_dict("records")}
+                    b = {_loose_key(r) for r in day[day["event_name"] == long].to_dict("records")}
+                    if a and a <= b:
+                        renamed[short] = long
+        if renamed:
+            for short, long in renamed.items():
+                drop = (df["event_name"] == short)
+                print(f"[card_discovery] {short!r} is the provisional name for {long!r} on the same "
+                      f"date and every one of its {int(drop.sum())} fight(s) is already tracked under "
+                      f"the full name -- dropping the {short!r} rows")
+                removed += int(drop.sum())
+                df = df[~drop]
+
     if removed:
-        pd.concat(kept_groups, ignore_index=True).to_csv(future_cards_path, index=False)
+        df.to_csv(future_cards_path, index=False)
     return removed
 
 
