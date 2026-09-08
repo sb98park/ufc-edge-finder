@@ -50,6 +50,7 @@ does -- so this can be re-run later as the sample grows.
 
 import math
 import os
+import re
 import sys
 from collections import defaultdict
 
@@ -64,6 +65,40 @@ WINDOW_LO, WINDOW_HI = "2026-07-11", "2026-09-05"
 def _rate(pairs):
     d = sum(1 for _, m in pairs if m is None)
     return d, len(pairs)
+
+
+def _published_grid_means():
+    """
+    Mean fight-level P(KO)/P(SUB)/P(decision) over the built page.
+
+    THE ONLY HONEST WAY TO ASK THIS. Comparing how often a LABEL says
+    "submission" to how often submissions happen measures the argmax, not
+    the model -- the same mistake that produced a confident, wrong report
+    about decisions. The label is the largest cell; the model's opinion is
+    the cell's value.
+
+    Reads docs/index.html because that is where the reconciled grid is
+    actually published. Returns {} when there is no build to read, and the
+    caller says so rather than guessing.
+    """
+    try:
+        with open("docs/index.html", encoding="utf-8") as fh:
+            page = fh.read()
+    except OSError:
+        return {}
+    vals = {"ko/tko": [], "submission": [], "decision": []}
+    for block in re.split(r'(?=<details class="fight-card)', page):
+        if "data-fight-key=" not in block:
+            continue
+        row = {}
+        for m in re.finditer(
+                r'<td class="mkt-label">Fight ends by ([A-Za-z/]+)</td>\s*'
+                r'<td class="mkt-model"[^>]*>([\d.]+)%</td>', block, re.DOTALL):
+            row[m.group(1).lower()] = float(m.group(2))
+        if len(row) == 3:
+            for k, v in row.items():
+                vals[k].append(v)
+    return {k: v for k, v in vals.items() if v}
 
 
 def main() -> int:
@@ -101,6 +136,32 @@ def main() -> int:
     gd = sum(1 for x in graded if "dec" in str(x["actual_method"]).lower())
     p_graded = gd / len(graded)
     se_g = math.sqrt(p_win * (1 - p_win) / len(graded))
+    # ---- ALL THREE CLASSES, model probability vs base rate -----------------
+    # Added after the same question was asked about SUBMISSIONS: the label
+    # names one on 4% of fights against a ~20% base rate, which looks like a
+    # large bias and is not one.
+    grid = _published_grid_means()
+    if grid:
+        alltime = {"ko/tko": 0.0, "submission": 0.0, "decision": 0.0}
+        tot = 0
+        for _n, fb in bouts.items():
+            for _d, _w, meth in fb:
+                tot += 1
+                alltime["decision" if meth is None else
+                        ("submission" if meth == "sub" else "ko/tko")] += 1
+        print(f"\n  model probability vs base rate, over {len(grid['submission'])} priced fights")
+        print(f"    {'outcome':12}{'model mean':>12}{'all-time':>11}{'gap':>9}")
+        for k in ("ko/tko", "submission", "decision"):
+            m = sum(grid[k]) / len(grid[k])
+            b = 100.0 * alltime[k] / tot
+            print(f"    {k:12}{m:11.1f}%{b:10.1f}%{m - b:+8.1f}pp")
+        sub = grid["submission"]
+        modal = sum(1 for i in range(len(sub))
+                    if sub[i] > max(grid["ko/tko"][i], grid["decision"][i]))
+        print(f"    submission is the largest cell on {modal}/{len(sub)} fights, "
+              f"which is why the LABEL names it rarely -- that is the argmax, "
+              f"not the probability")
+
     print(f"\n  our graded sample       {p_graded:6.1%}   ({gd}/{len(graded)})")
     print(f"    vs its own window:    {(p_graded - p_win)/se_g:+.2f} SE"
           f"  -- the sample tracks the window, the window is the outlier")
