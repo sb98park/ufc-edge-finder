@@ -899,6 +899,42 @@ def _fetch_method_breakdown_from_wikipedia(name: str) -> dict | None:
     return breakdown
 
 
+def _drop_duplicate_roster_rows(fighters, where: str):
+    """
+    One row per fighter, keeping the first. Returns the frame.
+
+    THERE ARE TWO APPENDERS. generate_site calls backfill_fighters() and
+    then ensure_roster_rows() in the same build, twenty lines apart, and
+    each computes the fighters it is missing from its own read of
+    fighters.csv. Nothing reconciled the two, so a fighter both of them
+    considered missing was appended twice, byte for byte.
+
+    That is not cosmetic. tests/test_name_aliases asserts the roster holds
+    one row per fighter, it is a HARD GATE that runs before any data
+    mutation, and on 2026-09-07 six duplicate rows froze the entire refresh
+    for eleven hours -- with a card five days out. The site served stale
+    data the whole time and nothing else reported it.
+
+    Deduping HERE rather than teaching the two appenders about each other
+    is deliberate: it is the invariant the test actually checks, it holds
+    however the two are ordered or interleaved, and it keeps working if a
+    third writer is added later.
+
+    Matched on the normalised name, so the ~12 folding rules already in the
+    project decide identity rather than a thirteenth notion of it.
+    """
+    if "name" not in getattr(fighters, "columns", []):
+        return fighters
+    keys = fighters["name"].astype(str).map(_normalize_name)
+    dupes = keys.duplicated(keep="first")
+    if not dupes.any():
+        return fighters
+    dropped = sorted(set(fighters.loc[dupes, "name"].astype(str)))
+    print(f"[roster] {where}: dropped {int(dupes.sum())} duplicate row(s) "
+          f"before writing: {dropped[:8]}")
+    return fighters.loc[~dupes].reset_index(drop=True)
+
+
 def backfill_fighters(fighters_path: str = "data/fighters.csv",
                        future_cards_path: str = "data/future_cards.csv",
                        attempt_athlete_detail: bool = True) -> int:
@@ -1332,6 +1368,7 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
         fighters = pd.concat([fighters, pd.DataFrame(new_rows)], ignore_index=True)
 
     if filled_count or any_checked_flag_changed:
+        fighters = _drop_duplicate_roster_rows(fighters, "backfill_fighters")
         fighters.to_csv(fighters_path, index=False)
     return filled_count
 
@@ -1689,6 +1726,7 @@ def ensure_roster_rows(fighters_path: str = "data/fighters.csv",
         return 0
 
     fighters = pd.concat([fighters, pd.DataFrame(new_rows)], ignore_index=True)
+    fighters = _drop_duplicate_roster_rows(fighters, "ensure_roster_rows")
     fighters.to_csv(fighters_path, index=False)
     print(f"[roster] added {len(new_rows)} row(s) to {fighters_path}")
     return len(new_rows)
