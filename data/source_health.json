@@ -1,62 +1,13 @@
 {
-  "at": "2026-09-08T11:29:55+00:00",
+  "at": "2026-09-08T11:39:11+00:00",
   "card_data_coverage": {
     "carded_fighters": 148,
-    "checked_at": "2026-09-08T11:22:01+00:00",
+    "checked_at": "2026-09-08T11:34:34+00:00",
     "counts": {
-      "history": 5,
-      "layoff": 1,
       "physicals": 5,
       "record": 1
     },
     "findings": [
-      {
-        "detail": "2 of 16 bouts in fight_history (12%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 332",
-        "event_date": "2026-10-03",
-        "fighter": "Bernardo Sopaj",
-        "last_fight_date": "2026-05-16",
-        "severity": "history"
-      },
-      {
-        "detail": "28 of 57 bouts in fight_history (49%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 332",
-        "event_date": "2026-10-03",
-        "fighter": "King Green",
-        "last_fight_date": "2026-07-11",
-        "severity": "history"
-      },
-      {
-        "detail": "5 of 13 bouts in fight_history (38%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 332",
-        "event_date": "2026-10-03",
-        "fighter": "Marcus McGhee",
-        "last_fight_date": "2026-06-06",
-        "severity": "history"
-      },
-      {
-        "detail": "0 of 1 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Las Vegas",
-        "event_date": "2026-10-31",
-        "fighter": "Lucia Szabova",
-        "last_fight_date": "2021-07-24",
-        "severity": "history"
-      },
-      {
-        "detail": "5 of 11 bouts in fight_history (45%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Las Vegas",
-        "event_date": "2026-10-31",
-        "fighter": "Tainara Lisboa",
-        "last_fight_date": "2025-10-18",
-        "severity": "history"
-      },
-      {
-        "detail": "last fight 2021-07-24 (5.1y) is the newest of only 0 bouts we hold -- the real one may be far more recent",
-        "event": "UFC Fight Night: Las Vegas",
-        "event_date": "2026-10-31",
-        "fighter": "Lucia Szabova",
-        "severity": "layoff"
-      },
       {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "UFC Fight Night: Buckley vs. Malott",
@@ -70,13 +21,13 @@
     "best_book": {
       "DraftKings": 41,
       "FanDuel": 7,
-      "Polymarket": 94
+      "Polymarket": 90
     },
     "books_quoting": {
-      "1.0": 122,
-      "2.0": 20
+      "1.0": 116,
+      "2.0": 22
     },
-    "n": 142
+    "n": 138
   },
   "moneyline": {
     "best_book": {
@@ -119,8 +70,8 @@
   },
   "rows_by_source": {
     "DraftKings": 46,
-    "FanDuel": 22,
-    "Polymarket": 290
+    "FanDuel": 24,
+    "Polymarket": 284
   },
   "rundown_dates_requested": [
     "2026-09-12"
@@ -242,7 +193,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-09-08T11:29:54+00:00",
+    "checked_at": "2026-09-08T11:39:11+00:00",
     "equivalent_floor": 0.699,
     "floor_in_force": 0.78,
     "gap_move": -0.077,
@@ -254,47 +205,47 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 202.1,
+      "duration_s": 4.8,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-08T11:26:14+00:00",
+      "last_ok": "2026-09-08T11:35:19+00:00",
       "ok": true,
-      "ran_at": "2026-09-08T11:26:14+00:00"
+      "ran_at": "2026-09-08T11:35:19+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 49.0,
+      "duration_s": 37.9,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-08T11:22:52+00:00",
+      "last_ok": "2026-09-08T11:35:14+00:00",
       "ok": true,
-      "ran_at": "2026-09-08T11:22:52+00:00"
+      "ran_at": "2026-09-08T11:35:14+00:00"
     },
     "card_data_coverage": {
+      "consecutive_failures": 0,
+      "duration_s": 0.5,
+      "error": null,
+      "exit_code": 0,
+      "in_flight": false,
+      "killed_previous_run": false,
+      "last_ok": "2026-09-08T11:34:34+00:00",
+      "ok": true,
+      "ran_at": "2026-09-08T11:34:34+00:00"
+    },
+    "grade_prop_prices": {
       "consecutive_failures": 0,
       "duration_s": 0.6,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-08T11:22:01+00:00",
+      "last_ok": "2026-09-08T11:34:36+00:00",
       "ok": true,
-      "ran_at": "2026-09-08T11:22:01+00:00"
-    },
-    "grade_prop_prices": {
-      "consecutive_failures": 0,
-      "duration_s": 0.8,
-      "error": null,
-      "exit_code": 0,
-      "in_flight": false,
-      "killed_previous_run": false,
-      "last_ok": "2026-09-08T11:22:03+00:00",
-      "ok": true,
-      "ran_at": "2026-09-08T11:22:03+00:00"
+      "ran_at": "2026-09-08T11:34:36+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -302,41 +253,41 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-08T11:27:19+00:00",
+      "last_ok": "2026-09-08T11:36:57+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 1.2,
+      "duration_s": 0.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-08T11:22:02+00:00",
+      "last_ok": "2026-09-08T11:34:35+00:00",
       "ok": true,
-      "ran_at": "2026-09-08T11:22:02+00:00"
+      "ran_at": "2026-09-08T11:34:35+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-08T11:29:55+00:00",
+      "last_ok": "2026-09-08T11:39:11+00:00",
       "ok": true,
-      "ran_at": "2026-09-08T11:29:55+00:00"
+      "ran_at": "2026-09-08T11:39:11+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-08T11:29:54+00:00",
+      "last_ok": "2026-09-08T11:39:11+00:00",
       "ok": true,
-      "ran_at": "2026-09-08T11:29:54+00:00"
+      "ran_at": "2026-09-08T11:39:11+00:00"
     }
   },
   "tracked_moneyline": {
