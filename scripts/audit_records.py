@@ -26,6 +26,8 @@ Usage:
     python3 scripts/audit_records.py --card --apply  # and fix what it finds
 """
 
+import csv
+import io
 import os
 import sys
 import time
@@ -72,6 +74,52 @@ def _athlete_ids_from_scoreboard(dates):
     return ids
 
 
+def _write_corrections(corrections: dict, path: str = "data/fighters.csv") -> None:
+    """
+    Apply the corrections to the file's own text, touching nothing else.
+
+    NOT fighters.to_csv(). A pandas round-trip rewrites every cell it parsed,
+    and this file carries the literal string "nan" in last_fight_method --
+    read as NaN, written back as "". Correcting ONE fighter therefore
+    produced a 117-line diff across 116 unrelated rows, three separate times,
+    each needing hand-cleaning before it could be committed. A data commit
+    that restates rows it did not mean to touch is exactly what CLAUDE.md s3
+    warns about, and the noise is where a real change hides.
+
+    So the frame is used to DECIDE and the text is used to WRITE. csv round
+    trip with lineterminator="\n" -- csv.writer defaults to \r\n and would
+    rewrite all 378 lines by itself, which is the same bug wearing different
+    clothes.
+    """
+    if not corrections:
+        return
+    with open(path, newline="", encoding="utf-8") as fh:
+        text = fh.read()
+    rows = list(csv.DictReader(io.StringIO(text)))
+    fieldnames = csv.DictReader(io.StringIO(text)).fieldnames
+    for r in rows:
+        fix = corrections.get(r.get("name"))
+        if not fix:
+            continue
+        for col, val in fix.items():
+            if col not in r or val is None:
+                continue
+            # SAME NUMBER, DIFFERENT SPELLING IS NOT A CHANGE. ESPN returns
+            # ints and the file stores "16.0", so writing an unchanged split
+            # back reformats it and the row's diff claims six corrections
+            # where one was made. Compare numerically, write only what moved.
+            try:
+                if float(r[col] or "nan") == float(val):
+                    continue
+            except (TypeError, ValueError):
+                pass
+            r[col] = val
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=fieldnames, lineterminator="\n")
+        w.writeheader()
+        w.writerows(rows)
+
+
 def main():
     apply = "--apply" in sys.argv
     fighters = pd.read_csv("data/fighters.csv")
@@ -101,6 +149,7 @@ def main():
 
     print(f"checking {len(names)} fighters against ESPN's career record...\n")
     bad, checked, unresolved = [], 0, 0
+    corrections: dict = {}
     for name in sorted(names):
         row = fighters[fighters["name"] == name]
         if row.empty or pd.isna(row.iloc[0].get("wins")):
@@ -121,18 +170,21 @@ def main():
             bad.append((name, f"{stored_w}-{stored_l}", f"{cw}-{cl}"))
             print(f"  MISMATCH {name:26} stored {stored_w}-{stored_l:<3} career {cw}-{cl}")
             if apply:
-                i = fighters.index[fighters["name"] == name][0]
-                fighters.at[i, "wins"], fighters.at[i, "losses"] = cw, cl
+                # Collected as {name: {col: value}} and applied to the FILE's
+                # own text below, rather than mutated into the DataFrame and
+                # written with to_csv -- see _write_corrections.
+                fix = {"wins": cw, "losses": cl}
                 # Method splits come from the same statsSummary block, so a
                 # wrong overall record almost always means wrong splits too.
                 for col in ("ko_wins", "ko_losses", "sub_wins", "sub_losses",
                             "dec_wins", "dec_losses"):
                     if col in recs and col in fighters.columns:
-                        fighters.at[i, col] = recs[col]
+                        fix[col] = recs[col]
+                corrections[name] = fix
 
     print(f"\nchecked {checked} | mismatches {len(bad)} | unresolved {unresolved}")
     if bad and apply:
-        fighters.to_csv("data/fighters.csv", index=False)
+        _write_corrections(corrections)
         print(f"\nWritten: {len(bad)} record(s) corrected in data/fighters.csv.")
         print("Re-run generate_site.py, then commit data/fighters.csv.")
     elif bad:
