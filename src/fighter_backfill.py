@@ -1367,7 +1367,18 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
     if new_rows:
         fighters = pd.concat([fighters, pd.DataFrame(new_rows)], ignore_index=True)
 
-    if filled_count or any_checked_flag_changed:
+    # `new_rows` is listed even though it is redundant TODAY. Every
+    # new_rows.append above is paired with filled_count += 1 on the very next
+    # line, so a non-empty new_rows already implies filled_count > 0 and this
+    # condition cannot currently drop a fetched row.
+    #
+    # It is here because that is a coupling 84 lines apart which nothing
+    # enforces: one future append that forgets the counter would silently
+    # discard a roster row that cost an ESPN round-trip to build, and the
+    # symptom would be a fighter who stays missing while the log says he was
+    # created. Naming the actual precondition costs one identifier and
+    # removes the need to verify the pairing by reading.
+    if filled_count or any_checked_flag_changed or new_rows:
         fighters = _drop_duplicate_roster_rows(fighters, "backfill_fighters")
         fighters.to_csv(fighters_path, index=False)
     return filled_count
