@@ -1,4 +1,56 @@
 {
- "Noche UFC: Silva vs. Delgado": {},
+ "Noche UFC: Silva vs. Delgado": {
+  "bankroll": {
+   "pinned_at": "2026-09-12T01:09:45+00:00",
+   "identities": [
+    "[\"Tommy McMillen|Marwan Rahiki\", [{\"fighter\": \"Tommy McMillen\", \"kind\": \"winner\"}]]",
+    "[\"Sean King|Jessie Rosas\", [{\"fighter\": \"Sean King\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Tommy McMillen ML",
+      "odds_display": "-142",
+      "is_model": false,
+      "decimal_odds": 1.704225,
+      "fight_key": "Tommy McMillen|Marwan Rahiki",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Tommy McMillen"
+       }
+      ],
+      "source": "DraftKings"
+     },
+     {
+      "label": "Sean King ML",
+      "odds_display": "-218",
+      "is_model": false,
+      "decimal_odds": 1.458716,
+      "fight_key": "Sean King|Jessie Rosas",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Sean King"
+       }
+      ],
+      "source": "DraftKings"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_2",
+     "card_11"
+    ],
+    "slip_id": "bf048cc4bd3e",
+    "combined_decimal": 2.48598,
+    "combined_american": 149,
+    "combined_american_display": "+149",
+    "combined_prob": 0.2899,
+    "combined_prob_raw": 0.3031,
+    "venue": "DraftKings"
+   }
+  }
+ },
  "UFC Fight Night: Hooker vs. Parnasse": {}
 }
