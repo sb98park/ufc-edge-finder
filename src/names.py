@@ -40,6 +40,23 @@ import pandas as pd
 # merging two real fighters. scripts/check_card_data_coverage.py reports new
 # candidates rather than leaving the next one to be found by chance.
 NAME_ALIASES = {
+    # ESPN CALLS HIM "Sean King III"; the card, the roster and the published
+    # prediction all say "Sean King". On 2026-09-12 the two folded differently
+    # and he became two fighters: a second roster row with a fabricated 8-0,
+    # seven duplicate spine bouts, a duplicate result row, and a duplicate
+    # card row that card_discovery read as a REPLACEMENT -- so it cancelled
+    # the real bout and voided its prediction. He won by KO/TKO in round one,
+    # so a correct pick left the record over a suffix.
+    #
+    # "Sean King" is canonical rather than ESPN's spelling because that is the
+    # name the pick was PUBLISHED under. Aliasing the other way would rewrite
+    # a published row, which is the one thing this project does not do (s1).
+    #
+    # An alias rather than stripping suffixes in _normalize_name: across all
+    # 385 names on the roster, cards and results only five carry one, and
+    # stripping collides exactly once -- this man with himself. Safe today,
+    # and silently wrong the first time a father and son are both carded.
+    "sean king iii": "Sean King",
     "jose miguel delgado": "Jose Delgado",
     # ONE BOUT EACH, WRITTEN TWICE. Found by sweeping the spine for a fighter
     # holding two bouts within a day of each other against opponents whose
