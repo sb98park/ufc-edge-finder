@@ -1164,7 +1164,28 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
         existing = pd.DataFrame(columns=["event_name", "fighter_a", "fighter_b", "winner", "method", "end_round", "end_time", "date_added", "card_position"] + STAT_COLS)
 
     def _key(a, b):
-        return frozenset({str(a).strip().lower(), str(b).strip().lower()})
+        # _normalize_name, NOT a bare .lower(). This key decides whether a
+        # finished bout matches a row on our card, and a bare lowercase
+        # consults none of the project's name knowledge -- not the accent
+        # folding, not the punctuation collapsing, and not NAME_ALIASES.
+        #
+        # ESPN reported the 2026-09-12 Noche main event as "Jean Silva vs
+        # Jose Miguel Delgado". Our card said "Jose Delgado", the alias table
+        # had said for weeks that those are one man, and this key still read
+        # them as two fights -- so the result was never matched, never
+        # fetched, and the card sat at 12 of 14 confirmed with the MAIN EVENT
+        # showing pending while the fighter's hand had been raised on TV.
+        # _loose_key below does not rescue it either: sorting tokens fixes
+        # "Ce Liu" against "Liu Ce", not a dropped middle name.
+        #
+        # _normalize_name is already imported at the top of this file and
+        # already used for roster_names_folded further down, so this is the
+        # file agreeing with itself rather than a new notion of identity
+        # (s4: do not add a thirteenth name helper).
+        #
+        # The change can only ever make two names compare EQUAL, which is the
+        # direction a fold exists to move in.
+        return frozenset({_normalize_name(a), _normalize_name(b)})
 
     def _loose_key(a, b):
         """
@@ -1189,7 +1210,11 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
         a weaker claim than an exact hit, so it must never override one.
         """
         def toks(n):
-            return " ".join(sorted(str(n).strip().lower().split()))
+            # Built on _normalize_name for the same reason _key is, and so
+            # the two keys stay on ONE basis: a loose key derived from a bare
+            # lowercase while the exact key folds would be its own quiet
+            # disagreement about who is who.
+            return " ".join(sorted(_normalize_name(n).split()))
         return frozenset({toks(a), toks(b)})
 
     # A REMATCH IS A DIFFERENT FIGHT. These keys carry no event, so the second
