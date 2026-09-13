@@ -56,6 +56,7 @@ import pandas as pd
 import requests
 
 from src.card_matcher import _normalize_name
+from src.names import canonical_name
 from src.results_fetcher import BASE_HEADERS, REQUEST_TIMEOUT, ESPN_SCOREBOARD_URL, WIKIPEDIA_OPENSEARCH_URL, is_placeholder_fighter_name
 
 # Sentinel distinguishing "this source rate-limited us" from a genuine
@@ -1279,7 +1280,9 @@ def backfill_fighters(fighters_path: str = "data/fighters.csv",
                 if name in needs_basic:
                     row = {col: None for col in fighters.columns}
                     row.update({
-                        "name": name, "weight_class": weight_class_by_fighter.get(name),
+                        # Canonical, for the reason given in ensure_roster_rows.
+                        "name": canonical_name(name),
+                        "weight_class": weight_class_by_fighter.get(name),
                         "country": country, "wins": wins, "losses": losses,
                     })
                     row.update(physical)
@@ -1720,7 +1723,13 @@ def ensure_roster_rows(fighters_path: str = "data/fighters.csv",
         recs = _fetch_espn_method_records(aid)
         last = _fetch_last_fight_from_events_map(aid, name)
 
-        row = {"name": name}
+        # CANONICAL SPELLING ON THE ROSTER ROW. The name here comes from a
+        # card, and a card can carry a variant the alias table already
+        # resolves. Taking it as given is how one man became two: "Sean King
+        # III" got his own roster row beside Sean King, with a parallel 8-0
+        # record, and the exclusion check above could not see the collision
+        # because it compares the unresolved spelling.
+        row = {"name": canonical_name(name)}
         row.update(physical or {})
         cw, cl = recs.pop("_career_w", None), recs.pop("_career_l", None)
         if cw is not None:

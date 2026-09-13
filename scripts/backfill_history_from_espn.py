@@ -40,6 +40,7 @@ import requests
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.fighter_backfill import (fetch_espn_fight_history, BASE_HEADERS,  # noqa: E402
                                   REQUEST_TIMEOUT)
+from src.names import canonical_name  # noqa: E402
 from src.results_fetcher import ESPN_SCOREBOARD_URL  # noqa: E402
 from src.card_matcher import fight_key  # noqa: E402
 from src.names import _normalize_name  # noqa: E402
@@ -232,6 +233,22 @@ def main():
             no_id.append(n)
             continue
         for row in fetch_espn_fight_history(aid, n):
+            # CANONICALISE BEFORE ANYTHING ELSE LOOKS AT THE ROW. The spine is
+            # append-only, so a non-canonical spelling entering here is
+            # permanent until a human edits it, and tests/test_name_aliases --
+            # a hard gate before any data mutation -- refuses the build while
+            # one is present.
+            #
+            # This is also how an identity SPLITS. ESPN returned "Sean King
+            # III" for a man the card, the roster and the alias table all call
+            # Sean King, and because the name was taken as given he accrued
+            # seven spine bouts, a second roster row and a parallel 8-0 record
+            # of his own. The duplicate detection three lines down cannot see
+            # any of it: _seen keys on the name, so two spellings are two
+            # fighters and every bout looks new.
+            for _c in ("fighter_a", "fighter_b", "winner"):
+                if row.get(_c):
+                    row[_c] = canonical_name(row[_c])
             if _seen(have, row["fighter_a"], row["fighter_b"], row["date"]):
                 continue
             if _same_day_bout(by_fighter, n, row["date"]):

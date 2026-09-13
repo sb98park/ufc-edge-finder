@@ -71,6 +71,7 @@ import time
 import pandas as pd
 
 from src.card_matcher import _normalize_name
+from src.names import canonical_name
 import requests
 from bs4 import BeautifulSoup
 
@@ -1400,6 +1401,25 @@ def fetch_and_log_new_results(event_name: str, fight_cards_df: pd.DataFrame, res
     if not new_rows and not updated_count:
         return 0
 
+    # CANONICALISE THE NEW ROWS, at the one place they reach the file rather
+    # than at the five places they are built.
+    #
+    # fight_results is what the track record grades against and what the spine
+    # merge reads, so a variant spelling here propagates. On 2026-09-12 ESPN
+    # returned the Noche main-event winner as "Sean King III" while the card,
+    # the roster and the alias table all said Sean King: the bout was logged a
+    # SECOND time under the variant, card_discovery read the finished fight as
+    # a replacement, cancelled the original and voided its prediction -- a
+    # correct pick removed from the published record by a suffix.
+    #
+    # Only the newly appended rows are touched. Existing rows are left exactly
+    # as they are: this file is append-only by contract (see the header), and
+    # rewriting history here would be a restatement rather than a fix.
+    if new_rows:
+        for _r in new_rows:
+            for _c in ("fighter_a", "fighter_b", "winner"):
+                if _r.get(_c):
+                    _r[_c] = canonical_name(_r[_c])
     combined = pd.concat([existing, pd.DataFrame(new_rows)], ignore_index=True) if new_rows else existing
     combined.to_csv(results_path, index=False)
     return len(new_rows) + updated_count
