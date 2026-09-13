@@ -389,6 +389,28 @@ def _confidence_label(favorite_prob: float, thinner_record: int | None = None,
             # and burying it would be its own distortion. It just must not be
             # eligible to be the week's flagship pick.
             return "Medium Confidence"
+        # A DEBUT CORNER CAPS HERE TOO, and the omission was a discontinuity
+        # rather than a decision. debut_corner was consulted only in the
+        # Medium branch below, where it sends a fight to LOW -- and
+        # DEBUT_MEDIUM_CEILING equals high_bar, so the same debutant read Low
+        # at 0.74 and HIGH at 0.76, skipping Medium entirely at exactly the
+        # probability where a five-unit stake appears.
+        #
+        # It is the same argument thinner_record makes one line up, about a
+        # different quantity: thinner_record counts PROFESSIONAL bouts, so a
+        # 7-0 regional fighter clears it while the model has never seen him
+        # fight in the UFC. His rating comes purely off the career-record
+        # curve, which is a prior rather than a measurement, and that is not
+        # something to stake the week's flagship pick on.
+        #
+        # Medium, not Low, for exactly the reason above: the gap may be real.
+        #
+        # MEASURED BEFORE CHANGING: across all 147 logged picks, three have a
+        # corner with zero UFC bouts and none of them reached 0.75. This
+        # changes no pick, past or present -- it is shipped for consistency,
+        # not for a measured gain.
+        if debut_corner:
+            return "Medium Confidence"
         return "High Confidence"
     elif favorite_prob >= med_bar:
         if debut_corner and favorite_prob < DEBUT_MEDIUM_CEILING:
@@ -412,8 +434,11 @@ def _confidence_capped(favorite_prob: float, thinner_record, debut_corner,
     med_bar = 0.60 - (CONFIDENCE_HYSTERESIS
                       if previous_label in ("High Confidence", "Medium Confidence") else 0.0)
     if favorite_prob >= high_bar:
-        return (thinner_record is not None
-                and thinner_record < MIN_RECORD_FOR_HIGH_CONFIDENCE)
+        # Both High-band caps, or the reason string goes missing on the one
+        # the label actually applied.
+        return ((thinner_record is not None
+                 and thinner_record < MIN_RECORD_FOR_HIGH_CONFIDENCE)
+                or bool(debut_corner))
     if favorite_prob >= med_bar:
         return bool(debut_corner) and favorite_prob < DEBUT_MEDIUM_CEILING
     return False
