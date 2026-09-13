@@ -51,6 +51,88 @@
 const OWNER = "sb98park";
 const REPO = "ufc-edge-finder";
 const DISPATCH_URL = `https://api.github.com/repos/${OWNER}/${REPO}/dispatches`;
+const RUNS_URL = `https://api.github.com/repos/${OWNER}/${REPO}/actions/runs`;
+
+/**
+ * How long a run may sit in `queued` before this treats it as wedged.
+ *
+ * A queued run is doing no work by definition -- it has no runner and no
+ * job. refresh.yml's own `timeout-minutes: 18` cannot bound it, because that
+ * clock only starts once a job is RUNNING. So the one failure mode that
+ * silences every guard inside the workflow is invisible to all of them.
+ *
+ * 30 minutes clears everything legitimate with room: a build takes 2-5
+ * minutes, the job cap is 18, and brief queueing while the previous run
+ * finishes is normal. Anything past that is not waiting, it is stuck.
+ */
+const STUCK_QUEUED_MINUTES = 30;
+
+function ghHeaders(env) {
+  return {
+    Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    // Same reason as the dispatch below: the Workers runtime sends no
+    // default User-Agent and GitHub 403s requests without one.
+    "User-Agent": `${REPO}-refresh-tick`,
+  };
+}
+
+/**
+ * Cancel runs wedged in `queued`, and say how many. Never throws.
+ *
+ * WHY THIS LIVES IN THE WORKER. On 2026-09-13 a run sat queued for 8.7
+ * hours holding refresh.yml's `refresh` concurrency group. That group is
+ * declared `cancel-in-progress: false`, so GitHub keeps only the newest
+ * PENDING run and cancels the rest: 99 consecutive runs cancelled, zero
+ * successes, the site stale for nine hours. Nothing inside the workflow
+ * could report it, because nothing inside the workflow ran. This Worker is
+ * the only piece that keeps executing when Actions is wedged, so it is the
+ * only place a guard can sit.
+ *
+ * ONLY `queued`, NEVER `in_progress`. An in-progress run may be mid-commit
+ * or mid-push, and cancelling one risks leaving the repo half-written --
+ * which is precisely why refresh.yml chose cancel-in-progress: false in the
+ * first place. This must not quietly undo that decision.
+ *
+ * NEVER THROWS, and that is load-bearing. The tick is the primary job; a
+ * broken health check must not stop the site refreshing. Failures are
+ * returned for the caller to log, not raised.
+ */
+async function unwedgeStuckRuns(env, now = Date.now()) {
+  const out = { checked: 0, cancelled: [], error: null };
+  try {
+    const resp = await fetch(`${RUNS_URL}?status=queued&per_page=50`, { headers: ghHeaders(env) });
+    if (!resp.ok) {
+      out.error = `list queued runs: HTTP ${resp.status}`;
+      return out;
+    }
+    const body = await resp.json();
+    const runs = Array.isArray(body?.workflow_runs) ? body.workflow_runs : [];
+    out.checked = runs.length;
+    for (const run of runs) {
+      const startedAt = Date.parse(run?.created_at ?? "");
+      if (!startedAt) continue;
+      const minutes = (now - startedAt) / 60000;
+      if (minutes < STUCK_QUEUED_MINUTES) continue;
+      const cancel = await fetch(`${RUNS_URL}/${run.id}/cancel`, {
+        method: "POST",
+        headers: ghHeaders(env),
+      });
+      // 202 Accepted is the documented success. 409 means it already moved
+      // on between the list and the cancel, which is a race this does not
+      // need to care about -- the wedge is gone either way.
+      if (cancel.status === 202 || cancel.status === 409) {
+        out.cancelled.push({ id: run.id, number: run.run_number, minutes: Math.round(minutes) });
+      } else {
+        out.error = `cancel ${run.id}: HTTP ${cancel.status}`;
+      }
+    }
+  } catch (err) {
+    out.error = String(err?.message ?? err);
+  }
+  return out;
+}
 
 /**
  * POST the repository_dispatch. Throws on anything that isn't a 204.
@@ -94,6 +176,8 @@ async function dispatchTick(env) {
   }
 }
 
+export { unwedgeStuckRuns, STUCK_QUEUED_MINUTES };
+
 export default {
   // Cron Trigger entry point. The five-minute expression is set in the
   // Cloudflare dashboard, not here -- see SETUP.md for the exact string.
@@ -109,6 +193,21 @@ export default {
     // stopped being asked. That is the same class of invisible starvation
     // that cost 12 hours of stale odds two days before a card. Swallowing
     // errors here would rebuild it exactly.
+    // BEFORE the dispatch, so a wedged queue is cleared in the same tick
+    // rather than one tick later. Its result is logged rather than thrown:
+    // see unwedgeStuckRuns -- the tick is the primary job and must survive a
+    // broken health check.
+    const unwedged = await unwedgeStuckRuns(env);
+    if (unwedged.cancelled.length) {
+      console.log(
+        `[refresh-tick] cancelled ${unwedged.cancelled.length} run(s) wedged in queued: ` +
+        unwedged.cancelled.map((r) => `#${r.number} (${r.minutes}m)`).join(", ")
+      );
+    }
+    if (unwedged.error) {
+      console.log(`[refresh-tick] queue check did not complete: ${unwedged.error}`);
+    }
+
     await dispatchTick(env);
   },
 
