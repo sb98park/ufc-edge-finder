@@ -38,6 +38,7 @@ import datetime as dt
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.names import canonical_name  # noqa: E402
 
 from src.card_matcher import fight_key   # noqa: E402
 from src.elo import canonical_method   # noqa: E402
@@ -108,7 +109,18 @@ def main():
 
     new_rows, skipped_known, skipped_nowinner = [], 0, 0
     for _, r in res.iterrows():
-        a, b, w = r.get("fighter_a"), r.get("fighter_b"), r.get("winner")
+        # CANONICALISE ON WRITE. The spine is the one file an alias cannot
+        # reach retroactively -- append-only by design -- so a non-canonical
+        # spelling entering here is permanent until someone edits it by hand.
+        # tests/test_name_aliases asserts no spine row carries one, it is a
+        # HARD GATE before any data mutation, and on 2026-09-12 a single row
+        # ("Jean Silva vs Jose Miguel Delgado", the main event) froze the
+        # refresh for over an hour on a fight night.
+        #
+        # The alias table already knew that man is Jose Delgado. Nothing
+        # applied it between the results feed and this append.
+        a, b, w = (canonical_name(r.get("fighter_a")), canonical_name(r.get("fighter_b")),
+                   canonical_name(r.get("winner")))
         method = str(r.get("method") or "").strip()
         decisive = isinstance(w, str) and w.strip()
         # A NO CONTEST OR DRAW IS A RESULT, AND IT BELONGS IN THE SPINE. It
