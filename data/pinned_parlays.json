@@ -1,13 +1,27 @@
 {
  "UFC 331: Van vs. Pantoja 2": {
   "bankroll": {
-   "pinned_at": "2026-09-13T15:23:49+00:00",
+   "pinned_at": "2026-09-13T16:34:11+00:00",
    "identities": [
-    "[\"Edmen Shahbazyan|Brunno Ferreira\", [{\"fighter\": \"Edmen Shahbazyan\", \"kind\": \"winner\"}]]",
-    "[\"Giga Chikadze|Joanderson Brito\", [{\"fighter\": \"Joanderson Brito\", \"kind\": \"winner\"}]]"
+    "[\"Marlon Vera|Charles Jourdain\", [{\"fighter\": \"Charles Jourdain\", \"kind\": \"winner\"}]]",
+    "[\"Edmen Shahbazyan|Brunno Ferreira\", [{\"fighter\": \"Edmen Shahbazyan\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
+     {
+      "label": "Charles Jourdain ML",
+      "odds_display": "-238",
+      "is_model": false,
+      "decimal_odds": 1.420168,
+      "fight_key": "Marlon Vera|Charles Jourdain",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Charles Jourdain"
+       }
+      ],
+      "source": "DraftKings"
+     },
      {
       "label": "Edmen Shahbazyan ML",
       "odds_display": "-162",
@@ -21,33 +35,19 @@
        }
       ],
       "source": "DraftKings"
-     },
-     {
-      "label": "Joanderson Brito ML",
-      "odds_display": "-375",
-      "is_model": false,
-      "decimal_odds": 1.266667,
-      "fight_key": "Giga Chikadze|Joanderson Brito",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Joanderson Brito"
-       }
-      ],
-      "source": "DraftKings"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_23",
-     "card_25"
+     "card_19",
+     "card_23"
     ],
-    "slip_id": "0aaa8d1c7842",
-    "combined_decimal": 2.04856,
-    "combined_american": 105,
-    "combined_american_display": "+105",
-    "combined_prob": 0.4383,
-    "combined_prob_raw": 0.3338,
+    "slip_id": "863aaae9b602",
+    "combined_decimal": 2.296815,
+    "combined_american": 130,
+    "combined_american_display": "+130",
+    "combined_prob": 0.3956,
+    "combined_prob_raw": 0.3216,
     "venue": "DraftKings"
    }
   }
