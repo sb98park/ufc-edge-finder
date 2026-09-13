@@ -425,6 +425,12 @@
      always there is a panel nobody reads, which is how the run summary
      failed. Sits directly under the build stamp because it answers the same
      question: can I trust what is below this line right now. */
+  /* The "why no bets" line. Quiet by construction: this is context for the
+     figures above it, not a result of its own, and it must not compete with
+     them. Hairline above rather than a box, so it reads as a footnote to the
+     grid it follows. */
+  .no-play-note { margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--hairline);
+    font-size: var(--t-small); line-height: 1.55; color: var(--muted); }
   .health-strip { margin: -8px 0 16px; display: flex; flex-direction: column; gap: 6px; }
   .health-item { display: flex; gap: 8px; align-items: baseline;
     font-size: var(--t-small); line-height: 1.5;
@@ -7044,6 +7050,24 @@
             <div class="event-summary-label">Perfect Props</div>
           </div>
         </div>
+        {#- WHY THERE IS NO BETS TAB, directly under the record it qualifies
+            and before the parlay block, because it is a statement ABOUT
+            these figures rather than a separate item.
+            Prose, not a fourth "0 Plays" stat: a zero sitting in a row of
+            performance numbers reads as a bad result, and this is the
+            opposite -- the ladder declining to bet a card it was not
+            confident about is the discipline working. Shown only where the
+            card genuinely has no plays and sits on the staking side of the
+            changeover; a card with a Bets tab answers this in numbers. -#}
+        {% if not bets and group.summary.no_play_reason %}
+        <p class="no-play-note">
+          {%- if group.summary.no_play_reason == 'tier' -%}
+          No units staked &mdash; nothing on this card reached High Confidence or Lock of the Week, the two tiers the ladder backs.
+          {%- else -%}
+          No units staked &mdash; the picks that qualified had no price at a book these can be placed at.
+          {%- endif -%}
+        </p>
+        {% endif %}
         {#- THE GRADED SLIP FOR THIS CARD, if one has settled. Keyed on
             group.event_name because summarise_by_event keys on the slip's own
             `event`, which is the same string -- no mapping to drift.

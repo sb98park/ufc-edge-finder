@@ -81,7 +81,7 @@ from src import parlay_pin
 from src import parlay_grader
 from src.parlay_ledger import load as parlay_load, record_slips
 from src.recommendations import build_recommendations
-from src.card_plays import build_card_plays
+from src.card_plays import build_card_plays, _LADDER_TIERS
 from src import bankroll as bankroll_state
 from src.plays_ledger import (
     load as plays_load, record_plays, committed_for, play_id,
@@ -1527,6 +1527,29 @@ def main(tier: str = "member", output_path: str | None = None):
                       for _m in (_g.get("results") or []) if _m.get("date_added")]
             _g.setdefault("summary", {})["units_were_staked"] = (
                 bool(_dates) and min(_dates) < _changeover)
+
+            # WHY A CARD STAKED NOTHING, said once, under the record it
+            # qualifies. Without it the panel simply has no Bets tab and no
+            # units line, and an absence explains nothing -- a reader cannot
+            # tell a disciplined week from a broken pipeline, which is the
+            # same confusion the units label above was causing.
+            #
+            # Only on the staking side of the changeover: before it every
+            # pick was staked, so there is nothing to explain. And only when
+            # the card really has no plays -- a card WITH a Bets tab already
+            # answers this with numbers.
+            #
+            # The reason is computed, not assumed. A card can stake nothing
+            # because no pick reached the ladder, or because one did and had
+            # no price at a book we can actually bet. Those are different
+            # facts and the second is the one worth seeing.
+            if not _g["summary"]["units_were_staked"]:
+                _tiers = {str(_m.get("confidence_label") or "") for _m in (_g.get("results") or [])}
+                _qualified = bool(_tiers & set(_LADDER_TIERS))
+                _g["summary"]["no_play_reason"] = (
+                    "priced" if _qualified else "tier")
+            else:
+                _g["summary"]["no_play_reason"] = None
 
         _pre = [m for m in (track_record or {}).get("results", [])
                 if m.get("units_result") is not None
