@@ -1511,6 +1511,23 @@ def main(tier: str = "member", output_path: str | None = None):
                          if str(r.get("event_date") or "")]
         _changeover = min(_ledger_dates) if _ledger_dates else "9999-12-31"
 
+        # WHICH SIDE OF THE CHANGEOVER EACH CARD SITS, stamped on the group so
+        # the template does not have to do date arithmetic in Jinja.
+        #
+        # The card panel used `bets` -- "is this card in the plays ledger" --
+        # as the proxy for this, and it is the wrong question twice over. A
+        # card BEFORE the changeover has no ledger entry because the ledger
+        # did not exist yet, and its picks WERE staked at tier size; it was
+        # labelled "not staked". A card AFTER it with no qualifying pick also
+        # has no ledger entry, so 2026-09-12 -- which staked nothing on
+        # purpose -- read identically to 2026-07-11, which staked on every
+        # fight. One label, two opposite meanings.
+        for _g in (track_record.get("results_by_event") or []):
+            _dates = [str(_m.get("date_added") or "")[:10]
+                      for _m in (_g.get("results") or []) if _m.get("date_added")]
+            _g.setdefault("summary", {})["units_were_staked"] = (
+                bool(_dates) and min(_dates) < _changeover)
+
         _pre = [m for m in (track_record or {}).get("results", [])
                 if m.get("units_result") is not None
                 and m.get("unit_size") is not None

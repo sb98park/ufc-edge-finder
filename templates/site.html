@@ -7021,10 +7021,22 @@
               output into the free payload. So the fix is the label, not the
               filter -- and the tabs return on their own the moment a play
               settles. -#}
-          {% if group.summary.units is not none %}
+          {#- UNITS ONLY WHERE UNITS WERE REAL.
+              Before the changeover every published pick WAS staked at its
+              tier size, and this said "Units - not staked" over seven cards
+              of money that was actually placed. After it nothing on this
+              panel is staked, so a signed unit figure here is not a softer
+              claim, it is an irrelevant one -- the Bets tab beside it
+              carries the real number.
+              The old condition keyed on `bets`, i.e. "is this card in the
+              plays ledger", which answers neither question: a pre-changeover
+              card has no ledger entry because the ledger did not exist, and
+              2026-09-12 has none because it staked nothing on purpose. Both
+              rendered the same label for opposite reasons. -#}
+          {% if group.summary.units is not none and group.summary.units_were_staked %}
           <div class="event-summary-stat">
             <div class="event-summary-value {{ 'positive' if group.summary.units >= 0 else 'negative' }}">{{ '+' if group.summary.units >= 0 else '' }}{{ group.summary.units }}U</div>
-            <div class="event-summary-label">{% if bets %}Units{% else %}Units &middot; not staked{% endif %}</div>
+            <div class="event-summary-label">Units staked</div>
           </div>
           {% endif %}
           <div class="event-summary-stat">
