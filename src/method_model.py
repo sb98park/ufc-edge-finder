@@ -566,4 +566,15 @@ def headline_method(ko: float, sub: float, dec: float) -> tuple[str, float]:
     finish = ko + sub
     if dec >= finish:
         return "Decision", dec
-    return ("KO/TKO", ko) if ko >= sub else ("Submission", sub)
+    # "FINISH", NOT THE LARGER OF KO AND SUB. Naming the bigger finish cell
+    # over-claims: on Arman Tsarukyan vs Mauricio Ruffy the grid read KO 30.7,
+    # SUB 12.3, DEC 37.3, and this returned "KO/TKO" -- a 30.7% outcome named
+    # as the call while the table directly below it showed decision as the
+    # largest single number. The reader checks row against headline and finds
+    # them disagreeing, which is the exact complaint the finish-first rule was
+    # introduced to fix, arriving from the other side.
+    #
+    # 43.0% for the finish is both the more likely claim AND one the reader
+    # can verify by adding two rows they can see. It never names an outcome
+    # less likely than the alternative.
+    return "Finish", finish

@@ -1083,8 +1083,24 @@ def _method_matches(predicted_method, actual_method) -> bool | None:
             return "SUBMISSION"
         if "DQ" in m:
             return "DQ"
+        if m.startswith("FINISH"):
+            return "FINISH"
         return m
-    return _bucket(predicted_method) == _bucket(actual_method)
+    pred, real = _bucket(predicted_method), _bucket(actual_method)
+    # "FINISH" IS A COARSER CLAIM THAT STILL COUNTS. The headline names a
+    # finish when P(KO)+P(SUB) beats P(decision) without asserting which one,
+    # so a submission or a knockout both satisfy it. Grading it against the
+    # literal string would score every such pick wrong even when the fighter
+    # won inside the distance.
+    #
+    # IT IS DELIBERATELY EASIER TO HIT than naming KO/TKO outright, and the
+    # owner chose that trade knowingly: a correct "by finish" is a weaker
+    # prediction than a correct "by KO/TKO" and earns the same Method +
+    # Winner badge. Recorded here so the looser standard is visible where the
+    # comparison happens rather than only in a commit message.
+    if pred == "FINISH":
+        return real in ("KO/TKO", "SUBMISSION")
+    return pred == real
 
 
 # A real two-way moneyline's two implied probabilities sum to a little over

@@ -787,7 +787,7 @@ def build_fight_preview(
         f"Model favors {favorite} at {favorite_prob*100:.0f}% over {underdog} "
         f"({matchup['style_a']} vs. {matchup['style_b']} stylistically). "
         f"Path to victory most likely runs through {likely_method.lower()} "
-        f"(projected at {method_rates[likely_method]*100:.0f}%, weighing {favorite.split()[-1]}'s own tendencies "
+        f"(projected at {_likely_rate*100:.0f}%, weighing {favorite.split()[-1]}'s own tendencies "
         f"against {underdog.split()[-1]}'s specific vulnerability profile). "
         f"Combined finish rate between both fighters sits at {combined_finish_rate*100:.0f}%, "
         f"leaning {rounds_lean.lower()} on total rounds."
@@ -897,7 +897,11 @@ def build_fight_preview(
         "scheduled_rounds": 5 if is_five_round else 3,
         "underdog": underdog,
         "likely_method": likely_method,
-        "likely_method_rate": round(method_rates[likely_method], 3),
+        # _likely_rate, NOT method_rates[likely_method]. headline_method can
+        # name "Finish", which is the SUM of two cells and therefore not a key
+        # in that dict -- indexing it would KeyError on every fight the model
+        # reads as more likely to end inside the distance.
+        "likely_method_rate": round(_likely_rate, 3),
         # Thinner record passed through so the label can refuse "High
         # Confidence" on a matchup where one corner has no career to read.
         # Taken from the matchup rather than recomputed, so the label and the
