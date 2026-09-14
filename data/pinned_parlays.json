@@ -20,13 +20,13 @@
         "fighter": "Charles Jourdain"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      },
      {
       "label": "Edmen Shahbazyan ML",
-      "odds_display": "-166",
+      "odds_display": "-170",
       "is_model": false,
-      "decimal_odds": 1.60241,
+      "decimal_odds": 1.588235,
       "fight_key": "Edmen Shahbazyan|Brunno Ferreira",
       "conditions": [
        {
@@ -34,7 +34,7 @@
         "fighter": "Edmen Shahbazyan"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      }
     ],
     "has_model_legs": false,
@@ -43,12 +43,12 @@
      "card_10"
     ],
     "slip_id": "c01cbc88ce58",
-    "combined_decimal": 2.299109,
-    "combined_american": 130,
-    "combined_american_display": "+130",
-    "combined_prob": 0.3951,
+    "combined_decimal": 2.278772,
+    "combined_american": 128,
+    "combined_american_display": "+128",
+    "combined_prob": 0.3969,
     "combined_prob_raw": 0.3216,
-    "venue": "DraftKings"
+    "venue": "FanDuel"
    }
   }
  },
