@@ -105,6 +105,22 @@ def _record_source_health(pm_rows, rd_rows, dates) -> None:
         print(f"[source_health] not written ({exc}) -- continuing")
 
 
+def _card_dates(known_fighters) -> list[str]:
+    """
+    Upcoming card dates, soonest first, derived from the tracked bouts.
+
+    Lives here rather than inline because BOTH book sources need it and the
+    one time it was inline it read a key Polymarket rows do not have, so the
+    list was silently always empty and the source it gated was never called.
+    A second caller reading a second copy of that logic is how that happens
+    twice.
+    """
+    dates = sorted({str(t[2])[:10] for t in (known_fighters or [])
+                    if isinstance(t, (tuple, list)) and len(t) > 2 and t[2]}
+                   - {"None", "nan", ""})
+    return [d for d in dates if len(d) == 10 and d >= _today()]
+
+
 def _today() -> str:
     """UTC date as YYYY-MM-DD, for discarding cards that have already run."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -196,10 +212,7 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
             #
             # known_fighters already carries (fighter_a, fighter_b, date) --
             # the date was in this function's own argument the whole time.
-            dates = sorted({str(t[2])[:10] for t in (known_fighters or [])
-                            if isinstance(t, (tuple, list)) and len(t) > 2 and t[2]}
-                           - {"None", "nan", ""})
-            dates = [d for d in dates if len(d) == 10 and d >= _today()]
+            dates = _card_dates(known_fighters)
 
             # ONE DATE, AND THE QUOTA IS WHY. The free tier allows 20,000 data
             # points a day, where a point is one participant x one line x one
@@ -234,9 +247,45 @@ def get_live_props(known_fighters=None) -> tuple[pd.DataFrame, str]:
         except Exception as exc:
             print(f"[warn] TheRundown fetch failed ({exc}) -- continuing on Polymarket alone")
 
-    _record_source_health(pm_rows, rd_rows, rd_dates)
+    # THE ODDS API, AS A SUPPLEMENT RATHER THAN A FALLBACK.
+    #
+    # This source used to run only `if not pm_rows`. Polymarket always returns
+    # rows, so the branch never fired -- for fifteen days its cache sat
+    # unrefreshed against a two-hour TTL, and nobody noticed because nothing
+    # was broken, only absent. Meanwhile the 09-19 card had ZERO bettable
+    # moneylines: every fight priced by Polymarket alone, so every ladder pick
+    # was refused at the venue gate and the Plays section read "no plays this
+    # week" with a High Confidence co-main sitting on the card. DraftKings was
+    # quoting that co-main at -375 the whole time. It was in this cache.
+    #
+    # So it runs alongside Polymarket now, for book moneylines only, and it is
+    # the LAST of the three appended: _bet_key treats (pair, market, selection,
+    # source) as the identity, so a DraftKings moneyline TheRundown already
+    # returned wins the de-duplication below. TheRundown polls on a 15-minute
+    # clock against this one's two hours -- when both have a price, the fresher
+    # one should be the one that survives.
+    oa_rows = []
+    if os.environ.get("ODDS_API_KEY"):
+        try:
+            from src.live_odds import fetch_mma_odds, to_book_moneyline_rows
+            _oa_dates = _card_dates(known_fighters)[:1]
+            if _oa_dates:
+                oa_rows = to_book_moneyline_rows(fetch_mma_odds(), dates=_oa_dates)
+                if oa_rows:
+                    sources_used.append("The Odds API")
+                else:
+                    print(f"[odds_api] {_oa_dates[0]} requested, but no bettable book "
+                          f"moneyline came back for it")
+            else:
+                print("[odds_api] ODDS_API_KEY is set but no usable card date was "
+                      f"derived from {len(known_fighters or [])} tracked bout(s) "
+                      "-- source skipped")
+        except Exception as exc:
+            print(f"[warn] The Odds API fetch failed ({exc}) -- continuing without it")
 
-    combined_rows = pm_rows + rd_rows
+    _record_source_health(pm_rows, rd_rows + oa_rows, rd_dates)
+
+    combined_rows = pm_rows + rd_rows + oa_rows
 
     # STAMP THE SOURCE ON EVERY ROW.
     #

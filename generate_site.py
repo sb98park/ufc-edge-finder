@@ -2439,6 +2439,32 @@ def build_health_alerts(cards_df, predictions_path: str = f"{DATA_DIR}/predictio
                 "text": f"{a} vs {b} is marked cancelled but has a published pick",
                 "detail": f"{row.get('event_name', '')} \u00b7 verify before the card",
             })
+
+    # A BOOK PRICE FEED THAT IS ALIVE BUT ANCIENT.
+    #
+    # The third failure shape, and the quietest: nothing errors, no step goes
+    # red, the site builds and publishes -- and every price it shows came from
+    # a fetch fifteen days ago, because the key was rejected and the module
+    # fell back to its cache with only a print to say so. src/live_odds bounds
+    # that now; this is the part the owner can actually see.
+    try:
+        with open(f"{DATA_DIR}/source_health.json", encoding="utf-8") as fh:
+            oa = (json.load(fh) or {}).get("odds_api") or {}
+    except (OSError, ValueError):
+        oa = {}
+    if oa and not oa.get("ok", True):
+        hours = float(oa.get("cache_age_hours") or 0.0)
+        limit = float(oa.get("max_serve_hours") or 24.0)
+        age = f"{hours/24:.1f} days" if hours >= 48 else f"{hours:.0f}h"
+        alerts.append({
+            "kind": "odds",
+            # Inside the limit the cache is still a price and the site is
+            # merely degraded; past it no book price is being served at all,
+            # which is what empties the Plays section.
+            "severe": hours > limit,
+            "text": f"book odds have not refreshed in {age}",
+            "detail": str(oa.get("detail") or "")[:120],
+        })
     return alerts
 
 
