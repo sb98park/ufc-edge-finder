@@ -12,13 +12,31 @@ having to update them is the point: it is the only place where "we changed the
 staking rule" and "we changed what we would have bet" become the same edit.
 """
 
-import sys, os, json, copy
+import sys, os, json, copy, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.card_plays import (  # noqa: E402
-    build_card_plays, axis_for_market, label_for, candidates_for_fight,
+    build_card_plays as _build_card_plays, axis_for_market, label_for,
+    candidates_for_fight as _candidates_for_fight,
 )
+
+# EVERY BUILD IN THIS FILE GETS ITS OWN EMPTY QUOTE MEMORY.
+# card_plays remembers the book prices it sees so a fighter the feed drops can
+# still be staked from a recent quote. Pointed at data/ that store is live
+# state: the Polymarket-only fixture below staked two plays off DraftKings
+# prices left by a real build minutes earlier, and the run wrote the fixture's
+# quotes back into data/. Carrying is covered on its own terms in
+# tests/test_carried_book_price.py.
+_STORE = os.path.join(tempfile.mkdtemp(prefix="card_plays_test_"), "last_book_price.json")
+
+
+def build_card_plays(event, committed=None):
+    return _build_card_plays(event, committed=committed, book_price_path=_STORE)
+
+
+def candidates_for_fight(fight):
+    return _candidates_for_fight(fight, last_book_prices={})
 from src.plays import AXIS_OUTCOME, AXIS_MANNER, MAX_UNITS_PER_CARD  # noqa: E402
 
 FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)),

@@ -45,6 +45,7 @@ import json
 import os
 from datetime import datetime, timezone
 
+from src.card_matcher import _normalize_name
 from src.parlay_builder import BETTABLE_VENUES
 from src.plays import (
     size_play, select_card, decimal_odds, ev_per_unit, required_prob,
@@ -200,6 +201,137 @@ def _disagreement(edge: dict) -> float | None:
         return None
 
 
+# HOW OLD A BOOK QUOTE MAY BE AND STILL BE STAKED.
+#
+# A ladder pick is refused when no bettable book is quoting it, which is the
+# right rule and is documented at the venue gate below. But the feed does not
+# quote continuously: a fighter can carry a DraftKings line all week and drop
+# out of one pull, and dropping the play for that is not honesty, it is
+# noise. The published ladder promises every Lock and every High Confidence
+# pick, and a subscriber cannot reproduce a record that silently skips one
+# because a single fetch came back thin.
+#
+# 12 HOURS, and the number matters in one direction only. The ladder stakes a
+# FLAT tier size regardless of price, so a carried quote does not change
+# whether we bet or how much -- it changes the price the ledger CLAIMS, and
+# therefore the return it reports. Too generous a window publishes a return
+# at a price nobody could have taken. Twelve hours covers a feed that pulls
+# roughly every 35 minutes missing a fighter for a long stretch, while
+# refusing anything that looks like a line the book has actually withdrawn.
+#
+# MEASURED, so the limit is not theoretical: on the 2026-09-19 card the
+# co-main and main event carried book quotes 358 HOURS old with a single
+# history point each, while sixteen other fighters had quotes 2.1 hours old
+# with thirty points. A window loose enough to stake the first group would be
+# publishing a fortnight-old price as though it were available.
+BOOK_PRICE_MAX_AGE_HOURS = 12
+LAST_BOOK_PRICE_PATH = "data/last_book_price.json"
+
+
+def _book_key(selection: str, market: str) -> str:
+    return f"{_normalize_name(selection)}|{market}"
+
+
+def _load_last_book_prices(path: str = LAST_BOOK_PRICE_PATH) -> dict:
+    """Last bettable quote per selection. Never raises; absent file is empty."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _remember_book_prices(edges: list, now_iso: str, path: str = LAST_BOOK_PRICE_PATH) -> None:
+    """
+    Record every bettable MONEYLINE quote seen this build.
+
+    Moneyline only, deliberately: the ladder is moneyline-only (`on_ladder`
+    below), so this is the one market the fallback can serve, and keeping the
+    file to that bounds it to roughly one entry per carded fighter instead of
+    one per market per fighter.
+
+    Never raises -- a bookkeeping file that breaks the build would be worse
+    than the missed play it exists to prevent.
+    """
+    try:
+        store = _load_last_book_prices(path)
+        for edge in edges or []:
+            if (edge.get("market") or "") != "Moneyline":
+                continue
+            venue = _venue(edge)
+            if venue not in BETTABLE_VENUES:
+                continue
+            try:
+                odds = float(edge.get("odds_american"))
+            except (TypeError, ValueError):
+                continue
+            store[_book_key(edge.get("fighter") or "", "Moneyline")] = {
+                "odds": odds, "venue": venue, "at": now_iso,
+            }
+        # DROP WHAT CAN NEVER BE CARRIED AGAIN. Without this the file only ever
+        # grows: this is committed state, so every retired entry is permanent
+        # diff noise, and an entry past the window is already refused by
+        # _carried_book_price. Pruned against this build's clock, not each
+        # entry's, so a build that writes nothing still tidies.
+        _cutoff = _parse_iso(now_iso)
+        if _cutoff is not None:
+            store = {
+                k: v for k, v in store.items()
+                if not _older_than_window(v, _cutoff)
+            }
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(store, fh, indent=1, sort_keys=True)
+            fh.write("\n")
+        os.replace(tmp, path)
+    except Exception as exc:                      # noqa: BLE001 -- see docstring
+        print(f"[card_plays] last-book-price store not written ({exc}) -- continuing")
+
+
+def _parse_iso(value) -> datetime | None:
+    """A tz-aware datetime, or None. Naive stamps are read as UTC."""
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _older_than_window(rec, now: datetime) -> bool:
+    """
+    True when this record is too old to carry.
+
+    A record that cannot be read at all is also too old: it can never be
+    carried either, so keeping it would just hold a dead key forever.
+    """
+    if not isinstance(rec, dict):
+        return True
+    seen = _parse_iso(rec.get("at"))
+    if seen is None:
+        return True
+    return (now - seen).total_seconds() > BOOK_PRICE_MAX_AGE_HOURS * 3600
+
+
+def _carried_book_price(selection: str, market: str, now: datetime,
+                        store: dict) -> tuple[float, str] | None:
+    """
+    A recent bettable quote for this selection, or None.
+
+    Returns None rather than a stale price when the record is older than
+    BOOK_PRICE_MAX_AGE_HOURS -- see that constant for why the age matters
+    more than it looks.
+    """
+    rec = store.get(_book_key(selection, market))
+    if _older_than_window(rec, now):
+        return None
+    try:
+        return float(rec["odds"]), str(rec["venue"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def _venue(edge: dict) -> str:
     """
     Where the price was quoted, or "" when nothing said.
@@ -296,7 +428,9 @@ def _record_incoherent(fighter, market, model, fair, blend, edge=None,
         print(f"[card_plays] could not record the refusal ({exc}) -- continuing")
 
 
-def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
+def candidates_for_fight(fight: dict,
+                        last_book_prices: dict | None = None
+                        ) -> tuple[list[dict], list[dict]]:
     """
     Every staked candidate this fight offers, and every priced row that was
     considered and refused with the reason why.
@@ -305,6 +439,12 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
     on the card" is the first question this section will ever be asked, and a
     card that silently omits a fight is indistinguishable from a card that
     forgot it.
+
+    `last_book_prices` is the remembered-quote store (see _carried_book_price).
+    PASS IT. Loading it here per call reads live data/ state, which made a
+    synthetic Polymarket-only fixture stake two plays off prices that came from
+    a real card built minutes earlier. Left as a default only so a direct
+    caller still works; build_card_plays reads it once and hands it down.
     """
     preview = fight.get("preview") or {}
     tier = preview.get("confidence_label") or ""
@@ -312,6 +452,9 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
     matchup = f"{fight.get('fighter_a')} vs {fight.get('fighter_b')}"
     taken: list[dict] = []
     refused: list[dict] = []
+    _now = datetime.now(timezone.utc)
+    _last_book_prices = (_load_last_book_prices()
+                         if last_book_prices is None else last_book_prices)
 
     if fight.get("cancelled"):
         return taken, refused
@@ -380,6 +523,20 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
         # quote thinly, fewer plays are staked. A thin week is honest; a
         # record measured at unobtainable prices is not.
         _venue_name = _venue(edge)
+        if sized["play"] and _venue_name not in BETTABLE_VENUES and on_ladder:
+            # CARRY A RECENT BOOK QUOTE RATHER THAN DROP A LADDER PICK.
+            # Only for the ladder: Medium, Low and props have to earn their
+            # place on live EV, and a carried price would be reasoning about a
+            # bet from a number nobody is currently offering. The ladder does
+            # not reason -- it stakes a flat tier size on every pick -- so the
+            # only thing the price decides there is what the ledger claims.
+            _carried = _carried_book_price(edge.get("fighter") or "", market,
+                                           _now, _last_book_prices)
+            if _carried:
+                price, _venue_name = _carried
+                print(f"[card_plays] {edge.get('fighter')} {market}: no book quoting it this "
+                      f"build, carrying {_venue_name} at {price:+.0f} from within "
+                      f"{BOOK_PRICE_MAX_AGE_HOURS}h")
         if sized["play"] and _venue_name not in BETTABLE_VENUES:
             sized = dict(sized, play=False, units=0.0, reason=(
                 f"priced at {_venue_name or 'no named venue'}, which is a reference "
@@ -475,7 +632,8 @@ def candidates_for_fight(fight: dict) -> tuple[list[dict], list[dict]]:
     return taken, refused
 
 
-def build_card_plays(event: dict | None, committed: list[dict] | None = None) -> dict:
+def build_card_plays(event: dict | None, committed: list[dict] | None = None,
+                     book_price_path: str = LAST_BOOK_PRICE_PATH) -> dict:
     """
     The staked card. One event -- the one the reader can actually bet.
 
@@ -496,11 +654,21 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None) ->
     candidates: list[dict] = []
     refused: list[dict] = []
     considered = 0
+    # REMEMBER EVERY BETTABLE QUOTE ON THE CARD BEFORE ANY OF IT IS JUDGED.
+    # Written once per build from all fights, so a fighter the books are
+    # quoting today can still be staked tomorrow if the feed misses him --
+    # see BOOK_PRICE_MAX_AGE_HOURS.
+    _remember_book_prices(
+        [e for f in event["fights"] for e in (f.get("edges") or [])],
+        datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        book_price_path)
+    _last_book_prices = _load_last_book_prices(book_price_path)
+
     for fight in event["fights"]:
         if fight.get("cancelled"):
             continue
         considered += 1
-        t, r = candidates_for_fight(fight)
+        t, r = candidates_for_fight(fight, _last_book_prices)
         candidates.extend(t)
         refused.extend(r)
 

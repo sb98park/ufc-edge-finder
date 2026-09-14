@@ -13,7 +13,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.plays_ledger import (  # noqa: E402
     record_plays, load, committed_for, grade_rows, summarise, play_id, fight_key,
 )
-from src.card_plays import build_card_plays  # noqa: E402
+from src.card_plays import build_card_plays as _build_card_plays  # noqa: E402
+
+# Own quote memory, never data/. See the same guard in tests/test_card_plays.py:
+# the store card_plays writes is live state, and a test must not read or move it.
+_STORE = os.path.join(tempfile.mkdtemp(prefix="plays_ledger_test_"), "last_book_price.json")
+
+
+def build_card_plays(event, committed=None):
+    return _build_card_plays(event, committed=committed, book_price_path=_STORE)
+
 
 FAILURES = []
 
