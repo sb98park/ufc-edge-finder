@@ -1,57 +1,5 @@
 {
- "UFC 331: Van vs. Pantoja 2": {
-  "bankroll": {
-   "pinned_at": "2026-09-13T16:34:11+00:00",
-   "identities": [
-    "[\"Marlon Vera|Charles Jourdain\", [{\"fighter\": \"Charles Jourdain\", \"kind\": \"winner\"}]]",
-    "[\"Edmen Shahbazyan|Brunno Ferreira\", [{\"fighter\": \"Edmen Shahbazyan\", \"kind\": \"winner\"}]]"
-   ],
-   "snapshot": {
-    "legs": [
-     {
-      "label": "Charles Jourdain ML",
-      "odds_display": "-230",
-      "is_model": false,
-      "decimal_odds": 1.434783,
-      "fight_key": "Marlon Vera|Charles Jourdain",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Charles Jourdain"
-       }
-      ],
-      "source": "FanDuel"
-     },
-     {
-      "label": "Edmen Shahbazyan ML",
-      "odds_display": "-170",
-      "is_model": false,
-      "decimal_odds": 1.588235,
-      "fight_key": "Edmen Shahbazyan|Brunno Ferreira",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Edmen Shahbazyan"
-       }
-      ],
-      "source": "FanDuel"
-     }
-    ],
-    "has_model_legs": false,
-    "fight_ids": [
-     "card_6",
-     "card_10"
-    ],
-    "slip_id": "c01cbc88ce58",
-    "combined_decimal": 2.278772,
-    "combined_american": 128,
-    "combined_american_display": "+128",
-    "combined_prob": 0.395,
-    "combined_prob_raw": 0.3216,
-    "venue": "FanDuel"
-   }
-  }
- },
+ "UFC 331: Van vs. Pantoja 2": {},
  "Noche UFC: Silva vs. Delgado": {},
  "UFC Fight Night: Hooker vs. Parnasse": {}
 }
