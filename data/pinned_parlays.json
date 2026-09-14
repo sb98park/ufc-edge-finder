@@ -1,5 +1,57 @@
 {
- "UFC 331: Van vs. Pantoja 2": {},
+ "UFC 331: Van vs. Pantoja 2": {
+  "bankroll": {
+   "pinned_at": "2026-09-14T19:56:46+00:00",
+   "identities": [
+    "[\"Renato Moicano|Brian Ortega\", [{\"fighter\": \"Renato Moicano\", \"kind\": \"winner\"}]]",
+    "[\"Alonzo Menifield|Iwo Baraniewski\", [{\"fighter\": \"Iwo Baraniewski\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Renato Moicano ML",
+      "odds_display": "-220",
+      "is_model": false,
+      "decimal_odds": 1.454545,
+      "fight_key": "Renato Moicano|Brian Ortega",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Renato Moicano"
+       }
+      ],
+      "source": "BetMGM"
+     },
+     {
+      "label": "Iwo Baraniewski ML",
+      "odds_display": "-220",
+      "is_model": false,
+      "decimal_odds": 1.454545,
+      "fight_key": "Alonzo Menifield|Iwo Baraniewski",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Iwo Baraniewski"
+       }
+      ],
+      "source": "BetMGM"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_3",
+     "card_4"
+    ],
+    "slip_id": "04db39b10e45",
+    "combined_decimal": 2.115702,
+    "combined_american": 112,
+    "combined_american_display": "+112",
+    "combined_prob": 0.4483,
+    "combined_prob_raw": 0.486,
+    "venue": "BetMGM"
+   }
+  }
+ },
  "Noche UFC: Silva vs. Delgado": {},
  "UFC Fight Night: Hooker vs. Parnasse": {}
 }
