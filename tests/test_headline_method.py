@@ -43,6 +43,19 @@ def check(label, cond):
         print(f"  FAIL: {label}")
 
 
+# --- naming the specific method, when it is genuinely specific -----------
+# The complaint that produced this branch: every headline read "by finish" or
+# "by decision" and KO never appeared, even on a fighter who wins by KO and
+# almost never by submission.
+check("a lopsided KO read names KO/TKO", headline_method(47.0, 5.0, 30.0) == ("KO/TKO", 47.0))
+check("a lopsided submission read names Submission",
+      headline_method(5.0, 40.0, 30.0) == ("Submission", 40.0))
+# ...but a near-even KO/SUB split is a coin flip dressed as a read.
+check("a 32/31 split stays Finish", headline_method(32.0, 31.0, 30.0)[0] == "Finish")
+# ...and a mode that does NOT outrank decision can never be named, because
+# the table directly below would show decision as the larger number.
+check("KO below decision stays Finish", headline_method(40.0, 8.0, 45.0)[0] == "Finish")
+
 # --- the two fights that drove each change -------------------------------
 check("Arman: finish 43.0 beats decision 37.3, so Finish",
       headline_method(30.7, 12.3, 37.3) == ("Finish", 43.0))
@@ -52,9 +65,9 @@ check("a genuine decision read is still Decision",
       headline_method(11.9, 8.1, 31.1) == ("Decision", 31.1))
 
 # --- it never names the less likely side ---------------------------------
-check("a dominant KO read is a Finish, not a Decision",
-      headline_method(42.8, 10.6, 28.9)[0] == "Finish")
-check("submission-heavy is also just Finish",
+check("a dominant KO read is never a Decision",
+      headline_method(42.8, 10.6, 28.9)[0] == "KO/TKO")
+check("a submission that trails decision stays Finish",
       headline_method(9.0, 21.0, 25.0)[0] == "Finish")
 
 # Ties resolve to Decision -- arbitrary but fixed, so the label cannot
@@ -62,37 +75,52 @@ check("submission-heavy is also just Finish",
 check("an exact tie goes to Decision", headline_method(20.0, 20.0, 40.0) == ("Decision", 40.0))
 
 # --- the rate belongs to the thing named ---------------------------------
-for trio in [(30.7, 12.3, 37.3), (11.9, 8.1, 31.1), (9.0, 21.0, 25.0), (42.8, 10.6, 28.9)]:
+for trio in [(30.7, 12.3, 37.3), (11.9, 8.1, 31.1), (9.0, 21.0, 25.0),
+             (42.8, 10.6, 28.9), (47.0, 5.0, 30.0), (5.0, 40.0, 30.0)]:
     name, rate = headline_method(*trio)
-    want = trio[2] if name == "Decision" else trio[0] + trio[1]
-    check(f"rate matches the named side for {trio}", abs(rate - want) < 1e-9)
+    want = {"KO/TKO": trio[0], "Submission": trio[1], "Decision": trio[2],
+            "Finish": trio[0] + trio[1]}[name]
+    check(f"rate matches the named thing for {trio}", abs(rate - want) < 1e-9)
 
 # --- THE INVARIANT, over random grids ------------------------------------
 rng = random.Random(20260914)
-bad = 0
+bad = contradicts_table = 0
 for _ in range(20000):
     ko, sub, dec = rng.uniform(0, 60), rng.uniform(0, 40), rng.uniform(0, 70)
     name, rate = headline_method(ko, sub, dec)
-    other = dec if name == "Finish" else ko + sub
-    if rate < other:
-        bad += 1
+    # The claim always beats the alternative claim it displaced.
+    if name == "Decision":
+        bad += dec < ko + sub
+    else:
+        bad += (ko + sub) <= dec
+    # And a SPECIFIC method must be the largest single cell on the grid, or
+    # the reader sees a bigger number on the row below the headline. That is
+    # the complaint this rule has now been rewritten twice to answer.
+    if name in ("KO/TKO", "Submission"):
+        contradicts_table += rate < max(ko, sub, dec) - 1e-9
 check("the named side is never the less likely one (20k grids)", bad == 0)
+check("a named KO/Submission is always the largest cell (20k grids)",
+      contradicts_table == 0)
 
-check("only two labels are ever produced",
+check("only the four labels are ever produced",
       {headline_method(rng.uniform(0, 60), rng.uniform(0, 40), rng.uniform(0, 70))[0]
-       for _ in range(5000)} <= {"Finish", "Decision"})
+       for _ in range(5000)} <= {"KO/TKO", "Submission", "Finish", "Decision"})
 
 # Scale invariance: the grid sums to the fighter's WIN probability, not to 1.
 for scale in (0.25, 0.5, 2.0):
     check(f"same call when scaled by {scale}",
           headline_method(30.7 * scale, 12.3 * scale, 37.3 * scale)[0] == "Finish")
+    check(f"  ...and for a KO read scaled by {scale}",
+          headline_method(47.0 * scale, 5.0 * scale, 30.0 * scale)[0] == "KO/TKO")
 
 # --- and it has to grade ------------------------------------------------
 check("Finish counts as a hit on a KO", _method_matches("Finish", "KO/TKO") is True)
 check("Finish counts as a hit on a submission", _method_matches("Finish", "Submission") is True)
 check("Finish is a miss on a decision", _method_matches("Finish", "Decision - Unanimous") is False)
 check("Decision still grades as before", _method_matches("Decision", "Decision - Split") is True)
-check("the older labels still grade", _method_matches("KO/TKO", "KO/TKO") is True)
+check("a named KO grades strictly", _method_matches("KO/TKO", "KO/TKO") is True)
+check("  ...and misses on a submission", _method_matches("KO/TKO", "Submission") is False)
+check("a named submission grades strictly", _method_matches("Submission", "Submission") is True)
 check("a missing side is still None", _method_matches("Finish", None) is None)
 
 print(f"{'PASS' if not fail else 'FAIL'}: test_headline_method -- {ok} passed, {fail} failed")

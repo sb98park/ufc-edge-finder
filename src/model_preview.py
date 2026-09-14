@@ -585,6 +585,17 @@ def build_spotlight_chips(row_a: dict, row_b: dict, name_a: str, name_b: str,
     return out[:MAX_CHIPS]
 
 
+# The headline label reads as a market name ("KO/TKO"); the narrative reads
+# as a sentence. Lowercasing the label gave "runs through ko/tko", which is
+# why this exists rather than a .lower() call.
+_METHOD_PROSE = {
+    "KO/TKO": "a knockout",
+    "Submission": "a submission",
+    "Finish": "a finish",
+    "Decision": "a decision",
+}
+
+
 def build_fight_preview(
     fighter_a: str, fighter_b: str,
     fighters_df: pd.DataFrame,
@@ -786,7 +797,7 @@ def build_fight_preview(
     narrative = (
         f"Model favors {favorite} at {favorite_prob*100:.0f}% over {underdog} "
         f"({matchup['style_a']} vs. {matchup['style_b']} stylistically). "
-        f"Path to victory most likely runs through {likely_method.lower()} "
+        f"Path to victory most likely runs through {_METHOD_PROSE.get(likely_method, likely_method.lower())} "
         f"(projected at {_likely_rate*100:.0f}%, weighing {favorite.split()[-1]}'s own tendencies "
         f"against {underdog.split()[-1]}'s specific vulnerability profile). "
         f"Combined finish rate between both fighters sits at {combined_finish_rate*100:.0f}%, "

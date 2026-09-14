@@ -528,6 +528,18 @@ def finish_share_before(line: float, scheduled_rounds: int = 3, division=None) -
     return min(total, 1.0)
 
 
+# HOW LOPSIDED THE KO/SUB SPLIT MUST BE before the headline names one of
+# them rather than "Finish". 2/3 of the finish mass is a 2:1 edge -- below
+# that the two are close enough that naming either is a coin flip, which is
+# what the owner meant by "genuinely pretty split at an even chance".
+#
+# NOT FITTED. It changes none of the 110 grids measured when it was chosen;
+# it exists so a 32/31 split cannot be published as a read. Tuning it on hit
+# rate would be fitting the 2026-07/09 finish-heavy window, which is the trap
+# scripts/validate_method_base_rate.py exists to catch.
+FINISH_DOMINANCE = 2.0 / 3.0
+
+
 def headline_method(ko: float, sub: float, dec: float) -> tuple[str, float]:
     """
     Which method to NAME in "<fighter> to win by <method>", and its rate.
@@ -566,15 +578,32 @@ def headline_method(ko: float, sub: float, dec: float) -> tuple[str, float]:
     finish = ko + sub
     if dec >= finish:
         return "Decision", dec
-    # "FINISH", NOT THE LARGER OF KO AND SUB. Naming the bigger finish cell
-    # over-claims: on Arman Tsarukyan vs Mauricio Ruffy the grid read KO 30.7,
-    # SUB 12.3, DEC 37.3, and this returned "KO/TKO" -- a 30.7% outcome named
-    # as the call while the table directly below it showed decision as the
-    # largest single number. The reader checks row against headline and finds
-    # them disagreeing, which is the exact complaint the finish-first rule was
-    # introduced to fix, arriving from the other side.
+
+    # A FINISH. Which leaves the question the "Finish" label was deliberately
+    # refusing to answer, and it is only unanswerable some of the time.
     #
-    # 43.0% for the finish is both the more likely claim AND one the reader
-    # can verify by adding two rows they can see. It never names an outcome
-    # less likely than the alternative.
+    # Naming the bigger finish cell unconditionally is what produced the
+    # Tsarukyan complaint: KO 30.7, SUB 12.3, DEC 37.3 read "by KO/TKO" while
+    # the table underneath showed decision as the largest number. But KO 47,
+    # SUB 5, DEC 30 is not that situation at all -- there the reader can see
+    # KO is both the way he wins and the largest cell on the grid, and
+    # "by finish" hides information rather than protecting anyone.
+    #
+    # So the specific method is named on two conditions, and it needs both:
+    #
+    #   it outranks decision      which makes it the largest single cell, so
+    #                             it cannot contradict the row below it. This
+    #                             is the condition that does the work: on 110
+    #                             grids it named KO/TKO on 5 and never once
+    #                             named a cell the table disagreed with.
+    #
+    #   it dominates the split    KO 32 / SUB 31 / DEC 30 satisfies the first
+    #                             condition on a one-point margin, and "by
+    #                             KO/TKO" would be a coin flip dressed as a
+    #                             read. Inert on today's data -- it changes
+    #                             none of the 110 -- and it is here for the
+    #                             grid that has not come up yet.
+    top, top_name = (ko, "KO/TKO") if ko >= sub else (sub, "Submission")
+    if top > dec and top >= FINISH_DOMINANCE * finish:
+        return top_name, top
     return "Finish", finish
