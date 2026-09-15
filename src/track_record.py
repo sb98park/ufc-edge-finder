@@ -35,6 +35,31 @@ PREDICTIONS_LOG_PATH = "data/predictions_log.csv"
 # where counting untestable bins would only make a real signal harder to see.
 MIN_BIN_FOR_DRIFT = 10
 DRIFT_ALPHA = 0.05
+def _calibration_family_p(points, point) -> float | None:
+    """
+    Chance of a gap this extreme in SOME bin, given how many bins were tested.
+
+    ONE TEST, TWO READERS. The build-log drift warning and the reader-facing
+    summary both judge the same bins, and for a while they judged them by
+    different rules: the warning corrected for testing four or five bands at
+    once and stayed silent, while the sentence on the page named a band as
+    "the one place the model has oversold itself" off an uncorrected look.
+    Same numbers, opposite conclusions, and the one the readers saw was the
+    wrong one. Both call this now so they cannot drift apart again.
+
+    None when the bin is too small to test at all.
+    """
+    tested = [p for p in points if p["n"] >= MIN_BIN_FOR_DRIFT]
+    k = len(tested)
+    if not k or point.get("n", 0) < MIN_BIN_FOR_DRIFT:
+        return None
+    pred, act, n = point["predicted"], point["actual"], point["n"]
+    se = math.sqrt(max(pred * (1.0 - pred), 1e-9) / n)
+    z = (act - pred) / se
+    per_bin = 2.0 * (1.0 - 0.5 * (1.0 + math.erf(abs(z) / math.sqrt(2.0))))
+    return 1.0 - (1.0 - per_bin) ** k
+
+
 def _warn_calibration_drift(points) -> None:
     """
     Say something only when a bin's gap is bigger than chance across ALL bins.
@@ -68,9 +93,8 @@ def _warn_calibration_drift(points) -> None:
         pred, act, n = p["predicted"], p["actual"], p["n"]
         se = math.sqrt(max(pred * (1.0 - pred), 1e-9) / n)
         z = (act - pred) / se
-        per_bin = 2.0 * (1.0 - 0.5 * (1.0 + math.erf(abs(z) / math.sqrt(2.0))))
-        family = 1.0 - (1.0 - per_bin) ** k
-        if family >= DRIFT_ALPHA:
+        family = _calibration_family_p(points, p)
+        if family is None or family >= DRIFT_ALPHA:
             continue
         direction = "OVERconfident" if act < pred else "UNDERconfident"
         print(f"[track_record] CALIBRATION DRIFT: {p['_lo']:.0%}-{min(p['_hi'], 1.0):.0%} bin is "
@@ -818,17 +842,59 @@ def _compute_calibration(matched: list[dict]) -> dict | None:
     else:
         summary = f"On average, our picks have won about {round(abs(weighted_gap)*100)} points LESS often than the confidence we stated — a real sign of overconfidence worth watching."
 
+    # NAMING THE BAND IS NOT THE SAME AS CLAIMING IT MEANS SOMETHING, and
+    # this sentence used to do both. It called the dip "the one place the
+    # model has oversold itself" off a raw look at the bin, while
+    # _warn_calibration_drift -- reading the identical numbers -- stayed
+    # silent because nothing survived correcting for the four or five bands
+    # tested every run. Two components, one dataset, opposite conclusions,
+    # and the one on the page was the uncorrected one. On 2026-09-15 the
+    # named band sat at z=-1.10 (p~0.27 corrected) while the WIDEST swing on
+    # the same chart was 12 points in the other direction, unmentioned.
+    #
+    # The band is still named, because the 2026-08-23 fix above is still
+    # right: a reader looking at a chart with a visible dip must not be told
+    # underneath that everything is level. What changes is the claim attached
+    # to it. Below the bar it is described as what it is -- a dip inside the
+    # noise this sample produces -- and the opposite swing is named alongside
+    # it, so the reader is not shown one side of a two-sided wobble.
+    worst_significant = False
     if worst is not None:
         band_gap = round((worst["predicted"] - worst["actual"]) * 100)
-        summary += (f" That average hides one band: where we said about "
-                    f"{round(worst['predicted']*100)}%, those picks have won "
-                    f"{round(worst['actual']*100)}% — {band_gap} points short "
-                    f"over {worst['n']} picks. It is the one place the model "
-                    f"has oversold itself, and we would rather point at it "
-                    f"than average it away.")
+        family_p = _calibration_family_p(points, worst)
+        worst_significant = family_p is not None and family_p < DRIFT_ALPHA
+        # "hides" is a claim of its own -- it says the average is concealing
+        # something real. That is the right word only when the band survives
+        # the test; otherwise the chart is being described, not indicted.
+        lead = ("That average hides one band:" if worst_significant
+                else "One band on the chart does sit lower:")
+        where = (f" {lead} where we said about "
+                 f"{round(worst['predicted']*100)}%, those picks have won "
+                 f"{round(worst['actual']*100)}% — {band_gap} points short "
+                 f"over {worst['n']} picks.")
+        if worst_significant:
+            summary += where + (f" It is the one place the model has oversold "
+                                f"itself, and we would rather point at it than "
+                                f"average it away.")
+        else:
+            tested = [q for q in points if q["n"] >= MIN_BIN_FOR_DRIFT]
+            widest = max(tested, key=lambda q: abs(q["actual"] - q["predicted"]),
+                         default=None)
+            other = ""
+            if widest is not None and widest is not worst:
+                swing = round(abs(widest["actual"] - widest["predicted"]) * 100)
+                if widest["actual"] > widest["predicted"] and swing >= band_gap:
+                    other = (f" The widest swing on the same chart is {swing} points "
+                             f"the OTHER way, at the {round(widest['predicted']*100)}% "
+                             f"band.")
+            summary += where + (f" At {worst['n']} picks a gap that size is inside "
+                                f"what chance produces once you account for testing "
+                                f"every band, so we name it because the chart shows "
+                                f"it, not because it is a finding yet.{other}")
 
     return {"ready": True, "total": len(eligible), "points": points,
-            "summary": summary, "worst_bin": worst}
+            "summary": summary, "worst_bin": worst,
+            "worst_bin_significant": worst_significant}
 
 
 def _pair_key(fighter_a: str, fighter_b: str) -> frozenset:
