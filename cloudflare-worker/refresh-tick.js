@@ -124,6 +124,20 @@ async function unwedgeStuckRuns(env, now = Date.now()) {
       // need to care about -- the wedge is gone either way.
       if (cancel.status === 202 || cancel.status === 409) {
         out.cancelled.push({ id: run.id, number: run.run_number, minutes: Math.round(minutes) });
+      } else if (cancel.status === 403) {
+        // THE ONE FAILURE THAT LOOKS LIKE NO FAILURE. Listing runs needs
+        // `actions: read` and cancelling needs `actions: write`. A PAT with
+        // only read sails through the list above, finds the wedged run, and
+        // is refused here -- so the guard appears installed, logs a bare
+        // "HTTP 403", and cancels nothing for as long as nobody reads Cron
+        // Events. That is the same invisible-starvation shape as a PAT
+        // silently expiring, which this file already exists to prevent.
+        out.error =
+          `cancel ${run.id}: HTTP 403 -- the token listed runs but may not ` +
+          `cancel them. That is the \`actions: write\` permission on the ` +
+          `fine-grained PAT in GITHUB_TOKEN; read alone is not enough. ` +
+          `Verify with GET /?token=...&check=queue`;
+        out.scopeDenied = true;
       } else {
         out.error = `cancel ${run.id}: HTTP ${cancel.status}`;
       }
@@ -176,7 +190,73 @@ async function dispatchTick(env) {
   }
 }
 
-export { unwedgeStuckRuns, STUCK_QUEUED_MINUTES };
+/**
+ * Can this token actually CANCEL, without cancelling anything?
+ *
+ * The queue guard's one real dependency is a permission that cannot be seen
+ * until the moment it is needed -- by which point a run has been wedged for
+ * half an hour and the answer arrives in a log nobody opens. This answers it
+ * on demand instead.
+ *
+ * The trick is to aim the cancel at a run that is ALREADY COMPLETED. GitHub
+ * checks authorization before it checks whether the resource can change, so
+ * a token without `actions: write` is refused with 403, and a token that has
+ * it gets 409 Conflict -- "that run is finished" -- having changed nothing.
+ * Nothing in flight is ever touched: the run picked is, by definition, over.
+ *
+ * A 409 is therefore strong evidence and not quite proof. If GitHub ever
+ * checked run state first, a scopeless token would also see 409 and this
+ * would report healthy while the guard stayed broken. That is the one way to
+ * be misled here, and it is recorded rather than hidden.
+ *
+ * NEVER THROWS, for the same reason unwedgeStuckRuns does not.
+ */
+async function probeCancelScope(env) {
+  const out = { canList: false, canCancel: null, status: null, detail: null };
+  try {
+    const resp = await fetch(`${RUNS_URL}?status=completed&per_page=1`, { headers: ghHeaders(env) });
+    if (!resp.ok) {
+      out.detail = `list completed runs: HTTP ${resp.status} -- the token cannot even ` +
+                   `READ Actions (\`actions: read\`)`;
+      return out;
+    }
+    out.canList = true;
+    const body = await resp.json();
+    const run = (Array.isArray(body?.workflow_runs) ? body.workflow_runs : [])[0];
+    if (!run) {
+      out.detail = "no completed run to probe against yet -- scope unverified";
+      return out;
+    }
+    const cancel = await fetch(`${RUNS_URL}/${run.id}/cancel`, {
+      method: "POST",
+      headers: ghHeaders(env),
+    });
+    out.status = cancel.status;
+    if (cancel.status === 403) {
+      out.canCancel = false;
+      out.detail = `HTTP 403 on a finished run: the token may read Actions but not ` +
+                   `cancel. Add \`actions: write\` to the fine-grained PAT in ` +
+                   `GITHUB_TOKEN, or the queue guard cannot clear a wedge.`;
+    } else if (cancel.status === 409) {
+      out.canCancel = true;
+      out.detail = `HTTP 409 on a finished run: refused for being already complete, ` +
+                   `not for permission, so \`actions: write\` is present.`;
+    } else if (cancel.status === 202) {
+      // Should not happen against a completed run, but if GitHub accepted it
+      // the permission plainly exists -- and the run was already over.
+      out.canCancel = true;
+      out.detail = `HTTP 202 on run ${run.id}, which had already completed -- ` +
+                   `permission is present.`;
+    } else {
+      out.detail = `unexpected HTTP ${cancel.status} -- scope not determined`;
+    }
+  } catch (err) {
+    out.detail = String(err?.message ?? err);
+  }
+  return out;
+}
+
+export { unwedgeStuckRuns, probeCancelScope, STUCK_QUEUED_MINUTES };
 
 export default {
   // Cron Trigger entry point. The five-minute expression is set in the
@@ -223,6 +303,37 @@ export default {
     // not a runtime TypeError surfacing as an opaque 500.
     if (!env.TICK_TOKEN || !token || token.trim() !== env.TICK_TOKEN.trim()) {
       return new Response("Forbidden\n", { status: 403 });
+    }
+
+    // ?check=queue verifies the queue guard WITHOUT dispatching anything.
+    //
+    // The guard's permission could not be confirmed except by waiting for a
+    // real wedge, which meant the answer only ever arrived after the outage
+    // it was supposed to prevent. This asks the question directly: it reads
+    // what is queued, and probes cancel authority against an already
+    // finished run so nothing in flight can be touched.
+    if (new URL(request.url).searchParams.get("check") === "queue") {
+      const scope = await probeCancelScope(env);
+      const queued = await unwedgeStuckRuns(env);
+      const verdict =
+        scope.canCancel === true ? "OK -- the queue guard can cancel a wedged run."
+        : scope.canCancel === false ? "BROKEN -- the queue guard cannot cancel anything."
+        : "UNKNOWN -- scope could not be determined.";
+      return new Response(
+        `${verdict}\n\n` +
+        `  can read Actions   ${scope.canList}\n` +
+        `  can cancel runs    ${scope.canCancel === null ? "unknown" : scope.canCancel}\n` +
+        `  probe status       ${scope.status ?? "n/a"}\n` +
+        `  detail             ${scope.detail ?? ""}\n\n` +
+        `  queued runs now    ${queued.checked}\n` +
+        `  cancelled this call ${queued.cancelled.length}` +
+        (queued.cancelled.length
+          ? ` (${queued.cancelled.map((r) => `#${r.number} ${r.minutes}m`).join(", ")})`
+          : ` -- nothing has been queued past ${STUCK_QUEUED_MINUTES}m`) + `\n` +
+        (queued.error ? `  queue check error  ${queued.error}\n` : "") +
+        `\nNo repository_dispatch was sent by this call.\n`,
+        { status: scope.canCancel === false ? 503 : 200 }
+      );
     }
 
     try {

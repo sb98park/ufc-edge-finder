@@ -13,7 +13,7 @@
 //
 // These tests are mostly about what it must NOT cancel.
 
-import { unwedgeStuckRuns, STUCK_QUEUED_MINUTES } from "../refresh-tick.js";
+import { unwedgeStuckRuns, probeCancelScope, STUCK_QUEUED_MINUTES } from "../refresh-tick.js";
 
 let pass = 0, fail = 0;
 const check = (n, c) => { (c ? pass++ : fail++); console.log(`  ${c ? "PASS" : "FAIL"}  ${n}`); };
@@ -107,6 +107,70 @@ check("a payload with no workflow_runs is survivable", r.checked === 0 && !r.err
 globalThis.fetch = async () => new Response(JSON.stringify({ workflow_runs: [{ id: 9 }] }), { status: 200 });
 r = await unwedgeStuckRuns(env, NOW);
 check("a run with no created_at is skipped", r.cancelled.length === 0 && !r.error);
+
+
+// --- the permission that looks like no failure ----------------------------
+// Listing runs needs `actions: read`; cancelling needs `actions: write`. A
+// read-only PAT lists the wedged run and is refused at the cancel, so the
+// guard looks installed and clears nothing. It must say which permission.
+cancelled = stub([{ id: 222, run_number: 10915, created_at: ago(600) }], { cancelStatus: 403 });
+r = await unwedgeStuckRuns(env, NOW);
+check("a 403 cancel is not counted as cancelled", r.cancelled.length === 0);
+check("  ...and names the actual permission", /actions: write/.test(r.error ?? ""));
+check("  ...and is flagged as a scope problem", r.scopeDenied === true);
+check("  ...and points at the check that confirms it", /check=queue/.test(r.error ?? ""));
+
+// A different failure must NOT be blamed on scope.
+stub([{ id: 333, run_number: 10916, created_at: ago(600) }], { cancelStatus: 500 });
+r = await unwedgeStuckRuns(env, NOW);
+check("a 500 is reported without claiming a scope problem",
+      /HTTP 500/.test(r.error ?? "") && !r.scopeDenied);
+
+// --- the probe cancels nothing --------------------------------------------
+// It aims at an already-completed run, so a 409 means "finished", not
+// "forbidden" -- authority confirmed with nothing touched.
+function stubProbe(cancelStatus, { listStatus = 200, runs = [{ id: 777 }] } = {}) {
+  const attempted = [];
+  globalThis.fetch = async (url) => {
+    if (String(url).includes("/cancel")) {
+      attempted.push(Number(String(url).match(/runs\/(\d+)\/cancel/)[1]));
+      return new Response("", { status: cancelStatus });
+    }
+    if (listStatus !== 200) return new Response("nope", { status: listStatus });
+    check("the probe asks for COMPLETED runs, never queued ones",
+          String(url).includes("status=completed"));
+    return new Response(JSON.stringify({ workflow_runs: runs }), { status: 200 });
+  };
+  return attempted;
+}
+
+let attempted = stubProbe(409);
+let p409 = await probeCancelScope(env);
+check("409 on a finished run means the scope is present", p409.canCancel === true);
+check("  ...and the probe only ever touched a completed run",
+      attempted.length === 1 && attempted[0] === 777);
+
+stubProbe(403);
+let p403 = await probeCancelScope(env);
+check("403 means the scope is missing", p403.canCancel === false);
+check("  ...and says which permission to add", /actions: write/.test(p403.detail ?? ""));
+
+stubProbe(202, { listStatus: 401 });
+let pNoRead = await probeCancelScope(env);
+check("a token that cannot read Actions is reported as such",
+      pNoRead.canList === false && /actions: read/.test(pNoRead.detail ?? ""));
+
+stubProbe(202, { runs: [] });
+let pEmpty = await probeCancelScope(env);
+check("no completed run to probe -> unknown, not a false OK", pEmpty.canCancel === null);
+
+stubProbe(418);
+let pOdd = await probeCancelScope(env);
+check("an unexpected status is unknown, not a false OK", pOdd.canCancel === null);
+
+globalThis.fetch = async () => { throw new Error("network down"); };
+let pDead = await probeCancelScope(env);
+check("the probe never throws", pDead.canCancel === null && /network down/.test(pDead.detail));
 
 console.log(`${fail ? "FAIL" : "PASS"}: refresh-tick -- ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

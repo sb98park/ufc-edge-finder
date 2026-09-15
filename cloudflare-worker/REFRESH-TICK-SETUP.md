@@ -151,6 +151,42 @@ On a quiet day you should see roughly 11 skips for every build. If every run
 says BUILDING, the ticks aren't arriving any faster than before — check the
 Worker's **Cron Events** log.
 
+## Verifying the queue guard's permission
+
+The Worker also clears runs wedged in `queued` (see `unwedgeStuckRuns` — this
+is what a 9-hour outage on 2026-09-13 cost before it existed). Listing runs
+needs `actions: read`; **cancelling them needs `actions: write`**, and a PAT
+with only read passes every other check in this document. It lists the wedged
+run, is refused at the cancel, and clears nothing — so the guard looks
+installed and does nothing, which is exactly the invisible-starvation shape
+the rest of this file exists to prevent.
+
+That permission used to be unverifiable until a real wedge happened, i.e. the
+answer arrived only after the outage. Ask directly instead:
+
+```bash
+read -rsp "TICK_TOKEN: " TT && echo && \
+  curl -s "https://refresh-tick.<your-subdomain>.workers.dev/?token=$TT&check=queue"
+```
+
+It sends **no** `repository_dispatch` and cancels nothing in flight: cancel
+authority is probed against a run that has already finished, so GitHub answers
+`403` (no permission) or `409` (permission fine, run already over) without
+anything changing. Expect:
+
+```
+OK -- the queue guard can cancel a wedged run.
+
+  can read Actions   true
+  can cancel runs    true
+  probe status       409
+```
+
+`BROKEN` (HTTP 503) means add `actions: write` to the fine-grained PAT in
+`GITHUB_TOKEN` and redeploy. `UNKNOWN` means the probe could not reach a
+verdict — the detail line says why — and should be treated as unverified
+rather than fine.
+
 ## Failure behavior
 
 A failed tick throws, which marks the invocation failed and surfaces it with
