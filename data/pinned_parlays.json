@@ -10,9 +10,9 @@
     "legs": [
      {
       "label": "Renato Moicano ML",
-      "odds_display": "-220",
+      "odds_display": "-225",
       "is_model": false,
-      "decimal_odds": 1.454545,
+      "decimal_odds": 1.444444,
       "fight_key": "Renato Moicano|Brian Ortega",
       "conditions": [
        {
@@ -20,13 +20,13 @@
         "fighter": "Renato Moicano"
        }
       ],
-      "source": "BetMGM"
+      "source": "DraftKings"
      },
      {
       "label": "Iwo Baraniewski ML",
-      "odds_display": "-220",
+      "odds_display": "-238",
       "is_model": false,
-      "decimal_odds": 1.454545,
+      "decimal_odds": 1.420168,
       "fight_key": "Alonzo Menifield|Iwo Baraniewski",
       "conditions": [
        {
@@ -34,21 +34,21 @@
         "fighter": "Iwo Baraniewski"
        }
       ],
-      "source": "BetMGM"
+      "source": "DraftKings"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_3",
-     "card_4"
+     "card_12",
+     "card_3"
     ],
-    "slip_id": "04db39b10e45",
-    "combined_decimal": 2.115702,
-    "combined_american": 112,
-    "combined_american_display": "+112",
-    "combined_prob": 0.4256,
+    "slip_id": "d6133428113d",
+    "combined_decimal": 2.051354,
+    "combined_american": 105,
+    "combined_american_display": "+105",
+    "combined_prob": 0.4067,
     "combined_prob_raw": 0.486,
-    "venue": "BetMGM"
+    "venue": "DraftKings"
    }
   }
  },
