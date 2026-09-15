@@ -1466,11 +1466,22 @@ def main(tier: str = "member", output_path: str | None = None):
             if _sn:
                 shadow_write(_shadow_all)
             _ssum = shadow_summarise(_shadow_all)
+            # A BARE ZERO IS NOT A DIAGNOSIS. "0 paper rows" reads the same
+            # whether the rule found nothing or the plumbing broke, and those
+            # need opposite responses. UFC 331 logged 0 because every
+            # discretionary pick was a short favourite that could not clear
+            # the hurdle -- true, but it took a separate investigation to
+            # establish, and the next zero would have taken another.
+            _why = plays_card.get("shadow_blocked") or {}
+            _why_txt = ("; ".join(f"{n} {r}" for r, n in _why.items())
+                        if _why else "nothing was refused")
             print(f"[shadow] {len(_shadow_all)} paper row(s), "
                   f"{_ssum.get('settled', 0)} settled, "
                   f"{_ssum.get('units', 0.0):+.2f}U notional on "
                   f"{_ssum.get('staked', 0.0):.1f}U "
                   f"-- NOT STAKED, see src/shadow_ledger")
+            print(f"[shadow] this card added {len(plays_card.get('shadow_plays') or [])}; "
+                  f"the rest went: {_why_txt}")
         except Exception as _exc:                 # noqa: BLE001 -- see above
             print(f"[shadow] paper ledger skipped ({_exc}) -- continuing")
 

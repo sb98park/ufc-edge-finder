@@ -41,6 +41,7 @@ would mean the site tips one fighter and bets the other.
 
 from __future__ import annotations
 
+import collections
 import json
 import os
 from datetime import datetime, timezone
@@ -648,6 +649,37 @@ def candidates_for_fight(fight: dict,
     return taken, refused
 
 
+def _shadow_block_reason(reason: str) -> str:
+    """
+    Bucket a refusal into WHY the paper card did not take it.
+
+    A paper ledger that logs "0 rows" says nothing about whether the rule
+    found nothing or the plumbing is broken, and those need different
+    responses. On UFC 331 the answer was chalk -- every discretionary pick a
+    short favourite that could not clear the hurdle -- but that took a
+    separate investigation to establish, and the next zero would take
+    another. The build says it now.
+    """
+    text = (reason or "").lower()
+    # Order matters: the floor message also contains "below the", so it has
+    # to be claimed before the hurdle test, not disambiguated inside it.
+    if "floor" in text:
+        return "Kelly below the stake floor"
+    if "hurdle" in text or "below the" in text:
+        return "price too short for the hurdle"
+    if "reference line" in text or "venue" in text:
+        return "no bettable book quoting it"
+    if "distrust" in text or "points off a market" in text:
+        # The contrarian gate. Worth its own bucket rather than "other":
+        # it is the adverse selection the discretionary tiers exist to be
+        # judged on, so a card blocked mostly HERE is a different finding
+        # from one blocked on price.
+        return "model too far off the market"
+    if "stake ladder" in text:
+        return "no stake ladder for the tier"
+    return "other"
+
+
 def build_card_plays(event: dict | None, committed: list[dict] | None = None,
                      book_price_path: str = LAST_BOOK_PRICE_PATH,
                      shadow_committed: list[dict] | None = None) -> dict:
@@ -663,7 +695,8 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None,
     a tiered pick never vanishes unexplained), and the totals.
     """
     empty = {"event_name": None, "plays": [], "passed": [], "dropped": [],
-             "shelved": [], "shadow_plays": [], "discretionary_on": DISCRETIONARY_PLAYS,
+             "shelved": [], "shadow_plays": [], "shadow_blocked": {},
+             "discretionary_on": DISCRETIONARY_PLAYS,
              "total_units": 0.0, "new_units": 0.0, "fights_considered": 0}
     if not event or not event.get("fights"):
         return empty
@@ -693,6 +726,7 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None,
     # section can be honest about what it is not betting and why.
     shelved = []
     shadow_plays = []
+    shadow_blocked: collections.Counter = collections.Counter()
     if not DISCRETIONARY_PLAYS:
         shelved = [c for c in candidates if not c.get("on_ladder")]
         # THE PAPER CARD, decided before the real one narrows the field.
@@ -713,6 +747,12 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None,
         shadow_committed = list(committed or []) + list(shadow_committed or [])
         _shadow = select_card(candidates, committed=shadow_committed)
         shadow_plays = [p for p in _shadow["plays"] if not p.get("on_ladder")]
+        # WHY the paper card is the size it is, counted from the refusals of
+        # everything the ladder does not cover. See _shadow_block_reason.
+        for _r in refused:
+            if _r.get("market") == "Moneyline" and _r.get("tier") in _LADDER_TIERS:
+                continue                      # the ladder's own misses are `passed`
+            shadow_blocked[_shadow_block_reason(_r.get("reason"))] += 1
         candidates = [c for c in candidates if c.get("on_ladder")]
 
     card = select_card(candidates, committed=committed)
@@ -749,6 +789,7 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None,
         # PAPER ONLY. Never staked, never summed into the published record,
         # and kept in its own ledger -- see src/shadow_ledger.
         "shadow_plays": sorted(shadow_plays, key=lambda p: (-p["units"], -p["ev_per_unit"])),
+        "shadow_blocked": dict(shadow_blocked.most_common()),
         "discretionary_on": DISCRETIONARY_PLAYS,
         "fights_considered": considered,
     }

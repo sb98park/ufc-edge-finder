@@ -80,6 +80,41 @@ check("real plus paper stays inside the card ceiling",
       sum(p["units"] for p in paper) + sum(p["units"] for p in built["plays"])
       <= MAX_UNITS_PER_CARD)
 
+# --- a zero has to explain itself ----------------------------------------
+# "0 paper rows" reads identically whether the rule found nothing or the
+# plumbing broke, and those need opposite responses. UFC 331 logged 0 because
+# every discretionary pick was a short favourite that could not clear the
+# hurdle -- true, but establishing that took a separate investigation, and the
+# next zero would have taken another.
+from src.card_plays import _shadow_block_reason  # noqa: E402
+
+blocked = built["shadow_blocked"]
+check("the build reports why candidates were refused", bool(blocked))
+check("  ...as counts", all(isinstance(v, int) and v > 0 for v in blocked.values()))
+check("  ...and nothing falls into 'other' on a real card", "other" not in blocked)
+
+for reason, want in (
+        ("Kelly sizes this at 0.83U, below the 1U floor", "Kelly below the stake floor"),
+        ("71.0%, below the 77.2% this price needs at a 5% hurdle",
+         "price too short for the hurdle"),
+        ("priced at Polymarket, which is a reference line rather than a book "
+         "this can be placed at", "no bettable book quoting it"),
+        ("the model is 33 points off a market with money on both sides, which is "
+         "a disagreement we distrust rather than an edge", "model too far off the market"),
+        ("no stake ladder for tier ''", "no stake ladder for the tier"),
+        ("a reason nobody has written yet", "other"),
+        ("", "other"),
+        (None, "other"),
+):
+    check(f"bucketed: {want}", _shadow_block_reason(reason) == want)
+
+# THE FLOOR MESSAGE ALSO CONTAINS "below the". Ordering, not cleverness, is
+# what keeps it out of the hurdle bucket -- assert it directly, because the
+# first version of this got it right only by operator precedence.
+check("the floor is never misread as the hurdle",
+      _shadow_block_reason("Kelly sizes this at 0.83U, below the 1U floor")
+      != "price too short for the hurdle")
+
 # --- recording ------------------------------------------------------------
 d = tempfile.mkdtemp(prefix="shadow_ledger_")
 LED = os.path.join(d, "shadow_ledger.csv")
