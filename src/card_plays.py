@@ -447,7 +447,23 @@ def candidates_for_fight(fight: dict,
     caller still works; build_card_plays reads it once and hands it down.
     """
     preview = fight.get("preview") or {}
-    tier = preview.get("confidence_label") or ""
+    # THE LOCK IS ITS OWN TIER, and reading confidence_label alone lost that.
+    #
+    # A Lock of the Week is ALWAYS labelled High Confidence -- the lock is a
+    # separate designation on top, not a fifth label -- so taking the tier
+    # from confidence_label capped the card's highest-conviction pick at the
+    # High Confidence stake of 5U. Meanwhile track_record has always graded
+    # locks at LOCK_OF_WEEK_UNITS (10U) and pulls them OUT of the High
+    # Confidence bucket so they are counted once at their real weight
+    # (src/track_record.py, "at its real 10-unit weight").
+    #
+    # So the published record advertised +46.96U over 9 locks staked at 10U
+    # while the live ladder would have staked the next one at 5. Arman
+    # Tsarukyan on 2026-09-19 was the first lock to reach this code after the
+    # changeover and went in at 5U; the owner called it explicitly and that
+    # row was corrected in the same commit as this line.
+    tier = ("Lock of the Week" if fight.get("is_lock_of_week")
+            else (preview.get("confidence_label") or ""))
     favorite = preview.get("favorite")
     matchup = f"{fight.get('fighter_a')} vs {fight.get('fighter_b')}"
     taken: list[dict] = []

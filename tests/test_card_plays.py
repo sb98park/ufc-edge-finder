@@ -37,7 +37,8 @@ def build_card_plays(event, committed=None):
 
 def candidates_for_fight(fight):
     return _candidates_for_fight(fight, last_book_prices={})
-from src.plays import AXIS_OUTCOME, AXIS_MANNER, MAX_UNITS_PER_CARD  # noqa: E402
+from src.plays import (AXIS_OUTCOME, AXIS_MANNER, MAX_UNITS_PER_CARD,  # noqa: E402
+                       TIER_CAP_UNITS)
 
 FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "fixtures", "card_nurmagomedov_song.json")
@@ -154,6 +155,33 @@ check("the HURDLE never benches a ladder pick",
       any(p["tier"] in ("Lock of the Week", "High Confidence")
           and "reference line" not in (p.get("reason") or "")
           for p in _book["passed"]), False)
+
+print("\nA LOCK OF THE WEEK IS ITS OWN TIER")
+# A lock is ALWAYS labelled High Confidence -- the lock is a designation on
+# top of the label, not a fifth label. Reading confidence_label alone capped
+# the card's highest-conviction pick at the 5U High Confidence stake, while
+# track_record has always graded locks at 10U and pulls them OUT of the High
+# Confidence bucket so they count once at their real weight. The record
+# advertised 10U locks; the ladder would have staked 5.
+_lockcard = at_book(card)
+_lockfights = [f for f in _lockcard["fights"]
+               if (f.get("preview") or {}).get("confidence_label") == "High Confidence"]
+_lockfights[0]["is_lock_of_week"] = True
+_locked = {p["label"]: p for p in build_card_plays(_lockcard)["plays"]}
+_lockname = (_lockfights[0]["preview"] or {}).get("favorite")
+_lockplay = _locked.get(f"{_lockname} Moneyline")
+check("the lock is staked at all", _lockplay is not None, True)
+check("  ...carries the Lock tier, not its confidence label",
+      _lockplay["tier"], "Lock of the Week")
+check("  ...at the 10-unit lock stake", _lockplay["units"], TIER_CAP_UNITS["Lock of the Week"])
+check("  ...and is still flagged as riding the ladder", _lockplay["on_ladder"], True)
+# The same fight without the flag stays where it was -- this must not
+# quietly promote every High Confidence pick to 10U.
+_plain = {p["label"]: p for p in build_card_plays(at_book(card))["plays"]}
+check("an unflagged High Confidence pick is untouched",
+      _plain[f"{_lockname} Moneyline"]["units"], TIER_CAP_UNITS["High Confidence"])
+check("  ...and keeps its own tier",
+      _plain[f"{_lockname} Moneyline"]["tier"], "High Confidence")
 
 print("\nA REFERENCE LINE MAKES A PICK, NEVER A STAKE")
 # The rule the fixture's own Polymarket provenance exists to protect: staking
