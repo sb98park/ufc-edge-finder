@@ -27,6 +27,7 @@ Exits 0 clean, 1 on any violation. Run: python3 scripts/check_plays_ledger.py
 import csv
 import io
 import subprocess
+import os
 import sys
 
 LEDGER = "data/plays_ledger.csv"
@@ -42,10 +43,11 @@ MUTABLE = {"last_seen", "closing_odds", "result", "units_result", "graded_at",
            "void_reason"}
 
 
-def _committed_copy():
+def _committed_copy(path=None):
     """The ledger as of HEAD, or None when it is not tracked yet."""
+    path = path or LEDGER
     try:
-        out = subprocess.run(["git", "show", f"HEAD:{LEDGER}"],
+        out = subprocess.run(["git", "show", f"HEAD:{path}"],
                              capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.SubprocessError) as exc:
         print(f"[plays-ledger] cannot read HEAD copy ({exc}) -- skipping")
@@ -109,7 +111,66 @@ def main():
 
     print(f"[plays-ledger] clean -- {len(before)} published row(s) unchanged, "
           f"{added} added")
+    _check_shadow()
     return 0
+
+
+def _check_shadow():
+    """
+    The same set-once check against the PAPER ledger -- reported, never fatal.
+
+    A shadow row that can be revised after the fight is not evidence, so the
+    drift is worth catching. But this file records bets nobody placed, and a
+    gate exiting non-zero freezes the whole site on stale data. Trading a live
+    card for a bookkeeping discrepancy about a paper bet is the wrong way
+    round, so this warns and records to source_health -- where the health
+    strip already surfaces it -- and leaves the exit code alone.
+
+    See src/shadow_ledger for why the record exists at all.
+    """
+    path = "data/shadow_ledger.csv"
+    try:
+        with open(path, encoding="utf-8") as fh:
+            current = _rows(fh.read())
+    except FileNotFoundError:
+        return
+    before_text = _committed_copy(path)
+    if before_text is None:
+        print(f"[shadow-ledger] not tracked at HEAD yet -- {len(current)} row(s) baseline")
+        return
+    before = _rows(before_text)
+
+    drifted = []
+    for pid, was in before.items():
+        now = current.get(pid)
+        if now is None:
+            drifted.append(f"REMOVED: {pid}")
+            continue
+        for field, old in was.items():
+            if field in MUTABLE:
+                continue
+            if (old or "") != (now.get(field, "") or ""):
+                drifted.append(f"REWRITTEN: {pid} :: {field}: {old!r} -> {now.get(field)!r}")
+
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from src.source_health import record
+        record("shadow_ledger", {
+            "ok": not drifted,
+            "rows": len(current),
+            "detail": (f"{len(drifted)} set-once field(s) drifted"
+                       if drifted else "set-once fields intact"),
+        })
+    except Exception:                             # noqa: BLE001 -- never fatal
+        pass
+
+    if drifted:
+        print(f"[shadow-ledger] WARNING -- {len(drifted)} row(s) drifted "
+              f"(paper record only, NOT failing the build)")
+        for d in drifted[:10]:
+            print("  " + d)
+    else:
+        print(f"[shadow-ledger] clean -- {len(current)} paper row(s)")
 
 
 if __name__ == "__main__":

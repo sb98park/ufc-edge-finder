@@ -649,7 +649,8 @@ def candidates_for_fight(fight: dict,
 
 
 def build_card_plays(event: dict | None, committed: list[dict] | None = None,
-                     book_price_path: str = LAST_BOOK_PRICE_PATH) -> dict:
+                     book_price_path: str = LAST_BOOK_PRICE_PATH,
+                     shadow_committed: list[dict] | None = None) -> dict:
     """
     The staked card. One event -- the one the reader can actually bet.
 
@@ -662,7 +663,7 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None,
     a tiered pick never vanishes unexplained), and the totals.
     """
     empty = {"event_name": None, "plays": [], "passed": [], "dropped": [],
-             "shelved": [], "discretionary_on": DISCRETIONARY_PLAYS,
+             "shelved": [], "shadow_plays": [], "discretionary_on": DISCRETIONARY_PLAYS,
              "total_units": 0.0, "new_units": 0.0, "fights_considered": 0}
     if not event or not event.get("fights"):
         return empty
@@ -691,8 +692,27 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None,
     # See DISCRETIONARY_PLAYS. Held back rather than never computed, so the
     # section can be honest about what it is not betting and why.
     shelved = []
+    shadow_plays = []
     if not DISCRETIONARY_PLAYS:
         shelved = [c for c in candidates if not c.get("on_ladder")]
+        # THE PAPER CARD, decided before the real one narrows the field.
+        #
+        # DISCRETIONARY_PLAYS is documented as "a pause, not a verdict --
+        # turn it back on when the discretionary moneylines have enough of a
+        # record to argue with". Nothing was accumulating that record, so the
+        # condition could never be met: `shelved` is recomputed every render
+        # and never graded, and the shortlist stats are the LADDER's record,
+        # not this one.
+        #
+        # Run through select_card exactly like the real card, because
+        # "what would we have played" has to include the budget. The ladder
+        # plays are caps_exempt but still SPEND, so passing them here is what
+        # makes the paper card compete for what the real one leaves -- a
+        # shadow card that ignored the ceiling would flatter itself by
+        # stacking plays a 20U cap would never have allowed.
+        shadow_committed = list(committed or []) + list(shadow_committed or [])
+        _shadow = select_card(candidates, committed=shadow_committed)
+        shadow_plays = [p for p in _shadow["plays"] if not p.get("on_ladder")]
         candidates = [c for c in candidates if c.get("on_ladder")]
 
     card = select_card(candidates, committed=committed)
@@ -726,6 +746,9 @@ def build_card_plays(event: dict | None, committed: list[dict] | None = None,
         "total_units": card["total_units"],
         "new_units": card["new_units"],
         "shelved": sorted(shelved, key=lambda c: -c["ev_per_unit"]),
+        # PAPER ONLY. Never staked, never summed into the published record,
+        # and kept in its own ledger -- see src/shadow_ledger.
+        "shadow_plays": sorted(shadow_plays, key=lambda p: (-p["units"], -p["ev_per_unit"])),
         "discretionary_on": DISCRETIONARY_PLAYS,
         "fights_considered": considered,
     }

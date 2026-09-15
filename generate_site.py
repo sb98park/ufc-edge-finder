@@ -56,6 +56,9 @@ from src import tiering
 from src.names import _normalize_name
 
 from src.elo import EloRatingSystem
+from src.shadow_ledger import (load as shadow_load, record as shadow_record,
+                               summarise as shadow_summarise,
+                               write_graded as shadow_write)
 from src.fighter_history import build_fighter_history, fold_name as fh_fold, summarise as fh_summarise
 from src.radar_chart import build_category_radar_svg
 from src.fighter_profile import (build_profiles, summarise as fp_summarise,
@@ -1401,14 +1404,18 @@ def main(tier: str = "member", output_path: str | None = None):
     try:
         _plays_event = events_for_model_only[0] if events_for_model_only else None
         _ledger = plays_load()
+        _ev_name = _plays_event.get("event_name") if _plays_event else None
+        _ev_date = _plays_event.get("event_date") if _plays_event else None
         plays_card = build_card_plays(
             _plays_event,
             # event_date as well as the name -- see committed_for. Without it a
             # renamed event hands select_card a fresh budget and double-books
             # every play on the card.
-            committed=committed_for(_plays_event.get("event_name") if _plays_event else None,
-                                    _ledger,
-                                    event_date=(_plays_event.get("event_date") if _plays_event else None)),
+            committed=committed_for(_ev_name, _ledger, event_date=_ev_date),
+            # The paper card's own committed rows, so it spends its budget
+            # across renders the same way the real one does. See
+            # src/shadow_ledger -- none of this is staked.
+            shadow_committed=committed_for(_ev_name, shadow_load(), event_date=_ev_date),
         )
 
         # The closing line for everything already on the board, including
@@ -1446,6 +1453,27 @@ def main(tier: str = "member", output_path: str | None = None):
             write_graded(_all)
             plays_rows = [r for r in plays_load()
                           if r.get("event_name") == plays_card.get("event_name")]
+        # THE PAPER CARD, recorded and settled exactly like the real one and
+        # kept entirely apart from it. Wrapped in its own try: a record of
+        # bets nobody placed must never be able to take down a build that
+        # real money is staked against.
+        try:
+            shadow_record(plays_card, generated_at_str, live_prices=_live)
+            _shadow_all = shadow_load()
+            _sn = grade_plays(_shadow_all, {**_cancelled, **finished_results},
+                              generated_at_str)
+            _sn += len(void_stale(_shadow_all, generated_at_str))
+            if _sn:
+                shadow_write(_shadow_all)
+            _ssum = shadow_summarise(_shadow_all)
+            print(f"[shadow] {len(_shadow_all)} paper row(s), "
+                  f"{_ssum.get('settled', 0)} settled, "
+                  f"{_ssum.get('units', 0.0):+.2f}U notional on "
+                  f"{_ssum.get('staked', 0.0):.1f}U "
+                  f"-- NOT STAKED, see src/shadow_ledger")
+        except Exception as _exc:                 # noqa: BLE001 -- see above
+            print(f"[shadow] paper ledger skipped ({_exc}) -- continuing")
+
         # THE PARLAYS, settled from the same results map. Only the PINNED
         # slip for a card is graded -- before src/parlay_pin the builder
         # re-picked every render, so one card holds dozens of variants and
