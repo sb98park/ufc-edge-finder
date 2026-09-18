@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-18T18:21:19+00:00",
+  "at": "2026-09-18T18:45:44+00:00",
   "card_data_coverage": {
     "carded_fighters": 121,
-    "checked_at": "2026-09-18T18:16:52+00:00",
+    "checked_at": "2026-09-18T18:41:39+00:00",
     "counts": {
       "physicals": 4,
       "record": 1
@@ -25,8 +25,8 @@
       "Polymarket": 94
     },
     "books_quoting": {
-      "1.0": 100,
-      "2.0": 12,
+      "1.0": 98,
+      "2.0": 14,
       "3.0": 22
     },
     "n": 134
@@ -47,8 +47,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 1.32,
-    "checked_at": "2026-09-18T18:18:04+00:00",
+    "cache_age_hours": 1.74,
+    "checked_at": "2026-09-18T18:42:57+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -56,10 +56,10 @@
   "overround": {
     "in_force": {
       "prop": 1.2,
-      "two_way": 1.0485
+      "two_way": 1.0491
     },
     "measured": {
-      "two_way": 1.0485
+      "two_way": 1.0491
     }
   },
   "parlay": {
@@ -87,7 +87,7 @@
   "rows_by_source": {
     "BetMGM": 22,
     "DraftKings": 52,
-    "FanDuel": 46,
+    "FanDuel": 48,
     "Polymarket": 276
   },
   "rundown_dates_requested": [
@@ -221,7 +221,7 @@
         "selectivity": 0.0769
       }
     ],
-    "checked_at": "2026-09-18T18:21:17+00:00",
+    "checked_at": "2026-09-18T18:45:43+00:00",
     "equivalent_floor": 0.695,
     "floor_in_force": 0.78,
     "gap_move": -0.1014,
@@ -238,47 +238,47 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 0.6,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-18T18:17:29+00:00",
+      "last_ok": "2026-09-18T18:42:21+00:00",
       "ok": true,
-      "ran_at": "2026-09-18T18:17:29+00:00"
+      "ran_at": "2026-09-18T18:42:21+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 33.1,
+      "duration_s": 38.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-18T18:17:28+00:00",
+      "last_ok": "2026-09-18T18:42:20+00:00",
       "ok": true,
-      "ran_at": "2026-09-18T18:17:28+00:00"
+      "ran_at": "2026-09-18T18:42:20+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
-      "duration_s": 0.6,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-18T18:16:52+00:00",
+      "last_ok": "2026-09-18T18:41:40+00:00",
       "ok": true,
-      "ran_at": "2026-09-18T18:16:52+00:00"
+      "ran_at": "2026-09-18T18:41:40+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.1,
+      "duration_s": 0.9,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-18T18:16:55+00:00",
+      "last_ok": "2026-09-18T18:41:42+00:00",
       "ok": true,
-      "ran_at": "2026-09-18T18:16:55+00:00"
+      "ran_at": "2026-09-18T18:41:42+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -286,41 +286,41 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-18T18:19:26+00:00",
+      "last_ok": "2026-09-18T18:44:09+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 1.2,
+      "duration_s": 1.0,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-18T18:16:54+00:00",
+      "last_ok": "2026-09-18T18:41:41+00:00",
       "ok": true,
-      "ran_at": "2026-09-18T18:16:54+00:00"
+      "ran_at": "2026-09-18T18:41:41+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-18T18:21:17+00:00",
+      "last_ok": "2026-09-18T18:45:43+00:00",
       "ok": true,
-      "ran_at": "2026-09-18T18:21:17+00:00"
+      "ran_at": "2026-09-18T18:45:43+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-18T18:21:17+00:00",
+      "last_ok": "2026-09-18T18:45:43+00:00",
       "ok": true,
-      "ran_at": "2026-09-18T18:21:17+00:00"
+      "ran_at": "2026-09-18T18:45:43+00:00"
     }
   },
   "tracked_moneyline": {
