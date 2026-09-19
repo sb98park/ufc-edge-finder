@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-19T23:00:26+00:00",
+  "at": "2026-09-19T23:11:32+00:00",
   "card_data_coverage": {
     "carded_fighters": 125,
-    "checked_at": "2026-09-19T22:56:16+00:00",
+    "checked_at": "2026-09-19T23:07:13+00:00",
     "counts": {
       "physicals": 5,
       "record": 1
@@ -19,10 +19,10 @@
   },
   "edges_two_way": {
     "best_book": {
-      "BetMGM": 4,
-      "DraftKings": 16,
-      "FanDuel": 12,
-      "Polymarket": 88
+      "BetMGM": 5,
+      "DraftKings": 15,
+      "FanDuel": 10,
+      "Polymarket": 90
     },
     "books_quoting": {
       "1.0": 94,
@@ -33,22 +33,22 @@
   },
   "moneyline": {
     "best_book": {
-      "BetMGM": 4,
-      "DraftKings": 11,
+      "BetMGM": 5,
+      "DraftKings": 10,
       "FanDuel": 9,
       "Polymarket": 32
     },
     "n": 56,
     "source": {
-      "BetMGM": 4,
-      "DraftKings": 11,
+      "BetMGM": 5,
+      "DraftKings": 10,
       "FanDuel": 9,
       "Polymarket": 32
     }
   },
   "odds_api": {
-    "cache_age_hours": 0.86,
-    "checked_at": "2026-09-19T22:57:51+00:00",
+    "cache_age_hours": 1.03,
+    "checked_at": "2026-09-19T23:08:24+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -56,10 +56,10 @@
   "overround": {
     "in_force": {
       "prop": 1.2,
-      "two_way": 1.0432
+      "two_way": 1.0429
     },
     "measured": {
-      "two_way": 1.0432
+      "two_way": 1.0429
     }
   },
   "parlay": {
@@ -69,26 +69,26 @@
       "reference_only_legs": 8
     },
     "bankroll/BetMGM": {
-      "combinations_considered": 20,
+      "combinations_considered": 32,
       "reason": "built",
       "slips": 1
     },
     "bankroll/DraftKings": {
-      "combinations_considered": 35,
+      "combinations_considered": 52,
       "reason": "built",
       "slips": 1
     },
     "bankroll/FanDuel": {
-      "combinations_considered": 34,
+      "combinations_considered": 50,
       "reason": "built",
       "slips": 1
     }
   },
   "rows_by_source": {
     "BetMGM": 20,
-    "DraftKings": 36,
-    "FanDuel": 34,
-    "Polymarket": 236
+    "DraftKings": 34,
+    "FanDuel": 32,
+    "Polymarket": 234
   },
   "rundown_dates_requested": [
     "2026-09-19"
@@ -221,7 +221,7 @@
         "selectivity": 0.0769
       }
     ],
-    "checked_at": "2026-09-19T23:00:24+00:00",
+    "checked_at": "2026-09-19T23:11:30+00:00",
     "equivalent_floor": 0.695,
     "floor_in_force": 0.78,
     "gap_move": -0.1014,
@@ -238,47 +238,47 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T22:57:06+00:00",
+      "last_ok": "2026-09-19T23:07:50+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T22:57:06+00:00"
+      "ran_at": "2026-09-19T23:07:50+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 48.3,
+      "duration_s": 33.6,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T22:57:05+00:00",
+      "last_ok": "2026-09-19T23:07:49+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T22:57:05+00:00"
+      "ran_at": "2026-09-19T23:07:49+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.6,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T22:56:16+00:00",
+      "last_ok": "2026-09-19T23:07:13+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T22:56:16+00:00"
+      "ran_at": "2026-09-19T23:07:13+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 0.7,
+      "duration_s": 1.1,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T22:56:17+00:00",
+      "last_ok": "2026-09-19T23:07:15+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T22:56:17+00:00"
+      "ran_at": "2026-09-19T23:07:15+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -286,53 +286,53 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T22:59:08+00:00",
+      "last_ok": "2026-09-19T23:09:37+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.5,
+      "duration_s": 1.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T22:56:16+00:00",
+      "last_ok": "2026-09-19T23:07:14+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T22:56:16+00:00"
+      "ran_at": "2026-09-19T23:07:14+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.2,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T23:00:24+00:00",
+      "last_ok": "2026-09-19T23:11:31+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T23:00:24+00:00"
+      "ran_at": "2026-09-19T23:11:31+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.2,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T23:00:24+00:00",
+      "last_ok": "2026-09-19T23:11:30+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T23:00:24+00:00"
+      "ran_at": "2026-09-19T23:11:30+00:00"
     }
   },
   "tracked_moneyline": {
     "best_book": {
-      "BetMGM": 4,
-      "DraftKings": 10,
+      "BetMGM": 5,
+      "DraftKings": 9,
       "FanDuel": 8
     },
     "n": 22,
     "source": {
-      "BetMGM": 4,
-      "DraftKings": 10,
+      "BetMGM": 5,
+      "DraftKings": 9,
       "FanDuel": 8
     }
   }
