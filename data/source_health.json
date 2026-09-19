@@ -1,13 +1,38 @@
 {
-  "at": "2026-09-19T21:30:33+00:00",
+  "at": "2026-09-19T21:42:21+00:00",
   "card_data_coverage": {
-    "carded_fighters": 121,
-    "checked_at": "2026-09-19T21:26:14+00:00",
+    "carded_fighters": 123,
+    "checked_at": "2026-09-19T21:37:24+00:00",
     "counts": {
+      "history": 2,
+      "layoff": 1,
       "physicals": 4,
       "record": 1
     },
     "findings": [
+      {
+        "detail": "0 of 9 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Buckley vs. Malott",
+        "event_date": "2026-10-17",
+        "fighter": "Cody Chovancek",
+        "last_fight_date": "2025-09-17",
+        "severity": "history"
+      },
+      {
+        "detail": "3 of 20 bouts in fight_history (15%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Buckley vs. Malott",
+        "event_date": "2026-10-17",
+        "fighter": "SuYoung You",
+        "last_fight_date": "2026-03-14",
+        "severity": "history"
+      },
+      {
+        "detail": "last fight 2025-09-17 (1.0y) is the newest of only 0 bouts we hold -- the real one may be far more recent",
+        "event": "UFC Fight Night: Buckley vs. Malott",
+        "event_date": "2026-10-17",
+        "fighter": "Cody Chovancek",
+        "severity": "layoff"
+      },
       {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "UFC Fight Night: Buckley vs. Malott",
@@ -22,14 +47,14 @@
       "BetMGM": 6,
       "DraftKings": 22,
       "FanDuel": 14,
-      "Polymarket": 82
+      "Polymarket": 90
     },
     "books_quoting": {
-      "1.0": 90,
+      "1.0": 98,
       "2.0": 12,
       "3.0": 22
     },
-    "n": 124
+    "n": 132
   },
   "moneyline": {
     "best_book": {
@@ -47,8 +72,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 1.39,
-    "checked_at": "2026-09-19T21:27:23+00:00",
+    "cache_age_hours": 1.59,
+    "checked_at": "2026-09-19T21:38:59+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -88,7 +113,7 @@
     "BetMGM": 22,
     "DraftKings": 52,
     "FanDuel": 48,
-    "Polymarket": 248
+    "Polymarket": 272
   },
   "rundown_dates_requested": [
     "2026-09-19"
@@ -221,7 +246,7 @@
         "selectivity": 0.0769
       }
     ],
-    "checked_at": "2026-09-19T21:30:31+00:00",
+    "checked_at": "2026-09-19T21:42:19+00:00",
     "equivalent_floor": 0.695,
     "floor_in_force": 0.78,
     "gap_move": -0.1014,
@@ -238,47 +263,47 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 0.6,
+      "duration_s": 18.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T21:26:50+00:00",
+      "last_ok": "2026-09-19T21:38:24+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T21:26:50+00:00"
+      "ran_at": "2026-09-19T21:38:24+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 32.9,
+      "duration_s": 40.0,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T21:26:49+00:00",
+      "last_ok": "2026-09-19T21:38:06+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T21:26:49+00:00"
+      "ran_at": "2026-09-19T21:38:06+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
-      "duration_s": 0.6,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T21:26:14+00:00",
+      "last_ok": "2026-09-19T21:37:24+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T21:26:14+00:00"
+      "ran_at": "2026-09-19T21:37:24+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.1,
+      "duration_s": 1.0,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T21:26:16+00:00",
+      "last_ok": "2026-09-19T21:37:26+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T21:26:16+00:00"
+      "ran_at": "2026-09-19T21:37:26+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -286,30 +311,30 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T21:28:38+00:00",
+      "last_ok": "2026-09-19T21:40:17+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 1.2,
+      "duration_s": 0.9,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T21:26:15+00:00",
+      "last_ok": "2026-09-19T21:37:25+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T21:26:15+00:00"
+      "ran_at": "2026-09-19T21:37:25+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T21:30:32+00:00",
+      "last_ok": "2026-09-19T21:42:19+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T21:30:32+00:00"
+      "ran_at": "2026-09-19T21:42:19+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -318,9 +343,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-19T21:30:31+00:00",
+      "last_ok": "2026-09-19T21:42:19+00:00",
       "ok": true,
-      "ran_at": "2026-09-19T21:30:31+00:00"
+      "ran_at": "2026-09-19T21:42:19+00:00"
     }
   },
   "tracked_moneyline": {
