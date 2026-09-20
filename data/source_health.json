@@ -1,13 +1,94 @@
 {
-  "at": "2026-09-20T03:32:03+00:00",
+  "at": "2026-09-20T03:46:55+00:00",
   "card_data_coverage": {
-    "carded_fighters": 108,
-    "checked_at": "2026-09-20T03:26:38+00:00",
+    "carded_fighters": 126,
+    "checked_at": "2026-09-20T03:39:45+00:00",
     "counts": {
+      "history": 9,
+      "layoff": 1,
       "physicals": 5,
       "record": 1
     },
     "findings": [
+      {
+        "detail": "3 of 12 bouts in fight_history (25%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Baisangur Susurkaev",
+        "last_fight_date": "2026-05-09",
+        "severity": "history"
+      },
+      {
+        "detail": "1 of 8 bouts in fight_history (12%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Bia Mesquita",
+        "last_fight_date": "2026-06-20",
+        "severity": "history"
+      },
+      {
+        "detail": "9 of 20 bouts in fight_history (45%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Caio Borralho",
+        "last_fight_date": "2026-03-07",
+        "severity": "history"
+      },
+      {
+        "detail": "8 of 18 bouts in fight_history (44%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Chris Duncan",
+        "last_fight_date": "2026-04-04",
+        "severity": "history"
+      },
+      {
+        "detail": "26 of 44 bouts in fight_history (59%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Drew Dober",
+        "last_fight_date": "2026-03-07",
+        "severity": "history"
+      },
+      {
+        "detail": "1 of 17 bouts in fight_history (6%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Juan Diaz",
+        "last_fight_date": "2026-05-16",
+        "severity": "history"
+      },
+      {
+        "detail": "3 of 20 bouts in fight_history (15%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Kayla Harrison",
+        "last_fight_date": "2025-06-07",
+        "severity": "history"
+      },
+      {
+        "detail": "4 of 15 bouts in fight_history (27%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Luis Gurule",
+        "last_fight_date": "2026-05-30",
+        "severity": "history"
+      },
+      {
+        "detail": "14 of 27 bouts in fight_history (52%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Terrance McKinney",
+        "last_fight_date": "2026-07-11",
+        "severity": "history"
+      },
+      {
+        "detail": "last fight 2025-06-07 (1.3y) is the newest of only 3 bouts we hold -- the real one may be far more recent",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Kayla Harrison",
+        "severity": "layoff"
+      },
       {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "UFC Fight Night: Buckley vs. Malott",
@@ -39,8 +120,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 1.18,
-    "checked_at": "2026-09-20T03:28:24+00:00",
+    "cache_age_hours": 1.43,
+    "checked_at": "2026-09-20T03:43:23+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -56,9 +137,9 @@
   },
   "parlay": {
     "bankroll": {
-      "detail": "8 leg(s) priced only on a reference line, which is not a book you can bet at",
+      "detail": "10 leg(s) priced only on a reference line, which is not a book you can bet at",
       "reason": "no bettable venue",
-      "reference_only_legs": 8
+      "reference_only_legs": 10
     },
     "bankroll/BetMGM": {
       "combinations_considered": 33,
@@ -211,7 +292,7 @@
         "selectivity": 0.0769
       }
     ],
-    "checked_at": "2026-09-20T03:32:00+00:00",
+    "checked_at": "2026-09-20T03:46:53+00:00",
     "equivalent_floor": 0.695,
     "floor_in_force": 0.78,
     "gap_move": -0.1014,
@@ -231,22 +312,23 @@
       "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
-      "in_flight": false,
+      "in_flight": true,
       "killed_previous_run": false,
       "last_ok": "2026-09-20T03:27:25+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T03:27:25+00:00"
+      "ran_at": "2026-09-20T03:27:25+00:00",
+      "started_at": "2026-09-20T03:40:30+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 44.1,
+      "duration_s": 42.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T03:27:25+00:00",
+      "last_ok": "2026-09-20T03:40:30+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T03:27:25+00:00"
+      "ran_at": "2026-09-20T03:40:30+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -255,9 +337,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T03:26:38+00:00",
+      "last_ok": "2026-09-20T03:39:45+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T03:26:38+00:00"
+      "ran_at": "2026-09-20T03:39:45+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
@@ -266,9 +348,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T03:26:41+00:00",
+      "last_ok": "2026-09-20T03:39:48+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T03:26:41+00:00"
+      "ran_at": "2026-09-20T03:39:48+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -276,7 +358,7 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T03:29:30+00:00",
+      "last_ok": "2026-09-20T03:44:21+00:00",
       "ok": true
     },
     "merge_results": {
@@ -286,20 +368,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T03:26:39+00:00",
+      "last_ok": "2026-09-20T03:39:46+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T03:26:39+00:00"
+      "ran_at": "2026-09-20T03:39:46+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T03:32:01+00:00",
+      "last_ok": "2026-09-20T03:46:53+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T03:32:01+00:00"
+      "ran_at": "2026-09-20T03:46:53+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -308,9 +390,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T03:32:00+00:00",
+      "last_ok": "2026-09-20T03:46:53+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T03:32:00+00:00"
+      "ran_at": "2026-09-20T03:46:53+00:00"
     }
   },
   "tracked_moneyline": {
