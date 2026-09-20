@@ -1,4 +1,57 @@
 {
+ "UFC Fight Night: Rosas Jr. vs. Barcelos": {
+  "bankroll": {
+   "pinned_at": "2026-09-20T07:30:27+00:00",
+   "identities": [
+    "[\"Brady Hiestand|Rinya Nakamura\", [{\"fighter\": \"Rinya Nakamura\", \"kind\": \"winner\"}]]",
+    "[\"Montel Jackson|Ricky Simon\", [{\"fighter\": \"Montel Jackson\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Rinya Nakamura ML",
+      "odds_display": "-325",
+      "is_model": false,
+      "decimal_odds": 1.307692,
+      "fight_key": "Brady Hiestand|Rinya Nakamura",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Rinya Nakamura"
+       }
+      ],
+      "source": "BetMGM"
+     },
+     {
+      "label": "Montel Jackson ML",
+      "odds_display": "-175",
+      "is_model": false,
+      "decimal_odds": 1.571429,
+      "fight_key": "Montel Jackson|Ricky Simon",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Montel Jackson"
+       }
+      ],
+      "source": "BetMGM"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_30",
+     "card_33"
+    ],
+    "slip_id": "ab0527d41480",
+    "combined_decimal": 2.054945,
+    "combined_american": 105,
+    "combined_american_display": "+105",
+    "combined_prob": 0.457,
+    "combined_prob_raw": 0.4884,
+    "venue": "BetMGM"
+   }
+  }
+ },
  "UFC 331: Van vs. Pantoja 2": {},
  "Noche UFC: Silva vs. Delgado": {},
  "UFC Fight Night: Hooker vs. Parnasse": {}
