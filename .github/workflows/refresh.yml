@@ -339,7 +339,21 @@ jobs:
         # NON-BLOCKING like the history backfill above, and for the same
         # reason: ESPN 403s under bursts, and a throttled stats fetch must
         # not stop the site publishing odds and results.
-        run: python scripts/run_step.py backfill_fight_stats -- python scripts/backfill_espn_fight_stats.py --cards --missing-only --apply
+        # --budget-seconds 45 is what keeps this step from being KILLED rather
+        # than merely slow. Its write happens after the fetch loop, so a run
+        # the runner kills at timeout-minutes saves nothing -- and since
+        # --missing-only reads what was written, a killed run leaves the
+        # target list exactly as it found it. After UFC 331 that was 13
+        # carded fighters at a measured 37.6s each from CI's cold cache: 8.2
+        # minutes of work against a 2-minute cap, so it died mid-loop 18 runs
+        # in a row, each one doing real work and keeping none of it.
+        #
+        # 45s, not 90s, because the budget is checked BEFORE a fighter and a
+        # fighter already started runs to completion -- so the real bound is
+        # budget + one fighter. 45 + ~40 + startup stays clear of 120s; 90
+        # would not. Fewer fighters per run is fine: the point is that each
+        # run now WRITES, so the list drains instead of resetting.
+        run: python scripts/run_step.py backfill_fight_stats -- python scripts/backfill_espn_fight_stats.py --cards --missing-only --budget-seconds 45 --apply
 
       - name: Generate site
         # 10, up from 6. This one genuinely MUST fail the job if it breaks --

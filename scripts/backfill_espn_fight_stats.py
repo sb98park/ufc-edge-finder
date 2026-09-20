@@ -556,6 +556,9 @@ def main():
                     help="walk fighters from data/fight_history.csv (most-fought first) rather "
                          "than fighters.csv -- populates the cache for point-in-time validation")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--budget-seconds", type=int, default=0,
+                    help="stop fetching once this many seconds have passed and WRITE what "
+                         "was gathered; 0 means no budget")
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
 
@@ -629,11 +632,37 @@ def main():
 
     print(f"{len(targets)} fighter(s) to process; {sum(1 for n in targets if _fold(n) in ids)} have an ESPN id\n")
 
+    # A KILLED RUN USED TO SAVE NOTHING, and that made this step permanently
+    # stuck rather than merely slow.
+    #
+    # `updates` is written once, after this loop. In CI the step carries
+    # timeout-minutes: 2 and starts with a COLD cache (data/.espn_cache is
+    # gitignored), and a cold fighter measured 37.6s. Thirteen carded
+    # fighters needed stats after UFC 331, which is 8.2 minutes of work
+    # against a 2-minute cap: the runner killed the step mid-loop every time,
+    # `updates` died with it, not one fighter was written, and so the same
+    # thirteen were still missing on the next run. Eighteen runs in a row,
+    # each doing real work and keeping none of it, with --missing-only unable
+    # to shrink a list that never got written to.
+    #
+    # The budget converts that into progress. Checked BEFORE each fighter
+    # rather than after, because the granularity that matters is one whole
+    # fetch, and a fighter begun at the limit would overrun it by its own
+    # full cost. Whatever was gathered is then written by the normal path,
+    # so each run leaves fewer targets than it found and the list drains.
+    #
+    # A budget, not a count: the variable that broke this is ESPN latency, so
+    # the bound that matters is wall-clock, not fighters attempted.
     updates, missing_id, no_stats = {}, [], []
+    deferred = 0
+    _loop_started = time.time()
     for i, name in enumerate(targets, 1):
         aid = ids.get(_fold(name))
         if not aid:
             missing_id.append(name)
+            continue      # costs nothing, so it never consumes the budget
+        if args.budget_seconds and (time.time() - _loop_started) >= args.budget_seconds:
+            deferred += 1
             continue
         s = fighter_stats(aid, name)
         if not s:
@@ -646,6 +675,10 @@ def main():
 
     print(f"\n{len(updates)} with stats | {len(missing_id)} without an ESPN id | "
           f"{len(no_stats)} with an id but no usable stats")
+    if deferred:
+        print(f"  {deferred} fighter(s) left for the next run -- {args.budget_seconds}s budget "
+              f"reached after {time.time() - _loop_started:.0f}s. What was fetched IS written "
+              f"below, so the remaining list shrinks every run.")
     print("\nWHY COLUMNS CAME BACK EMPTY")
     labels = {"ssa": "strike_accuracy_pct", "tda": "td_accuracy_pct", "opp_tda": "td_defense_pct"}
     print(f"  {'column':<22}{'too few':>10}")
