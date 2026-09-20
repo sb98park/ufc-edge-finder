@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-20T19:33:06+00:00",
+  "at": "2026-09-20T20:07:04+00:00",
   "card_data_coverage": {
     "carded_fighters": 126,
-    "checked_at": "2026-09-20T19:26:29+00:00",
+    "checked_at": "2026-09-20T20:02:24+00:00",
     "counts": {
       "physicals": 5,
       "record": 1
@@ -43,9 +43,9 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 0.0,
-    "checked_at": "2026-09-20T19:30:04+00:00",
-    "detail": "fetched 33 events, quota remaining 282",
+    "cache_age_hours": 0.57,
+    "checked_at": "2026-09-20T20:04:10+00:00",
+    "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
   },
@@ -216,7 +216,7 @@
         "selectivity": 0.0769
       }
     ],
-    "checked_at": "2026-09-20T19:33:04+00:00",
+    "checked_at": "2026-09-20T20:07:02+00:00",
     "equivalent_floor": 0.695,
     "floor_in_force": 0.78,
     "gap_move": -0.1014,
@@ -233,25 +233,25 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 82.0,
+      "duration_s": 30.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T19:28:54+00:00",
+      "last_ok": "2026-09-20T20:03:34+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T19:28:54+00:00"
+      "ran_at": "2026-09-20T20:03:34+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 59.9,
+      "duration_s": 38.0,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T19:27:32+00:00",
+      "last_ok": "2026-09-20T20:03:04+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T19:27:32+00:00"
+      "ran_at": "2026-09-20T20:03:04+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -260,20 +260,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T19:26:29+00:00",
+      "last_ok": "2026-09-20T20:02:24+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T19:26:29+00:00"
+      "ran_at": "2026-09-20T20:02:24+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.2,
+      "duration_s": 1.1,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T19:26:32+00:00",
+      "last_ok": "2026-09-20T20:02:26+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T19:26:32+00:00"
+      "ran_at": "2026-09-20T20:02:26+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -281,19 +281,19 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T19:30:53+00:00",
+      "last_ok": "2026-09-20T20:04:51+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.8,
+      "duration_s": 0.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T19:26:30+00:00",
+      "last_ok": "2026-09-20T20:02:24+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T19:26:30+00:00"
+      "ran_at": "2026-09-20T20:02:24+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
@@ -302,9 +302,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T19:33:04+00:00",
+      "last_ok": "2026-09-20T20:07:02+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T19:33:04+00:00"
+      "ran_at": "2026-09-20T20:07:02+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -313,9 +313,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-20T19:33:04+00:00",
+      "last_ok": "2026-09-20T20:07:02+00:00",
       "ok": true,
-      "ran_at": "2026-09-20T19:33:04+00:00"
+      "ran_at": "2026-09-20T20:07:02+00:00"
     }
   },
   "tracked_moneyline": {
