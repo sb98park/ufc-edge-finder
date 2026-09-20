@@ -1008,7 +1008,12 @@
     flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%; background: rgba(61,220,132,0.15); color: var(--green);
     display: flex; align-items: center; justify-content: center; font-size: var(--t-micro); font-weight: 700;
   }
-  .underdog-pick { font-weight: 600; color: var(--text); flex: 1; }
+  .underdog-pick { font-weight: 600; color: var(--text); flex: none; }
+  /* Takes the flex:1 the pick used to hold, so the odds still sit hard right
+     and a long opponent name ellipsises instead of wrapping the row. */
+  .underdog-beat { flex: 1; min-width: 0; color: var(--muted);
+                   font-size: var(--t-small); white-space: nowrap;
+                   overflow: hidden; text-overflow: ellipsis; }
   /* Lock of the Week full-history card -- same visual family as
      .underdog-block directly above it, in the site's established lock
      purple (rgba(255,255,255,0.05), matching .lock-pick-card elsewhere)
@@ -1618,13 +1623,6 @@
   .pr-leg-odds { flex: none; font-family: var(--font-mono, ui-monospace, monospace);
                  color: var(--muted); font-variant-numeric: tabular-nums; }
   .pr-foot { font-size: var(--t-micro); color: var(--muted); line-height: 1.5; margin-top: 2px; }
-  .pr-rollup { font-size: var(--t-small); color: var(--muted); line-height: 1.55;
-               margin: 8px 0 2px; }
-  .pr-rollup b { color: var(--text); font-weight: 600; }
-  .pr-rollup .up { color: var(--pos, #3ddc84); font-weight: 700;
-                   font-variant-numeric: tabular-nums; }
-  .pr-rollup .down { color: var(--neg, #ff7a7a); font-weight: 700;
-                     font-variant-numeric: tabular-nums; }
   .event-summary-label { font-size: var(--t-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
   .track-record-headline { font-size: var(--t-h1); font-weight: 700; font-family: var(--font-display); margin-bottom: 6px; }
   .track-record-headline span { font-size: var(--t-lead); color: var(--muted); font-weight: 600; }
@@ -6362,9 +6360,25 @@
          quietly disappears on a losing month is worse than no record line at
          all -- it makes every visible one unfalsifiable. #}
       {% if track_record and track_record.total %}
-      <div class="cd-record{{ ' neg' if track_record.units_stats and track_record.units_stats.total_units < 0 }}"
-           title="{{ track_record.correct }}/{{ track_record.total }} picks correct{% if track_record.units_stats %}, {{ '%+.2f'|format(track_record.units_stats.total_units) }} units at 1u flat{% endif %}">
-        {{ track_record.accuracy_pct }}%{% if track_record.units_stats %} · {{ '%+.2f'|format(track_record.units_stats.total_units) }}U{% endif %}
+      {#- THE SAME UNITS FIGURE AS THE RECORD HEADLINE, and it has to stay that
+          way. This read units_stats.total_units, which counts every graded pick
+          at tier size -- including Medium and Low, which have not been staked
+          since the changeover. That put -13.54U of bets nobody placed into a
+          number sitting next to the accuracy percentage, so the chip said
+          +58.08U while the Record headline said +71.49U: two "U" figures on one
+          site, 13 units apart, neither saying which it was.
+
+          Its title was worse than the number. It called the figure "1u flat"
+          when it is tier-weighted across stakes of 1, 2, 3, 5 and 10 -- a true
+          flat total is +9.31U, so the label was out by roughly six times.
+
+          staked_units is the honest one: pre-changeover picks, when everything
+          WAS staked, plus the plays ledger since. Real money only. The all-tier
+          number is a fine model-quality diagnostic and it is why the ladder was
+          not widened, but it is not a P&L and does not belong here unexplained. -#}
+      <div class="cd-record{{ ' neg' if staked_units and staked_units.entries and staked_units.total_units < 0 }}"
+           title="{{ track_record.correct }}/{{ track_record.total }} picks correct{% if staked_units and staked_units.entries %}, {{ '%+.2f'|format(staked_units.total_units) }} units actually staked across {{ staked_units.entries }} stakes{% endif %}">
+        {{ track_record.accuracy_pct }}%{% if staked_units and staked_units.entries %} · {{ '%+.2f'|format(staked_units.total_units) }}U{% endif %}
       </div>
       {% endif %}
     </div>
@@ -6738,19 +6752,13 @@
     {% endif %}
       <div class="track-record-kicker">Overall Record</div>
       <div class="track-record-headline">{{ track_record.correct }}/{{ track_record.total }} <span class="countup">({{ track_record.accuracy_pct }}%)</span></div>
-    {#- ONE LINE, AND DELIBERATELY NOT A HEADLINE STAT. The figure above is
-        the model's record; this is a hypothetical at a named unit size on a
-        product that is not staked, and giving it a donut or a big number
-        would put it on the same footing as money that was actually risked.
-        Hidden entirely until a slip settles -- "0 of 0" reads as a failure. -#}
-    {% if parlay_record and parlay_record.n %}
-    <div class="pr-rollup">
-      {{ icon_coins() }} <b>Parlays</b> &middot; {{ parlay_record.cashed }} of {{ parlay_record.n }} cashed
-      {%- if parlay_record.events %} across {{ parlay_record.events }} card{{ 's' if parlay_record.events != 1 }}{% endif %}
-      &middot; <span class="{{ 'up' if parlay_record.units_flat > 0 else ('down' if parlay_record.units_flat < 0 else '') }}">{{ '%+.2f'|format(parlay_record.units_flat) }}U</span>
-      at 1U flat &middot; published, not staked
-    </div>
-    {% endif %}
+    {#- The parlay rollup used to sit here: "N of M cashed across K cards ...
+        at 1U flat - published, not staked". Removed at the owner's request.
+        It was a hypothetical at a named unit size on a product nobody stakes,
+        printed directly under the record that IS staked, and the disclaimer
+        did not stop it reading as part of the same number. Per-slip results
+        are still on the parlay cards themselves, where the legs are in front
+        of the reader; parlay_record is still computed, just not rolled up. -#}
     {% if track_record.by_confidence %}
     <div class="baseline-title" style="margin-top: 14px;">Accuracy by Pick Confidence</div>
     <div class="baseline-caption" style="margin-bottom: 6px;">How often the model's own stated conviction level (High/Medium/Low) matched the actual result.</div>
@@ -6862,9 +6870,16 @@
       {% if track_record.underdog_record.hits|length > 1 %}
       <div class="underdog-list">
         {% for h in track_record.underdog_record.hits[1:] %}
+        {#- WHO THEY BEAT, because a name and a price is not a fight. A row
+            reading "Diego Ferreira +153" cannot be checked against anything,
+            and the same fighter can land here more than once -- a repeat would
+            render as two identical rows describing different nights. The
+            opponent is derived exactly as the "biggest" block above does it:
+            the corner that is not the pick. -#}
         <div class="underdog-row">
           <span class="underdog-icon">{{ icon_check() }}</span>
           <span class="underdog-pick">{{ h.predicted_favorite }}</span>
+          <span class="underdog-beat">beat {{ h.fighter_a if h.fighter_a != h.predicted_favorite else h.fighter_b }}</span>
           <span class="underdog-odds">{{ '+' if h.pick_odds >= 0 else '' }}{{ h.pick_odds|int }}</span>
         </div>
         {% endfor %}
