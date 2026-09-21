@@ -1,13 +1,22 @@
 {
-  "at": "2026-09-21T23:00:53+00:00",
+  "at": "2026-09-21T23:36:11+00:00",
   "card_data_coverage": {
-    "carded_fighters": 127,
-    "checked_at": "2026-09-21T22:56:10+00:00",
+    "carded_fighters": 129,
+    "checked_at": "2026-09-21T23:31:10+00:00",
     "counts": {
+      "history": 1,
       "physicals": 5,
       "record": 1
     },
     "findings": [
+      {
+        "detail": "8 of 15 bouts in fight_history (53%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Rosas Jr. vs. Barcelos",
+        "event_date": "2026-09-26",
+        "fighter": "Sedriques Dumas",
+        "last_fight_date": "2026-04-25",
+        "severity": "history"
+      },
       {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "UFC Fight Night: Buckley vs. Malott",
@@ -19,28 +28,28 @@
   },
   "edges_two_way": {
     "best_book": {
-      "DraftKings": 38,
-      "Polymarket": 60
+      "DraftKings": 42,
+      "Polymarket": 50
     },
     "books_quoting": {
-      "1.0": 98
+      "1.0": 92
     },
-    "n": 98
+    "n": 92
   },
   "moneyline": {
     "best_book": {
-      "DraftKings": 26,
+      "DraftKings": 28,
       "Polymarket": 34
     },
-    "n": 60,
+    "n": 62,
     "source": {
-      "DraftKings": 26,
+      "DraftKings": 28,
       "Polymarket": 34
     }
   },
   "odds_api": {
-    "cache_age_hours": 1.17,
-    "checked_at": "2026-09-21T22:57:58+00:00",
+    "cache_age_hours": 1.77,
+    "checked_at": "2026-09-21T23:33:40+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -77,8 +86,8 @@
     }
   },
   "rows_by_source": {
-    "DraftKings": 44,
-    "Polymarket": 166
+    "DraftKings": 50,
+    "Polymarket": 145
   },
   "rundown_dates_requested": [
     "2026-09-26"
@@ -218,12 +227,12 @@
         "gap_p90": 0.0171,
         "market_p90": 0.7335,
         "model_p90": 0.7506,
-        "priced": 11,
+        "priced": 12,
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-09-21T23:00:51+00:00",
-    "equivalent_floor": 0.686,
+    "checked_at": "2026-09-21T23:36:09+00:00",
+    "equivalent_floor": 0.684,
     "floor_in_force": 0.78,
     "gap_move": -0.0945,
     "trailing_cards": 6,
@@ -239,47 +248,47 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 17.6,
+      "duration_s": 54.1,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-21T22:57:12+00:00",
+      "last_ok": "2026-09-21T23:32:56+00:00",
       "ok": true,
-      "ran_at": "2026-09-21T22:57:12+00:00"
+      "ran_at": "2026-09-21T23:32:56+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 42.7,
+      "duration_s": 50.0,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-21T22:56:55+00:00",
+      "last_ok": "2026-09-21T23:32:02+00:00",
       "ok": true,
-      "ran_at": "2026-09-21T22:56:55+00:00"
+      "ran_at": "2026-09-21T23:32:02+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
-      "duration_s": 0.6,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-21T22:56:10+00:00",
+      "last_ok": "2026-09-21T23:31:10+00:00",
       "ok": true,
-      "ran_at": "2026-09-21T22:56:10+00:00"
+      "ran_at": "2026-09-21T23:31:10+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.3,
+      "duration_s": 0.9,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-21T22:56:12+00:00",
+      "last_ok": "2026-09-21T23:31:12+00:00",
       "ok": true,
-      "ran_at": "2026-09-21T22:56:12+00:00"
+      "ran_at": "2026-09-21T23:31:12+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -287,51 +296,51 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-21T22:58:55+00:00",
+      "last_ok": "2026-09-21T23:34:19+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 1.2,
+      "duration_s": 0.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-21T22:56:11+00:00",
+      "last_ok": "2026-09-21T23:31:11+00:00",
       "ok": true,
-      "ran_at": "2026-09-21T22:56:11+00:00"
+      "ran_at": "2026-09-21T23:31:11+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-21T23:00:51+00:00",
+      "last_ok": "2026-09-21T23:36:10+00:00",
       "ok": true,
-      "ran_at": "2026-09-21T23:00:51+00:00"
+      "ran_at": "2026-09-21T23:36:10+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-21T23:00:51+00:00",
+      "last_ok": "2026-09-21T23:36:09+00:00",
       "ok": true,
-      "ran_at": "2026-09-21T23:00:51+00:00"
+      "ran_at": "2026-09-21T23:36:09+00:00"
     }
   },
   "tracked_moneyline": {
     "best_book": {
-      "DraftKings": 18,
+      "DraftKings": 20,
       "Polymarket": 2
     },
-    "n": 20,
+    "n": 22,
     "source": {
-      "DraftKings": 18,
+      "DraftKings": 20,
       "Polymarket": 2
     }
   }
