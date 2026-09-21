@@ -1,13 +1,27 @@
 {
  "UFC Fight Night: Rosas Jr. vs. Barcelos": {
   "bankroll": {
-   "pinned_at": "2026-09-20T07:30:27+00:00",
+   "pinned_at": "2026-09-21T00:18:10+00:00",
    "identities": [
-    "[\"Brady Hiestand|Rinya Nakamura\", [{\"fighter\": \"Rinya Nakamura\", \"kind\": \"winner\"}]]",
-    "[\"Montel Jackson|Ricky Simon\", [{\"fighter\": \"Montel Jackson\", \"kind\": \"winner\"}]]"
+    "[\"Raul Rosas Jr.|Raoni Barcelos\", [{\"fighter\": \"Raul Rosas Jr\", \"kind\": \"winner\"}]]",
+    "[\"Brady Hiestand|Rinya Nakamura\", [{\"fighter\": \"Rinya Nakamura\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
+     {
+      "label": "Raul Rosas Jr ML",
+      "odds_display": "-175",
+      "is_model": false,
+      "decimal_odds": 1.571429,
+      "fight_key": "Raul Rosas Jr.|Raoni Barcelos",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Raul Rosas Jr"
+       }
+      ],
+      "source": "DraftKings"
+     },
      {
       "label": "Rinya Nakamura ML",
       "odds_display": "-325",
@@ -20,35 +34,21 @@
         "fighter": "Rinya Nakamura"
        }
       ],
-      "source": "BetMGM"
-     },
-     {
-      "label": "Montel Jackson ML",
-      "odds_display": "-200",
-      "is_model": false,
-      "decimal_odds": 1.5,
-      "fight_key": "Montel Jackson|Ricky Simon",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Montel Jackson"
-       }
-      ],
-      "source": "BetMGM"
+      "source": "DraftKings"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_30",
-     "card_33"
+     "card_26",
+     "card_30"
     ],
-    "slip_id": "ab0527d41480",
-    "combined_decimal": 1.961538,
-    "combined_american": -104,
-    "combined_american_display": "-104",
-    "combined_prob": 0.4714,
-    "combined_prob_raw": 0.4884,
-    "venue": "BetMGM"
+    "slip_id": "2abda195c52f",
+    "combined_decimal": 2.054945,
+    "combined_american": 105,
+    "combined_american_display": "+105",
+    "combined_prob": 0.4557,
+    "combined_prob_raw": 0.4514,
+    "venue": "DraftKings"
    }
   }
  },
