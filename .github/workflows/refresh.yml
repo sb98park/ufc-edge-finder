@@ -355,6 +355,19 @@ jobs:
         # run now WRITES, so the list drains instead of resetting.
         run: python scripts/run_step.py backfill_fight_stats -- python scripts/backfill_espn_fight_stats.py --cards --missing-only --budget-seconds 45 --apply
 
+      - name: Look for one fighter recorded under two names
+        # NON-BLOCKING, and cheap: an inverted index over the spine, no
+        # network. It runs BEFORE the build so a pair found this cycle is in
+        # source_health when build_health_alerts reads it, rather than a
+        # cycle late.
+        #
+        # This check exists because the failure it looks for has happened
+        # twice and was found by accident both times -- Sean King after the
+        # card cost a correct pick, Valesca Machado three days before one
+        # left a main-card bout priced against a row marked cancelled.
+        continue-on-error: true
+        run: python scripts/run_step.py duplicate_identities -- python scripts/check_duplicate_identities.py
+
       - name: Generate site
         # 10, up from 6. This one genuinely MUST fail the job if it breaks --
         # there is no site without it -- so it keeps a hard limit rather than

@@ -2491,6 +2491,34 @@ def build_health_alerts(cards_df, predictions_path: str = f"{DATA_DIR}/predictio
             oa = (json.load(fh) or {}).get("odds_api") or {}
     except (OSError, ValueError):
         oa = {}
+    # TWO NAMES, ONE FIGHTER. Found twice by accident while looking at
+    # something else, and it cost a correct pick the first time and three
+    # days of a mispriced main-card bout the second. card_discovery reads the
+    # variant's card row as a REPLACEMENT, cancels the real bout and voids its
+    # prediction -- so the expensive moment is always a card, which is exactly
+    # when nobody is reading a build log. See scripts/check_duplicate_identities.
+    try:
+        with open(f"{DATA_DIR}/source_health.json", encoding="utf-8") as fh:
+            dupes = (json.load(fh) or {}).get("duplicate_identities") or {}
+    except (OSError, ValueError):
+        dupes = {}
+    for pair in (dupes.get("pairs") or [])[:4]:
+        names = pair.get("names") or []
+        if len(names) != 2:
+            continue
+        on_card = pair.get("on_a_card") or []
+        alerts.append({
+            "kind": "identity",
+            # Both sides carded is the shape that becomes a phantom
+            # replacement on a live card; off-card it is still wrong but it
+            # is not about to cancel a bout anyone has bet.
+            "severe": bool(on_card),
+            "text": f"\u201c{names[0]}\u201d and \u201c{names[1]}\u201d look like one fighter",
+            "detail": f"{pair.get('shared_bouts')} identical bouts"
+                      + (f" \u00b7 on a card: {', '.join(on_card)}" if on_card else "")
+                      + " \u00b7 alias in src/names.py before merging",
+        })
+
     if oa and not oa.get("ok", True):
         hours = float(oa.get("cache_age_hours") or 0.0)
         limit = float(oa.get("max_serve_hours") or 24.0)
