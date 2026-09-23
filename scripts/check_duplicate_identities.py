@@ -156,6 +156,27 @@ def main() -> int:
               + (f"  [{' | '.join(where)}]" if where else ""))
     print("  If these are one fighter: add an alias to src/names.py FIRST -- a "
           "data merge without one is undone by the next build -- then merge.")
+
+    # THE STEP SUMMARY, NOT THE SITE. This briefly rendered on the health
+    # strip and had to be pulled: every other alert there is transient and
+    # self-clearing, while a duplicate identity persists until someone merges
+    # it -- so findings sat permanently above the fight card telling readers
+    # to edit a source file. This is a maintenance item and belongs where
+    # maintenance is read.
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        try:
+            with open(summary, "a", encoding="utf-8") as fh:
+                fh.write(f"### {len(rows)} possible duplicate identity/identities\n\n")
+                fh.write("| names | shared bouts | on a card |\n|---|---|---|\n")
+                for r in rows:
+                    fh.write(f"| `{r['names'][0]}` = `{r['names'][1]}` "
+                             f"| {r['shared_bouts']} "
+                             f"| {', '.join(r['on_a_card']) or '-'} |\n")
+                fh.write("\nAlias in `src/names.py` first -- a data merge "
+                         "without one is undone by the next build.\n")
+        except OSError as exc:
+            print(f"[dupes] step summary not written ({exc}) -- continuing")
     return 0            # ALWAYS. See the docstring.
 
 

@@ -113,6 +113,23 @@ for label, payload in (("no fighters", {}),
     except Exception as exc:                      # noqa: BLE001
         check(f"{label} -> no crash ({exc})", False)
 
+# --- it must NOT reach the site's health strip -----------------------------
+# It was added there and had to come straight back out. Every alert on that
+# strip is transient and self-clearing; a duplicate identity persists until a
+# human merges it, so three findings sat permanently above the fight card
+# telling readers to edit src/names.py. Maintenance goes to the step summary.
+gs = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                       "generate_site.py")).read()
+_alerts = gs[gs.index("def build_health_alerts"):gs.index("def _record_landing_health")]
+check("findings never render as a page alert",
+      '"kind": "identity"' not in _alerts and "look like one fighter" not in _alerts)
+check("  ...and the reason is written down where it would be re-added",
+      "DELIBERATELY DOES NOT RENDER HERE" in _alerts)
+
+src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                        "scripts", "check_duplicate_identities.py")).read()
+check("findings go to the GitHub step summary instead", "GITHUB_STEP_SUMMARY" in src)
+
 # --- the pipeline actually runs it -----------------------------------------
 wf = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
                        ".github", "workflows", "refresh.yml")).read()
