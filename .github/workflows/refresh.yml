@@ -564,12 +564,44 @@ jobs:
 
           if [ -n "${CF_API_TOKEN:-}" ] && [ -n "${CF_ACCOUNT_ID:-}" ]; then
             # docs/index.html is still the MEMBER build at this point.
-            curl -sS --fail-with-body -X PUT \
+            #
+            # GUARDED, and the KV block below already explains why: under
+            # `set -e` an unguarded curl takes the whole job down, "including
+            # the Pages deploy after it". That was fixed for the KV write and
+            # left in place here, on the bigger call. On 2026-09-23T15:25
+            # Cloudflare answered this PUT with a 502 -- one transient blip --
+            # and it skipped the free-payload swap below, "Upload the built
+            # site", "Commit and push if changed" and the entire deploy job.
+            # A whole build discarded and no deploy that cycle, because a CDN
+            # hiccuped on a write whose own failure path is "members see the
+            # free build for one cycle".
+            #
+            # --retry covers exactly the transient class (5xx, 429, timeouts)
+            # and deliberately NOT 4xx: a bad token should fail fast and land
+            # in the summary rather than spend four attempts proving itself.
+            #
+            # NOT continue-on-error. That would still abort the step at the
+            # failing command under `set -e`, skipping the swap two lines
+            # down and shipping the MEMBER payload to Pages -- the paywall
+            # inverted. The curl has to be guarded so the rest of the step
+            # still runs.
+            if curl -sS --fail-with-body --retry 4 --retry-delay 3 --retry-max-time 60 -X PUT \
               "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/r2/buckets/octane-alpha-member/objects/index.html" \
               -H "Authorization: Bearer $CF_API_TOKEN" \
               -H "Content-Type: text/html" \
-              --data-binary @docs/index.html > /dev/null
-            echo "R2: uploaded member payload, $(wc -c < docs/index.html) bytes"
+              --data-binary @docs/index.html > /dev/null; then
+              echo "R2: uploaded member payload, $(wc -c < docs/index.html) bytes"
+            else
+              echo "R2: upload FAILED after retries -- members fall back to the free build this cycle."
+              echo "R2: not fatal; the swap and the Pages deploy below must still run."
+              {
+                echo "### R2 member upload failed"
+                echo ""
+                echo "Members are served the free build this cycle. Transient Cloudflare"
+                echo "errors are retried; a persistent failure means checking the token"
+                echo "has R2 Object:Edit."
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
           else
             echo "R2: CLOUDFLARE_API_TOKEN/ACCOUNT_ID absent -- skipping upload."
             echo "R2: members will fall back to the free build until this is set."
