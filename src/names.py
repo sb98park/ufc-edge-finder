@@ -75,6 +75,26 @@ NAME_ALIASES = {
     # the first build after it re-cancelled the bout and re-created the roster
     # row within one cycle, because the ingest still produced the variant. A
     # data correction without an alias is undone by the next refresh.
+    # FOUND BY scripts/check_duplicate_identities.py, canonical spellings
+    # chosen by the owner. Unlike Tina Black these are not clean duplicates --
+    # each identity holds bouts the other lacks -- so the alias is doing the
+    # work on its own for now: _normalize_name resolves through it before
+    # folding, so fight_key, the scouting drawer, method rates, coverage and
+    # card_discovery's replacement branch all see one fighter even while the
+    # duplicate ROWS are still on file.
+    #
+    # "Cong Wang" and "Cam Nelson" are the owner's calls. Note the books and
+    # the 2026-10-04 card both say "Wang Cong" -- the opposite order -- which
+    # does not matter for matching, because an alias folds BOTH spellings to
+    # the same key. It only decides which one is displayed.
+    "cameron nelson": "Cam Nelson",
+    "wang cong": "Cong Wang",
+    # ARIANE, not Ariana: the owner wrote Ariana, and every spelling in the
+    # spine is "Ariane" (Ariane Lipski da Silva, Ariane da Silva, Ariane
+    # Carnelossi). The structure is the owner's -- Lipski da Silva as the
+    # surname -- and the spelling is the sources'. An alias whose canonical
+    # form no source emits would display a name nobody else uses.
+    "ariane da silva": "Ariane Lipski da Silva",
     "tina black": "Valesca Machado",
     "sean king iii": "Sean King",
     "jose miguel delgado": "Jose Delgado",
