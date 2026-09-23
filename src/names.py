@@ -56,6 +56,26 @@ NAME_ALIASES = {
     # 385 names on the roster, cards and results only five carry one, and
     # stripping collides exactly once -- this man with himself. Safe today,
     # and silently wrong the first time a father and son are both carded.
+    # THE SAME BUG, CAUGHT THREE DAYS BEFORE THE CARD INSTEAD OF AFTER IT.
+    # The 2026-09-26 card source calls her "Tina Black"; ESPN's athlete page
+    # (id 4836549) and every sportsbook pricing the bout -- DraftKings,
+    # BetMGM, BetRivers, Bovada, BetUS, BetOnline -- call her Valesca Machado.
+    # The two folded differently and she became two fighters: a duplicate
+    # roster row, twenty duplicate spine bouts carrying the same dates,
+    # opponents, winners, methods and promotions, and a second card row that
+    # card_discovery read as a REPLACEMENT -- so it cancelled the real bout
+    # and voided its prediction, exactly as it did to Sean King.
+    #
+    # "Valesca Machado" is canonical on every axis that matters: it is what
+    # the books quote, so it is what a price has to match to be bettable; it
+    # is ESPN's own spelling; and it is the name the surviving pick was
+    # published under. The variant is the one the card feed invented.
+    #
+    # The merge alone was not enough and that is the lesson worth keeping:
+    # the first build after it re-cancelled the bout and re-created the roster
+    # row within one cycle, because the ingest still produced the variant. A
+    # data correction without an alias is undone by the next refresh.
+    "tina black": "Valesca Machado",
     "sean king iii": "Sean King",
     "jose miguel delgado": "Jose Delgado",
     # ONE BOUT EACH, WRITTEN TWICE. Found by sweeping the spine for a fighter
