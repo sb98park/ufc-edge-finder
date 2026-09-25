@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-25T03:21:17+00:00",
+  "at": "2026-09-25T03:52:33+00:00",
   "card_data_coverage": {
     "carded_fighters": 132,
-    "checked_at": "2026-09-25T03:16:03+00:00",
+    "checked_at": "2026-09-25T03:46:12+00:00",
     "counts": {
       "physicals": 6,
       "record": 1
@@ -44,8 +44,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 1.33,
-    "checked_at": "2026-09-25T03:17:55+00:00",
+    "cache_age_hours": 1.84,
+    "checked_at": "2026-09-25T03:48:19+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -61,7 +61,7 @@
   },
   "parlay": {
     "bankroll": {
-      "combinations_considered": 59,
+      "combinations_considered": 89,
       "reason": "built",
       "slips": 1
     },
@@ -86,7 +86,7 @@
   },
   "rows_by_source": {
     "DraftKings": 24,
-    "Polymarket": 263
+    "Polymarket": 265
   },
   "rundown_dates_requested": [
     "2026-09-26"
@@ -222,21 +222,21 @@
         "clearing_floor": 0,
         "date": "2026-09-26",
         "event": "UFC Fight Night: Rosas Jr. vs. Barcelos",
-        "fights": 12,
-        "gap_p90": 0.0219,
+        "fights": 13,
+        "gap_p90": 0.0173,
         "market_p90": 0.7335,
-        "model_p90": 0.7554,
-        "priced": 12,
+        "model_p90": 0.7508,
+        "priced": 13,
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-09-25T03:21:15+00:00",
-    "equivalent_floor": 0.685,
+    "checked_at": "2026-09-25T03:52:31+00:00",
+    "equivalent_floor": 0.684,
     "floor_in_force": 0.78,
-    "gap_move": -0.0937,
+    "gap_move": -0.0945,
     "trailing_cards": 6,
-    "trailing_gap_p90": -0.0791,
-    "trailing_selectivity": 0.0238,
+    "trailing_gap_p90": -0.0799,
+    "trailing_selectivity": 0.0235,
     "verdict": "drifted"
   },
   "shadow_ledger": {
@@ -247,58 +247,58 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 18.5,
+      "duration_s": 18.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-25T03:17:12+00:00",
+      "last_ok": "2026-09-25T03:47:26+00:00",
       "ok": true,
-      "ran_at": "2026-09-25T03:17:12+00:00"
+      "ran_at": "2026-09-25T03:47:26+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 48.5,
+      "duration_s": 53.1,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-25T03:16:53+00:00",
+      "last_ok": "2026-09-25T03:47:07+00:00",
       "ok": true,
-      "ran_at": "2026-09-25T03:16:53+00:00"
+      "ran_at": "2026-09-25T03:47:07+00:00"
     },
     "card_data_coverage": {
+      "consecutive_failures": 0,
+      "duration_s": 0.6,
+      "error": null,
+      "exit_code": 0,
+      "in_flight": false,
+      "killed_previous_run": false,
+      "last_ok": "2026-09-25T03:46:12+00:00",
+      "ok": true,
+      "ran_at": "2026-09-25T03:46:12+00:00"
+    },
+    "duplicate_identities": {
       "consecutive_failures": 0,
       "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-25T03:16:03+00:00",
+      "last_ok": "2026-09-25T03:47:26+00:00",
       "ok": true,
-      "ran_at": "2026-09-25T03:16:03+00:00"
-    },
-    "duplicate_identities": {
-      "consecutive_failures": 0,
-      "duration_s": 0.3,
-      "error": null,
-      "exit_code": 0,
-      "in_flight": false,
-      "killed_previous_run": false,
-      "last_ok": "2026-09-25T03:17:12+00:00",
-      "ok": true,
-      "ran_at": "2026-09-25T03:17:12+00:00"
+      "ran_at": "2026-09-25T03:47:26+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 0.9,
+      "duration_s": 1.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-25T03:16:04+00:00",
+      "last_ok": "2026-09-25T03:46:14+00:00",
       "ok": true,
-      "ran_at": "2026-09-25T03:16:04+00:00"
+      "ran_at": "2026-09-25T03:46:14+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -306,52 +306,52 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-25T03:19:11+00:00",
+      "last_ok": "2026-09-25T03:50:06+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.7,
+      "duration_s": 1.0,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-25T03:16:04+00:00",
+      "last_ok": "2026-09-25T03:46:13+00:00",
       "ok": true,
-      "ran_at": "2026-09-25T03:16:04+00:00"
+      "ran_at": "2026-09-25T03:46:13+00:00"
     },
     "orphaned_event_rows": {
-      "consecutive_failures": 0,
-      "duration_s": 0.2,
-      "error": null,
-      "exit_code": 0,
-      "in_flight": false,
-      "killed_previous_run": false,
-      "last_ok": "2026-09-25T03:21:16+00:00",
-      "ok": true,
-      "ran_at": "2026-09-25T03:21:16+00:00"
-    },
-    "scale_drift": {
       "consecutive_failures": 0,
       "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-09-25T03:21:15+00:00",
+      "last_ok": "2026-09-25T03:52:31+00:00",
       "ok": true,
-      "ran_at": "2026-09-25T03:21:15+00:00"
+      "ran_at": "2026-09-25T03:52:31+00:00"
+    },
+    "scale_drift": {
+      "consecutive_failures": 0,
+      "duration_s": 0.4,
+      "error": null,
+      "exit_code": 0,
+      "in_flight": false,
+      "killed_previous_run": false,
+      "last_ok": "2026-09-25T03:52:31+00:00",
+      "ok": true,
+      "ran_at": "2026-09-25T03:52:31+00:00"
     }
   },
   "tracked_moneyline": {
     "best_book": {
-      "DraftKings": 16,
-      "Polymarket": 8
+      "DraftKings": 18,
+      "Polymarket": 6
     },
     "n": 24,
     "source": {
-      "DraftKings": 16,
-      "Polymarket": 8
+      "DraftKings": 18,
+      "Polymarket": 6
     }
   }
 }
