@@ -1,57 +1,5 @@
 {
- "UFC Fight Night: Rosas Jr. vs. Barcelos": {
-  "bankroll": {
-   "pinned_at": "2026-09-21T00:18:10+00:00",
-   "identities": [
-    "[\"Raul Rosas Jr.|Raoni Barcelos\", [{\"fighter\": \"Raul Rosas Jr\", \"kind\": \"winner\"}]]",
-    "[\"Brady Hiestand|Rinya Nakamura\", [{\"fighter\": \"Rinya Nakamura\", \"kind\": \"winner\"}]]"
-   ],
-   "snapshot": {
-    "legs": [
-     {
-      "label": "Raul Rosas Jr ML",
-      "odds_display": "-142",
-      "is_model": false,
-      "decimal_odds": 1.704225,
-      "fight_key": "Raul Rosas Jr.|Raoni Barcelos",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Raul Rosas Jr"
-       }
-      ],
-      "source": "DraftKings"
-     },
-     {
-      "label": "Rinya Nakamura ML",
-      "odds_display": "-145",
-      "is_model": false,
-      "decimal_odds": 1.689655,
-      "fight_key": "Brady Hiestand|Rinya Nakamura",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Rinya Nakamura"
-       }
-      ],
-      "source": "DraftKings"
-     }
-    ],
-    "has_model_legs": false,
-    "fight_ids": [
-     "card_0",
-     "card_5"
-    ],
-    "slip_id": "8c553e0b99e6",
-    "combined_decimal": 2.879553,
-    "combined_american": 188,
-    "combined_american_display": "+188",
-    "combined_prob": 0.3569,
-    "combined_prob_raw": 0.4514,
-    "venue": "DraftKings"
-   }
-  }
- },
+ "UFC Fight Night: Rosas Jr. vs. Barcelos": {},
  "UFC 331: Van vs. Pantoja 2": {},
  "Noche UFC: Silva vs. Delgado": {},
  "UFC Fight Night: Hooker vs. Parnasse": {}
