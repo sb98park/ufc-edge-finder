@@ -1,4 +1,57 @@
 {
+ "UFC 332: Silva vs. Wang": {
+  "bankroll": {
+   "pinned_at": "2026-09-27T03:58:28+00:00",
+   "identities": [
+    "[\"Deiveson Figueiredo|Payton Talbott\", [{\"fighter\": \"Payton Talbott\", \"kind\": \"winner\"}]]",
+    "[\"Marvin Vettori|Ismail Naurdiev\", [{\"fighter\": \"Ismail Naurdiev\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Payton Talbott ML",
+      "odds_display": "-650",
+      "is_model": false,
+      "decimal_odds": 1.153846,
+      "fight_key": "Deiveson Figueiredo|Payton Talbott",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Payton Talbott"
+       }
+      ],
+      "source": "BetMGM"
+     },
+     {
+      "label": "Ismail Naurdiev ML",
+      "odds_display": "-135",
+      "is_model": false,
+      "decimal_odds": 1.740741,
+      "fight_key": "Marvin Vettori|Ismail Naurdiev",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Ismail Naurdiev"
+       }
+      ],
+      "source": "BetMGM"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_44",
+     "card_54"
+    ],
+    "slip_id": "2c16270a77d0",
+    "combined_decimal": 2.008547,
+    "combined_american": 101,
+    "combined_american_display": "+101",
+    "combined_prob": 0.4431,
+    "combined_prob_raw": 0.3457,
+    "venue": "BetMGM"
+   }
+  }
+ },
  "UFC Fight Night: Rosas Jr. vs. Barcelos": {},
  "UFC 331: Van vs. Pantoja 2": {},
  "Noche UFC: Silva vs. Delgado": {},
