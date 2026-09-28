@@ -1,14 +1,15 @@
-event_name,event_date,card_position,weight_class,fighter_a,fighter_b,event_start_time_et,is_womens_division,event_location,event_main_card_time_et,replacement,replaced_fighter,cancelled,manually_added,bout_order,_orphan_streak
-UFC 332: Silva vs. Wang,2026-10-03,Main Event,Women's Flyweight,Natalia Silva,Cong Wang,16:00,True,"Delta Center, Salt Lake City, UT",20:00,,,,,8.0,
-UFC 332: Silva vs. Wang,2026-10-03,Co-Main Event,Bantamweight,Deiveson Figueiredo,Payton Talbott,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,7.0,
-UFC 332: Silva vs. Wang,2026-10-03,Main Card,Lightweight,King Green,Esteban Ribovics,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,10.0,
-UFC 332: Silva vs. Wang,2026-10-03,Main Card,Welterweight,Khaos Williams,Roberto Soldić,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,9.0,
-UFC 332: Silva vs. Wang,2026-10-03,Main Card,Middleweight,Ateba Gautier,Roman Kopylov,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,4.0,
-UFC 332: Silva vs. Wang,2026-10-03,Prelims,Flyweight,Imanol Rodriguez,Alden Coria,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,3.0,
-UFC 332: Silva vs. Wang,2026-10-03,Prelims,Middleweight,Damian Pinas,Andrey Pulyaev,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,2.0,
-UFC 332: Silva vs. Wang,2026-10-03,Prelims,Bantamweight,Marcus McGhee,Bernardo Sopaj,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,5.0,
-UFC 332: Silva vs. Wang,2026-10-03,Prelims,Heavyweight,Anthony Wint,Lucas Armand,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,1.0,
-UFC 332: Silva vs. Wang,2026-10-03,Early Prelims,Heavyweight,Johnny Walker,Mick Parkin,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,6.0,
-UFC 332: Silva vs. Wang,2026-10-03,Early Prelims,Lightweight,Rafael Dos Anjos,Alexander Hernandez,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,3.0,
-UFC 332: Silva vs. Wang,2026-10-03,Early Prelims,Middleweight,Marvin Vettori,Ismail Naurdiev,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,5.0,
-UFC 332: Silva vs. Wang,2026-10-03,Early Prelims,Welterweight,Court McGee,Eric Nolan,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,1.0,
+event_name,event_date,card_position,weight_class,fighter_a,fighter_b,event_start_time_et,is_womens_division,event_location,event_main_card_time_et,replacement,replaced_fighter,cancelled,manually_added,bout_order
+UFC 332: Silva vs. Wang,2026-10-03,Main Event,Women's Flyweight,Natalia Silva,Cong Wang,16:00,True,"Delta Center, Salt Lake City, UT",20:00,,,,,8.0
+UFC 332: Silva vs. Wang,2026-10-03,Co-Main Event,Bantamweight,Deiveson Figueiredo,Payton Talbott,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,7.0
+UFC 332: Silva vs. Wang,2026-10-03,Main Card,Lightweight,King Green,Esteban Ribovics,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,10.0
+UFC 332: Silva vs. Wang,2026-10-03,Main Card,Welterweight,Khaos Williams,Roberto Soldić,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,9.0
+UFC 332: Silva vs. Wang,2026-10-03,Main Card,Middleweight,Ateba Gautier,Roman Kopylov,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,4.0
+UFC 332: Silva vs. Wang,2026-10-03,Prelims,Flyweight,Imanol Rodriguez,Alden Coria,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,3.0
+UFC 332: Silva vs. Wang,2026-10-03,Prelims,Middleweight,Damian Pinas,Andrey Pulyaev,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,2.0
+UFC 332: Silva vs. Wang,2026-10-03,Prelims,Bantamweight,Marcus McGhee,Bernardo Sopaj,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,5.0
+UFC 332: Silva vs. Wang,2026-10-03,Prelims,Heavyweight,Anthony Wint,Lucas Armand,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,1.0
+UFC 332: Silva vs. Wang,2026-10-03,Early Prelims,Heavyweight,Johnny Walker,Mick Parkin,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,6.0
+UFC 332: Silva vs. Wang,2026-10-03,Early Prelims,Lightweight,Rafael Dos Anjos,Alexander Hernandez,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,3.0
+UFC 332: Silva vs. Wang,2026-10-03,Early Prelims,Middleweight,Marvin Vettori,Ismail Naurdiev,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,5.0
+UFC 332: Silva vs. Wang,2026-10-03,Early Prelims,Welterweight,Jacobe Smith,Bruce Whitehead,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,
+UFC 332: Silva vs. Wang,2026-10-03,Early Prelims,Welterweight,Court McGee,Eric Nolan,16:00,False,"Delta Center, Salt Lake City, UT",20:00,,,,,1.0
