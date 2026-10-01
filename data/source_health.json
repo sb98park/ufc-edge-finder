@@ -1,110 +1,13 @@
 {
-  "at": "2026-10-01T02:32:34+00:00",
+  "at": "2026-10-01T02:57:27+00:00",
   "card_data_coverage": {
     "carded_fighters": 128,
-    "checked_at": "2026-10-01T02:26:10+00:00",
+    "checked_at": "2026-10-01T02:51:19+00:00",
     "counts": {
-      "history": 12,
       "physicals": 5,
       "record": 1
     },
     "findings": [
-      {
-        "detail": "2 of 8 bouts in fight_history (25%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Aleksandre Topuria",
-        "last_fight_date": "2025-11-22",
-        "severity": "history"
-      },
-      {
-        "detail": "6 of 22 bouts in fight_history (27%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Alessandro Costa",
-        "last_fight_date": "2026-07-11",
-        "severity": "history"
-      },
-      {
-        "detail": "7 of 20 bouts in fight_history (35%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Amir Albazi",
-        "last_fight_date": "2026-02-07",
-        "severity": "history"
-      },
-      {
-        "detail": "8 of 27 bouts in fight_history (30%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Asu Almabayev",
-        "last_fight_date": "2026-06-27",
-        "severity": "history"
-      },
-      {
-        "detail": "6 of 20 bouts in fight_history (30%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Ikram Aliskerov",
-        "last_fight_date": "2026-06-27",
-        "severity": "history"
-      },
-      {
-        "detail": "8 of 38 bouts in fight_history (21%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Ji\u0159\u00ed Proch\u00e1zka",
-        "last_fight_date": "2026-04-11",
-        "severity": "history"
-      },
-      {
-        "detail": "4 of 19 bouts in fight_history (21%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Kevin Vallejos",
-        "last_fight_date": "2026-03-14",
-        "severity": "history"
-      },
-      {
-        "detail": "12 of 42 bouts in fight_history (29%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Kyoji Horiguchi",
-        "last_fight_date": "2026-06-20",
-        "severity": "history"
-      },
-      {
-        "detail": "5 of 11 bouts in fight_history (45%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Navajo Stirling",
-        "last_fight_date": "2026-08-01",
-        "severity": "history"
-      },
-      {
-        "detail": "2 of 9 bouts in fight_history (22%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Santiago Luna",
-        "last_fight_date": "2026-06-06",
-        "severity": "history"
-      },
-      {
-        "detail": "1 of 23 bouts in fight_history (4%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Tahir Abdullayev",
-        "last_fight_date": "2026-06-27",
-        "severity": "history"
-      },
-      {
-        "detail": "3 of 11 bouts in fight_history (27%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
-        "event_date": "2026-11-21",
-        "fighter": "Tallison Teixeira",
-        "last_fight_date": "2026-05-30",
-        "severity": "history"
-      },
       {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "UFC Fight Night: Buckley vs. Malott",
@@ -122,8 +25,8 @@
   "edges_two_way": {
     "best_book": {
       "BetMGM": 11,
-      "DraftKings": 34,
-      "FanDuel": 7,
+      "DraftKings": 33,
+      "FanDuel": 8,
       "Polymarket": 76
     },
     "books_quoting": {
@@ -136,21 +39,21 @@
   "moneyline": {
     "best_book": {
       "BetMGM": 11,
-      "DraftKings": 19,
-      "FanDuel": 4,
+      "DraftKings": 18,
+      "FanDuel": 5,
       "Polymarket": 6
     },
     "n": 40,
     "source": {
       "BetMGM": 11,
-      "DraftKings": 19,
-      "FanDuel": 4,
+      "DraftKings": 18,
+      "FanDuel": 5,
       "Polymarket": 6
     }
   },
   "odds_api": {
-    "cache_age_hours": 0.43,
-    "checked_at": "2026-10-01T02:29:06+00:00",
+    "cache_age_hours": 0.85,
+    "checked_at": "2026-10-01T02:54:16+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -190,7 +93,7 @@
     "BetMGM": 24,
     "DraftKings": 64,
     "FanDuel": 48,
-    "Polymarket": 276
+    "Polymarket": 278
   },
   "rundown_dates_requested": [
     "2026-10-03"
@@ -345,7 +248,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-10-01T02:32:32+00:00",
+    "checked_at": "2026-10-01T02:57:25+00:00",
     "equivalent_floor": 0.68,
     "floor_in_force": 0.78,
     "gap_move": -0.093,
@@ -362,25 +265,25 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 82.6,
+      "duration_s": 107.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-01T02:28:21+00:00",
+      "last_ok": "2026-10-01T02:53:44+00:00",
       "ok": true,
-      "ran_at": "2026-10-01T02:28:21+00:00"
+      "ran_at": "2026-10-01T02:53:44+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 45.6,
+      "duration_s": 34.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-01T02:26:58+00:00",
+      "last_ok": "2026-10-01T02:51:57+00:00",
       "ok": true,
-      "ran_at": "2026-10-01T02:26:58+00:00"
+      "ran_at": "2026-10-01T02:51:57+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -389,31 +292,31 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-01T02:26:10+00:00",
+      "last_ok": "2026-10-01T02:51:19+00:00",
       "ok": true,
-      "ran_at": "2026-10-01T02:26:10+00:00"
+      "ran_at": "2026-10-01T02:51:19+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
-      "duration_s": 0.5,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-01T02:28:22+00:00",
+      "last_ok": "2026-10-01T02:53:44+00:00",
       "ok": true,
-      "ran_at": "2026-10-01T02:28:22+00:00"
+      "ran_at": "2026-10-01T02:53:44+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.4,
+      "duration_s": 1.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-01T02:26:13+00:00",
+      "last_ok": "2026-10-01T02:51:22+00:00",
       "ok": true,
-      "ran_at": "2026-10-01T02:26:13+00:00"
+      "ran_at": "2026-10-01T02:51:22+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -421,19 +324,19 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-01T02:30:40+00:00",
+      "last_ok": "2026-10-01T02:55:33+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 1.3,
+      "duration_s": 1.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-01T02:26:11+00:00",
+      "last_ok": "2026-10-01T02:51:20+00:00",
       "ok": true,
-      "ran_at": "2026-10-01T02:26:11+00:00"
+      "ran_at": "2026-10-01T02:51:20+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
@@ -442,9 +345,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-01T02:32:32+00:00",
+      "last_ok": "2026-10-01T02:57:26+00:00",
       "ok": true,
-      "ran_at": "2026-10-01T02:32:32+00:00"
+      "ran_at": "2026-10-01T02:57:26+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -453,22 +356,22 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-01T02:32:32+00:00",
+      "last_ok": "2026-10-01T02:57:26+00:00",
       "ok": true,
-      "ran_at": "2026-10-01T02:32:32+00:00"
+      "ran_at": "2026-10-01T02:57:26+00:00"
     }
   },
   "tracked_moneyline": {
     "best_book": {
       "BetMGM": 10,
-      "DraftKings": 15,
-      "FanDuel": 3
+      "DraftKings": 14,
+      "FanDuel": 4
     },
     "n": 28,
     "source": {
       "BetMGM": 10,
-      "DraftKings": 15,
-      "FanDuel": 3
+      "DraftKings": 14,
+      "FanDuel": 4
     }
   }
 }
