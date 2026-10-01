@@ -1,18 +1,18 @@
 {
  "UFC 332: Silva vs. Wang": {
   "bankroll": {
-   "pinned_at": "2026-09-27T03:58:28+00:00",
+   "pinned_at": "2026-10-01T00:03:20+00:00",
    "identities": [
     "[\"Deiveson Figueiredo|Payton Talbott\", [{\"fighter\": \"Payton Talbott\", \"kind\": \"winner\"}]]",
-    "[\"Marvin Vettori|Ismail Naurdiev\", [{\"fighter\": \"Ismail Naurdiev\", \"kind\": \"winner\"}]]"
+    "[\"Marcus McGhee|Bernardo Sopaj\", [{\"fighter\": \"Bernardo Sopaj\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
       "label": "Payton Talbott ML",
-      "odds_display": "-625",
+      "odds_display": "-675",
       "is_model": false,
-      "decimal_odds": 1.16,
+      "decimal_odds": 1.148148,
       "fight_key": "Deiveson Figueiredo|Payton Talbott",
       "conditions": [
        {
@@ -23,15 +23,15 @@
       "source": "DraftKings"
      },
      {
-      "label": "Ismail Naurdiev ML",
-      "odds_display": "-135",
+      "label": "Bernardo Sopaj ML",
+      "odds_display": "+114",
       "is_model": false,
-      "decimal_odds": 1.740741,
-      "fight_key": "Marvin Vettori|Ismail Naurdiev",
+      "decimal_odds": 2.14,
+      "fight_key": "Marcus McGhee|Bernardo Sopaj",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Ismail Naurdiev"
+        "fighter": "Bernardo Sopaj"
        }
       ],
       "source": "DraftKings"
@@ -40,14 +40,14 @@
     "has_model_legs": false,
     "fight_ids": [
      "card_1",
-     "card_12"
+     "card_7"
     ],
-    "slip_id": "072b371835b5",
-    "combined_decimal": 2.019259,
-    "combined_american": 102,
-    "combined_american_display": "+102",
-    "combined_prob": 0.4495,
-    "combined_prob_raw": 0.3457,
+    "slip_id": "3f35fe937bef",
+    "combined_decimal": 2.457037,
+    "combined_american": 146,
+    "combined_american_display": "+146",
+    "combined_prob": 0.506,
+    "combined_prob_raw": 0.3667,
     "venue": "DraftKings"
    }
   }
