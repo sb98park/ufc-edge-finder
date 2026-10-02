@@ -97,7 +97,7 @@ Mateusz Rębecki,Lightweight,67.0,66.0,Southpaw,21,5,10.0,7.0,4.0,2.0,1.0,2.0,49
 Jovan Leka,Heavyweight,76.0,75.0,Orthodox,14,2,8.0,4.0,2.0,0.0,0.0,2.0,,,55.6,2026-08-01,,24.0,W,KO/TKO,,,,,Alexander Poppeck,Serbia,0.0,True,True,,,,,,0.5,,2.0,24.0,0.5,,0.0,8.5,4.5,,,,17.4,,,,,,,,,,,,
 Max Gimenis,Heavyweight,74.0,75.0,Orthodox,6,2,3.0,2.0,1.0,2.0,0.0,0.0,,,,,,33.0,,,,,,,,Brazil,,True,True,,,,,,0.0,,1.0,7.0,0.0,,2.0,9.0,0.0,,,,0.9,,,,,,,,,,,,
 Hailey Cowan,Women's Bantamweight,68.0,67.0,Southpaw,7,6,2.0,2.0,3.0,2.0,3.0,1.0,41.2,37.5,80.0,2026-08-01,,34.0,L,KO/TKO,,,,,Nina Milošević,USA,0.0,True,True,2.399,,,,,0.0,37.7,5.0,66.0,3.2,39.7,0.4,31.2,1.0,2.723,1.802,3.123,50.0,14.1,35.3,10.3,50.6,57.4,36.0,64.7,2.6,25.0,6.6,69.9,27.6
-Nina Milošević,Women's Bantamweight,65.0,65.0,,9,1,4.0,2.0,3.0,0.0,0.0,1.0,,,,2026-08-01,,29.0,W,KO/TKO,,,,,Hailey Cowan,Australia,0.0,True,True,,,,,,1.0,,1.0,39.0,0.0,,0.0,13.0,2.0,,,,3.7,,,,,,,,,,,,
+Nina Milošević,Women's Bantamweight,65.0,65.0,Orthodox,9,1,4.0,2.0,3.0,0.0,0.0,1.0,,,,2026-08-01,,29.0,W,KO/TKO,,,,,Hailey Cowan,Australia,0.0,True,True,,,,,,1.0,,1.0,39.0,0.0,,0.0,13.0,2.0,,,,3.7,,,,,,,,,,,,
 Dennis Buzukja,Featherweight,69.0,70.5,Switch,12,7,5.0,1.0,6.0,2.0,1.0,4.0,44.3,27.3,72.5,2026-08-01,,28.0,L,SUB,,,,,Bogdan Grad,USA,0.0,True,True,0.0,,,,,0.25,21.4,8.0,99.0,1.38,45.4,0.375,48.88,5.0,4.277,0.548,4.764,82.1,12.8,24.0,4.8,63.2,57.0,25.4,84.9,7.2,10.3,17.7,76.0,16.9
 Bogdan Grad,Featherweight,68.0,70.0,Orthodox,16,4,9.0,4.0,3.0,2.0,0.0,2.0,53.2,38.6,,2026-08-01,,30.0,W,SUB,,,,,Dennis Buzukja,Austria,0.0,True,True,5.022,2.643,2.15,5.269,,0.0,38.2,6.0,72.67,7.33,54.5,0.5,46.67,0.67,4.158,4.57,5.018,55.8,7.5,17.1,22.4,75.4,63.8,22.0,65.5,6.1,12.1,14.2,88.2,5.7
 Josias Musasa,Bantamweight,68.0,74.0,Southpaw,8,2,7.0,0.0,1.0,0.0,1.0,1.0,45.5,,81.2,,,27.0,,,,,,,,Democratic Republic of Congo,,True,True,0.821,,,,,0.0,,3.0,77.67,1.33,45.9,0.333,48.67,10.67,3.186,0.902,4.389,33.3,12.3,28.1,2.8,59.6,53.8,23.6,63.2,29.5,34.0,22.6,47.9,22.6
@@ -458,3 +458,18 @@ Yana Santos,Women's Bantamweight,66.0,68.0,Orthodox,17,8,7.0,1.0,9.0,3.0,2.0,3.0
 Luana Santos,Women's Bantamweight,66.0,67.0,Orthodox,11,2,1.0,5.0,5.0,0.0,0.0,2.0,53.6,37.9,85.7,2026-06-20,,26.0,W,,,,,,Karol Rosa,Brazil,,False,True,,,,,,0.0,34.3,7.0,52.0,4.14,54.6,0.0,27.0,1.0,2.529,2.14,2.451,77.1,12.2,22.8,2.1,65.1,59.0,29.2,89.2,5.3,8.7,11.8,78.8,15.9
 Carlos Leal,Welterweight,71.0,74.0,Orthodox,23,7,,,,,,,47.0,11.1,90.9,2026-02-21,,32.0,W,DEC,,,,,Chidi Njokuani,Brazil,,False,True,,,,,,0.0,7.6,5.0,130.2,1.8,46.1,0.2,54.4,4.4,6.124,0.3,5.444,50.0,19.5,21.7,0.0,58.8,64.4,23.9,86.6,0.4,13.4,11.8,87.9,11.8
 Randy Brown,Welterweight,75.0,78.0,Orthodox,20,8,,,,,,,47.1,34.4,74.6,2026-04-11,,36.0,L,nan,,,,,Kevin Holland,Jamaica,,False,True,,,,,,0.25,21.3,24.0,89.92,1.33,46.4,0.25,32.29,2.62,4.258,0.691,3.248,238.6,43.4,18.3,7.7,38.3,62.1,20.5,77.2,9.4,15.2,17.4,76.9,13.7
+Gabriel Lorenço,Heavyweight,75.0,76.0,Orthodox,8,1,,,,,,,,,,2026-09-01,,27.0,W,,,,,,Charlie Cleveland,Brazil,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Jose Delano,Featherweight,68.0,70.0,Orthodox,17,3,,,,,,,,,,2026-04-04,,30.0,W,,,,,,Robert Ruchała,Brazil,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Murtazali Magomedov,Featherweight,69.0,70.5,Orthodox,11,0,,,,,,,,,,2026-06-20,,27.0,W,,,,,,Melsik Baghdasaryan,Kyrgyzstan,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Davey Grant,Bantamweight,68.0,69.0,Orthodox,18,8,4.0,9.0,5.0,0.0,5.0,3.0,,,,2026-04-25,,40.0,W,,,,,,Adrian Luna Martinetti,England,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Elijah Smith,Bantamweight,69.0,71.0,Orthodox,10,1,,,,,,,,,,2026-03-14,,24.0,W,nan,,,,,SuYoung You,USA,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Jonny Parsons,Welterweight,69.0,69.0,Orthodox,9,3,,,,,,,,,,2023-07-22,,35.0,W,KO/TKO,,,,,Danny Roberts,USA,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Jose Henrique,Welterweight,75.0,79.0,Orthodox,9,1,,,,,,,,,,2026-05-30,,24.0,W,nan,,,,,Ding Meng,Brazil,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Priscila Cachoeira,Women's Bantamweight,67.0,65.0,Orthodox,13,9,8.0,0.0,5.0,1.0,5.0,3.0,,,,2026-06-06,,38.0,L,nan,,,,,Chelsea Chandler,Brazil,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Karine Silva,Women's Flyweight,65.0,67.0,Orthodox,19,7,9.0,8.0,2.0,1.0,2.0,4.0,,,,2026-04-18,,32.0,L,nan,,,,,Jasmine Jasudavicius,Brazil,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Gabriella Fernandes,Women's Flyweight,66.0,66.0,Southpaw,11,4,,,,,,,,,,2026-03-28,,33.0,L,nan,,,,,Casey O'Neill,Brazil,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Lucas Brennan,Featherweight,70.0,71.0,Southpaw,11,3,2.0,7.0,1.0,0.0,0.0,3.0,,,,2026-04-25,,26.0,L,,,,,,Francis Marshall,USA,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Billy Elekana,Light Heavyweight,75.0,77.5,Southpaw,10,2,3.0,3.0,4.0,0.0,1.0,1.0,,,,2026-01-31,,31.0,W,SUB,,,,,Junior Tafa,USA,,,True,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Mantas Kondratavičius,Middleweight,74.0,75.5,Orthodox,9,1,,,,,,,,,,2026-03-21,,27.0,W,,,,,,Antonio Trocoli,Lithuania,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Tatiana Suarez,Women's Strawweight,65.0,66.0,Southpaw,13,1,,,,,,,,,,2026-04-11,,35.0,W,nan,,,,,Loopy Godínez,USA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Virna Jandiroba,Women's Strawweight,63.0,64.0,Orthodox,23,4,,,,,,,,,,2026-04-04,,38.0,W,,,,,,Tabatha Ricci,Brazil,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
