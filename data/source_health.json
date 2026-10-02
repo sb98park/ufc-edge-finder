@@ -1,10 +1,10 @@
 {
-  "at": "2026-10-02T14:29:04+00:00",
+  "at": "2026-10-02T14:53:55+00:00",
   "card_data_coverage": {
     "carded_fighters": 150,
-    "checked_at": "2026-10-02T14:21:46+00:00",
+    "checked_at": "2026-10-02T14:46:46+00:00",
     "counts": {
-      "history": 17,
+      "history": 14,
       "physicals": 6,
       "record": 1
     },
@@ -18,27 +18,11 @@
         "severity": "history"
       },
       {
-        "detail": "1 of 7 bouts in fight_history (14%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Allen vs. Duncan",
-        "event_date": "2026-10-10",
-        "fighter": "Allen Frye Jr.",
-        "last_fight_date": "2025-12-14",
-        "severity": "history"
-      },
-      {
         "detail": "9 of 28 bouts in fight_history (32%) -- layoff, form and Elo all read a partial sample",
         "event": "UFC Fight Night: Allen vs. Duncan",
         "event_date": "2026-10-10",
         "fighter": "Brendson Ribeiro",
         "last_fight_date": "2026-04-04",
-        "severity": "history"
-      },
-      {
-        "detail": "4 of 13 bouts in fight_history (31%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Allen vs. Duncan",
-        "event_date": "2026-10-10",
-        "fighter": "Daria Zhelezniakova",
-        "last_fight_date": "2026-04-18",
         "severity": "history"
       },
       {
@@ -138,14 +122,6 @@
         "severity": "history"
       },
       {
-        "detail": "1 of 6 bouts in fight_history (17%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC Fight Night: Allen vs. Duncan",
-        "event_date": "2026-10-10",
-        "fighter": "RJ Harris",
-        "last_fight_date": "2026-07-18",
-        "severity": "history"
-      },
-      {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "UFC Fight Night: Buckley vs. Malott",
         "event_date": "2026-10-17",
@@ -189,8 +165,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 0.36,
-    "checked_at": "2026-10-02T14:24:54+00:00",
+    "cache_age_hours": 0.78,
+    "checked_at": "2026-10-02T14:50:01+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -385,7 +361,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-10-02T14:29:02+00:00",
+    "checked_at": "2026-10-02T14:53:53+00:00",
     "equivalent_floor": 0.679,
     "floor_in_force": 0.78,
     "gap_move": -0.0908,
@@ -402,25 +378,25 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 47.1,
+      "duration_s": 73.0,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T14:23:35+00:00",
+      "last_ok": "2026-10-02T14:48:58+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T14:23:35+00:00"
+      "ran_at": "2026-10-02T14:48:58+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 59.0,
+      "duration_s": 56.8,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T14:22:48+00:00",
+      "last_ok": "2026-10-02T14:47:45+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T14:22:48+00:00"
+      "ran_at": "2026-10-02T14:47:45+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -429,9 +405,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T14:21:46+00:00",
+      "last_ok": "2026-10-02T14:46:46+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T14:21:46+00:00"
+      "ran_at": "2026-10-02T14:46:46+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
@@ -440,9 +416,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T14:23:35+00:00",
+      "last_ok": "2026-10-02T14:48:59+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T14:23:35+00:00"
+      "ran_at": "2026-10-02T14:48:59+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
@@ -451,9 +427,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T14:21:49+00:00",
+      "last_ok": "2026-10-02T14:46:49+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T14:21:49+00:00"
+      "ran_at": "2026-10-02T14:46:49+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -461,19 +437,19 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T14:26:32+00:00",
+      "last_ok": "2026-10-02T14:51:34+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 1.0,
+      "duration_s": 1.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T14:21:48+00:00",
+      "last_ok": "2026-10-02T14:46:47+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T14:21:48+00:00"
+      "ran_at": "2026-10-02T14:46:47+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
@@ -482,20 +458,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T14:29:02+00:00",
+      "last_ok": "2026-10-02T14:53:54+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T14:29:02+00:00"
+      "ran_at": "2026-10-02T14:53:54+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T14:29:02+00:00",
+      "last_ok": "2026-10-02T14:53:53+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T14:29:02+00:00"
+      "ran_at": "2026-10-02T14:53:53+00:00"
     }
   },
   "tracked_moneyline": {
