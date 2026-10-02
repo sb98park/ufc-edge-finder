@@ -1,11 +1,11 @@
 {
-  "at": "2026-10-02T22:01:35+00:00",
+  "at": "2026-10-02T22:27:09+00:00",
   "card_data_coverage": {
-    "carded_fighters": 168,
-    "checked_at": "2026-10-02T21:52:31+00:00",
+    "carded_fighters": 190,
+    "checked_at": "2026-10-02T22:16:44+00:00",
     "counts": {
-      "history": 27,
-      "layoff": 2,
+      "history": 45,
+      "layoff": 4,
       "physicals": 7,
       "record": 2
     },
@@ -227,6 +227,150 @@
         "severity": "history"
       },
       {
+        "detail": "2 of 9 bouts in fight_history (22%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Alvin Hines",
+        "last_fight_date": "2026-07-18",
+        "severity": "history"
+      },
+      {
+        "detail": "3 of 16 bouts in fight_history (19%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Austin Bashi",
+        "last_fight_date": "2026-07-18",
+        "severity": "history"
+      },
+      {
+        "detail": "4 of 12 bouts in fight_history (33%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Billy Elekana",
+        "last_fight_date": "2026-01-31",
+        "severity": "history"
+      },
+      {
+        "detail": "15 of 26 bouts in fight_history (58%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Davey Grant",
+        "last_fight_date": "2026-04-25",
+        "severity": "history"
+      },
+      {
+        "detail": "3 of 11 bouts in fight_history (27%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Elijah Smith",
+        "last_fight_date": "2026-03-14",
+        "severity": "history"
+      },
+      {
+        "detail": "0 of 9 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Gabriel Loren\u00e7o",
+        "last_fight_date": "2026-09-01",
+        "severity": "history"
+      },
+      {
+        "detail": "6 of 15 bouts in fight_history (40%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Gabriella Fernandes",
+        "last_fight_date": "2026-03-28",
+        "severity": "history"
+      },
+      {
+        "detail": "1 of 12 bouts in fight_history (8%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Jonny Parsons",
+        "last_fight_date": "2023-07-22",
+        "severity": "history"
+      },
+      {
+        "detail": "0 of 20 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Jose Delano",
+        "last_fight_date": "2026-04-04",
+        "severity": "history"
+      },
+      {
+        "detail": "1 of 10 bouts in fight_history (10%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Jose Henrique",
+        "last_fight_date": "2026-05-30",
+        "severity": "history"
+      },
+      {
+        "detail": "8 of 26 bouts in fight_history (31%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Karine Silva",
+        "last_fight_date": "2026-04-18",
+        "severity": "history"
+      },
+      {
+        "detail": "0 of 14 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Lucas Brennan",
+        "last_fight_date": "2026-04-25",
+        "severity": "history"
+      },
+      {
+        "detail": "0 of 10 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Mantas Kondratavi\u010dius",
+        "last_fight_date": "2026-03-21",
+        "severity": "history"
+      },
+      {
+        "detail": "0 of 11 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Murtazali Magomedov",
+        "last_fight_date": "2026-06-20",
+        "severity": "history"
+      },
+      {
+        "detail": "1 of 10 bouts in fight_history (10%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Nina Milo\u0161evi\u0107",
+        "last_fight_date": "2026-08-01",
+        "severity": "history"
+      },
+      {
+        "detail": "3 of 16 bouts in fight_history (19%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Seokhyeon Ko",
+        "last_fight_date": "2026-07-18",
+        "severity": "history"
+      },
+      {
+        "detail": "12 of 27 bouts in fight_history (44%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Virna Jandiroba",
+        "last_fight_date": "2026-04-04",
+        "severity": "history"
+      },
+      {
+        "detail": "9 of 26 bouts in fight_history (35%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Wellington Turman",
+        "last_fight_date": "2023-12-02",
+        "severity": "history"
+      },
+      {
         "detail": "last fight 2025-05-10 (1.4y) is the newest of only 4 bouts we hold -- the real one may be far more recent",
         "event": "UFC Fight Night: Las Vegas",
         "event_date": "2026-10-31",
@@ -238,6 +382,20 @@
         "event": "UFC Fight Night: Las Vegas",
         "event_date": "2026-10-31",
         "fighter": "Rodrigo Sezinando",
+        "severity": "layoff"
+      },
+      {
+        "detail": "last fight 2023-07-22 (3.2y) is the newest of only 1 bout we hold -- the real one may be far more recent",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Jonny Parsons",
+        "severity": "layoff"
+      },
+      {
+        "detail": "last fight 2023-12-02 (2.8y) is the newest of only 9 bouts we hold -- the real one may be far more recent",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Wellington Turman",
         "severity": "layoff"
       },
       {
@@ -263,43 +421,43 @@
   },
   "edges_two_way": {
     "best_book": {
-      "DraftKings": 32,
-      "FanDuel": 24,
-      "Polymarket": 68
+      "DraftKings": 30,
+      "FanDuel": 26,
+      "Polymarket": 88
     },
     "books_quoting": {
-      "1.0": 80,
+      "1.0": 100,
       "2.0": 44
     },
-    "n": 124
+    "n": 144
   },
   "moneyline": {
     "best_book": {
-      "DraftKings": 21,
-      "FanDuel": 11,
-      "Polymarket": 6
+      "DraftKings": 19,
+      "FanDuel": 13,
+      "Polymarket": 26
     },
-    "n": 38,
+    "n": 58,
     "source": {
-      "DraftKings": 21,
-      "FanDuel": 11,
-      "Polymarket": 6
+      "DraftKings": 19,
+      "FanDuel": 13,
+      "Polymarket": 26
     }
   },
   "odds_api": {
-    "cache_age_hours": 1.66,
-    "checked_at": "2026-10-02T21:55:23+00:00",
-    "detail": "served from cache, quota untouched",
+    "cache_age_hours": 0.0,
+    "checked_at": "2026-10-02T22:20:46+00:00",
+    "detail": "fetched 44 events, quota remaining 424",
     "max_serve_hours": 24.0,
     "ok": true
   },
   "overround": {
     "in_force": {
       "prop": 1.2,
-      "two_way": 1.0475
+      "two_way": 1.047
     },
     "measured": {
-      "two_way": 1.0475
+      "two_way": 1.047
     }
   },
   "parlay": {
@@ -327,7 +485,7 @@
   "rows_by_source": {
     "DraftKings": 64,
     "FanDuel": 64,
-    "Polymarket": 288
+    "Polymarket": 308
   },
   "rundown_dates_requested": [
     "2026-10-03"
@@ -482,7 +640,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-10-02T22:01:32+00:00",
+    "checked_at": "2026-10-02T22:27:06+00:00",
     "equivalent_floor": 0.679,
     "floor_in_force": 0.78,
     "gap_move": -0.0908,
@@ -499,25 +657,25 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 0.5,
+      "duration_s": 81.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T21:53:26+00:00",
+      "last_ok": "2026-10-02T22:19:09+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T21:53:26+00:00"
+      "ran_at": "2026-10-02T22:19:09+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 52.2,
+      "duration_s": 61.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T21:53:26+00:00",
+      "last_ok": "2026-10-02T22:17:48+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T21:53:26+00:00"
+      "ran_at": "2026-10-02T22:17:48+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -526,9 +684,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T21:52:31+00:00",
+      "last_ok": "2026-10-02T22:16:44+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T21:52:31+00:00"
+      "ran_at": "2026-10-02T22:16:44+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
@@ -537,9 +695,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T21:53:27+00:00",
+      "last_ok": "2026-10-02T22:19:09+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T21:53:27+00:00"
+      "ran_at": "2026-10-02T22:19:09+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
@@ -548,9 +706,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T21:52:33+00:00",
+      "last_ok": "2026-10-02T22:16:46+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T21:52:33+00:00"
+      "ran_at": "2026-10-02T22:16:46+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -558,7 +716,7 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T21:57:22+00:00",
+      "last_ok": "2026-10-02T22:22:55+00:00",
       "ok": true
     },
     "merge_results": {
@@ -568,20 +726,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T21:52:32+00:00",
+      "last_ok": "2026-10-02T22:16:45+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T21:52:32+00:00"
+      "ran_at": "2026-10-02T22:16:45+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T22:01:32+00:00",
+      "last_ok": "2026-10-02T22:27:06+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T22:01:32+00:00"
+      "ran_at": "2026-10-02T22:27:06+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -590,20 +748,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-02T22:01:32+00:00",
+      "last_ok": "2026-10-02T22:27:06+00:00",
       "ok": true,
-      "ran_at": "2026-10-02T22:01:32+00:00"
+      "ran_at": "2026-10-02T22:27:06+00:00"
     }
   },
   "tracked_moneyline": {
     "best_book": {
-      "DraftKings": 18,
-      "FanDuel": 10
+      "DraftKings": 17,
+      "FanDuel": 11
     },
     "n": 28,
     "source": {
-      "DraftKings": 18,
-      "FanDuel": 10
+      "DraftKings": 17,
+      "FanDuel": 11
     }
   }
 }
