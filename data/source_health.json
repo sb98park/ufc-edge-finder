@@ -1,8 +1,8 @@
 {
-  "at": "2026-10-03T08:24:09+00:00",
+  "at": "2026-10-03T08:50:24+00:00",
   "card_data_coverage": {
     "carded_fighters": 190,
-    "checked_at": "2026-10-03T08:16:43+00:00",
+    "checked_at": "2026-10-03T08:41:44+00:00",
     "counts": {
       "history": 43,
       "layoff": 4,
@@ -433,9 +433,9 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 1.64,
-    "checked_at": "2026-10-03T08:18:35+00:00",
-    "detail": "served from cache, quota untouched",
+    "cache_age_hours": 0.0,
+    "checked_at": "2026-10-03T08:44:28+00:00",
+    "detail": "fetched 44 events, quota remaining 408",
     "max_serve_hours": 24.0,
     "ok": true
   },
@@ -629,7 +629,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-10-03T08:24:06+00:00",
+    "checked_at": "2026-10-03T08:50:21+00:00",
     "equivalent_floor": 0.679,
     "floor_in_force": 0.78,
     "gap_move": -0.0908,
@@ -646,25 +646,25 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 0.5,
+      "duration_s": 0.6,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-03T08:17:35+00:00",
+      "last_ok": "2026-10-03T08:42:49+00:00",
       "ok": true,
-      "ran_at": "2026-10-03T08:17:35+00:00"
+      "ran_at": "2026-10-03T08:42:49+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 48.1,
+      "duration_s": 61.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-03T08:17:34+00:00",
+      "last_ok": "2026-10-03T08:42:48+00:00",
       "ok": true,
-      "ran_at": "2026-10-03T08:17:34+00:00"
+      "ran_at": "2026-10-03T08:42:48+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -673,9 +673,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-03T08:16:43+00:00",
+      "last_ok": "2026-10-03T08:41:44+00:00",
       "ok": true,
-      "ran_at": "2026-10-03T08:16:43+00:00"
+      "ran_at": "2026-10-03T08:41:44+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
@@ -684,9 +684,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-03T08:17:35+00:00",
+      "last_ok": "2026-10-03T08:42:49+00:00",
       "ok": true,
-      "ran_at": "2026-10-03T08:17:35+00:00"
+      "ran_at": "2026-10-03T08:42:49+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
@@ -695,9 +695,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-03T08:16:46+00:00",
+      "last_ok": "2026-10-03T08:41:47+00:00",
       "ok": true,
-      "ran_at": "2026-10-03T08:16:46+00:00"
+      "ran_at": "2026-10-03T08:41:47+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -705,7 +705,7 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-03T08:20:06+00:00",
+      "last_ok": "2026-10-03T08:46:19+00:00",
       "ok": true
     },
     "merge_results": {
@@ -715,9 +715,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-03T08:16:45+00:00",
+      "last_ok": "2026-10-03T08:41:46+00:00",
       "ok": true,
-      "ran_at": "2026-10-03T08:16:45+00:00"
+      "ran_at": "2026-10-03T08:41:46+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
@@ -726,9 +726,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-03T08:24:07+00:00",
+      "last_ok": "2026-10-03T08:50:21+00:00",
       "ok": true,
-      "ran_at": "2026-10-03T08:24:07+00:00"
+      "ran_at": "2026-10-03T08:50:21+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -737,9 +737,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-03T08:24:07+00:00",
+      "last_ok": "2026-10-03T08:50:21+00:00",
       "ok": true,
-      "ran_at": "2026-10-03T08:24:07+00:00"
+      "ran_at": "2026-10-03T08:50:21+00:00"
     }
   },
   "tracked_moneyline": {
