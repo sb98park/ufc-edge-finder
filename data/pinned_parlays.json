@@ -1,4 +1,57 @@
 {
+ "UFC Fight Night: Allen vs. Duncan": {
+  "bankroll": {
+   "pinned_at": "2026-10-04T03:18:31+00:00",
+   "identities": [
+    "[\"Matheus Camilo|Jai Herbert\", [{\"fighter\": \"Matheus Camilo\", \"kind\": \"winner\"}]]",
+    "[\"Felipe Franco|Brendson Ribeiro\", [{\"fighter\": \"Felipe Franco\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Matheus Camilo ML",
+      "odds_display": "-180",
+      "is_model": false,
+      "decimal_odds": 1.555556,
+      "fight_key": "Matheus Camilo|Jai Herbert",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Matheus Camilo"
+       }
+      ],
+      "source": "DraftKings"
+     },
+     {
+      "label": "Felipe Franco ML",
+      "odds_display": "-290",
+      "is_model": false,
+      "decimal_odds": 1.344828,
+      "fight_key": "Felipe Franco|Brendson Ribeiro",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Felipe Franco"
+       }
+      ],
+      "source": "DraftKings"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_65",
+     "card_72"
+    ],
+    "slip_id": "3a785633b9d2",
+    "combined_decimal": 2.091954,
+    "combined_american": 109,
+    "combined_american_display": "+109",
+    "combined_prob": 0.4548,
+    "combined_prob_raw": 0.4518,
+    "venue": "DraftKings"
+   }
+  }
+ },
  "UFC 332: Silva vs. Wang": {
   "bankroll": {
    "pinned_at": "2026-10-01T00:03:20+00:00",
