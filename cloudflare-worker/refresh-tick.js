@@ -100,7 +100,7 @@ function ghHeaders(env) {
  * returned for the caller to log, not raised.
  */
 async function unwedgeStuckRuns(env, now = Date.now()) {
-  const out = { checked: 0, cancelled: [], error: null };
+  const out = { checked: 0, cancelled: [], unkillable: [], error: null };
   try {
     const resp = await fetch(`${RUNS_URL}?status=queued&per_page=50`, { headers: ghHeaders(env) });
     if (!resp.ok) {
@@ -119,11 +119,40 @@ async function unwedgeStuckRuns(env, now = Date.now()) {
         method: "POST",
         headers: ghHeaders(env),
       });
-      // 202 Accepted is the documented success. 409 means it already moved
-      // on between the list and the cancel, which is a race this does not
-      // need to care about -- the wedge is gone either way.
-      if (cancel.status === 202 || cancel.status === 409) {
+      // 202 Accepted is the documented success.
+      if (cancel.status === 202) {
         out.cancelled.push({ id: run.id, number: run.run_number, minutes: Math.round(minutes) });
+      } else if (cancel.status === 409) {
+        // 409 WAS TREATED AS SUCCESS AND IT IS NOT ALWAYS ONE.
+        //
+        // The reasoning was that the run moved on between the list and the
+        // cancel -- a race, and the wedge is gone either way. That is one of
+        // two things 409 means. The other is a run GitHub will no longer let
+        // anyone cancel: #3097 has been `queued` since 2026-08-19, answers
+        // 409 every time, and was therefore reported as freshly cancelled on
+        // every tick for forty-eight days. A guard that claims a cancellation
+        // it did not perform is worse than one that says nothing, because the
+        // log it writes is the only evidence anybody has.
+        //
+        // The two are told apart by asking. A run that genuinely moved on is
+        // no longer queued; a zombie still is. One extra request, only on a
+        // path that should almost never be taken.
+        let stillQueued = false;
+        try {
+          const after = await fetch(`${RUNS_URL}/${run.id}`, { headers: ghHeaders(env) });
+          if (after.ok) {
+            const body = await after.json();
+            stillQueued = body?.status === "queued";
+          }
+        } catch {
+          // Unknowable this tick. Treated as the race, which is the reading
+          // that does not invent a problem.
+        }
+        if (stillQueued) {
+          out.unkillable.push({ id: run.id, number: run.run_number, minutes: Math.round(minutes) });
+        } else {
+          out.cancelled.push({ id: run.id, number: run.run_number, minutes: Math.round(minutes) });
+        }
       } else if (cancel.status === 403) {
         // THE ONE FAILURE THAT LOOKS LIKE NO FAILURE. Listing runs needs
         // `actions: read` and cancelling needs `actions: write`. A PAT with
@@ -284,6 +313,15 @@ export default {
         unwedged.cancelled.map((r) => `#${r.number} (${r.minutes}m)`).join(", ")
       );
     }
+    if (unwedged.unkillable.length) {
+      // Not a cancellation and not an error: a run GitHub will not let anyone
+      // cancel. Named so it cannot be mistaken for the guard working.
+      console.log(
+        `[refresh-tick] ${unwedged.unkillable.length} run(s) stuck in queued that GitHub ` +
+        `refuses to cancel (409, still queued after): ` +
+        unwedged.unkillable.map((r) => `#${r.number} (${Math.round(r.minutes / 60)}h)`).join(", ")
+      );
+    }
     if (unwedged.error) {
       console.log(`[refresh-tick] queue check did not complete: ${unwedged.error}`);
     }
@@ -330,6 +368,9 @@ export default {
         (queued.cancelled.length
           ? ` (${queued.cancelled.map((r) => `#${r.number} ${r.minutes}m`).join(", ")})`
           : ` -- nothing has been queued past ${STUCK_QUEUED_MINUTES}m`) + `\n` +
+        (queued.unkillable && queued.unkillable.length
+          ? `  unkillable         ${queued.unkillable.map((r) => `#${r.number} (${Math.round(r.minutes / 60)}h)`).join(", ")}\n`
+          : "") +
         (queued.error ? `  queue check error  ${queued.error}\n` : "") +
         `\nNo repository_dispatch was sent by this call.\n`,
         { status: scope.canCancel === false ? 503 : 200 }

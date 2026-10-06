@@ -32,6 +32,12 @@ function stub(runs, { listStatus = 200, cancelStatus = 202 } = {}) {
       return new Response("", { status: cancelStatus });
     }
     if (listStatus !== 200) return new Response("nope", { status: listStatus });
+    // The 409 re-check asks for ONE run by id. It is not the list call, so it
+    // must not be measured by the list call's rule -- answering "completed"
+    // keeps this helper's 409 meaning the race it was written for.
+    if (/\/runs\/\d+$/.test(String(url))) {
+      return new Response(JSON.stringify({ status: "completed" }), { status: 200 });
+    }
     // The guard must ask only for queued runs -- never in_progress.
     check("only queued runs are listed", String(url).includes("status=queued"));
     return new Response(JSON.stringify({ workflow_runs: runs }), { status: 200 });
@@ -171,6 +177,64 @@ check("an unexpected status is unknown, not a false OK", pOdd.canCancel === null
 globalThis.fetch = async () => { throw new Error("network down"); };
 let pDead = await probeCancelScope(env);
 check("the probe never throws", pDead.canCancel === null && /network down/.test(pDead.detail));
+
+
+// --- 409 is two different things -------------------------------------------
+// It was read as "the run moved on between the list and the cancel", which is
+// one of them. The other is a run GitHub will no longer let anyone cancel:
+// #3097 sat `queued` from 2026-08-19, answered 409 every tick, and was
+// reported as freshly cancelled for forty-eight days. On 2026-10-05 a REAL
+// wedge then sat for 25.5 hours while the guard logged success.
+function stub409(stillQueued, { createdMinAgo = 600 } = {}) {
+  const runs = [{ id: 999, run_number: 3097, created_at: ago(createdMinAgo) }];
+  globalThis.fetch = async (url, opts = {}) => {
+    const u = String(url);
+    if (u.includes("/cancel")) return new Response("", { status: 409 });
+    // the re-check: same run id, no /cancel suffix
+    if (/runs\/999$/.test(u)) {
+      return new Response(JSON.stringify({ status: stillQueued ? "queued" : "completed" }),
+                          { status: 200 });
+    }
+    return new Response(JSON.stringify({ workflow_runs: runs }), { status: 200 });
+  };
+}
+
+stub409(true);
+r = await unwedgeStuckRuns(env, NOW);
+check("a 409 that is STILL queued is not counted as cancelled", r.cancelled.length === 0);
+check("  ...it is reported as unkillable instead", r.unkillable.length === 1);
+check("  ...naming the run", r.unkillable[0] && r.unkillable[0].number === 3097);
+check("  ...and is not an error either", r.error === null);
+
+stub409(false);
+r = await unwedgeStuckRuns(env, NOW);
+check("a 409 that genuinely moved on still counts as cancelled", r.cancelled.length === 1);
+check("  ...and is not called unkillable", r.unkillable.length === 0);
+
+// If the re-check itself fails we must not invent a zombie: unknowable reads
+// as the race, which is the interpretation that does not raise a false alarm.
+globalThis.fetch = async (url) => {
+  const u = String(url);
+  if (u.includes("/cancel")) return new Response("", { status: 409 });
+  if (/runs\/999$/.test(u)) throw new Error("network down");
+  return new Response(JSON.stringify({
+    workflow_runs: [{ id: 999, run_number: 3097, created_at: ago(600) }] }), { status: 200 });
+};
+r = await unwedgeStuckRuns(env, NOW);
+check("an unreadable re-check falls back to the race reading",
+      r.cancelled.length === 1 && r.unkillable.length === 0);
+
+// A 202 must not pay for the extra request.
+let probes = 0;
+globalThis.fetch = async (url) => {
+  const u = String(url);
+  if (u.includes("/cancel")) return new Response("", { status: 202 });
+  if (/runs\/999$/.test(u)) { probes++; return new Response("{}", { status: 200 }); }
+  return new Response(JSON.stringify({
+    workflow_runs: [{ id: 999, run_number: 3097, created_at: ago(600) }] }), { status: 200 });
+};
+r = await unwedgeStuckRuns(env, NOW);
+check("a clean 202 makes no re-check request", r.cancelled.length === 1 && probes === 0);
 
 console.log(`${fail ? "FAIL" : "PASS"}: refresh-tick -- ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
