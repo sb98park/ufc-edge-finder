@@ -100,7 +100,7 @@ function ghHeaders(env) {
  * returned for the caller to log, not raised.
  */
 async function unwedgeStuckRuns(env, now = Date.now()) {
-  const out = { checked: 0, cancelled: [], unkillable: [], error: null };
+  const out = { checked: 0, qualified: 0, cancelled: [], unkillable: [], error: null };
   try {
     const resp = await fetch(`${RUNS_URL}?status=queued&per_page=50`, { headers: ghHeaders(env) });
     if (!resp.ok) {
@@ -115,6 +115,7 @@ async function unwedgeStuckRuns(env, now = Date.now()) {
       if (!startedAt) continue;
       const minutes = (now - startedAt) / 60000;
       if (minutes < STUCK_QUEUED_MINUTES) continue;
+      out.qualified += 1;
       const cancel = await fetch(`${RUNS_URL}/${run.id}/cancel`, {
         method: "POST",
         headers: ghHeaders(env),
@@ -367,7 +368,16 @@ export default {
         `  cancelled this call ${queued.cancelled.length}` +
         (queued.cancelled.length
           ? ` (${queued.cancelled.map((r) => `#${r.number} ${r.minutes}m`).join(", ")})`
-          : ` -- nothing has been queued past ${STUCK_QUEUED_MINUTES}m`) + `\n` +
+          : queued.qualified
+            // A REAL WEDGE THAT SURVIVED IS NOT "nothing was stuck".
+            // The first run of this check printed "cancelled this call 0 --
+            // nothing has been queued past 30m" while reporting, two lines
+            // below, a 403 on a run queued since 2026-08-19. The suffix
+            // assumed the only reason to cancel nothing is that there was
+            // nothing to cancel, which is the one reading this guard exists
+            // to disprove.
+            ? ` -- ${queued.qualified} past ${STUCK_QUEUED_MINUTES}m AND STILL THERE`
+            : ` -- nothing has been queued past ${STUCK_QUEUED_MINUTES}m`) + `\n` +
         (queued.unkillable && queued.unkillable.length
           ? `  unkillable         ${queued.unkillable.map((r) => `#${r.number} (${Math.round(r.minutes / 60)}h)`).join(", ")}\n`
           : "") +

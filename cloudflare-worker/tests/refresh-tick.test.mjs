@@ -236,5 +236,20 @@ globalThis.fetch = async (url) => {
 r = await unwedgeStuckRuns(env, NOW);
 check("a clean 202 makes no re-check request", r.cancelled.length === 1 && probes === 0);
 
+
+// --- "cancelled 0" has two very different meanings --------------------------
+// The first real run of ?check=queue printed "cancelled this call 0 -- nothing
+// has been queued past 30m" while reporting a 403 on a run queued since
+// 2026-08-19, two lines below. Nothing stuck and stuck-but-unkillable are
+// opposite findings and must not share a sentence.
+stub([{ id: 7, run_number: 42, created_at: ago(600) }], { cancelStatus: 403 });
+r = await unwedgeStuckRuns(env, NOW);
+check("a run past the threshold is counted even when the cancel fails", r.qualified === 1);
+check("  ...and nothing is reported as cancelled", r.cancelled.length === 0);
+
+stub([{ id: 8, run_number: 43, created_at: ago(5) }]);
+r = await unwedgeStuckRuns(env, NOW);
+check("a fresh queued run does not count as qualified", r.qualified === 0);
+
 console.log(`${fail ? "FAIL" : "PASS"}: refresh-tick -- ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
