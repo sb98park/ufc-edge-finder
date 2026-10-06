@@ -34,6 +34,15 @@ compatibility_date = "2026-08-01"
 # octane-gate, it serves no site traffic.
 workers_dev = true
 
+# NO PREVIEW URLS. wrangler warned on the first deploy from this file that
+# leaving preview_urls unset turns them ON by default, which quietly creates
+# additional public hostnames for a Worker whose whole job is holding a GitHub
+# PAT. The fetch handler is token-gated so a preview URL is not an open door,
+# but an undeclared setting is precisely what this config exists to abolish --
+# the same argument wrangler.toml makes about routes: declare it here, do not
+# leave it to a default somebody has to remember.
+preview_urls = false
+
 # EVERY FIVE MINUTES, and the number is load-bearing rather than arbitrary:
 # refresh.yml asks GitHub for the same cadence and GitHub delivers roughly one
 # tick an hour, which is the whole reason this Worker exists. Changing it here
