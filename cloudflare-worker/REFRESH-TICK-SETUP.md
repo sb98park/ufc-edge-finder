@@ -151,6 +151,31 @@ On a quiet day you should see roughly 11 skips for every build. If every run
 says BUILDING, the ticks aren't arriving any faster than before — check the
 Worker's **Cron Events** log.
 
+## Deploying from the committed config
+
+This Worker was originally deployed by pasting it into the Cloudflare
+dashboard. `wrangler.toml` explains why that is a problem for `octane-gate`,
+and on 2026-10-06 it cost something here: a run sat queued for 25 hours, the
+site went a day stale, and `unwedgeStuckRuns` — which exists to clear exactly
+that — did not fire. Two explanations fitted, a PAT missing `actions: write`
+or a deployed Worker older than the guard, and **nothing in the repo could
+tell them apart**, because nothing in the repo knew what was deployed.
+
+So deploy from `wrangler.refresh-tick.toml` rather than the dashboard:
+
+```bash
+npx wrangler deploy --config cloudflare-worker/wrangler.refresh-tick.toml
+```
+
+The config carries the name, the entry point and the `*/5 * * * *` cron. It
+deliberately declares **no secrets** — `GITHUB_TOKEN` and `TICK_TOKEN` are set
+with `wrangler secret put` and live only in Cloudflare, and a deploy does not
+disturb secrets already set.
+
+After deploying, run the check below. If it answers with a queue report, the
+deployed Worker is the one in git. If it ignores `check=queue` and simply
+dispatches, what is running is older than this document.
+
 ## Verifying the queue guard's permission
 
 The Worker also clears runs wedged in `queued` (see `unwedgeStuckRuns` — this

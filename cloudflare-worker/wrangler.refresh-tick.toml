@@ -1,0 +1,46 @@
+# The refresh tick, as a committed config.
+#
+# WHY THIS FILE NOW EXISTS. wrangler.toml opens by explaining that these
+# Workers were deployed by pasting them into the Cloudflare dashboard, which
+# "left no record of which version was actually running, and no way to tell
+# whether the file in git matched production", and that for the gate this was
+# unacceptable. refresh-tick kept the dashboard habit.
+#
+# On 2026-10-06 that cost a concrete thing. A run sat queued for 25 hours
+# holding the refresh concurrency group, the site went a day stale, and
+# unwedgeStuckRuns -- which exists precisely to clear that -- did not. The two
+# candidate explanations were a PAT without `actions: write`, and a deployed
+# Worker that predates the guard entirely. Nothing in the repo could tell them
+# apart, because nothing in the repo knew what was deployed. That ambiguity is
+# what this file removes; one `wrangler deploy` and the answer is "the version
+# in git".
+#
+# Deploy:    npx wrangler deploy --config cloudflare-worker/wrangler.refresh-tick.toml
+# Secrets:   npx wrangler secret put GITHUB_TOKEN --config cloudflare-worker/wrangler.refresh-tick.toml
+#            npx wrangler secret put TICK_TOKEN   --config cloudflare-worker/wrangler.refresh-tick.toml
+# Tail logs: npx wrangler tail refresh-tick --config cloudflare-worker/wrangler.refresh-tick.toml
+#
+# SECRETS ARE NOT DECLARED HERE and must not be. GITHUB_TOKEN is a
+# fine-grained PAT and TICK_TOKEN guards the manual endpoint; both are set
+# with `wrangler secret put` and live only in Cloudflare. A deploy from this
+# config does not disturb secrets already set.
+
+name = "refresh-tick"
+main = "refresh-tick.js"
+compatibility_date = "2026-08-01"
+
+# The manual endpoint (?token=...) needs a reachable URL, and refresh-tick
+# sits on workers.dev rather than behind a route on the apex -- unlike
+# octane-gate, it serves no site traffic.
+workers_dev = true
+
+# EVERY FIVE MINUTES, and the number is load-bearing rather than arbitrary:
+# refresh.yml asks GitHub for the same cadence and GitHub delivers roughly one
+# tick an hour, which is the whole reason this Worker exists. Changing it here
+# changes how often the site can publish.
+#
+# The guard that clears a wedged queue runs on this same schedule, BEFORE the
+# dispatch, so a queue jammed at 03:00 is cleared on the 03:05 tick rather
+# than whenever somebody happens to look.
+[triggers]
+crons = ["*/5 * * * *"]
