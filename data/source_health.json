@@ -1,13 +1,38 @@
 {
-  "at": "2026-10-07T22:31:11+00:00",
+  "at": "2026-10-07T23:07:59+00:00",
   "card_data_coverage": {
-    "carded_fighters": 165,
-    "checked_at": "2026-10-07T22:25:59+00:00",
+    "carded_fighters": 168,
+    "checked_at": "2026-10-07T23:00:53+00:00",
     "counts": {
-      "physicals": 5,
+      "history": 3,
+      "physicals": 6,
       "record": 2
     },
     "findings": [
+      {
+        "detail": "1 of 17 bouts in fight_history (6%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Buckley vs. Malott",
+        "event_date": "2026-10-17",
+        "fighter": "Cristian P\u00e9rez",
+        "last_fight_date": "2026-08-18",
+        "severity": "history"
+      },
+      {
+        "detail": "0 of 6 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Buckley vs. Malott",
+        "event_date": "2026-10-17",
+        "fighter": "Joel Faglier",
+        "last_fight_date": "2026-02-20",
+        "severity": "history"
+      },
+      {
+        "detail": "12 of 24 bouts in fight_history (50%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Buckley vs. Malott",
+        "event_date": "2026-10-17",
+        "fighter": "Kyle Nelson",
+        "last_fight_date": "2026-03-28",
+        "severity": "history"
+      },
       {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "UFC Fight Night: Buckley vs. Malott",
@@ -59,9 +84,9 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 1.88,
-    "checked_at": "2026-10-07T22:27:23+00:00",
-    "detail": "served from cache, quota untouched",
+    "cache_age_hours": 0.0,
+    "checked_at": "2026-10-07T23:03:45+00:00",
+    "detail": "fetched 40 events, quota remaining 128",
     "max_serve_hours": 24.0,
     "ok": true
   },
@@ -100,7 +125,7 @@
     "BetMGM": 20,
     "DraftKings": 52,
     "FanDuel": 52,
-    "Polymarket": 173
+    "Polymarket": 180
   },
   "rundown_dates_requested": [
     "2026-10-10"
@@ -266,7 +291,7 @@
         "selectivity": 0.0833
       }
     ],
-    "checked_at": "2026-10-07T22:31:09+00:00",
+    "checked_at": "2026-10-07T23:07:57+00:00",
     "equivalent_floor": 0.672,
     "floor_in_force": 0.78,
     "gap_move": -0.0818,
@@ -283,25 +308,25 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 37.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-07T22:26:43+00:00",
+      "last_ok": "2026-10-07T23:02:37+00:00",
       "ok": true,
-      "ran_at": "2026-10-07T22:26:43+00:00"
+      "ran_at": "2026-10-07T23:02:37+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 41.3,
+      "duration_s": 64.8,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-07T22:26:43+00:00",
+      "last_ok": "2026-10-07T23:02:00+00:00",
       "ok": true,
-      "ran_at": "2026-10-07T22:26:43+00:00"
+      "ran_at": "2026-10-07T23:02:00+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -310,20 +335,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-07T22:25:59+00:00",
+      "last_ok": "2026-10-07T23:00:53+00:00",
       "ok": true,
-      "ran_at": "2026-10-07T22:25:59+00:00"
+      "ran_at": "2026-10-07T23:00:53+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-07T22:26:43+00:00",
+      "last_ok": "2026-10-07T23:02:38+00:00",
       "ok": true,
-      "ran_at": "2026-10-07T22:26:43+00:00"
+      "ran_at": "2026-10-07T23:02:38+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
@@ -332,9 +357,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-07T22:26:01+00:00",
+      "last_ok": "2026-10-07T23:00:55+00:00",
       "ok": true,
-      "ran_at": "2026-10-07T22:26:01+00:00"
+      "ran_at": "2026-10-07T23:00:55+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -342,7 +367,7 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-07T22:28:21+00:00",
+      "last_ok": "2026-10-07T23:04:59+00:00",
       "ok": true
     },
     "merge_results": {
@@ -352,9 +377,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-07T22:26:00+00:00",
+      "last_ok": "2026-10-07T23:00:54+00:00",
       "ok": true,
-      "ran_at": "2026-10-07T22:26:00+00:00"
+      "ran_at": "2026-10-07T23:00:54+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
@@ -363,9 +388,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-07T22:31:10+00:00",
+      "last_ok": "2026-10-07T23:07:58+00:00",
       "ok": true,
-      "ran_at": "2026-10-07T22:31:10+00:00"
+      "ran_at": "2026-10-07T23:07:58+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -374,9 +399,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-07T22:31:09+00:00",
+      "last_ok": "2026-10-07T23:07:57+00:00",
       "ok": true,
-      "ran_at": "2026-10-07T22:31:09+00:00"
+      "ran_at": "2026-10-07T23:07:57+00:00"
     }
   },
   "tracked_moneyline": {
