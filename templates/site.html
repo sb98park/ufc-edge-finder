@@ -7102,11 +7102,34 @@
               <span class="pr-state st-{{ s.result }}">
                 {%- if s.result == 'cashed' %}Cashed{% elif s.result == 'dead' %}Missed{% else %}Void{% endif -%}
               </span>
-              <span class="pr-legs-won">{{ s.legs_won }}/{{ s.legs|length }} legs</span>
+              {#- A VOID WAS NEVER GRADED, so it has no won-count and no price,
+                  and must not invent either.
+
+                  grade_slips writes result, leg_states, legs_won,
+                  units_result and settled_decimal together. void_stale_slips
+                  writes result, units_result, graded_at and void_reason --
+                  and nothing else. This line read settled_decimal
+                  unconditionally, american_from_decimal called float() on the
+                  Undefined, and the whole build died. `Generate site` has no
+                  continue-on-error by design, so the site froze for seven
+                  hours on the first slip ever to void: 74ff7228c89e, on
+                  2026-10-07.
+
+                  Showing 0/2 legs would be worse than showing nothing. Those
+                  legs did not lose; the market was voided out from under
+                  them, which is why units_result is 0.0 rather than -1.0. -#}
+              {% if s.result == 'void' %}
+              <span class="pr-legs-won">{{ s.legs|length }} legs</span>
+              {% else %}
+              <span class="pr-legs-won">{{ s.legs_won | default(0) }}/{{ s.legs|length }} legs</span>
               {#- Priced off settled_decimal, the number units_result was
                   computed from, so the two can never disagree -- a voided leg
-                  shortens the slip and this follows it. -#}
+                  shortens the slip and this follows it. Guarded anyway: a
+                  price is worth less than a page. -#}
+              {% if s.settled_decimal is defined and s.settled_decimal %}
               <span class="pr-price">{{ s.settled_decimal | american_from_decimal }}</span>
+              {% endif %}
+              {% endif %}
               <span class="pr-units {{ 'up' if (s.units_result or 0) > 0 else ('down' if (s.units_result or 0) < 0 else 'flat') }}">{{ '%+.2f'|format(s.units_result or 0) }}U</span>
             </div>
             <ul class="pr-leglist">
