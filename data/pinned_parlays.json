@@ -1,57 +1,4 @@
 {
- "UFC Fight Night: Allen vs. Duncan": {
-  "bankroll": {
-   "pinned_at": "2026-10-06T11:06:29+00:00",
-   "identities": [
-    "[\"Matheus Camilo|Jai Herbert\", [{\"fighter\": \"Matheus Camilo\", \"kind\": \"winner\"}]]",
-    "[\"Malcolm Wellmaker|Otari Tanzilovi\", [{\"fighter\": \"Malcolm Wellmaker\", \"kind\": \"winner\"}]]"
-   ],
-   "snapshot": {
-    "legs": [
-     {
-      "label": "Matheus Camilo ML",
-      "odds_display": "-192",
-      "is_model": false,
-      "decimal_odds": 1.520833,
-      "fight_key": "Matheus Camilo|Jai Herbert",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Matheus Camilo"
-       }
-      ],
-      "source": "DraftKings"
-     },
-     {
-      "label": "Malcolm Wellmaker ML",
-      "odds_display": "-198",
-      "is_model": false,
-      "decimal_odds": 1.505051,
-      "fight_key": "Malcolm Wellmaker|Otari Tanzilovi",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Malcolm Wellmaker"
-       }
-      ],
-      "source": "DraftKings"
-     }
-    ],
-    "has_model_legs": false,
-    "fight_ids": [
-     "card_1",
-     "card_4"
-    ],
-    "slip_id": "5b27b9086f5d",
-    "combined_decimal": 2.288931,
-    "combined_american": 129,
-    "combined_american_display": "+129",
-    "combined_prob": 0.3934,
-    "combined_prob_raw": 0.2896,
-    "venue": "DraftKings"
-   }
-  }
- },
  "UFC 332: Silva vs. Wang": {
   "bankroll": {
    "pinned_at": "2026-10-01T00:03:20+00:00",
@@ -105,6 +52,7 @@
    }
   }
  },
+ "UFC Fight Night: Allen vs. Duncan": {},
  "UFC Fight Night: Rosas Jr. vs. Barcelos": {},
  "UFC 331: Van vs. Pantoja 2": {},
  "Noche UFC: Silva vs. Delgado": {},
