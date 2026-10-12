@@ -1,4 +1,57 @@
 {
+ "UFC Fight Night: Buckley vs. Malott": {
+  "bankroll": {
+   "pinned_at": "2026-10-12T04:18:40+00:00",
+   "identities": [
+    "[\"Chad Anheliger|Steven Koslow\", [{\"fighter\": \"Steven Koslow\", \"kind\": \"winner\"}]]",
+    "[\"Cody Chovancek|SuYoung You\", [{\"fighter\": \"Cody Chovancek\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Steven Koslow ML",
+      "odds_display": "-108",
+      "is_model": false,
+      "decimal_odds": 1.925926,
+      "fight_key": "Chad Anheliger|Steven Koslow",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Steven Koslow"
+       }
+      ],
+      "source": "DraftKings"
+     },
+     {
+      "label": "Cody Chovancek ML",
+      "odds_display": "-155",
+      "is_model": false,
+      "decimal_odds": 1.645161,
+      "fight_key": "Cody Chovancek|SuYoung You",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Cody Chovancek"
+       }
+      ],
+      "source": "DraftKings"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_7",
+     "card_9"
+    ],
+    "slip_id": "b2f81d18b201",
+    "combined_decimal": 3.168459,
+    "combined_american": 217,
+    "combined_american_display": "+217",
+    "combined_prob": 0.2981,
+    "combined_prob_raw": 0.4209,
+    "venue": "DraftKings"
+   }
+  }
+ },
  "UFC 332: Silva vs. Wang": {
   "bankroll": {
    "pinned_at": "2026-10-01T00:03:20+00:00",
