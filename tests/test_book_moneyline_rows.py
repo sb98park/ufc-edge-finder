@@ -123,9 +123,24 @@ totals = [{"home_team": "A", "away_team": "B", "commence_time": "2026-09-20T03:3
 check("a totals market yields no moneyline row", to_book_moneyline_rows(totals) == [])
 
 # --- the quota and freshness bounds --------------------------------------
-# 500 requests a month on the free tier. Anything under ~1.4h overruns it.
+# COUNTED IN CREDITS, NOT CALLS. The API bills one credit per market per
+# region, and this test used to divide hours by the TTL and stop there. The
+# request asked for two markets, so the real cost was double what the check
+# measured -- it passed all the way to 500/500 on 2026-10-13, which cost the
+# back half of the month. A call's cost is now part of the assertion.
+import re  # noqa: E402
+import src.live_odds as _lo  # noqa: E402
+
+_src = open(_lo.__file__, encoding="utf-8").read()
+_markets = re.search(r'"markets":\s*"([^"]+)"', _src).group(1).split(",")
+_regions = 1                      # the request sends regions="us"
+_credits_per_call = len(_markets) * _regions
 _calls_per_month = (24 * 30 * 3600) / ODDS_CACHE_TTL_SEC
-check("the TTL fits inside the free tier", _calls_per_month <= 500)
+check(f"the TTL fits the free tier in CREDITS ({_credits_per_call}/call)",
+      _calls_per_month * _credits_per_call <= 500)
+# Every market we pay for has to be one something reads. to_book_moneyline_rows
+# reads h2h; nothing in the supplement path reads anything else.
+check("we do not buy a market the supplement discards", _markets == ["h2h"])
 check("  ...without being so slow the price is meaningless", ODDS_CACHE_TTL_SEC <= 6 * 3600)
 # Fifteen days is what this bound exists to have refused.
 check("the stale-serve bound is shorter than the outage it missed",

@@ -33,11 +33,18 @@ ODDS_API_BASE = "https://api.the-odds-api.com/v4/sports/mma_mixed_martial_arts/o
 # tier.
 ODDS_CACHE_PATH = "data/odds_api_cache.json"
 
-# TWO HOURS, AND THE QUOTA IS THE WHOLE ARGUMENT. At one hour this is
-# 24 x 30 = 720 requests a month against a 500-request free tier -- over the
-# cap by 44%, which is the same overrun that spent the quota in two days
-# before the cache existed. Two hours is ~360 a month and fits with room to
-# spare. Moneylines do not move meaningfully in two hours; the quota running
+# TWO HOURS, AND THE QUOTA IS THE WHOLE ARGUMENT -- BUT COUNT CREDITS, NOT
+# CALLS. This comment used to say two hours is "~360 a month and fits with
+# room to spare", which was wrong and cost the site the back half of October
+# 2026: the key hit 500/500 on the 13th and there is no way to buy the month
+# back. The API bills one credit PER MARKET PER REGION, and the request asked
+# for two markets, so 12 calls a day was 24 credits a day -- about 720 a
+# month, over a 500 cap, guaranteed to run dry before month end whatever the
+# TTL was. The outages of 10-05 and 10-07 only decided which day.
+#
+# Dropping `totals` from the request (see below) makes a call cost one credit
+# again, so twelve a day is ~360 a month and the sentence is finally true.
+# Moneylines do not move meaningfully in two hours; the quota running
 # out moves them to "no price at all", which is worse than a slightly old one.
 ODDS_CACHE_TTL_SEC = 2 * 60 * 60
 
@@ -103,7 +110,18 @@ def fetch_mma_odds(api_key: str | None = None, regions: str = "us") -> list[dict
         ODDS_API_BASE,
         params={
             "regions": regions,
-            "markets": "h2h,totals",
+            # h2h ONLY, AND THE BILLING IS WHY. The Odds API charges one
+            # credit PER MARKET PER REGION, so "h2h,totals" cost two credits
+            # a call rather than one -- and to_book_moneyline_rows, the only
+            # consumer that actually runs, reads h2h and ignores totals
+            # entirely. We were paying double for a market we discard.
+            #
+            # to_upcoming_rows does read totals, but it sits behind
+            # `if not pm_rows` in src/live_props: the fallback for Polymarket
+            # returning nothing at all, which has not happened in months. If
+            # it ever fires it now yields moneylines and no totals, which is
+            # the right trade against going blind for three weeks a month.
+            "markets": "h2h",
             "oddsFormat": "american",
             "apiKey": api_key,
         },
