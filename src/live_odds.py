@@ -117,11 +117,24 @@ def fetch_mma_odds(api_key: str | None = None, regions: str = "us") -> list[dict
     # difference decides whether you regenerate a key or just wait for the
     # quota to roll over.
     if resp.status_code in (401, 403, 429) and cached is not None:
+        # WHICH 401 IS THIS? The Odds API answers 401 both for a key that is
+        # wrong or revoked and for a valid key whose monthly quota is spent,
+        # and the two need opposite responses -- regenerate, or wait for the
+        # rollover. The raise below already says so and reads the headers; the
+        # FALLBACK path did not, so the health record said only "key rejected
+        # (HTTP 401)" and left the owner to guess. Costs nothing: the headers
+        # are already on the response.
+        _used = resp.headers.get("x-requests-used")
+        _left = resp.headers.get("x-requests-remaining")
+        _quota = (f" | quota used={_used} remaining={_left}"
+                  f" -- {'the quota is spent, it rolls over monthly' if _left == '0' else 'the key itself is invalid or revoked'}"
+                  if (_used or _left) else
+                  " | the API sent no quota headers, so this is the key rather than the quota")
         if age > ODDS_CACHE_MAX_SERVE_SEC:
             # PAST THE BOUND THE CACHE STOPS BEING A PRICE. See
             # ODDS_CACHE_MAX_SERVE_SEC: serving this is how fifteen days went by.
             _record_health(ok=False, age_sec=age, detail=(
-                f"key rejected (HTTP {resp.status_code}) and the cache is "
+                f"key rejected (HTTP {resp.status_code}){_quota}; cache is "
                 f"{age/86400:.1f} days old -- past the {ODDS_CACHE_MAX_SERVE_SEC/3600:.0f}h "
                 f"limit, so no book price was served"))
             print(f"[odds_api] request rejected (HTTP {resp.status_code}) and the cache is "
@@ -129,8 +142,8 @@ def fetch_mma_odds(api_key: str | None = None, regions: str = "us") -> list[dict
                   f"staked against; regenerate ODDS_API_KEY or wait for the quota.")
             return []
         _record_health(ok=False, age_sec=age, detail=(
-            f"key rejected (HTTP {resp.status_code}) -- serving cache from "
-            f"{age/3600:.1f}h ago"))
+            f"key rejected (HTTP {resp.status_code}){_quota} -- serving cache "
+            f"from {age/3600:.1f}h ago"))
         print(f"[odds_api] request rejected (HTTP {resp.status_code}) -- falling back to "
               f"cached odds from {age/3600:.1f}h ago. Stale odds beat no odds, and this "
               f"keeps the site running through a quota outage instead of going dark.")

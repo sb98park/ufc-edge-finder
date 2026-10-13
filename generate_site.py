@@ -107,7 +107,9 @@ from src.track_record import (
 )
 from src.schedule import build_fight_schedule, apply_live_corrections, promote_card_if_stale
 from src.results_fetcher import fetch_and_log_new_results, fetch_espn_live_fight_key
-from src.card_discovery import discover_and_append_new_cards, normalize_existing_card_order, resync_tracked_card_order, deduplicate_tracked_fights
+from src.card_discovery import (discover_and_append_new_cards, normalize_existing_card_order,
+                               resync_tracked_card_order, deduplicate_tracked_fights,
+                               void_predictions_for_cancelled_fights)
 from src.fighter_backfill import backfill_fighters, fill_missing_last_fights, ensure_roster_rows, fill_last_fight_methods, fill_from_espn_id_map
 from src.calibration_chart import build_calibration_svg
 from src.sparkline_chart import build_sparkline_svg
@@ -336,6 +338,22 @@ def main(tier: str = "member", output_path: str | None = None):
 
     try:
         resync_tracked_card_order(f"{DATA_DIR}/fight_cards.csv")
+
+        # A CANCELLED FIGHT'S PICK IS VOIDED, EVERY BUILD, NOT JUST THE RUN
+        # THAT CANCELLED IT. The resync's void is driven by `newly_cancelled`
+        # and is one-shot by its own admission; a cancellation inherited when
+        # a card promotes from future_cards into fight_cards is never new to
+        # the file that ends up holding it. Six such picks were live on the
+        # 10-17 card on 2026-10-13. Idempotent and cheap -- see
+        # card_discovery.void_predictions_for_cancelled_fights.
+        try:
+            _nv = void_predictions_for_cancelled_fights(
+                (f"{DATA_DIR}/fight_cards.csv", f"{DATA_DIR}/future_cards.csv"),
+                f"{DATA_DIR}/predictions_log.csv")
+            if _nv:
+                print(f"[card_discovery] reconciled {_nv} stranded pick(s) on cancelled fights")
+        except Exception as _exc:          # noqa: BLE001 -- never break the build
+            print(f"[card_discovery] cancelled-pick reconcile skipped ({_exc})")
     except Exception as e:
         print(f"[generate_site] active-card resync against ESPN failed unexpectedly, continuing without it: {e}")
 

@@ -908,6 +908,58 @@ def _flag_short_notice(names: set[str], fighters_path: str = "data/fighters.csv"
     return int(to_set.sum())
 
 
+def void_predictions_for_cancelled_fights(
+        card_paths: tuple = ("data/fight_cards.csv", "data/future_cards.csv"),
+        predictions_path: str = "data/predictions_log.csv") -> int:
+    """
+    Every cancelled fight's pick is voided -- as an invariant, not an event.
+
+    _void_predictions_for is driven by `newly_cancelled`, which is populated
+    only in the branch that FIRST marks a row cancelled. The resync's own
+    comment says what that costs: once a row lands with cancelled=true it is
+    collected into `pinned` on every later run and never re-enters that
+    branch, so the void is ONE-SHOT and "not self-healing: the next run sees
+    nothing left to do". Anything that misses the single moment is stranded
+    permanently.
+
+    On 2026-10-13 six fights on UFC Fight Night: Buckley vs. Malott were
+    cancelled on the card and still carried live picks -- Horth/Cerminara,
+    Mahjoub/Faglier, Cerminara/Stiller, LeBlanc/Urbina, Jourdain/Cuamba,
+    Mahjoub/Sutherland. All six cancellations were legitimate: real
+    replacements and withdrawals, verified fighter by fighter. The picks were
+    feeding accuracy, confidence-tier, lock and units math that
+    _void_predictions_for's docstring says they must be excluded from, and
+    the health strip had been saying so on the live site.
+
+    The likeliest route is a cancellation inherited when a card promotes from
+    future_cards into fight_cards: already cancelled on arrival, so never new
+    to the file that now holds it. Rather than chase which branch dropped it,
+    this reconciles the state every build. The question stops being "did we
+    catch the moment" and becomes "does the file agree with itself".
+
+    Cheap and idempotent: _void_predictions_for skips rows already voided and
+    writes nothing when there is nothing to change, so the steady-state cost
+    is one read of each file.
+    """
+    pairs: list[tuple[str, str]] = []
+    for path in card_paths:
+        try:
+            df = pd.read_csv(path)
+        except (FileNotFoundError, pd.errors.EmptyDataError, OSError):
+            continue
+        if "cancelled" not in df.columns or df.empty:
+            continue
+        flagged = df["cancelled"].astype(str).str.strip().str.lower() == "true"
+        for _, r in df[flagged].iterrows():
+            a = str(r.get("fighter_a") or "").strip()
+            b = str(r.get("fighter_b") or "").strip()
+            if a and b:
+                pairs.append((a, b))
+    if not pairs:
+        return 0
+    return _void_predictions_for(pairs, predictions_path)
+
+
 def _void_predictions_for(pairs: list[tuple[str, str]],
                           predictions_path: str = "data/predictions_log.csv") -> int:
     """
