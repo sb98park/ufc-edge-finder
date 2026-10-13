@@ -104,9 +104,23 @@ check("the same pair on two dates is not merged", removed == 0 and len(out) == 2
 
 # The boundary must be a real separator, not a prefix collision: "UFC 33"
 # is not the provisional name of "UFC 332".
+#
+# DIFFERENT BOUTS ON PURPOSE. This case used to give both events the same
+# single bout, which isolated the prefix rule when the prefix rule was the
+# only one here. It no longer is: the identical-bout-set rule added for the
+# 2026-10-31 triplicate would merge them, and correctly -- one bout cannot be
+# on two cards the same night, whatever they are called. Giving them separate
+# bouts keeps this assertion about the thing it is named after.
+removed, out = run([bout("UFC 33", "2026-10-24", "A One", "B Two"),
+                    bout("UFC 332", "2026-10-24", "C Three", "D Four")])
+check("a bare prefix with no separator is not treated as a rename", removed == 0)
+
+# And the converse, so the separator guard cannot be quietly satisfied by the
+# other rule: same prefix collision, same bouts, now MERGED -- because two
+# cards on one date never share a fight.
 removed, out = run([bout("UFC 33", "2026-10-24", "A One", "B Two"),
                     bout("UFC 332", "2026-10-24", "A One", "B Two")])
-check("a bare prefix with no separator is not treated as a rename", removed == 0)
+check("...but identical bouts on one date are still one card", removed == 1)
 
 # --- the within-event pass still works ------------------------------------
 removed, out = run([bout("UFC 332: Silva vs. Wang", "2026-10-24", "Jose Delgado", "Jean Silva"),

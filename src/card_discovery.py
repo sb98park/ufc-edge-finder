@@ -347,6 +347,7 @@ def deduplicate_tracked_fights(future_cards_path: str = "data/future_cards.csv")
     # two real cards would be far worse than tracking one twice.
     if "event_date" in df.columns and not df.empty:
         renamed = {}
+        why: dict = {}
         for date, day in df.groupby("event_date", sort=False):
             names = [n for n in dict.fromkeys(day["event_name"].astype(str)) if n]
             for short in names:
@@ -360,12 +361,75 @@ def deduplicate_tracked_fights(future_cards_path: str = "data/future_cards.csv")
                     b = {_loose_key(r) for r in day[day["event_name"] == long].to_dict("records")}
                     if a and a <= b:
                         renamed[short] = long
+                        why[short] = 'provisional'
+        # NEITHER NAME EXTENDS THE OTHER, AND IT IS STILL ONE CARD.
+        #
+        # The rule above handles a provisional name being EXTENDED
+        # ("UFC 332" -> "UFC 332: Silva vs. Wang") and deliberately stops
+        # there, because "merging two real cards would be far worse than
+        # tracking one twice". That caution was right and it was not enough:
+        # on 2026-10-31 the same eleven bouts were tracked three times, as
+        # "UFC Fight Night: Las Vegas" (the venue placeholder used before the
+        # main event was announced), "UFC Fight Night: Moicano vs. Nolan" and
+        # "UFC Fight Night: Nolan vs. Moicano" (the same billing reversed).
+        # No prefix relation between any pair, so none merged, and the site
+        # listed one card three times.
+        #
+        # The evidence acted on is the one this function already calls
+        # decisive: "two genuinely different events on one date do not share
+        # fighters". These do not merely overlap -- the bout sets are
+        # IDENTICAL, which is as strong as that signal gets. Subset is
+        # deliberately NOT enough and stays with the prefix rule above,
+        # because a card that has lost a bout to a cancellation is a subset
+        # of its own earlier self.
+        #
+        # WHICH NAME SURVIVES is read off the card rather than guessed: the
+        # UFC bills a Fight Night "<main event A> vs. <main event B>", and the
+        # main-event row carries that order. The name matching it wins. Failing
+        # that the longest wins -- a placeholder is a venue, and the real
+        # billing is strictly longer than "Las Vegas".
+        for date, day in df.groupby("event_date", sort=False):
+            day_names = [n for n in dict.fromkeys(day["event_name"].astype(str)) if n]
+            if len(day_names) < 2:
+                continue
+            by_bouts: dict = {}
+            for n in day_names:
+                key = frozenset(_loose_key(r)
+                                for r in day[day["event_name"] == n].to_dict("records"))
+                if key:
+                    by_bouts.setdefault(key, []).append(n)
+            for same in by_bouts.values():
+                if len(same) < 2 or any(n in renamed for n in same):
+                    continue
+                main = day[day["card_position"].astype(str).str.strip() == "Main Event"] \
+                    if "card_position" in day.columns else day.iloc[0:0]
+                keep = None
+                if not main.empty:
+                    a = str(main.iloc[0]["fighter_a"]).split()[-1].lower()
+                    b = str(main.iloc[0]["fighter_b"]).split()[-1].lower()
+                    keep = next((n for n in same
+                                 if n.lower().rstrip().endswith(f"{a} vs. {b}")), None)
+                if keep is None:
+                    keep = max(same, key=len)
+                for n in same:
+                    if n != keep:
+                        renamed[n] = keep
+                        why[n] = 'duplicate'
+
         if renamed:
             for short, long in renamed.items():
                 drop = (df["event_name"] == short)
-                print(f"[card_discovery] {short!r} is the provisional name for {long!r} on the same "
-                      f"date and every one of its {int(drop.sum())} fight(s) is already tracked under "
-                      f"the full name -- dropping the {short!r} rows")
+                # The two rules reach the same action for different reasons,
+                # and saying "provisional" about a reversed billing would be a
+                # small lie in the one place anybody looks afterwards.
+                if why.get(short) == "duplicate":
+                    print(f"[card_discovery] {short!r} and {long!r} are the same card on "
+                          f"{'the same date'} -- identical {int(drop.sum())} fight(s), and the "
+                          f"main event bills it {long!r} -- dropping the {short!r} rows")
+                else:
+                    print(f"[card_discovery] {short!r} is the provisional name for {long!r} on the same "
+                          f"date and every one of its {int(drop.sum())} fight(s) is already tracked under "
+                          f"the full name -- dropping the {short!r} rows")
                 removed += int(drop.sum())
                 df = df[~drop]
 
