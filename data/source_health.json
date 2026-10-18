@@ -1,8 +1,8 @@
 {
-  "at": "2026-10-18T01:10:03+00:00",
+  "at": "2026-10-18T01:21:27+00:00",
   "card_data_coverage": {
     "carded_fighters": 125,
-    "checked_at": "2026-10-18T01:05:35+00:00",
+    "checked_at": "2026-10-18T01:15:52+00:00",
     "counts": {
       "physicals": 3,
       "record": 1
@@ -26,25 +26,25 @@
     "best_book": {
       "DraftKings": 9,
       "FanDuel": 13,
-      "Polymarket": 50
+      "Polymarket": 42
     },
     "books_quoting": {
-      "1.0": 58,
+      "1.0": 50,
       "2.0": 14
     },
-    "n": 72
+    "n": 64
   },
   "moneyline": {
     "best_book": {
       "DraftKings": 7,
       "FanDuel": 11,
-      "Polymarket": 16
+      "Polymarket": 14
     },
-    "n": 34,
+    "n": 32,
     "source": {
       "DraftKings": 7,
       "FanDuel": 11,
-      "Polymarket": 16
+      "Polymarket": 14
     }
   },
   "no_winner_bouts": {
@@ -59,8 +59,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 165.23,
-    "checked_at": "2026-10-18T01:07:18+00:00",
+    "cache_age_hours": 165.41,
+    "checked_at": "2026-10-18T01:17:40+00:00",
     "detail": "key rejected (HTTP 401) | quota used=500 remaining=0 -- the quota is spent, it rolls over monthly; cache is 6.9 days old -- past the 24h limit, so no book price was served",
     "max_serve_hours": 24.0,
     "ok": false
@@ -76,9 +76,9 @@
   },
   "parlay": {
     "bankroll": {
-      "detail": "14 leg(s) priced only on a reference line, which is not a book you can bet at",
+      "detail": "12 leg(s) priced only on a reference line, which is not a book you can bet at",
       "reason": "no bettable venue",
-      "reference_only_legs": 14
+      "reference_only_legs": 12
     },
     "bankroll/BetMGM": {
       "combinations_considered": 2,
@@ -105,7 +105,7 @@
   "rows_by_source": {
     "DraftKings": 14,
     "FanDuel": 22,
-    "Polymarket": 164
+    "Polymarket": 144
   },
   "rundown_dates_requested": [
     "2026-10-24"
@@ -282,7 +282,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-10-18T01:10:01+00:00",
+    "checked_at": "2026-10-18T01:21:25+00:00",
     "equivalent_floor": 0.671,
     "floor_in_force": 0.78,
     "gap_move": -0.0817,
@@ -304,53 +304,53 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-18T01:06:34+00:00",
+      "last_ok": "2026-10-18T01:16:53+00:00",
       "ok": true,
-      "ran_at": "2026-10-18T01:06:34+00:00"
+      "ran_at": "2026-10-18T01:16:53+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 56.3,
+      "duration_s": 58.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-18T01:06:33+00:00",
+      "last_ok": "2026-10-18T01:16:53+00:00",
       "ok": true,
-      "ran_at": "2026-10-18T01:06:33+00:00"
+      "ran_at": "2026-10-18T01:16:53+00:00"
     },
     "card_data_coverage": {
+      "consecutive_failures": 0,
+      "duration_s": 0.5,
+      "error": null,
+      "exit_code": 0,
+      "in_flight": false,
+      "killed_previous_run": false,
+      "last_ok": "2026-10-18T01:15:52+00:00",
+      "ok": true,
+      "ran_at": "2026-10-18T01:15:52+00:00"
+    },
+    "duplicate_identities": {
       "consecutive_failures": 0,
       "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-18T01:05:35+00:00",
+      "last_ok": "2026-10-18T01:16:54+00:00",
       "ok": true,
-      "ran_at": "2026-10-18T01:05:35+00:00"
-    },
-    "duplicate_identities": {
-      "consecutive_failures": 0,
-      "duration_s": 0.3,
-      "error": null,
-      "exit_code": 0,
-      "in_flight": false,
-      "killed_previous_run": false,
-      "last_ok": "2026-10-18T01:06:34+00:00",
-      "ok": true,
-      "ran_at": "2026-10-18T01:06:34+00:00"
+      "ran_at": "2026-10-18T01:16:54+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.2,
+      "duration_s": 1.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-18T01:05:37+00:00",
+      "last_ok": "2026-10-18T01:15:54+00:00",
       "ok": true,
-      "ran_at": "2026-10-18T01:05:37+00:00"
+      "ran_at": "2026-10-18T01:15:54+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -358,50 +358,50 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-18T01:08:19+00:00",
+      "last_ok": "2026-10-18T01:18:43+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.6,
+      "duration_s": 0.9,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-18T01:05:36+00:00",
+      "last_ok": "2026-10-18T01:15:53+00:00",
       "ok": true,
-      "ran_at": "2026-10-18T01:05:36+00:00"
+      "ran_at": "2026-10-18T01:15:53+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.2,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-18T01:10:01+00:00",
+      "last_ok": "2026-10-18T01:21:25+00:00",
       "ok": true,
-      "ran_at": "2026-10-18T01:10:01+00:00"
+      "ran_at": "2026-10-18T01:21:25+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.2,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-18T01:10:01+00:00",
+      "last_ok": "2026-10-18T01:21:25+00:00",
       "ok": true,
-      "ran_at": "2026-10-18T01:10:01+00:00"
+      "ran_at": "2026-10-18T01:21:25+00:00"
     }
   },
   "tracked_moneyline": {
     "best_book": {
-      "Polymarket": 10
+      "Polymarket": 8
     },
-    "n": 10,
+    "n": 8,
     "source": {
-      "Polymarket": 10
+      "Polymarket": 8
     }
   }
 }
