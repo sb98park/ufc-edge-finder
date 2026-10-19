@@ -1,62 +1,13 @@
 {
-  "at": "2026-10-19T21:17:22+00:00",
+  "at": "2026-10-19T21:55:21+00:00",
   "card_data_coverage": {
     "carded_fighters": 131,
-    "checked_at": "2026-10-19T21:11:04+00:00",
+    "checked_at": "2026-10-19T21:51:01+00:00",
     "counts": {
-      "history": 5,
-      "layoff": 1,
       "physicals": 3,
       "record": 1
     },
     "findings": [
-      {
-        "detail": "5 of 14 bouts in fight_history (36%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 333: Volkanovski vs. Evloev",
-        "event_date": "2026-10-24",
-        "fighter": "Bolaji Oki",
-        "last_fight_date": "2026-03-14",
-        "severity": "history"
-      },
-      {
-        "detail": "7 of 17 bouts in fight_history (41%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 333: Volkanovski vs. Evloev",
-        "event_date": "2026-10-24",
-        "fighter": "Daniel Santos",
-        "last_fight_date": "2026-05-16",
-        "severity": "history"
-      },
-      {
-        "detail": "8 of 24 bouts in fight_history (33%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 333: Volkanovski vs. Evloev",
-        "event_date": "2026-10-24",
-        "fighter": "Iasmin Lucindo",
-        "last_fight_date": "2025-08-09",
-        "severity": "history"
-      },
-      {
-        "detail": "2 of 13 bouts in fight_history (15%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 333: Volkanovski vs. Evloev",
-        "event_date": "2026-10-24",
-        "fighter": "Nicolle Caliari",
-        "last_fight_date": "2026-05-16",
-        "severity": "history"
-      },
-      {
-        "detail": "1 of 12 bouts in fight_history (8%) -- layoff, form and Elo all read a partial sample",
-        "event": "UFC 333: Volkanovski vs. Evloev",
-        "event_date": "2026-10-24",
-        "fighter": "Noah Gugnon",
-        "last_fight_date": "2026-08-01",
-        "severity": "history"
-      },
-      {
-        "detail": "last fight 2025-08-09 (1.2y) is the newest of only 8 bouts we hold -- the real one may be far more recent",
-        "event": "UFC 333: Volkanovski vs. Evloev",
-        "event_date": "2026-10-24",
-        "fighter": "Iasmin Lucindo",
-        "severity": "layoff"
-      },
       {
         "detail": "recorded 0-0 -- either a true debutant or a record we never sourced; power_rating cannot tell them apart. no ESPN id on file either; add one to data/espn_athlete_ids.csv if a profile exists",
         "event": "UFC 333: Volkanovski vs. Evloev",
@@ -75,25 +26,25 @@
     "best_book": {
       "DraftKings": 23,
       "FanDuel": 17,
-      "Polymarket": 56
+      "Polymarket": 54
     },
     "books_quoting": {
-      "1.0": 76,
+      "1.0": 74,
       "2.0": 20
     },
-    "n": 96
+    "n": 94
   },
   "moneyline": {
     "best_book": {
       "DraftKings": 13,
       "FanDuel": 9,
-      "Polymarket": 22
+      "Polymarket": 20
     },
-    "n": 44,
+    "n": 42,
     "source": {
       "DraftKings": 13,
       "FanDuel": 9,
-      "Polymarket": 22
+      "Polymarket": 20
     }
   },
   "no_winner_bouts": {
@@ -108,8 +59,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 209.34,
-    "checked_at": "2026-10-19T21:13:51+00:00",
+    "cache_age_hours": 209.99,
+    "checked_at": "2026-10-19T21:52:31+00:00",
     "detail": "key rejected (HTTP 401) | quota used=500 remaining=0 -- the quota is spent, it rolls over monthly; cache is 8.7 days old -- past the 24h limit, so no book price was served",
     "max_serve_hours": 24.0,
     "ok": false
@@ -148,7 +99,7 @@
   "rows_by_source": {
     "DraftKings": 28,
     "FanDuel": 32,
-    "Polymarket": 213
+    "Polymarket": 211
   },
   "rundown_dates_requested": [
     "2026-10-24"
@@ -336,7 +287,7 @@
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-10-19T21:17:20+00:00",
+    "checked_at": "2026-10-19T21:55:19+00:00",
     "equivalent_floor": 0.688,
     "floor_in_force": 0.78,
     "gap_move": -0.0717,
@@ -353,58 +304,58 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 62.2,
+      "duration_s": 18.0,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-19T21:13:02+00:00",
+      "last_ok": "2026-10-19T21:51:57+00:00",
       "ok": true,
-      "ran_at": "2026-10-19T21:13:02+00:00"
+      "ran_at": "2026-10-19T21:51:57+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 52.4,
+      "duration_s": 34.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-19T21:12:00+00:00",
+      "last_ok": "2026-10-19T21:51:39+00:00",
       "ok": true,
-      "ran_at": "2026-10-19T21:12:00+00:00"
+      "ran_at": "2026-10-19T21:51:39+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
-      "duration_s": 0.6,
+      "duration_s": 0.7,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-19T21:11:04+00:00",
+      "last_ok": "2026-10-19T21:51:01+00:00",
       "ok": true,
-      "ran_at": "2026-10-19T21:11:04+00:00"
+      "ran_at": "2026-10-19T21:51:01+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
-      "duration_s": 0.5,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-19T21:13:02+00:00",
+      "last_ok": "2026-10-19T21:51:58+00:00",
       "ok": true,
-      "ran_at": "2026-10-19T21:13:02+00:00"
+      "ran_at": "2026-10-19T21:51:58+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.7,
+      "duration_s": 1.8,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-19T21:11:07+00:00",
+      "last_ok": "2026-10-19T21:51:05+00:00",
       "ok": true,
-      "ran_at": "2026-10-19T21:11:07+00:00"
+      "ran_at": "2026-10-19T21:51:05+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -412,19 +363,19 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-19T21:15:20+00:00",
+      "last_ok": "2026-10-19T21:53:44+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 1.1,
+      "duration_s": 1.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-19T21:11:05+00:00",
+      "last_ok": "2026-10-19T21:51:03+00:00",
       "ok": true,
-      "ran_at": "2026-10-19T21:11:05+00:00"
+      "ran_at": "2026-10-19T21:51:03+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
@@ -433,20 +384,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-19T21:17:21+00:00",
+      "last_ok": "2026-10-19T21:55:20+00:00",
       "ok": true,
-      "ran_at": "2026-10-19T21:17:21+00:00"
+      "ran_at": "2026-10-19T21:55:20+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.5,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-19T21:17:20+00:00",
+      "last_ok": "2026-10-19T21:55:19+00:00",
       "ok": true,
-      "ran_at": "2026-10-19T21:17:20+00:00"
+      "ran_at": "2026-10-19T21:55:19+00:00"
     }
   },
   "tracked_moneyline": {
