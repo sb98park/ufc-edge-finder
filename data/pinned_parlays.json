@@ -1,18 +1,18 @@
 {
  "UFC 333: Volkanovski vs. Evloev": {
   "bankroll": {
-   "pinned_at": "2026-10-21T15:58:46+00:00",
+   "pinned_at": "2026-10-24T14:06:42+00:00",
    "identities": [
     "[\"Petr Yan|Merab Dvalishvili\", [{\"kind\": \"rounds\", \"line\": 4.5, \"op\": \"over\"}]]",
-    "[\"Iasmin Lucindo|Nicolle Caliari\", [{\"kind\": \"rounds\", \"line\": 2.5, \"op\": \"under\"}]]"
+    "[\"Alexander Volkov|Rizvan Kuniev\", [{\"fighter\": \"Alexander Volkov\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
       "label": "Merab Dvalishvili vs Petr Yan Over 4.5 rounds",
-      "odds_display": "-410",
+      "odds_display": "-340",
       "is_model": false,
-      "decimal_odds": 1.243902,
+      "decimal_odds": 1.294118,
       "fight_key": "Petr Yan|Merab Dvalishvili",
       "conditions": [
        {
@@ -21,36 +21,35 @@
         "line": 4.5
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      },
      {
-      "label": "Nicolle Caliari vs Iasmin Lucindo Under 2.5 rounds",
-      "odds_display": "+210",
+      "label": "Alexander Volkov ML",
+      "odds_display": "-126",
       "is_model": false,
-      "decimal_odds": 3.1,
-      "fight_key": "Iasmin Lucindo|Nicolle Caliari",
+      "decimal_odds": 1.793651,
+      "fight_key": "Alexander Volkov|Rizvan Kuniev",
       "conditions": [
        {
-        "kind": "rounds",
-        "op": "under",
-        "line": 2.5
+        "kind": "winner",
+        "fighter": "Alexander Volkov"
        }
       ],
-      "source": "DraftKings"
+      "source": "FanDuel"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
      "card_1",
-     "card_14"
+     "card_3"
     ],
-    "slip_id": "fc4071ed872c",
-    "combined_decimal": 3.856098,
-    "combined_american": 286,
-    "combined_american_display": "+286",
-    "combined_prob": 0.5006,
-    "combined_prob_raw": 0.3513,
-    "venue": "DraftKings"
+    "slip_id": "55c25da6fe5c",
+    "combined_decimal": 2.321195,
+    "combined_american": 132,
+    "combined_american_display": "+132",
+    "combined_prob": 0.4756,
+    "combined_prob_raw": 0.3335,
+    "venue": "FanDuel"
    }
   }
  },
