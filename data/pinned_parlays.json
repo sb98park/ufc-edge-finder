@@ -1,57 +1,4 @@
 {
- "UFC Fight Night: Moicano vs. Nolan": {
-  "bankroll": {
-   "pinned_at": "2026-10-25T07:48:29+00:00",
-   "identities": [
-    "[\"Rodrigo Sezinando|Theodor Berggren\", [{\"fighter\": \"Rodrigo Sezinando\", \"kind\": \"winner\"}]]",
-    "[\"Talita Alencar|Piera Rodriguez\", [{\"fighter\": \"Piera Rodriguez\", \"kind\": \"winner\"}]]"
-   ],
-   "snapshot": {
-    "legs": [
-     {
-      "label": "Rodrigo Sezinando ML",
-      "odds_display": "-188",
-      "is_model": false,
-      "decimal_odds": 1.531915,
-      "fight_key": "Rodrigo Sezinando|Theodor Berggren",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Rodrigo Sezinando"
-       }
-      ],
-      "source": "FanDuel"
-     },
-     {
-      "label": "Piera Rodriguez ML",
-      "odds_display": "-290",
-      "is_model": false,
-      "decimal_odds": 1.344828,
-      "fight_key": "Talita Alencar|Piera Rodriguez",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Piera Rodriguez"
-       }
-      ],
-      "source": "FanDuel"
-     }
-    ],
-    "has_model_legs": false,
-    "fight_ids": [
-     "card_36",
-     "card_39"
-    ],
-    "slip_id": "a1b89b00feda",
-    "combined_decimal": 2.060161,
-    "combined_american": 106,
-    "combined_american_display": "+106",
-    "combined_prob": 0.4217,
-    "combined_prob_raw": 0.3158,
-    "venue": "FanDuel"
-   }
-  }
- },
  "UFC 333: Volkanovski vs. Evloev": {
   "bankroll": {
    "pinned_at": "2026-10-24T14:06:42+00:00",
@@ -159,6 +106,7 @@
    }
   }
  },
+ "UFC Fight Night: Moicano vs. Nolan": {},
  "UFC Fight Night: Buckley vs. Malott": {},
  "UFC Fight Night: Allen vs. Duncan": {},
  "UFC Fight Night: Rosas Jr. vs. Barcelos": {},
