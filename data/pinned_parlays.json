@@ -1,4 +1,73 @@
 {
+ "UFC Fight Night: Moicano vs. Nolan": {
+  "bankroll": {
+   "pinned_at": "2026-10-26T04:58:17+00:00",
+   "identities": [
+    "[\"Francis Marshall|Dakota Hope\", [{\"fighter\": \"Francis Marshall\", \"kind\": \"winner\"}]]",
+    "[\"Nick Klein|Joe Kropschot\", [{\"fighter\": \"Joe Kropschot\", \"kind\": \"winner\"}]]",
+    "[\"Talita Alencar|Piera Rodriguez\", [{\"fighter\": \"Piera Rodriguez\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Francis Marshall ML",
+      "odds_display": "-290",
+      "is_model": false,
+      "decimal_odds": 1.344828,
+      "fight_key": "Francis Marshall|Dakota Hope",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Francis Marshall"
+       }
+      ],
+      "source": "FanDuel"
+     },
+     {
+      "label": "Joe Kropschot ML",
+      "odds_display": "-330",
+      "is_model": false,
+      "decimal_odds": 1.30303,
+      "fight_key": "Nick Klein|Joe Kropschot",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Joe Kropschot"
+       }
+      ],
+      "source": "FanDuel"
+     },
+     {
+      "label": "Piera Rodriguez ML",
+      "odds_display": "-290",
+      "is_model": false,
+      "decimal_odds": 1.344828,
+      "fight_key": "Talita Alencar|Piera Rodriguez",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Piera Rodriguez"
+       }
+      ],
+      "source": "FanDuel"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_6",
+     "card_10",
+     "card_11"
+    ],
+    "slip_id": "ca16bf7c6a7f",
+    "combined_decimal": 2.35661,
+    "combined_american": 136,
+    "combined_american_display": "+136",
+    "combined_prob": 0.3347,
+    "combined_prob_raw": 0.1924,
+    "venue": "FanDuel"
+   }
+  }
+ },
  "UFC 333: Volkanovski vs. Evloev": {
   "bankroll": {
    "pinned_at": "2026-10-24T14:06:42+00:00",
@@ -106,7 +175,6 @@
    }
   }
  },
- "UFC Fight Night: Moicano vs. Nolan": {},
  "UFC Fight Night: Buckley vs. Malott": {},
  "UFC Fight Night: Allen vs. Duncan": {},
  "UFC Fight Night: Rosas Jr. vs. Barcelos": {},
