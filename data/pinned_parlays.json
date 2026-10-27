@@ -1,28 +1,14 @@
 {
  "UFC Fight Night: Moicano vs. Nolan": {
   "bankroll": {
-   "pinned_at": "2026-10-26T04:58:17+00:00",
+   "pinned_at": "2026-10-27T10:43:11+00:00",
    "identities": [
-    "[\"Francis Marshall|Dakota Hope\", [{\"fighter\": \"Francis Marshall\", \"kind\": \"winner\"}]]",
     "[\"Nick Klein|Joe Kropschot\", [{\"fighter\": \"Joe Kropschot\", \"kind\": \"winner\"}]]",
-    "[\"Talita Alencar|Piera Rodriguez\", [{\"fighter\": \"Piera Rodriguez\", \"kind\": \"winner\"}]]"
+    "[\"Talita Alencar|Piera Rodriguez\", [{\"fighter\": \"Piera Rodriguez\", \"kind\": \"winner\"}]]",
+    "[\"Zach Reese|Mickey Gall\", [{\"fighter\": \"Zach Reese\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
-     {
-      "label": "Francis Marshall ML",
-      "odds_display": "-290",
-      "is_model": false,
-      "decimal_odds": 1.344828,
-      "fight_key": "Francis Marshall|Dakota Hope",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Francis Marshall"
-       }
-      ],
-      "source": "FanDuel"
-     },
      {
       "label": "Joe Kropschot ML",
       "odds_display": "-330",
@@ -50,20 +36,34 @@
        }
       ],
       "source": "FanDuel"
+     },
+     {
+      "label": "Zach Reese ML",
+      "odds_display": "-295",
+      "is_model": false,
+      "decimal_odds": 1.338983,
+      "fight_key": "Zach Reese|Mickey Gall",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Zach Reese"
+       }
+      ],
+      "source": "FanDuel"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_6",
      "card_10",
-     "card_11"
+     "card_11",
+     "card_14"
     ],
-    "slip_id": "ca16bf7c6a7f",
-    "combined_decimal": 2.35661,
-    "combined_american": 136,
-    "combined_american_display": "+136",
-    "combined_prob": 0.3342,
-    "combined_prob_raw": 0.1924,
+    "slip_id": "95105cbab480",
+    "combined_decimal": 2.346368,
+    "combined_american": 135,
+    "combined_american_display": "+135",
+    "combined_prob": 0.3469,
+    "combined_prob_raw": 0.1948,
     "venue": "FanDuel"
    }
   }
