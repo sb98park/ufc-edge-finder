@@ -1,12 +1,61 @@
 {
-  "at": "2026-10-27T23:09:44+00:00",
+  "at": "2026-10-27T23:45:48+00:00",
   "card_data_coverage": {
-    "carded_fighters": 111,
-    "checked_at": "2026-10-27T23:05:36+00:00",
+    "carded_fighters": 115,
+    "checked_at": "2026-10-27T23:40:45+00:00",
     "counts": {
+      "history": 4,
+      "layoff": 2,
       "physicals": 2
     },
-    "findings": []
+    "findings": [
+      {
+        "detail": "0 of 18 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Marcos Degli",
+        "last_fight_date": "2026-09-22",
+        "severity": "history"
+      },
+      {
+        "detail": "3 of 14 bouts in fight_history (21%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Bonfim vs. Brady",
+        "event_date": "2026-11-07",
+        "fighter": "Mitch Raposo",
+        "last_fight_date": "2026-06-20",
+        "severity": "history"
+      },
+      {
+        "detail": "5 of 12 bouts in fight_history (42%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Evan Elder",
+        "last_fight_date": "2025-04-26",
+        "severity": "history"
+      },
+      {
+        "detail": "0 of 12 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Samuel Sanches",
+        "last_fight_date": "2025-09-10",
+        "severity": "history"
+      },
+      {
+        "detail": "last fight 2025-04-26 (1.5y) is the newest of only 5 bouts we hold -- the real one may be far more recent",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Evan Elder",
+        "severity": "layoff"
+      },
+      {
+        "detail": "last fight 2025-09-10 (1.1y) is the newest of only 0 bouts we hold -- the real one may be far more recent",
+        "event": "UFC 334: Gane vs. Hokit",
+        "event_date": "2026-11-14",
+        "fighter": "Samuel Sanches",
+        "severity": "layoff"
+      }
+    ]
   },
   "duplicate_identities": {
     "count": 0,
@@ -29,13 +78,13 @@
     "best_book": {
       "DraftKings": 10,
       "FanDuel": 4,
-      "Polymarket": 30
+      "Polymarket": 32
     },
-    "n": 44,
+    "n": 46,
     "source": {
       "DraftKings": 10,
       "FanDuel": 4,
-      "Polymarket": 30
+      "Polymarket": 32
     }
   },
   "no_winner_bouts": {
@@ -50,8 +99,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 403.23,
-    "checked_at": "2026-10-27T23:07:06+00:00",
+    "cache_age_hours": 403.83,
+    "checked_at": "2026-10-27T23:42:47+00:00",
     "detail": "key rejected (HTTP 401) | quota used=500 remaining=0 -- the quota is spent, it rolls over monthly; cache is 16.8 days old -- past the 24h limit, so no book price was served",
     "max_serve_hours": 24.0,
     "ok": false
@@ -288,19 +337,19 @@
         "date": "2026-10-31",
         "event": "UFC Fight Night: Moicano vs. Nolan",
         "fights": 15,
-        "gap_p90": -0.0478,
+        "gap_p90": -0.0484,
         "market_p90": 0.7492,
-        "model_p90": 0.7014,
+        "model_p90": 0.7008,
         "priced": 13,
         "selectivity": 0.0
       }
     ],
-    "checked_at": "2026-10-27T23:09:42+00:00",
+    "checked_at": "2026-10-27T23:45:46+00:00",
     "equivalent_floor": 0.684,
     "floor_in_force": 0.78,
-    "gap_move": -0.0633,
+    "gap_move": -0.0634,
     "trailing_cards": 6,
-    "trailing_gap_p90": -0.0479,
+    "trailing_gap_p90": -0.048,
     "trailing_selectivity": 0.0115,
     "verdict": "drifted"
   },
@@ -312,36 +361,36 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 34.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-27T23:06:20+00:00",
+      "last_ok": "2026-10-27T23:42:07+00:00",
       "ok": true,
-      "ran_at": "2026-10-27T23:06:20+00:00"
+      "ran_at": "2026-10-27T23:42:07+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 42.3,
+      "duration_s": 44.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-27T23:06:20+00:00",
+      "last_ok": "2026-10-27T23:41:32+00:00",
       "ok": true,
-      "ran_at": "2026-10-27T23:06:20+00:00"
+      "ran_at": "2026-10-27T23:41:32+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-27T23:05:36+00:00",
+      "last_ok": "2026-10-27T23:40:45+00:00",
       "ok": true,
-      "ran_at": "2026-10-27T23:05:36+00:00"
+      "ran_at": "2026-10-27T23:40:45+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
@@ -350,20 +399,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-27T23:06:21+00:00",
+      "last_ok": "2026-10-27T23:42:07+00:00",
       "ok": true,
-      "ran_at": "2026-10-27T23:06:21+00:00"
+      "ran_at": "2026-10-27T23:42:07+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.0,
+      "duration_s": 1.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-27T23:05:38+00:00",
+      "last_ok": "2026-10-27T23:40:48+00:00",
       "ok": true,
-      "ran_at": "2026-10-27T23:05:38+00:00"
+      "ran_at": "2026-10-27T23:40:48+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -371,30 +420,30 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-27T23:08:33+00:00",
+      "last_ok": "2026-10-27T23:44:26+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.6,
+      "duration_s": 0.8,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-27T23:05:37+00:00",
+      "last_ok": "2026-10-27T23:40:46+00:00",
       "ok": true,
-      "ran_at": "2026-10-27T23:05:37+00:00"
+      "ran_at": "2026-10-27T23:40:46+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.2,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-27T23:09:42+00:00",
+      "last_ok": "2026-10-27T23:45:46+00:00",
       "ok": true,
-      "ran_at": "2026-10-27T23:09:42+00:00"
+      "ran_at": "2026-10-27T23:45:46+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -403,9 +452,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-10-27T23:09:42+00:00",
+      "last_ok": "2026-10-27T23:45:46+00:00",
       "ok": true,
-      "ran_at": "2026-10-27T23:09:42+00:00"
+      "ran_at": "2026-10-27T23:45:46+00:00"
     }
   },
   "tracked_moneyline": {
