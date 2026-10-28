@@ -1,73 +1,4 @@
 {
- "UFC Fight Night: Moicano vs. Nolan": {
-  "bankroll": {
-   "pinned_at": "2026-10-27T10:43:11+00:00",
-   "identities": [
-    "[\"Nick Klein|Joe Kropschot\", [{\"fighter\": \"Joe Kropschot\", \"kind\": \"winner\"}]]",
-    "[\"Talita Alencar|Piera Rodriguez\", [{\"fighter\": \"Piera Rodriguez\", \"kind\": \"winner\"}]]",
-    "[\"Zach Reese|Mickey Gall\", [{\"fighter\": \"Zach Reese\", \"kind\": \"winner\"}]]"
-   ],
-   "snapshot": {
-    "legs": [
-     {
-      "label": "Joe Kropschot ML",
-      "odds_display": "-330",
-      "is_model": false,
-      "decimal_odds": 1.30303,
-      "fight_key": "Nick Klein|Joe Kropschot",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Joe Kropschot"
-       }
-      ],
-      "source": "FanDuel"
-     },
-     {
-      "label": "Piera Rodriguez ML",
-      "odds_display": "-290",
-      "is_model": false,
-      "decimal_odds": 1.344828,
-      "fight_key": "Talita Alencar|Piera Rodriguez",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Piera Rodriguez"
-       }
-      ],
-      "source": "FanDuel"
-     },
-     {
-      "label": "Zach Reese ML",
-      "odds_display": "-295",
-      "is_model": false,
-      "decimal_odds": 1.338983,
-      "fight_key": "Zach Reese|Mickey Gall",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Zach Reese"
-       }
-      ],
-      "source": "FanDuel"
-     }
-    ],
-    "has_model_legs": false,
-    "fight_ids": [
-     "card_10",
-     "card_11",
-     "card_9"
-    ],
-    "slip_id": "f75e5f820868",
-    "combined_decimal": 2.346368,
-    "combined_american": 135,
-    "combined_american_display": "+135",
-    "combined_prob": 0.3559,
-    "combined_prob_raw": 0.1952,
-    "venue": "FanDuel"
-   }
-  }
- },
  "UFC 333: Volkanovski vs. Evloev": {
   "bankroll": {
    "pinned_at": "2026-10-24T14:06:42+00:00",
@@ -175,6 +106,7 @@
    }
   }
  },
+ "UFC Fight Night: Moicano vs. Nolan": {},
  "UFC Fight Night: Buckley vs. Malott": {},
  "UFC Fight Night: Allen vs. Duncan": {},
  "UFC Fight Night: Rosas Jr. vs. Barcelos": {},
