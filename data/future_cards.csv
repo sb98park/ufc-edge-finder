@@ -1,8 +1,8 @@
 event_name,event_date,card_position,weight_class,fighter_a,fighter_b,event_start_time_et,is_womens_division,event_location,event_main_card_time_et,replacement,replaced_fighter,cancelled,manually_added,bout_order,_orphan_since,_orphan_streak
-UFC Fight Night: Bonfim vs. Brady,2026-11-07,Main Event,Heavyweight,Waldo Cortes Acosta,Johnny Walker,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,14.0,,
-UFC Fight Night: Bonfim vs. Brady,2026-11-07,Main Event,Welterweight,Gabriel Bonfim,Sean Brady,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,1.0,,6.0
-UFC Fight Night: Bonfim vs. Brady,2026-11-07,Co-Main Event,Women's Strawweight,Tatiana Suarez,Virna Jandiroba,17:00,True,"Meta APEX, Las Vegas, NV",20:00,,,,,12.0,,
-UFC Fight Night: Bonfim vs. Brady,2026-11-07,Main Card,Bantamweight,Davey Grant,Elijah Smith,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,3.0,,
+UFC Fight Night: Bonfim vs. Brady,2026-11-07,Main Event,Women's Strawweight,Tatiana Suarez,Virna Jandiroba,17:00,True,"Meta APEX, Las Vegas, NV",20:00,,,,,12.0,,
+UFC Fight Night: Bonfim vs. Brady,2026-11-07,Main Event,Heavyweight,Waldo Cortes Acosta,Johnny Walker,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,14.0,,1.0
+UFC Fight Night: Bonfim vs. Brady,2026-11-07,Main Event,Welterweight,Gabriel Bonfim,Sean Brady,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,1.0,,7.0
+UFC Fight Night: Bonfim vs. Brady,2026-11-07,Co-Main Event,Bantamweight,Davey Grant,Elijah Smith,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,3.0,,
 UFC Fight Night: Bonfim vs. Brady,2026-11-07,Main Card,Welterweight,Seokhyeon Ko,Wellington Turman,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,5.0,,
 UFC Fight Night: Bonfim vs. Brady,2026-11-07,Main Card,Light Heavyweight,Billy Elekana,Lucas Fernando,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,10.0,,
 UFC Fight Night: Bonfim vs. Brady,2026-11-07,Main Card,Unknown,Mantas Kondratavičius,Andre Petroski,17:00,False,"Meta APEX, Las Vegas, NV",20:00,True,Wes Schultz,,,9.0,,
@@ -45,9 +45,9 @@ UFC 335: Oliveira vs. Lopes,2026-12-12,Main Card,Middleweight,Bo Nickal,Joe Pyfe
 UFC 335: Oliveira vs. Lopes,2026-12-12,Main Card,Flyweight,Brandon Moreno,Charles Johnson,17:00,False,"T-Mobile Arena, Las Vegas, NV",21:00,,,,,3.0,,
 UFC 335: Oliveira vs. Lopes,2026-12-12,Prelims,Women's Flyweight,Maycee Barber,Carli Judice,17:00,True,"T-Mobile Arena, Las Vegas, NV",21:00,,,,,2.0,,
 UFC 335: Oliveira vs. Lopes,2026-12-12,Early Prelims,Light Heavyweight,Quentin Pasley,Junior Tafa,17:00,False,"T-Mobile Arena, Las Vegas, NV",21:00,,,,,1.0,,
-UFC Fight Night: Cortes Acosta vs. Walker,2026-11-07,Main Event,Heavyweight,Waldo Cortes Acosta,Johnny Walker,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,14.0,,
-UFC Fight Night: Cortes Acosta vs. Walker,2026-11-07,Co-Main Event,Women's Strawweight,Tatiana Suarez,Virna Jandiroba,17:00,True,"Meta APEX, Las Vegas, NV",20:00,,,,,13.0,,
-UFC Fight Night: Cortes Acosta vs. Walker,2026-11-07,Main Card,Bantamweight,Davey Grant,Elijah Smith,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,12.0,,
+UFC Fight Night: Cortes Acosta vs. Walker,2026-11-07,Main Event,Women's Strawweight,Tatiana Suarez,Virna Jandiroba,17:00,True,"Meta APEX, Las Vegas, NV",20:00,,,,,13.0,,
+UFC Fight Night: Cortes Acosta vs. Walker,2026-11-07,Main Event,Heavyweight,Waldo Cortes Acosta,Johnny Walker,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,14.0,,1.0
+UFC Fight Night: Cortes Acosta vs. Walker,2026-11-07,Co-Main Event,Bantamweight,Davey Grant,Elijah Smith,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,12.0,,
 UFC Fight Night: Cortes Acosta vs. Walker,2026-11-07,Main Card,Welterweight,Seokhyeon Ko,Wellington Turman,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,11.0,,
 UFC Fight Night: Cortes Acosta vs. Walker,2026-11-07,Main Card,Light Heavyweight,Billy Elekana,Lucas Fernando,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,10.0,,
 UFC Fight Night: Cortes Acosta vs. Walker,2026-11-07,Main Card,Middleweight,Mantas Kondratavičius,Andre Petroski,17:00,False,"Meta APEX, Las Vegas, NV",20:00,,,,,9.0,,
