@@ -1,4 +1,57 @@
 {
+ "UFC Fight Night: Bonfim vs. Brady": {
+  "bankroll": {
+   "pinned_at": "2026-11-02T05:18:11+00:00",
+   "identities": [
+    "[\"Waldo Cortes Acosta|Johnny Walker\", [{\"fighter\": \"Waldo Cortes-Acosta\", \"kind\": \"winner\"}]]",
+    "[\"Mantas Kondratavičius|Andre Petroski\", [{\"fighter\": \"Mantas Kondratavicius\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Waldo Cortes-Acosta ML",
+      "odds_display": "-190",
+      "is_model": false,
+      "decimal_odds": 1.526316,
+      "fight_key": "Waldo Cortes Acosta|Johnny Walker",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Waldo Cortes-Acosta"
+       }
+      ],
+      "source": "BetMGM"
+     },
+     {
+      "label": "Mantas Kondratavicius ML",
+      "odds_display": "-300",
+      "is_model": false,
+      "decimal_odds": 1.333333,
+      "fight_key": "Mantas Kondratavičius|Andre Petroski",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Mantas Kondratavicius"
+       }
+      ],
+      "source": "BetMGM"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_47",
+     "card_52"
+    ],
+    "slip_id": "16d0624abbaf",
+    "combined_decimal": 2.035088,
+    "combined_american": 104,
+    "combined_american_display": "+104",
+    "combined_prob": 0.4576,
+    "combined_prob_raw": 0.476,
+    "venue": "BetMGM"
+   }
+  }
+ },
  "UFC 333: Volkanovski vs. Evloev": {
   "bankroll": {
    "pinned_at": "2026-10-24T14:06:42+00:00",
