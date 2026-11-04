@@ -1,54 +1,54 @@
 {
  "UFC Fight Night: Bonfim vs. Brady": {
   "bankroll": {
-   "pinned_at": "2026-11-04T04:37:51+00:00",
+   "pinned_at": "2026-11-04T17:37:38+00:00",
    "identities": [
-    "[\"Priscila Cachoeira|Nina Milošević\", [{\"fighter\": \"Nina Milošević\", \"kind\": \"winner\"}]]",
-    "[\"Gabriel Lorenço|Thomas Petersen\", [{\"fighter\": \"Gabriel Lorenço\", \"kind\": \"winner\"}]]"
+    "[\"Waldo Cortes Acosta|Johnny Walker\", [{\"fighter\": \"Waldo Cortes-Acosta\", \"kind\": \"winner\"}]]",
+    "[\"Mitch Raposo|Marcos Degli\", [{\"fighter\": \"Marcos Degli\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
-      "label": "Nina Milošević ML",
-      "odds_display": "-520",
+      "label": "Waldo Cortes-Acosta ML",
+      "odds_display": "-225",
       "is_model": false,
-      "decimal_odds": 1.192308,
-      "fight_key": "Priscila Cachoeira|Nina Milošević",
+      "decimal_odds": 1.444444,
+      "fight_key": "Waldo Cortes Acosta|Johnny Walker",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Nina Milošević"
+        "fighter": "Waldo Cortes-Acosta"
        }
       ],
-      "source": "DraftKings"
+      "source": "BetMGM"
      },
      {
-      "label": "Gabriel Lorenço ML",
-      "odds_display": "+142",
+      "label": "Marcos Degli ML",
+      "odds_display": "-235",
       "is_model": false,
-      "decimal_odds": 2.42,
-      "fight_key": "Gabriel Lorenço|Thomas Petersen",
+      "decimal_odds": 1.425532,
+      "fight_key": "Mitch Raposo|Marcos Degli",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Gabriel Lorenço"
+        "fighter": "Marcos Degli"
        }
       ],
-      "source": "DraftKings"
+      "source": "BetMGM"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_52",
-     "card_55"
+     "card_48",
+     "card_53"
     ],
-    "slip_id": "19c471dc4a2d",
-    "combined_decimal": 2.885385,
-    "combined_american": 189,
-    "combined_american_display": "+189",
-    "combined_prob": 0.4941,
-    "combined_prob_raw": 0.4881,
-    "venue": "DraftKings"
+    "slip_id": "193ad75fda9c",
+    "combined_decimal": 2.059102,
+    "combined_american": 106,
+    "combined_american_display": "+106",
+    "combined_prob": 0.4349,
+    "combined_prob_raw": 0.3396,
+    "venue": "BetMGM"
    }
   }
  },
