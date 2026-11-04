@@ -1,8 +1,8 @@
 {
-  "at": "2026-11-04T04:00:21+00:00",
+  "at": "2026-11-04T04:40:07+00:00",
   "card_data_coverage": {
     "carded_fighters": 92,
-    "checked_at": "2026-11-04T03:56:21+00:00",
+    "checked_at": "2026-11-04T04:36:14+00:00",
     "counts": {},
     "findings": []
   },
@@ -29,31 +29,31 @@
   },
   "edges_two_way": {
     "best_book": {
-      "BetMGM": 12,
-      "DraftKings": 30,
+      "BetMGM": 13,
+      "DraftKings": 31,
       "FanDuel": 2,
-      "Polymarket": 90
+      "Polymarket": 86
     },
     "books_quoting": {
-      "1.0": 106,
-      "2.0": 6,
-      "3.0": 22
+      "1.0": 104,
+      "2.0": 8,
+      "3.0": 20
     },
-    "n": 134
+    "n": 132
   },
   "moneyline": {
     "best_book": {
-      "BetMGM": 12,
-      "DraftKings": 16,
+      "BetMGM": 13,
+      "DraftKings": 17,
       "FanDuel": 2,
-      "Polymarket": 30
+      "Polymarket": 28
     },
     "n": 60,
     "source": {
-      "BetMGM": 12,
-      "DraftKings": 16,
+      "BetMGM": 13,
+      "DraftKings": 17,
       "FanDuel": 2,
-      "Polymarket": 30
+      "Polymarket": 28
     }
   },
   "no_winner_bouts": {
@@ -68,8 +68,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 0.59,
-    "checked_at": "2026-11-04T03:57:29+00:00",
+    "cache_age_hours": 1.25,
+    "checked_at": "2026-11-04T04:37:19+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -90,17 +90,17 @@
       "reference_only_legs": 0
     },
     "bankroll/BetMGM": {
-      "combinations_considered": 30,
+      "combinations_considered": 16,
       "reason": "built",
       "slips": 1
     },
     "bankroll/DraftKings": {
-      "combinations_considered": 56,
+      "combinations_considered": 54,
       "reason": "built",
       "slips": 1
     },
     "bankroll/FanDuel": {
-      "combinations_considered": 57,
+      "combinations_considered": 55,
       "reason": "built",
       "slips": 1
     }
@@ -319,7 +319,7 @@
         "selectivity": 0.0556
       }
     ],
-    "checked_at": "2026-11-04T04:00:19+00:00",
+    "checked_at": "2026-11-04T04:40:05+00:00",
     "equivalent_floor": 0.693,
     "floor_in_force": 0.78,
     "gap_move": -0.0677,
@@ -341,20 +341,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-04T03:56:57+00:00",
+      "last_ok": "2026-11-04T04:36:49+00:00",
       "ok": true,
-      "ran_at": "2026-11-04T03:56:57+00:00"
+      "ran_at": "2026-11-04T04:36:49+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 31.3,
+      "duration_s": 31.1,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-04T03:56:56+00:00",
+      "last_ok": "2026-11-04T04:36:49+00:00",
       "ok": true,
-      "ran_at": "2026-11-04T03:56:56+00:00"
+      "ran_at": "2026-11-04T04:36:49+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -363,20 +363,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-04T03:56:22+00:00",
+      "last_ok": "2026-11-04T04:36:14+00:00",
       "ok": true,
-      "ran_at": "2026-11-04T03:56:22+00:00"
+      "ran_at": "2026-11-04T04:36:14+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-04T03:56:57+00:00",
+      "last_ok": "2026-11-04T04:36:50+00:00",
       "ok": true,
-      "ran_at": "2026-11-04T03:56:57+00:00"
+      "ran_at": "2026-11-04T04:36:50+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
@@ -385,9 +385,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-04T03:56:25+00:00",
+      "last_ok": "2026-11-04T04:36:18+00:00",
       "ok": true,
-      "ran_at": "2026-11-04T03:56:25+00:00"
+      "ran_at": "2026-11-04T04:36:18+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -395,7 +395,7 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-04T03:58:35+00:00",
+      "last_ok": "2026-11-04T04:38:23+00:00",
       "ok": true
     },
     "merge_results": {
@@ -405,9 +405,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-04T03:56:23+00:00",
+      "last_ok": "2026-11-04T04:36:16+00:00",
       "ok": true,
-      "ran_at": "2026-11-04T03:56:23+00:00"
+      "ran_at": "2026-11-04T04:36:16+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
@@ -416,9 +416,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-04T04:00:19+00:00",
+      "last_ok": "2026-11-04T04:40:06+00:00",
       "ok": true,
-      "ran_at": "2026-11-04T04:00:19+00:00"
+      "ran_at": "2026-11-04T04:40:06+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -427,24 +427,24 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-04T04:00:19+00:00",
+      "last_ok": "2026-11-04T04:40:05+00:00",
       "ok": true,
-      "ran_at": "2026-11-04T04:00:19+00:00"
+      "ran_at": "2026-11-04T04:40:05+00:00"
     }
   },
   "tracked_moneyline": {
     "best_book": {
-      "BetMGM": 9,
-      "DraftKings": 13,
+      "BetMGM": 10,
+      "DraftKings": 14,
       "FanDuel": 2,
-      "Polymarket": 4
+      "Polymarket": 2
     },
     "n": 28,
     "source": {
-      "BetMGM": 9,
-      "DraftKings": 13,
+      "BetMGM": 10,
+      "DraftKings": 14,
       "FanDuel": 2,
-      "Polymarket": 4
+      "Polymarket": 2
     }
   }
 }
