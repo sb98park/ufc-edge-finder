@@ -1,8 +1,8 @@
 {
-  "at": "2026-11-05T06:54:45+00:00",
+  "at": "2026-11-05T07:15:20+00:00",
   "card_data_coverage": {
     "carded_fighters": 93,
-    "checked_at": "2026-11-05T06:51:10+00:00",
+    "checked_at": "2026-11-05T07:11:18+00:00",
     "counts": {},
     "findings": []
   },
@@ -31,29 +31,29 @@
     "best_book": {
       "BetMGM": 14,
       "DraftKings": 30,
-      "FanDuel": 6,
-      "Polymarket": 74
+      "FanDuel": 8,
+      "Polymarket": 76
     },
     "books_quoting": {
-      "1.0": 96,
+      "1.0": 100,
       "2.0": 8,
       "3.0": 20
     },
-    "n": 124
+    "n": 128
   },
   "moneyline": {
     "best_book": {
       "BetMGM": 14,
       "DraftKings": 16,
-      "FanDuel": 4,
-      "Polymarket": 28
+      "FanDuel": 6,
+      "Polymarket": 26
     },
     "n": 62,
     "source": {
       "BetMGM": 14,
       "DraftKings": 16,
-      "FanDuel": 4,
-      "Polymarket": 28
+      "FanDuel": 6,
+      "Polymarket": 26
     }
   },
   "no_winner_bouts": {
@@ -68,9 +68,9 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 2.0,
-    "checked_at": "2026-11-05T06:52:22+00:00",
-    "detail": "served from cache, quota untouched",
+    "cache_age_hours": 0.0,
+    "checked_at": "2026-11-05T07:12:24+00:00",
+    "detail": "fetched 68 events, quota remaining 431",
     "max_serve_hours": 24.0,
     "ok": true
   },
@@ -108,8 +108,8 @@
   "rows_by_source": {
     "BetMGM": 22,
     "DraftKings": 54,
-    "FanDuel": 44,
-    "Polymarket": 127
+    "FanDuel": 46,
+    "Polymarket": 135
   },
   "rundown_dates_requested": [
     "2026-11-07"
@@ -312,19 +312,19 @@
         "date": "2026-11-07",
         "event": "UFC Fight Night: Bonfim vs. Brady",
         "fights": 19,
-        "gap_p90": -0.0323,
-        "market_p90": 0.7799,
+        "gap_p90": -0.0453,
+        "market_p90": 0.7929,
         "model_p90": 0.7476,
-        "priced": 15,
+        "priced": 16,
         "selectivity": 0.0526
       }
     ],
-    "checked_at": "2026-11-05T06:54:44+00:00",
+    "checked_at": "2026-11-05T07:15:18+00:00",
     "equivalent_floor": 0.69,
     "floor_in_force": 0.78,
-    "gap_move": -0.0679,
+    "gap_move": -0.0701,
     "trailing_cards": 6,
-    "trailing_gap_p90": -0.0525,
+    "trailing_gap_p90": -0.0547,
     "trailing_selectivity": 0.0323,
     "verdict": "drifted"
   },
@@ -336,58 +336,58 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.6,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-05T06:51:49+00:00",
+      "last_ok": "2026-11-05T07:11:54+00:00",
       "ok": true,
-      "ran_at": "2026-11-05T06:51:49+00:00"
+      "ran_at": "2026-11-05T07:11:54+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 36.1,
+      "duration_s": 31.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-05T06:51:48+00:00",
+      "last_ok": "2026-11-05T07:11:53+00:00",
       "ok": true,
-      "ran_at": "2026-11-05T06:51:48+00:00"
+      "ran_at": "2026-11-05T07:11:53+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-05T06:51:10+00:00",
+      "last_ok": "2026-11-05T07:11:18+00:00",
       "ok": true,
-      "ran_at": "2026-11-05T06:51:10+00:00"
+      "ran_at": "2026-11-05T07:11:18+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-05T06:51:49+00:00",
+      "last_ok": "2026-11-05T07:11:54+00:00",
       "ok": true,
-      "ran_at": "2026-11-05T06:51:49+00:00"
+      "ran_at": "2026-11-05T07:11:54+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.6,
+      "duration_s": 2.0,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-05T06:51:12+00:00",
+      "last_ok": "2026-11-05T07:11:22+00:00",
       "ok": true,
-      "ran_at": "2026-11-05T06:51:12+00:00"
+      "ran_at": "2026-11-05T07:11:22+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -395,41 +395,41 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-05T06:53:18+00:00",
+      "last_ok": "2026-11-05T07:13:29+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.7,
+      "duration_s": 1.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-05T06:51:11+00:00",
+      "last_ok": "2026-11-05T07:11:20+00:00",
       "ok": true,
-      "ran_at": "2026-11-05T06:51:11+00:00"
+      "ran_at": "2026-11-05T07:11:20+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-05T06:54:44+00:00",
+      "last_ok": "2026-11-05T07:15:19+00:00",
       "ok": true,
-      "ran_at": "2026-11-05T06:54:44+00:00"
+      "ran_at": "2026-11-05T07:15:19+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-05T06:54:44+00:00",
+      "last_ok": "2026-11-05T07:15:18+00:00",
       "ok": true,
-      "ran_at": "2026-11-05T06:54:44+00:00"
+      "ran_at": "2026-11-05T07:15:18+00:00"
     }
   },
   "tracked_moneyline": {
