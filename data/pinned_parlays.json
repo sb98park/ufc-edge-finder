@@ -10,9 +10,9 @@
     "legs": [
      {
       "label": "Waldo Cortes-Acosta ML",
-      "odds_display": "-225",
+      "odds_display": "-230",
       "is_model": false,
-      "decimal_odds": 1.444444,
+      "decimal_odds": 1.434783,
       "fight_key": "Waldo Cortes Acosta|Johnny Walker",
       "conditions": [
        {
@@ -20,13 +20,13 @@
         "fighter": "Waldo Cortes-Acosta"
        }
       ],
-      "source": "BetMGM"
+      "source": "DraftKings"
      },
      {
       "label": "Marcos Degli ML",
-      "odds_display": "-250",
+      "odds_display": "-245",
       "is_model": false,
-      "decimal_odds": 1.4,
+      "decimal_odds": 1.408163,
       "fight_key": "Mitch Raposo|Marcos Degli",
       "conditions": [
        {
@@ -34,7 +34,7 @@
         "fighter": "Marcos Degli"
        }
       ],
-      "source": "BetMGM"
+      "source": "DraftKings"
      }
     ],
     "has_model_legs": false,
@@ -43,12 +43,12 @@
      "card_54"
     ],
     "slip_id": "63abb29691a3",
-    "combined_decimal": 2.022222,
+    "combined_decimal": 2.020408,
     "combined_american": 102,
     "combined_american_display": "+102",
-    "combined_prob": 0.4451,
+    "combined_prob": 0.4469,
     "combined_prob_raw": 0.3396,
-    "venue": "BetMGM"
+    "venue": "DraftKings"
    }
   }
  },
