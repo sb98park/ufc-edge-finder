@@ -1,0 +1,75 @@
+# Watchdog for the PUBLISHED page, not for the build.
+#
+# WHY IT IS A SEPARATE WORKFLOW. refresh.yml's deploy step is
+# continue-on-error (see the long comment there: the in-run retry it replaced
+# went 0 for 5, because a Pages deployment ID is the commit sha and cannot be
+# redeployed -- only the next tick's new sha can). That trade gives up the
+# per-incident email, and this is what replaces it. It must NOT be a step in
+# refresh.yml or a fourth entry in its gate loop: this check can fail for a
+# reason outside the repo -- Pages down, CDN slow, domain unreachable -- and
+# CLAUDE.md section 2 is explicit that a gate exiting non-zero freezes the
+# whole site on stale data. A watchdog that can fail stays out of the path
+# that commits data. This workflow touches nothing and needs no secrets.
+#
+# WHAT A FAILURE HERE MEANS: the page a reader loads has stopped moving for
+# over 75 minutes. That is a real outage worth an email. A single lost deploy
+# is not and will not trip it -- see the threshold note in
+# scripts/check_site_freshness.py, which is sized against
+# should_refresh.py's 30-minute worst-case cadence.
+name: Site Freshness
+
+on:
+  # Best-effort by design. GitHub drops `schedule` ticks under load -- this
+  # repo measured roughly one in twelve delivered (see refresh.yml) -- and
+  # that is fine here in a way it is not there: against a 75-minute
+  # threshold, even hourly delivery catches a persistent outage, and unlike
+  # the refresh cadence there is nothing to be gained from a Cloudflare
+  # Worker firing this more reliably. Do not wire one up; a watchdog that
+  # runs more often than the thing it watches only adds noise.
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# A queued watchdog is a stale watchdog: if one is already running, the
+# newer tick is the one worth keeping.
+concurrency:
+  group: site-freshness
+  cancel-in-progress: true
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `pip install`: check_site_freshness.py is stdlib only (urllib,
+      # datetime, re) precisely so this job cannot fail for a dependency
+      # resolution problem on the one workflow whose job is to be trusted.
+      - name: Check the published page's build stamp
+        run: python3 scripts/check_site_freshness.py
+
+      - name: Say what a failure here means
+        if: failure()
+        run: |
+          {
+            echo "### The published page is stale"
+            echo
+            echo "The site has not published a new build in over 75 minutes."
+            echo "This is past anything should_refresh.py's cadence explains"
+            echo "(it caps at a 30-minute interval), so a Pages deploy is"
+            echo "failing repeatedly rather than losing one race."
+            echo
+            echo "Where to look, in order:"
+            echo "1. The \`deploy\` job of recent Refresh runs -- it is"
+            echo "   continue-on-error, so look at the step, not the check."
+            echo "   A lost deploy writes a 'Pages deploy did not land'"
+            echo "   notice to its run summary."
+            echo "2. \`gh api repos/:owner/:repo/pages --jq .status\`"
+            echo "3. https://www.githubstatus.com for Pages."
+            echo
+            echo "Locally: \`python3 scripts/check_site_freshness.py\`"
+          } >> "$GITHUB_STEP_SUMMARY"

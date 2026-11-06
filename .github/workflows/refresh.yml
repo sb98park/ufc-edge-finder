@@ -736,31 +736,67 @@ jobs:
     needs: refresh
     if: needs.refresh.outputs.build == 'yes' 
     runs-on: ubuntu-latest
+    # ADDED 2026-11-06. This job had no bound and inherited the 6-hour
+    # default, while the comment on `concurrency` above claimed
+    # timeout-minutes bounded a hung run -- it is on `refresh` only. Two
+    # failures on 2026-11-05 (42097750081, 42093775766) therefore held the
+    # `refresh` group for 20+ minutes apiece, collapsing every tick behind
+    # them. 12 = the action's own hard 10-minute cap plus setup.
+    timeout-minutes: 12
     environment:
       name: github-pages
-      # Falls back to the retry's URL: on a first-attempt failure the original
-      # output is empty and the environment link would render blank.
-      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # RETRIED ONCE, because the failures here are transient and server-side.
+      # ONE ATTEMPT, NON-FATAL. Both halves are deliberate. Two earlier
+      # diagnoses in this block were wrong and each sent the next reader
+      # somewhere useless, so the evidence for this one is written out.
       #
-      # THE PREVIOUS DIAGNOSIS IN THIS BLOCK WAS WRONG and is corrected below,
-      # because it sent the next reader (and it did) after the wrong thing.
-      # It read: "Every failure so far has been the ACTION giving up while
-      # GitHub still reported deployment_in_progress -- not an error from
-      # Pages", and on that basis raised the timeout to 30 minutes.
+      # 1. WHY THERE IS NO LONGER A RETRY HERE. The retry that used to sit
+      #    below went 0 for 5 across every failure observed on 2026-11-05/06.
+      #    It could not have worked, for a structural reason: the Pages
+      #    deployment ID *is* the commit sha, so it is fixed for the life of
+      #    a run, and both observed failure modes defeat re-using it.
       #
-      # Run 2574 refutes it. GitHub itself marked the DEPLOYMENT failed:
-      #     15:06:09  in_progress
-      #     15:07:05  failure
-      # Fifty-six seconds, against a 30-minute timeout. The action did not
-      # give up; Pages failed it. No timeout value addresses that, and the
-      # generous timeout below is retained only because it is harmless.
+      #    (a) Timeout -- 4 of 5. The action CANCELS the deployment when it
+      #        gives up, then the retry recreates the same ID and reads back
+      #        our own cancel:
+      #            16:26:21  Timeout reached, aborting!
+      #            16:26:21  Canceled deployment with ID ff01348d...
+      #            16:26:22  [retry] Created deployment for ff01348d...
+      #            16:26:28  Deployment cancelled.
+      #        Seven seconds. In two of these the retry instead burned a
+      #        second full 10-minute window before failing the same way.
       #
-      # What the evidence supports is a retry. The same sha deployed cleanly
-      # six minutes later in 13 seconds, so the artifact and the config were
-      # both fine -- permissions, upload-pages-artifact@v3 and path: docs all
-      # verified on the failing run.
+      #    (b) Pages rejects the artifact -- 1 of 5, run 42268299690:
+      #        "Deployment failed, try again later." at 16s, and the retry
+      #        failed identically 3m45s later. Same sha, same verdict.
+      #
+      #    The retry that DOES work is the next tick five minutes later: it
+      #    builds a NEW sha, which gets a new deployment ID. Every one of
+      #    the five self-healed that way with no intervention.
+      #
+      # 2. WHY continue-on-error. Given the above, a red run here never
+      #    meant "the site is broken" -- it meant "this attempt lost a race
+      #    the next tick wins". Five such emails in 41 hours is how an owner
+      #    gets trained to ignore the one that will matter. What is worth
+      #    alarming on is the PUBLISHED PAGE going stale, which is what a
+      #    reader actually experiences; that is
+      #    .github/workflows/site-freshness.yml, deliberately a separate
+      #    workflow so a watchdog that can fail for a GitHub-side reason is
+      #    never in the path that commits data (CLAUDE.md section 2).
+      #
+      #    IF YOU ARE HERE BECAUSE THE SITE IS STALE: this step going green
+      #    is NOT evidence the page published. Check the freshness workflow,
+      #    or `python3 scripts/check_site_freshness.py`.
+      #
+      # 3. WHY timeout: 600000 AND NOT MORE. The action clamps it. Every run
+      #    before this change logged, against a `timeout: 1800000` that the
+      #    previous comment here called "harmless":
+      #        Warning: timeout value is greater than the allowed maximum --
+      #        timeout set to the maximum of 600000 milliseconds
+      #    It was inert, not harmless: the file advertised thirty minutes
+      #    while ten was the real budget, and ten is the number that decided
+      #    all four timeout failures. Raising it back does nothing at all.
       #
       # WHY NOT "SKIP THE DEPLOY WHEN THE PAGE IS UNCHANGED", which is the
       # obvious way to reduce exposure: the page is never unchanged. docs/ is
@@ -774,13 +810,25 @@ jobs:
         continue-on-error: true
         uses: actions/deploy-pages@v4
         with:
-          timeout: 1800000
+          timeout: 600000
           error_count: 20
 
-      - name: Retry the deploy once
-        id: deployment_retry
+      # Non-fatal on purpose, so this is the only trace a lost deploy leaves
+      # in the run. Keep it: with continue-on-error above, a green check is
+      # otherwise indistinguishable from a deploy that landed.
+      - name: Record that the deploy did not land
         if: steps.deployment.outcome == 'failure'
-        uses: actions/deploy-pages@v4
-        with:
-          timeout: 1800000
-          error_count: 20
+        run: |
+          {
+            echo "### Pages deploy did not land"
+            echo
+            echo "The build ran and the data commit landed; the PAGE did not."
+            echo "The next tick builds a new sha, which gets a new Pages"
+            echo "deployment ID, and publishes it. All five failures observed"
+            echo "on 2026-11-05/06 self-healed that way."
+            echo
+            echo "A deploy that stops landing for good surfaces in the"
+            echo "site-freshness workflow, which fails once the published"
+            echo "page is over 75 minutes old."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=Pages deploy did not land::the next tick republishes; site-freshness covers a persistent failure"
