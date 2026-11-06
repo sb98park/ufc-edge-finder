@@ -56,6 +56,40 @@ MODEL_MARKERS = (
 MIN_VALUE_LEN = 6
 
 
+def _leak_at(value: str, haystack: str):
+    """
+    Where `value` appears as a NUMBER, not as digits inside a bigger one.
+
+    A bare `value in haystack` is what this used to do, and the file already
+    carries one scar from it -- "letter-spacing: -0.2px matched a redacted
+    value and reported a leak that was a CSS declaration", fixed by stripping
+    style and script. The same collision then happened in rendered HTML, where
+    stripping cannot help: on 2026-11-01 the probability 0.6396 was found
+    inside data-target-offset="40.6396425204", a progress-ring geometry
+    attribute. 87.96459 is 2*pi*14, so that offset encodes 53.8% and has
+    nothing to do with 63.96% -- the digits merely collide. The gate blocked
+    every deploy for twenty-nine consecutive runs until the probability moved.
+
+    So a match is only real when it is not preceded by a digit or a dot, which
+    is exactly what makes it part of a longer number. A genuine leak is
+    preceded by a quote, a space, a bracket or a tag -- never by a digit.
+
+    DELIBERATELY STILL FAILS CLOSED on a trailing digit: if the manifest holds
+    0.6396 and the page carries 0.6396425204 standing on its own, that is the
+    same quantity at more precision and it is still paid content. Only the
+    leading side is a false-positive source.
+    """
+    start = 0
+    while True:
+        i = haystack.find(value, start)
+        if i < 0:
+            return None
+        before = haystack[i - 1] if i else ""
+        if not (before.isdigit() or before == "."):
+            return i
+        start = i + 1
+
+
 def _ungraded_cards(html: str) -> list[str]:
     """
     Every fight card that has NOT been graded yet.
@@ -112,10 +146,10 @@ def main() -> int:
         if len(s) < MIN_VALUE_LEN:
             continue
         checked += 1
-        if s in haystack:
+        where = _leak_at(s, haystack)
+        if where is not None:
             leaked += 1
             if leaked <= 8:
-                where = haystack.find(s)
                 context = re.sub(r"\s+", " ", haystack[max(0, where - 70):where + 70])
                 failures.append(f"redacted value {s!r} present in the free payload: ...{context}...")
 
