@@ -1,10 +1,132 @@
 {
-  "at": "2026-11-08T03:55:15+00:00",
+  "at": "2026-11-08T04:07:09+00:00",
   "card_data_coverage": {
-    "carded_fighters": 59,
-    "checked_at": "2026-11-08T03:51:21+00:00",
-    "counts": {},
-    "findings": []
+    "carded_fighters": 81,
+    "checked_at": "2026-11-08T04:01:21+00:00",
+    "counts": {
+      "history": 12,
+      "layoff": 3,
+      "physicals": 1
+    },
+    "findings": [
+      {
+        "detail": "0 of 14 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Akbar Abdullaev",
+        "last_fight_date": "2026-09-15",
+        "severity": "history"
+      },
+      {
+        "detail": "1 of 13 bouts in fight_history (8%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Islam Dulatov",
+        "last_fight_date": "2025-07-19",
+        "severity": "history"
+      },
+      {
+        "detail": "1 of 7 bouts in fight_history (14%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Ivan Gnizditskiy",
+        "last_fight_date": "2026-03-28",
+        "severity": "history"
+      },
+      {
+        "detail": "6 of 22 bouts in fight_history (27%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Jafel Filho",
+        "last_fight_date": "2026-04-25",
+        "severity": "history"
+      },
+      {
+        "detail": "13 of 26 bouts in fight_history (50%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "JunYong Park",
+        "last_fight_date": "2025-10-25",
+        "severity": "history"
+      },
+      {
+        "detail": "1 of 18 bouts in fight_history (6%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Levan Chokheli",
+        "last_fight_date": "2026-06-20",
+        "severity": "history"
+      },
+      {
+        "detail": "1 of 7 bouts in fight_history (14%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Magomed Tuchalov",
+        "last_fight_date": "2026-03-28",
+        "severity": "history"
+      },
+      {
+        "detail": "6 of 17 bouts in fight_history (35%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Marco Tulio",
+        "last_fight_date": "2026-05-09",
+        "severity": "history"
+      },
+      {
+        "detail": "0 of 9 bouts in fight_history (0%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Modestino Rodrigues",
+        "last_fight_date": "2026-09-01",
+        "severity": "history"
+      },
+      {
+        "detail": "6 of 18 bouts in fight_history (33%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Shara Magomedov",
+        "last_fight_date": "2026-06-27",
+        "severity": "history"
+      },
+      {
+        "detail": "2 of 10 bouts in fight_history (20%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Uran Satybaldiev",
+        "last_fight_date": "2025-08-23",
+        "severity": "history"
+      },
+      {
+        "detail": "3 of 31 bouts in fight_history (10%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Yaroslav Amosov",
+        "last_fight_date": "2026-05-09",
+        "severity": "history"
+      },
+      {
+        "detail": "last fight 2025-07-19 (1.3y) is the newest of only 1 bout we hold -- the real one may be far more recent",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Islam Dulatov",
+        "severity": "layoff"
+      },
+      {
+        "detail": "last fight 2025-10-25 (1.0y) is the newest of only 13 bouts we hold -- the real one may be far more recent",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "JunYong Park",
+        "severity": "layoff"
+      },
+      {
+        "detail": "last fight 2025-08-23 (1.2y) is the newest of only 2 bouts we hold -- the real one may be far more recent",
+        "event": "UFC Fight Night: Adesanya vs Magomedov",
+        "event_date": "2026-12-05",
+        "fighter": "Uran Satybaldiev",
+        "severity": "layoff"
+      }
+    ]
   },
   "duplicate_identities": {
     "count": 1,
@@ -32,13 +154,13 @@
       "BetMGM": 13,
       "DraftKings": 2,
       "FanDuel": 3,
-      "Polymarket": 24
+      "Polymarket": 22
     },
     "books_quoting": {
-      "1.0": 36,
+      "1.0": 34,
       "3.0": 6
     },
-    "n": 42
+    "n": 40
   },
   "moneyline": {
     "best_book": {
@@ -67,9 +189,9 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 0.0,
-    "checked_at": "2026-11-08T03:52:19+00:00",
-    "detail": "fetched 47 events, quota remaining 382",
+    "cache_age_hours": 0.19,
+    "checked_at": "2026-11-08T04:03:35+00:00",
+    "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
   },
@@ -84,9 +206,9 @@
   },
   "parlay": {
     "bankroll": {
-      "detail": "3 leg(s) priced only on a reference line, which is not a book you can bet at",
+      "detail": "4 leg(s) priced only on a reference line, which is not a book you can bet at",
       "reason": "no bettable venue",
-      "reference_only_legs": 3
+      "reference_only_legs": 4
     },
     "bankroll/BetMGM": {
       "combinations_considered": 45,
@@ -108,7 +230,7 @@
     "BetMGM": 16,
     "DraftKings": 6,
     "FanDuel": 8,
-    "Polymarket": 76
+    "Polymarket": 74
   },
   "rundown_dates_requested": [
     "2026-11-14"
@@ -311,14 +433,14 @@
         "date": "2026-11-07",
         "event": "UFC Fight Night: Bonfim vs. Brady",
         "fights": 19,
-        "gap_p90": -0.0271,
+        "gap_p90": -0.0267,
         "market_p90": 0.7929,
-        "model_p90": 0.7658,
+        "model_p90": 0.7662,
         "priced": 16,
         "selectivity": 0.1053
       }
     ],
-    "checked_at": "2026-11-08T03:55:13+00:00",
+    "checked_at": "2026-11-08T04:07:06+00:00",
     "equivalent_floor": 0.69,
     "floor_in_force": 0.78,
     "gap_move": -0.067,
@@ -335,36 +457,36 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
+      "duration_s": 57.4,
+      "error": null,
+      "exit_code": 0,
+      "in_flight": false,
+      "killed_previous_run": false,
+      "last_ok": "2026-11-08T04:03:01+00:00",
+      "ok": true,
+      "ran_at": "2026-11-08T04:03:01+00:00"
+    },
+    "backfill_history": {
+      "consecutive_failures": 0,
+      "duration_s": 38.6,
+      "error": null,
+      "exit_code": 0,
+      "in_flight": false,
+      "killed_previous_run": false,
+      "last_ok": "2026-11-08T04:02:03+00:00",
+      "ok": true,
+      "ran_at": "2026-11-08T04:02:03+00:00"
+    },
+    "card_data_coverage": {
+      "consecutive_failures": 0,
       "duration_s": 0.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T03:51:48+00:00",
+      "last_ok": "2026-11-08T04:01:21+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T03:51:48+00:00"
-    },
-    "backfill_history": {
-      "consecutive_failures": 0,
-      "duration_s": 24.1,
-      "error": null,
-      "exit_code": 0,
-      "in_flight": false,
-      "killed_previous_run": false,
-      "last_ok": "2026-11-08T03:51:47+00:00",
-      "ok": true,
-      "ran_at": "2026-11-08T03:51:47+00:00"
-    },
-    "card_data_coverage": {
-      "consecutive_failures": 0,
-      "duration_s": 0.4,
-      "error": null,
-      "exit_code": 0,
-      "in_flight": false,
-      "killed_previous_run": false,
-      "last_ok": "2026-11-08T03:51:21+00:00",
-      "ok": true,
-      "ran_at": "2026-11-08T03:51:21+00:00"
+      "ran_at": "2026-11-08T04:01:21+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
@@ -373,20 +495,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T03:51:48+00:00",
+      "last_ok": "2026-11-08T04:03:01+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T03:51:48+00:00"
+      "ran_at": "2026-11-08T04:03:01+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
-      "duration_s": 1.8,
+      "duration_s": 2.2,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T03:51:23+00:00",
+      "last_ok": "2026-11-08T04:01:25+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T03:51:23+00:00"
+      "ran_at": "2026-11-08T04:01:25+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -394,19 +516,19 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T03:53:09+00:00",
+      "last_ok": "2026-11-08T04:04:34+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.7,
+      "duration_s": 1.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T03:51:21+00:00",
+      "last_ok": "2026-11-08T04:01:23+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T03:51:21+00:00"
+      "ran_at": "2026-11-08T04:01:23+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
@@ -415,20 +537,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T03:55:14+00:00",
+      "last_ok": "2026-11-08T04:07:07+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T03:55:14+00:00"
+      "ran_at": "2026-11-08T04:07:07+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T03:55:13+00:00",
+      "last_ok": "2026-11-08T04:07:06+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T03:55:13+00:00"
+      "ran_at": "2026-11-08T04:07:06+00:00"
     }
   },
   "tracked_moneyline": {
