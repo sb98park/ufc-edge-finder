@@ -1,8 +1,8 @@
 {
-  "at": "2026-11-08T18:30:55+00:00",
+  "at": "2026-11-08T19:05:59+00:00",
   "card_data_coverage": {
     "carded_fighters": 83,
-    "checked_at": "2026-11-08T18:26:20+00:00",
+    "checked_at": "2026-11-08T19:01:22+00:00",
     "counts": {
       "physicals": 1
     },
@@ -70,8 +70,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 0.58,
-    "checked_at": "2026-11-08T18:27:16+00:00",
+    "cache_age_hours": 1.16,
+    "checked_at": "2026-11-08T19:02:19+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -321,7 +321,7 @@
         "selectivity": 0.1053
       }
     ],
-    "checked_at": "2026-11-08T18:30:52+00:00",
+    "checked_at": "2026-11-08T19:05:56+00:00",
     "equivalent_floor": 0.69,
     "floor_in_force": 0.78,
     "gap_move": -0.067,
@@ -343,20 +343,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T18:26:54+00:00",
+      "last_ok": "2026-11-08T19:01:56+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T18:26:54+00:00"
+      "ran_at": "2026-11-08T19:01:56+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 29.6,
+      "duration_s": 29.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T18:26:54+00:00",
+      "last_ok": "2026-11-08T19:01:55+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T18:26:54+00:00"
+      "ran_at": "2026-11-08T19:01:55+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -365,9 +365,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T18:26:20+00:00",
+      "last_ok": "2026-11-08T19:01:22+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T18:26:20+00:00"
+      "ran_at": "2026-11-08T19:01:22+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
@@ -376,9 +376,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T18:26:55+00:00",
+      "last_ok": "2026-11-08T19:01:56+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T18:26:55+00:00"
+      "ran_at": "2026-11-08T19:01:56+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
@@ -387,9 +387,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T18:26:24+00:00",
+      "last_ok": "2026-11-08T19:01:26+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T18:26:24+00:00"
+      "ran_at": "2026-11-08T19:01:26+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -397,7 +397,7 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T18:28:11+00:00",
+      "last_ok": "2026-11-08T19:03:15+00:00",
       "ok": true
     },
     "merge_results": {
@@ -407,20 +407,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T18:26:22+00:00",
+      "last_ok": "2026-11-08T19:01:23+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T18:26:22+00:00"
+      "ran_at": "2026-11-08T19:01:23+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.3,
+      "duration_s": 0.4,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T18:30:53+00:00",
+      "last_ok": "2026-11-08T19:05:57+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T18:30:53+00:00"
+      "ran_at": "2026-11-08T19:05:57+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -429,9 +429,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-08T18:30:52+00:00",
+      "last_ok": "2026-11-08T19:05:56+00:00",
       "ok": true,
-      "ran_at": "2026-11-08T18:30:52+00:00"
+      "ran_at": "2026-11-08T19:05:56+00:00"
     }
   },
   "tracked_moneyline": {
