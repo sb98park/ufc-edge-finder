@@ -1,57 +1,4 @@
 {
- "UFC Fight Night: Bonfim vs. Brady": {
-  "bankroll": {
-   "pinned_at": "2026-11-04T17:37:38+00:00",
-   "identities": [
-    "[\"Waldo Cortes Acosta|Johnny Walker\", [{\"fighter\": \"Waldo Cortes-Acosta\", \"kind\": \"winner\"}]]",
-    "[\"Mitch Raposo|Marcos Degli\", [{\"fighter\": \"Marcos Degli\", \"kind\": \"winner\"}]]"
-   ],
-   "snapshot": {
-    "legs": [
-     {
-      "label": "Waldo Cortes-Acosta ML",
-      "odds_display": "-225",
-      "is_model": false,
-      "decimal_odds": 1.444444,
-      "fight_key": "Waldo Cortes Acosta|Johnny Walker",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Waldo Cortes-Acosta"
-       }
-      ],
-      "source": "DraftKings"
-     },
-     {
-      "label": "Marcos Degli ML",
-      "odds_display": "-245",
-      "is_model": false,
-      "decimal_odds": 1.408163,
-      "fight_key": "Mitch Raposo|Marcos Degli",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Marcos Degli"
-       }
-      ],
-      "source": "DraftKings"
-     }
-    ],
-    "has_model_legs": false,
-    "fight_ids": [
-     "card_49",
-     "card_54"
-    ],
-    "slip_id": "63abb29691a3",
-    "combined_decimal": 2.034014,
-    "combined_american": 103,
-    "combined_american_display": "+103",
-    "combined_prob": 0.4415,
-    "combined_prob_raw": 0.3396,
-    "venue": "DraftKings"
-   }
-  }
- },
  "UFC 333: Volkanovski vs. Evloev": {
   "bankroll": {
    "pinned_at": "2026-10-24T14:06:42+00:00",
@@ -159,6 +106,7 @@
    }
   }
  },
+ "UFC Fight Night: Bonfim vs. Brady": {},
  "UFC Fight Night: Moicano vs. Nolan": {},
  "UFC Fight Night: Buckley vs. Malott": {},
  "UFC Fight Night: Allen vs. Duncan": {},
