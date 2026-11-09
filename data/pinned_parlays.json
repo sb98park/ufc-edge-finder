@@ -1,4 +1,57 @@
 {
+ "UFC 334: Gane vs. Hokit": {
+  "bankroll": {
+   "pinned_at": "2026-11-09T05:32:54+00:00",
+   "identities": [
+    "[\"Bilal Hasan|Luis Gurule\", [{\"fighter\": \"Bilal Hasan\", \"kind\": \"winner\"}]]",
+    "[\"Evan Elder|Samuel Sanches\", [{\"fighter\": \"Evan Elder\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Bilal Hasan ML",
+      "odds_display": "-1100",
+      "is_model": false,
+      "decimal_odds": 1.090909,
+      "fight_key": "Bilal Hasan|Luis Gurule",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Bilal Hasan"
+       }
+      ],
+      "source": "BetMGM"
+     },
+     {
+      "label": "Evan Elder ML",
+      "odds_display": "-115",
+      "is_model": false,
+      "decimal_odds": 1.869565,
+      "fight_key": "Evan Elder|Samuel Sanches",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Evan Elder"
+       }
+      ],
+      "source": "BetMGM"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_4",
+     "card_13"
+    ],
+    "slip_id": "366687afd370",
+    "combined_decimal": 2.039526,
+    "combined_american": 104,
+    "combined_american_display": "+104",
+    "combined_prob": 0.4298,
+    "combined_prob_raw": 0.376,
+    "venue": "BetMGM"
+   }
+  }
+ },
  "UFC 333: Volkanovski vs. Evloev": {
   "bankroll": {
    "pinned_at": "2026-10-24T14:06:42+00:00",
