@@ -448,6 +448,50 @@ ORPHAN_STREAK_LIMIT = 3
 ORPHAN_GRACE_HOURS = 24
 
 
+def _days_since_event(event_date) -> float:
+    """
+    Whole days from an event's date to now, or -1.0 if it cannot be read.
+
+    -1.0, not 0.0, on a bad date: the caller uses this to decide whether an
+    event is already behind us, so an unreadable date must read as "still
+    ahead" and keep the conservative pre-card grace rather than unlock the
+    shortcut. Same reasoning as _hours_since's 0.0 default, opposite sign.
+    """
+    try:
+        d = dt.datetime.fromisoformat(str(event_date).strip()[:10])
+    except (TypeError, ValueError):
+        return -1.0
+    d = d.replace(tzinfo=dt.timezone.utc)
+    return (dt.datetime.now(dt.timezone.utc) - d).total_seconds() / 86400.0
+
+
+def _is_blank(value) -> bool:
+    """
+    True for an unset CSV cell, whatever pandas handed back for it.
+
+    EXISTS BECAUSE `not str(value or "").strip()` IS WRONG HERE, and was,
+    for 571 consecutive resyncs. An empty cell in a column that any other
+    row has filled reads back as NaN, NaN is truthy, so `value or ""`
+    returns the NaN rather than the "" -- and `str(NaN).strip()` is the
+    non-empty string "nan", which the caller then reads as "already set".
+    CLAUDE.md s4; _bump_orphan_streak below documents the same trap for the
+    sibling column and the fix missed this one three lines away.
+
+    Also treats the literal "nan"/"none" text as blank: once a NaN has been
+    round-tripped through a to_csv/read_csv pair it is indistinguishable
+    from a value, and this repo has already shipped one bug that wrote the
+    string "nan" into a real field.
+    """
+    if value is None:
+        return True
+    try:
+        if value != value:          # pandas/numpy NaN
+            return True
+    except (TypeError, ValueError):
+        pass
+    return str(value).strip().lower() in ("", "nan", "none", "nat")
+
+
 def _hours_since(stamp, now_iso) -> float:
     """
     Hours between an ISO stamp and now, or 0.0 if it cannot be read.
@@ -468,6 +512,55 @@ def _hours_since(stamp, now_iso) -> float:
     if b.tzinfo is None:
         b = b.replace(tzinfo=dt.timezone.utc)
     return max(0.0, (b - a).total_seconds() / 3600.0)
+
+
+def _orphan_is_ripe(streak, since, event_date, now_iso) -> bool:
+    """
+    Has a missing bout been missing long enough to call it scrapped?
+
+    THE SHIPPED RULE LIVES HERE, not inline at the call site, for the same
+    reason _bump_orphan_streak does: tests/test_orphan_grace.py used to
+    reimplement it in a local `ripe()` whose docstring said "the shipped
+    rule", and that copy went stale the moment the rule gained a second
+    branch. A rule two files disagree about is worse than no test.
+
+    TWO WAYS TO RIPEN, and the second one matters:
+
+    1. BEFORE THE CARD -- streak AND hours, both. The streak proves the
+       fetches were real successes; the hours prove it is not a blip. This
+       is the conservative path and it stays conservative, because
+       everything it guards against (ESPN serving a partial prelim card, a
+       bout announced but not yet listed) looks identical to a scratch, and
+       a false cancellation strands a published pick. Jimenez vs Vera on
+       the 2026-09-12 Noche card was cancelled this way with $130k of
+       Polymarket liquidity behind it.
+
+    2. AFTER THE CARD -- streak alone. None of the above can happen once
+       the event is behind us: a bout ESPN's own card no longer lists, the
+       day after that card ran, did not happen, and no later fetch is going
+       to say otherwise. Holding the 24-hour grace past the event only
+       keeps a phantom in the denominator of "N of M results confirmed" on
+       the one day anybody reads it.
+
+    Case 2 is why Gabriel Bonfim vs Sean Brady sat on the 2026-11-07 card
+    at 571 consecutive orphaned resyncs, billed as its Main Event, two days
+    after Cortes Acosta vs Walker actually headlined it. The elapsed-hours
+    half could never be satisfied -- _orphan_since never got stamped, see
+    _is_blank -- and even with the stamp fixed the clock would have
+    restarted at zero the day after the card, which is correct before an
+    event and useless after one.
+    """
+    if streak is None:
+        return False
+    try:
+        streak = int(float(streak))
+    except (TypeError, ValueError):
+        return False
+    if streak <= ORPHAN_STREAK_LIMIT:
+        return False
+    if _hours_since(since, now_iso) >= ORPHAN_GRACE_HOURS:
+        return True
+    return _days_since_event(event_date) >= 1
 
 
 def _bump_orphan_streak(row) -> int:
@@ -829,11 +922,11 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
                 # the stamp now, which restarts its clock -- deliberately the
                 # safe direction, since the alternative is cancelling on a
                 # streak that was accumulated under the old rule.
-                if not str(r.get("_orphan_since") or "").strip():
+                if _is_blank(r.get("_orphan_since")):
                     r["_orphan_since"] = _now_iso
-                _elapsed_h = _hours_since(r.get("_orphan_since"), _now_iso)
-                _ripe = (r["_orphan_streak"] > ORPHAN_STREAK_LIMIT
-                         and _elapsed_h >= ORPHAN_GRACE_HOURS)
+                _ripe = _orphan_is_ripe(r["_orphan_streak"],
+                                        r.get("_orphan_since"),
+                                        event_date, _now_iso)
                 (exceeded_grace if _ripe else still_within_grace).append(r)
             if exceeded_grace:
                 # Also cancelled-not-dropped now, for the same reason as
@@ -846,10 +939,12 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
                     r["cancelled"] = True
                     r.pop("_orphan_streak", None)
                     newly_cancelled.append((str(r["fighter_a"]).strip(), str(r["fighter_b"]).strip()))
+                _why = (f"the card was {_days_since_event(event_date):.0f} day(s) ago"
+                        if _days_since_event(event_date) >= 1
+                        else f"{ORPHAN_GRACE_HOURS}+ hours")
                 print(f"[card_discovery] {len(exceeded_grace)} previously-tracked fight(s) for {event_name!r} "
                       f"missing from ESPN's current card across {ORPHAN_STREAK_LIMIT}+ consecutive successful "
-                      f"resyncs AND {ORPHAN_GRACE_HOURS}+ hours "
-                      f"resyncs now -- no longer treating as a transient gap, marking CANCELLED: "
+                      f"resyncs and {_why} -- no longer treating as a transient gap, marking CANCELLED: "
                       f"{[(r['fighter_a'], r['fighter_b']) for r in exceeded_grace]}")
             if still_within_grace:
                 print(f"[card_discovery] {len(still_within_grace)} previously-tracked fight(s) for {event_name!r} "

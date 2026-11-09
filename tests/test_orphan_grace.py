@@ -28,7 +28,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.card_discovery import (ORPHAN_GRACE_HOURS, ORPHAN_STREAK_LIMIT,  # noqa: E402
-                                _bump_orphan_streak, _hours_since)
+                                _bump_orphan_streak, _hours_since,
+                                _orphan_is_ripe)
 
 ok = fail = 0
 
@@ -50,9 +51,18 @@ def ago(**kw):
     return (NOW - dt.timedelta(**kw)).isoformat(timespec="seconds")
 
 
-def ripe(streak, since):
-    """The shipped rule: both conditions must hold."""
-    return streak > ORPHAN_STREAK_LIMIT and _hours_since(since, now_iso) >= ORPHAN_GRACE_HOURS
+def ripe(streak, since, event_date="2099-01-01"):
+    """
+    Delegates to the SHIPPED rule rather than restating it.
+
+    This used to be a local reimplementation whose docstring claimed to be
+    the shipped rule, and it went stale the moment that rule gained its
+    second branch (post-card ripening). Every case in this file is about
+    the PRE-card path, so the default event_date is far in the future --
+    pass a past one to exercise the other branch, and see
+    tests/test_orphan_post_card.py.
+    """
+    return _orphan_is_ripe(streak, since, event_date, now_iso)
 
 
 # --- the regression --------------------------------------------------------
