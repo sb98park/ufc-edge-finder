@@ -95,17 +95,32 @@ check("post-card with streak 1 -> NOT ripe",
       not _orphan_is_ripe(1, now_iso, PAST, now_iso))
 
 # --- the day boundary ------------------------------------------------------
+# THIS BLOCK IS WHY _days_since_event TAKES `now` AS A PARAMETER.
+#
+# These two checks derive an event_date from the frozen NOW above, and the
+# helper used to read dt.datetime.now() instead. So they agreed on the day
+# this file was written and disagreed the moment real-world midnight passed:
+# "2026-11-09" stopped being today and became yesterday, the first check
+# flipped to ripe, and the suite went red. The suite is a hard gate ahead of
+# data mutation in refresh.yml, so every build for the next eight hours
+# failed and the site served stale data until someone noticed.
+#
+# Nothing here may read the wall clock. If a check in this file would give a
+# different answer tomorrow, it is wrong today.
 check("the card's own day does not count as post-card",
       not _orphan_is_ripe(9, now_iso, NOW.date().isoformat(), now_iso))
 check("the day after does",
       _orphan_is_ripe(9, now_iso, (NOW - dt.timedelta(days=1)).date().isoformat(),
                       now_iso))
+check("the day boundary holds a year from NOW, not just on the day this was written",
+      _orphan_is_ripe(9, now_iso, "2025-11-09", now_iso)
+      and not _orphan_is_ripe(9, now_iso, "2027-11-09", now_iso))
 
 # --- junk must fail CLOSED, never cancel -----------------------------------
 check("an unreadable event_date keeps the conservative pre-card grace",
       not _orphan_is_ripe(9, now_iso, "not-a-date", now_iso))
 check("an unreadable event_date reads as -1 days, i.e. still ahead",
-      _days_since_event("not-a-date") == -1.0)
+      _days_since_event("not-a-date", now_iso) == -1.0)
 check("a missing event_date keeps the grace",
       not _orphan_is_ripe(9, now_iso, None, now_iso))
 check("a NaN streak never ripens", not _orphan_is_ripe(_nan, now_iso, PAST, now_iso))
@@ -113,7 +128,12 @@ check("a junk streak never ripens", not _orphan_is_ripe("", now_iso, PAST, now_i
 check("a None streak never ripens", not _orphan_is_ripe(None, now_iso, PAST, now_iso))
 
 # --- a future-dated event is never post-card ------------------------------
-check("a card a fortnight out is not post-card", _days_since_event(FUTURE) < 1)
+check("a card a fortnight out is not post-card",
+      _days_since_event(FUTURE, now_iso) < 1)
+check("an unreadable now also reads as -1, never as post-card",
+      _days_since_event(PAST, "not-a-date") == -1.0)
+check("the day count itself is measured against now_iso, not the wall clock",
+      abs(_days_since_event(PAST, now_iso) - 2.5) < 0.01)
 
 print(f"{'PASS' if not fail else 'FAIL'}: test_orphan_post_card -- {ok} passed, {fail} failed")
 sys.exit(1 if fail else 0)

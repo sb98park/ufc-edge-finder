@@ -448,21 +448,34 @@ ORPHAN_STREAK_LIMIT = 3
 ORPHAN_GRACE_HOURS = 24
 
 
-def _days_since_event(event_date) -> float:
+def _days_since_event(event_date, now_iso) -> float:
     """
-    Whole days from an event's date to now, or -1.0 if it cannot be read.
+    Days from an event's date to `now_iso`, or -1.0 if either cannot be read.
 
-    -1.0, not 0.0, on a bad date: the caller uses this to decide whether an
-    event is already behind us, so an unreadable date must read as "still
+    NOW IS A PARAMETER, NOT dt.datetime.now(). It read the wall clock for
+    one day, and that day cost a night of refreshes: this is the only clock
+    helper in this module that did, so a test could pin a frozen NOW, derive
+    an event_date from it, and pass -- until real-world midnight moved the
+    answer underneath it. The gate is the whole test suite, so the site
+    froze on stale data until someone looked. _hours_since has always taken
+    its `now` explicitly; this now matches it, and _orphan_is_ripe threads
+    the single _now_iso it already computes into both.
+
+    -1.0, not 0.0, on a bad value: the caller uses this to decide whether an
+    event is already behind us, so anything unreadable must read as "still
     ahead" and keep the conservative pre-card grace rather than unlock the
-    shortcut. Same reasoning as _hours_since's 0.0 default, opposite sign.
+    post-card shortcut. Same reasoning as _hours_since's 0.0, opposite sign.
     """
     try:
         d = dt.datetime.fromisoformat(str(event_date).strip()[:10])
+        n = dt.datetime.fromisoformat(str(now_iso))
     except (TypeError, ValueError):
         return -1.0
-    d = d.replace(tzinfo=dt.timezone.utc)
-    return (dt.datetime.now(dt.timezone.utc) - d).total_seconds() / 86400.0
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=dt.timezone.utc)
+    if n.tzinfo is None:
+        n = n.replace(tzinfo=dt.timezone.utc)
+    return (n - d).total_seconds() / 86400.0
 
 
 def _is_blank(value) -> bool:
@@ -560,7 +573,7 @@ def _orphan_is_ripe(streak, since, event_date, now_iso) -> bool:
         return False
     if _hours_since(since, now_iso) >= ORPHAN_GRACE_HOURS:
         return True
-    return _days_since_event(event_date) >= 1
+    return _days_since_event(event_date, now_iso) >= 1
 
 
 def _bump_orphan_streak(row) -> int:
@@ -939,8 +952,9 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
                     r["cancelled"] = True
                     r.pop("_orphan_streak", None)
                     newly_cancelled.append((str(r["fighter_a"]).strip(), str(r["fighter_b"]).strip()))
-                _why = (f"the card was {_days_since_event(event_date):.0f} day(s) ago"
-                        if _days_since_event(event_date) >= 1
+                _elapsed_d = _days_since_event(event_date, _now_iso)
+                _why = (f"the card was {_elapsed_d:.0f} day(s) ago"
+                        if _elapsed_d >= 1
                         else f"{ORPHAN_GRACE_HOURS}+ hours")
                 print(f"[card_discovery] {len(exceeded_grace)} previously-tracked fight(s) for {event_name!r} "
                       f"missing from ESPN's current card across {ORPHAN_STREAK_LIMIT}+ consecutive successful "
