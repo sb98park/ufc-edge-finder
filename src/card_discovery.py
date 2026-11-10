@@ -847,10 +847,45 @@ def resync_tracked_card_order(future_cards_path: str = "data/future_cards.csv") 
             # hand. So the old pairing is now marked cancelled and PINNED
             # (kept, with its banner), and the replacement bout that ESPN
             # already gave us is flagged so the card can say so.
+            # A BOUT WE HAVE ALREADY CANCELLED IS NOT EVIDENCE ABOUT ANY
+            # OTHER BOUT, however current ESPN's card makes it look.
+            #
+            # ESPN flips back to a superseded pairing. Observed on the
+            # 2026-11-07 card at 2026-11-04 23:54Z: Brennan had already
+            # withdrawn and been replaced by Calderon, and that fetch served
+            # Bashi vs BRENNAN again. Without this filter the fresh Brennan
+            # bout counted as a fighter-match for the tracked Bashi vs
+            # Calderon row, so the rule below ran the substitution BACKWARDS
+            # -- it cancelled the live bout as "replaced" by the dead one and
+            # moved the replacement badge onto the corpse. ESPN flipped
+            # forward again on a later fetch, but `cancelled` is sticky, so
+            # the bout that actually happened stayed dead: Austin Bashi beat
+            # Carlos Calderon by submission while our card said the fight was
+            # off and the published pick on it was voided instead of graded.
+            #
+            # The asymmetry is the point. This path has no notion of
+            # direction -- it assumes any fresh bout sharing a fighter
+            # supersedes the tracked one -- and a pairing we have already
+            # marked cancelled is the one case where we know the direction
+            # for certain. Re-serving it changes nothing on its own (it is
+            # pinned above for exactly that reason); it must not be allowed
+            # to kill something else either.
+            _cancelled_pairs = {
+                k for k, r in existing_by_key.items()
+                if str(r.get("cancelled", "")).strip().lower() == "true"
+            }
             fresh_by_fighter = {}
+            _stale_fresh = 0
             for fresh in fresh_rows:
+                if _key(fresh) in _cancelled_pairs:
+                    _stale_fresh += 1
+                    continue
                 for n in (fresh["fighter_a"], fresh["fighter_b"]):
                     fresh_by_fighter.setdefault(_fold(n), []).append(fresh)
+            if _stale_fresh:
+                print(f"[card_discovery] ESPN's current card for {event_name!r} still lists "
+                      f"{_stale_fresh} bout(s) we have already cancelled -- ignoring them as "
+                      f"replacement evidence rather than substituting backwards")
             # The fresh rows as they actually sit in new_order, so flags set
             # here land on the dicts that get written, not on throwaway copies.
             in_order_by_key = {_key(r): r for r in new_order}

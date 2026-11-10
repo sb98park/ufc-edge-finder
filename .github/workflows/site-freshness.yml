@@ -32,6 +32,12 @@ on:
 
 permissions:
   contents: read
+  # For the open-an-issue escalation at the end of this job. A failing
+  # Actions run only sends email, and email at 02:39Z is email you read at
+  # breakfast: the 2026-11-10 freeze was detected by this workflow on its
+  # first try and still cost about eleven hours, because nothing woke
+  # anybody. An assigned issue is what GitHub's mobile app actually pushes.
+  issues: write
 
 # A queued watchdog is a stale watchdog: if one is already running, the
 # newer tick is the one worth keeping.
@@ -73,3 +79,60 @@ jobs:
             echo
             echo "Locally: \`python3 scripts/check_site_freshness.py\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # ESCALATION. The run's own red X is not a notification -- see the
+      # `issues: write` note above. One issue, reused and reopened rather
+      # than a new one every 15 minutes, and closed automatically the moment
+      # the page starts publishing again so a healthy site leaves no
+      # standing alarm to ignore.
+      #
+      # Deliberately NOT a step that can fail the job: if the escalation
+      # itself breaks, that must not mask or alter the freshness verdict,
+      # which is the only thing this workflow exists to report.
+      - name: Open or update the stale-site issue
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -u
+          TITLE="Site is stale -- Pages is not publishing"
+          EXISTING=$(gh issue list --label site-stale --state all \
+                       --limit 1 --json number,state \
+                       --jq '.[0] | "\(.number) \(.state)"' || echo "")
+          gh label create site-stale --color B60205 \
+             --description "Automated: the published page stopped updating" \
+             >/dev/null 2>&1 || true
+          BODY=$(printf '%s\n\n%s\n\n%s\n' \
+            "The published page has not changed in over 75 minutes, which is past anything should_refresh.py's cadence explains (it caps at a 30-minute interval)." \
+            "Detected by: $RUN_URL" \
+            "Closes itself automatically once the page publishes again. See the deploy job of recent Refresh runs -- it is continue-on-error, so read the step, not the check.")
+          if [ -z "$EXISTING" ] || [ "$EXISTING" = "null null" ]; then
+            gh issue create --title "$TITLE" --label site-stale \
+              --body "$BODY" --assignee "${{ github.repository_owner }}"
+          else
+            NUM=${EXISTING%% *}; STATE=${EXISTING##* }
+            if [ "$STATE" = "CLOSED" ]; then
+              gh issue reopen "$NUM"
+            fi
+            gh issue comment "$NUM" --body "$BODY"
+          fi
+
+      # The mirror image, and the reason the alarm is safe to leave armed:
+      # a recovered site clears its own alarm. Without this, the first
+      # transient freeze would leave an issue open forever and the next real
+      # one would be invisible underneath it.
+      - name: Close the stale-site issue once the page is publishing again
+        if: success()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          OPEN=$(gh issue list --label site-stale --state open --limit 1 \
+                   --json number --jq '.[0].number' || echo "")
+          if [ -n "$OPEN" ] && [ "$OPEN" != "null" ]; then
+            gh issue comment "$OPEN" --body "The page is publishing again; closing."
+            gh issue close "$OPEN"
+          fi
