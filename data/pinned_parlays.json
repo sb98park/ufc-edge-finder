@@ -1,54 +1,54 @@
 {
  "UFC 334: Gane vs. Hokit": {
   "bankroll": {
-   "pinned_at": "2026-11-09T05:32:54+00:00",
+   "pinned_at": "2026-11-11T18:38:49+00:00",
    "identities": [
-    "[\"Bilal Hasan|Luis Gurule\", [{\"fighter\": \"Bilal Hasan\", \"kind\": \"winner\"}]]",
-    "[\"Evan Elder|Samuel Sanches\", [{\"fighter\": \"Evan Elder\", \"kind\": \"winner\"}]]"
+    "[\"Donte Johnson|Cesar Almeida\", [{\"fighter\": \"Donte Johnson\", \"kind\": \"winner\"}]]",
+    "[\"Juan Diaz|Alatengheili\", [{\"fighter\": \"Juan Diaz\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
-      "label": "Bilal Hasan ML",
-      "odds_display": "-1100",
+      "label": "Donte Johnson ML",
+      "odds_display": "-170",
       "is_model": false,
-      "decimal_odds": 1.090909,
-      "fight_key": "Bilal Hasan|Luis Gurule",
+      "decimal_odds": 1.588235,
+      "fight_key": "Donte Johnson|Cesar Almeida",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Bilal Hasan"
+        "fighter": "Donte Johnson"
        }
       ],
-      "source": "BetMGM"
+      "source": "DraftKings"
      },
      {
-      "label": "Evan Elder ML",
-      "odds_display": "+100",
+      "label": "Juan Diaz ML",
+      "odds_display": "-355",
       "is_model": false,
-      "decimal_odds": 2.0,
-      "fight_key": "Evan Elder|Samuel Sanches",
+      "decimal_odds": 1.28169,
+      "fight_key": "Juan Diaz|Alatengheili",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Evan Elder"
+        "fighter": "Juan Diaz"
        }
       ],
-      "source": "BetMGM"
+      "source": "DraftKings"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_4",
-     "card_13"
+     "card_9",
+     "card_12"
     ],
-    "slip_id": "366687afd370",
-    "combined_decimal": 2.181818,
-    "combined_american": 118,
-    "combined_american_display": "+118",
-    "combined_prob": 0.4339,
-    "combined_prob_raw": 0.376,
-    "venue": "BetMGM"
+    "slip_id": "32a07f801b54",
+    "combined_decimal": 2.035626,
+    "combined_american": 104,
+    "combined_american_display": "+104",
+    "combined_prob": 0.4669,
+    "combined_prob_raw": 0.6384,
+    "venue": "DraftKings"
    }
   }
  },
