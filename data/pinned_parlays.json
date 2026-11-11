@@ -1,37 +1,37 @@
 {
  "UFC 334: Gane vs. Hokit": {
   "bankroll": {
-   "pinned_at": "2026-11-11T18:38:49+00:00",
+   "pinned_at": "2026-11-11T22:43:01+00:00",
    "identities": [
-    "[\"Donte Johnson|Cesar Almeida\", [{\"fighter\": \"Donte Johnson\", \"kind\": \"winner\"}]]",
-    "[\"Juan Diaz|Alatengheili\", [{\"fighter\": \"Juan Diaz\", \"kind\": \"winner\"}]]"
+    "[\"Kayla Harrison|Amanda Nunes\", [{\"fighter\": \"Kayla Harrison\", \"kind\": \"winner\"}]]",
+    "[\"Jim Miller|Terrance McKinney\", [{\"fighter\": \"Terrance Mckinney\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
-      "label": "Donte Johnson ML",
-      "odds_display": "-162",
+      "label": "Kayla Harrison ML",
+      "odds_display": "-180",
       "is_model": false,
-      "decimal_odds": 1.617284,
-      "fight_key": "Donte Johnson|Cesar Almeida",
+      "decimal_odds": 1.555556,
+      "fight_key": "Kayla Harrison|Amanda Nunes",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Donte Johnson"
+        "fighter": "Kayla Harrison"
        }
       ],
       "source": "DraftKings"
      },
      {
-      "label": "Juan Diaz ML",
-      "odds_display": "-410",
+      "label": "Terrance Mckinney ML",
+      "odds_display": "-198",
       "is_model": false,
-      "decimal_odds": 1.243902,
-      "fight_key": "Juan Diaz|Alatengheili",
+      "decimal_odds": 1.505051,
+      "fight_key": "Jim Miller|Terrance McKinney",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Juan Diaz"
+        "fighter": "Terrance Mckinney"
        }
       ],
       "source": "DraftKings"
@@ -39,15 +39,15 @@
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_9",
-     "card_12"
+     "card_1",
+     "card_7"
     ],
-    "slip_id": "32a07f801b54",
-    "combined_decimal": 2.011743,
-    "combined_american": 101,
-    "combined_american_display": "+101",
-    "combined_prob": 0.4783,
-    "combined_prob_raw": 0.6384,
+    "slip_id": "fef95ef1f2ab",
+    "combined_decimal": 2.34119,
+    "combined_american": 134,
+    "combined_american_display": "+134",
+    "combined_prob": 0.4063,
+    "combined_prob_raw": 0.4518,
     "venue": "DraftKings"
    }
   }
