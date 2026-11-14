@@ -1,12 +1,46 @@
 {
-  "at": "2026-11-14T06:36:41+00:00",
+  "at": "2026-11-14T06:56:47+00:00",
   "card_data_coverage": {
-    "carded_fighters": 84,
-    "checked_at": "2026-11-14T06:31:24+00:00",
+    "carded_fighters": 88,
+    "checked_at": "2026-11-14T06:51:31+00:00",
     "counts": {
+      "history": 3,
+      "layoff": 1,
       "physicals": 1
     },
-    "findings": []
+    "findings": [
+      {
+        "detail": "1 of 10 bouts in fight_history (10%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
+        "event_date": "2026-11-21",
+        "fighter": "Alik Lorenz",
+        "last_fight_date": "2026-08-18",
+        "severity": "history"
+      },
+      {
+        "detail": "4 of 12 bouts in fight_history (33%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
+        "event_date": "2026-11-21",
+        "fighter": "Dom Mar Fan",
+        "last_fight_date": "2026-05-02",
+        "severity": "history"
+      },
+      {
+        "detail": "6 of 21 bouts in fight_history (29%) -- layoff, form and Elo all read a partial sample",
+        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
+        "event_date": "2026-11-21",
+        "fighter": "Nikolas Motta",
+        "last_fight_date": "2025-06-21",
+        "severity": "history"
+      },
+      {
+        "detail": "last fight 2025-06-21 (1.4y) is the newest of only 6 bouts we hold -- the real one may be far more recent",
+        "event": "UFC Fight Night: Proch\u00e1zka vs. Stirling",
+        "event_date": "2026-11-21",
+        "fighter": "Nikolas Motta",
+        "severity": "layoff"
+      }
+    ]
   },
   "duplicate_identities": {
     "count": 1,
@@ -32,9 +66,9 @@
   "edges_two_way": {
     "best_book": {
       "BetMGM": 5,
-      "DraftKings": 21,
+      "DraftKings": 19,
       "FanDuel": 34,
-      "Polymarket": 96
+      "Polymarket": 98
     },
     "books_quoting": {
       "1.0": 124,
@@ -70,8 +104,8 @@
     }
   },
   "odds_api": {
-    "cache_age_hours": 1.0,
-    "checked_at": "2026-11-14T06:32:45+00:00",
+    "cache_age_hours": 1.34,
+    "checked_at": "2026-11-14T06:53:27+00:00",
     "detail": "served from cache, quota untouched",
     "max_serve_hours": 24.0,
     "ok": true
@@ -79,10 +113,10 @@
   "overround": {
     "in_force": {
       "prop": 1.2,
-      "two_way": 1.0422
+      "two_way": 1.0421
     },
     "measured": {
-      "two_way": 1.0422
+      "two_way": 1.0421
     }
   },
   "parlay": {
@@ -109,7 +143,7 @@
   },
   "rows_by_source": {
     "BetMGM": 20,
-    "DraftKings": 42,
+    "DraftKings": 40,
     "FanDuel": 58,
     "Polymarket": 278
   },
@@ -325,19 +359,19 @@
         "date": "2026-11-14",
         "event": "UFC 334: Gane vs. Hokit",
         "fights": 15,
-        "gap_p90": 0.0461,
+        "gap_p90": 0.0467,
         "market_p90": 0.7543,
-        "model_p90": 0.8004,
+        "model_p90": 0.801,
         "priced": 13,
         "selectivity": 0.2
       }
     ],
-    "checked_at": "2026-11-14T06:36:39+00:00",
+    "checked_at": "2026-11-14T06:56:45+00:00",
     "equivalent_floor": 0.709,
     "floor_in_force": 0.78,
-    "gap_move": -0.0319,
+    "gap_move": -0.0318,
     "trailing_cards": 6,
-    "trailing_gap_p90": -0.0164,
+    "trailing_gap_p90": -0.0163,
     "trailing_selectivity": 0.0753,
     "verdict": "watch"
   },
@@ -349,25 +383,25 @@
   "steps": {
     "backfill_fight_stats": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 42.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-14T06:32:11+00:00",
+      "last_ok": "2026-11-14T06:52:51+00:00",
       "ok": true,
-      "ran_at": "2026-11-14T06:32:11+00:00"
+      "ran_at": "2026-11-14T06:52:51+00:00"
     },
     "backfill_history": {
       "consecutive_failures": 0,
-      "duration_s": 43.3,
+      "duration_s": 35.5,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-14T06:32:10+00:00",
+      "last_ok": "2026-11-14T06:52:09+00:00",
       "ok": true,
-      "ran_at": "2026-11-14T06:32:10+00:00"
+      "ran_at": "2026-11-14T06:52:09+00:00"
     },
     "card_data_coverage": {
       "consecutive_failures": 0,
@@ -376,20 +410,20 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-14T06:31:24+00:00",
+      "last_ok": "2026-11-14T06:51:31+00:00",
       "ok": true,
-      "ran_at": "2026-11-14T06:31:24+00:00"
+      "ran_at": "2026-11-14T06:51:31+00:00"
     },
     "duplicate_identities": {
       "consecutive_failures": 0,
-      "duration_s": 0.4,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-14T06:32:11+00:00",
+      "last_ok": "2026-11-14T06:52:51+00:00",
       "ok": true,
-      "ran_at": "2026-11-14T06:32:11+00:00"
+      "ran_at": "2026-11-14T06:52:51+00:00"
     },
     "grade_prop_prices": {
       "consecutive_failures": 0,
@@ -398,9 +432,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-14T06:31:27+00:00",
+      "last_ok": "2026-11-14T06:51:33+00:00",
       "ok": true,
-      "ran_at": "2026-11-14T06:31:27+00:00"
+      "ran_at": "2026-11-14T06:51:33+00:00"
     },
     "landing": {
       "consecutive_failures": 0,
@@ -408,30 +442,30 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-14T06:35:02+00:00",
+      "last_ok": "2026-11-14T06:55:08+00:00",
       "ok": true
     },
     "merge_results": {
       "consecutive_failures": 0,
-      "duration_s": 0.7,
+      "duration_s": 0.8,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-14T06:31:25+00:00",
+      "last_ok": "2026-11-14T06:51:31+00:00",
       "ok": true,
-      "ran_at": "2026-11-14T06:31:25+00:00"
+      "ran_at": "2026-11-14T06:51:31+00:00"
     },
     "orphaned_event_rows": {
       "consecutive_failures": 0,
-      "duration_s": 0.6,
+      "duration_s": 0.3,
       "error": null,
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-14T06:36:39+00:00",
+      "last_ok": "2026-11-14T06:56:45+00:00",
       "ok": true,
-      "ran_at": "2026-11-14T06:36:39+00:00"
+      "ran_at": "2026-11-14T06:56:45+00:00"
     },
     "scale_drift": {
       "consecutive_failures": 0,
@@ -440,9 +474,9 @@
       "exit_code": 0,
       "in_flight": false,
       "killed_previous_run": false,
-      "last_ok": "2026-11-14T06:36:39+00:00",
+      "last_ok": "2026-11-14T06:56:45+00:00",
       "ok": true,
-      "ran_at": "2026-11-14T06:36:39+00:00"
+      "ran_at": "2026-11-14T06:56:45+00:00"
     }
   },
   "tracked_moneyline": {
