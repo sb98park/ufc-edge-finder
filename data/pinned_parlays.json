@@ -1,27 +1,13 @@
 {
  "UFC Fight Night: Procházka vs. Stirling": {
   "bankroll": {
-   "pinned_at": "2026-11-16T05:32:39+00:00",
+   "pinned_at": "2026-11-16T06:07:31+00:00",
    "identities": [
-    "[\"Jared Cannonier|Ikram Aliskerov\", [{\"fighter\": \"Ikram Aliskerov\", \"kind\": \"winner\"}]]",
-    "[\"Nikolas Motta|Dom Mar Fan\", [{\"fighter\": \"Dom Mar Fan\", \"kind\": \"winner\"}]]"
+    "[\"Nikolas Motta|Dom Mar Fan\", [{\"fighter\": \"Dom Mar Fan\", \"kind\": \"winner\"}]]",
+    "[\"Diyar Nurgozhay|Alik Lorenz\", [{\"fighter\": \"Diyar Nurgozhay\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
-     {
-      "label": "Ikram Aliskerov ML",
-      "odds_display": "-350",
-      "is_model": false,
-      "decimal_odds": 1.285714,
-      "fight_key": "Jared Cannonier|Ikram Aliskerov",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Ikram Aliskerov"
-       }
-      ],
-      "source": "BetMGM"
-     },
      {
       "label": "Dom Mar Fan ML",
       "odds_display": "-155",
@@ -35,19 +21,33 @@
        }
       ],
       "source": "BetMGM"
+     },
+     {
+      "label": "Diyar Nurgozhay ML",
+      "odds_display": "-250",
+      "is_model": false,
+      "decimal_odds": 1.4,
+      "fight_key": "Diyar Nurgozhay|Alik Lorenz",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Diyar Nurgozhay"
+       }
+      ],
+      "source": "BetMGM"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_4",
-     "card_9"
+     "card_9",
+     "card_10"
     ],
-    "slip_id": "21892fd79332",
-    "combined_decimal": 2.115207,
-    "combined_american": 112,
-    "combined_american_display": "+112",
-    "combined_prob": 0.4364,
-    "combined_prob_raw": 0.4662,
+    "slip_id": "04ec4ac4af8c",
+    "combined_decimal": 2.303226,
+    "combined_american": 130,
+    "combined_american_display": "+130",
+    "combined_prob": 0.4015,
+    "combined_prob_raw": 0.3739,
     "venue": "BetMGM"
    }
   }
