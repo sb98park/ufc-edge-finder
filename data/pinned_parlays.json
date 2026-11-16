@@ -1,4 +1,57 @@
 {
+ "UFC Fight Night: Procházka vs. Stirling": {
+  "bankroll": {
+   "pinned_at": "2026-11-16T05:32:39+00:00",
+   "identities": [
+    "[\"Jared Cannonier|Ikram Aliskerov\", [{\"fighter\": \"Ikram Aliskerov\", \"kind\": \"winner\"}]]",
+    "[\"Nikolas Motta|Dom Mar Fan\", [{\"fighter\": \"Dom Mar Fan\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Ikram Aliskerov ML",
+      "odds_display": "-350",
+      "is_model": false,
+      "decimal_odds": 1.285714,
+      "fight_key": "Jared Cannonier|Ikram Aliskerov",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Ikram Aliskerov"
+       }
+      ],
+      "source": "BetMGM"
+     },
+     {
+      "label": "Dom Mar Fan ML",
+      "odds_display": "-155",
+      "is_model": false,
+      "decimal_odds": 1.645161,
+      "fight_key": "Nikolas Motta|Dom Mar Fan",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Dom Mar Fan"
+       }
+      ],
+      "source": "BetMGM"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_4",
+     "card_9"
+    ],
+    "slip_id": "21892fd79332",
+    "combined_decimal": 2.115207,
+    "combined_american": 112,
+    "combined_american_display": "+112",
+    "combined_prob": 0.4364,
+    "combined_prob_raw": 0.4662,
+    "venue": "BetMGM"
+   }
+  }
+ },
  "UFC 334: Gane vs. Hokit": {
   "bankroll": {
    "pinned_at": "2026-11-11T22:43:01+00:00",
