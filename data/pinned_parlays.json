@@ -10,9 +10,9 @@
     "legs": [
      {
       "label": "Dom Mar Fan ML",
-      "odds_display": "-160",
+      "odds_display": "-175",
       "is_model": false,
-      "decimal_odds": 1.625,
+      "decimal_odds": 1.571429,
       "fight_key": "Nikolas Motta|Dom Mar Fan",
       "conditions": [
        {
@@ -20,7 +20,7 @@
         "fighter": "Dom Mar Fan"
        }
       ],
-      "source": "BetMGM"
+      "source": "DraftKings"
      },
      {
       "label": "Diyar Nurgozhay ML",
@@ -34,7 +34,7 @@
         "fighter": "Diyar Nurgozhay"
        }
       ],
-      "source": "BetMGM"
+      "source": "DraftKings"
      }
     ],
     "has_model_legs": false,
@@ -43,12 +43,12 @@
      "card_10"
     ],
     "slip_id": "04ec4ac4af8c",
-    "combined_decimal": 2.275,
-    "combined_american": 127,
-    "combined_american_display": "+127",
-    "combined_prob": 0.3727,
+    "combined_decimal": 2.2,
+    "combined_american": 120,
+    "combined_american_display": "+120",
+    "combined_prob": 0.3737,
     "combined_prob_raw": 0.3623,
-    "venue": "BetMGM"
+    "venue": "DraftKings"
    }
   }
  },
