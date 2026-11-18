@@ -1,37 +1,37 @@
 {
  "UFC Fight Night: Procházka vs. Stirling": {
   "bankroll": {
-   "pinned_at": "2026-11-16T06:07:31+00:00",
+   "pinned_at": "2026-11-18T00:12:54+00:00",
    "identities": [
-    "[\"Nikolas Motta|Dom Mar Fan\", [{\"fighter\": \"Dom Mar Fan\", \"kind\": \"winner\"}]]",
-    "[\"Diyar Nurgozhay|Alik Lorenz\", [{\"fighter\": \"Diyar Nurgozhay\", \"kind\": \"winner\"}]]"
+    "[\"Aleksandre Topuria|Santiago Luna\", [{\"fighter\": \"Aleksandre Topuria\", \"kind\": \"winner\"}]]",
+    "[\"Jake Matthews|Tahir Abdullayev\", [{\"fighter\": \"Tahir Abdullayev\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
-      "label": "Dom Mar Fan ML",
-      "odds_display": "-170",
+      "label": "Aleksandre Topuria ML",
+      "odds_display": "-290",
       "is_model": false,
-      "decimal_odds": 1.588235,
-      "fight_key": "Nikolas Motta|Dom Mar Fan",
+      "decimal_odds": 1.344828,
+      "fight_key": "Aleksandre Topuria|Santiago Luna",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Dom Mar Fan"
+        "fighter": "Aleksandre Topuria"
        }
       ],
       "source": "DraftKings"
      },
      {
-      "label": "Diyar Nurgozhay ML",
-      "odds_display": "-250",
+      "label": "Tahir Abdullayev ML",
+      "odds_display": "+205",
       "is_model": false,
-      "decimal_odds": 1.4,
-      "fight_key": "Diyar Nurgozhay|Alik Lorenz",
+      "decimal_odds": 3.05,
+      "fight_key": "Jake Matthews|Tahir Abdullayev",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Diyar Nurgozhay"
+        "fighter": "Tahir Abdullayev"
        }
       ],
       "source": "DraftKings"
@@ -39,15 +39,15 @@
     ],
     "has_model_legs": false,
     "fight_ids": [
-     "card_9",
-     "card_10"
+     "card_5",
+     "card_8"
     ],
-    "slip_id": "04ec4ac4af8c",
-    "combined_decimal": 2.223529,
-    "combined_american": 122,
-    "combined_american_display": "+122",
-    "combined_prob": 0.3737,
-    "combined_prob_raw": 0.3623,
+    "slip_id": "776c4ccdff1a",
+    "combined_decimal": 4.101724,
+    "combined_american": 310,
+    "combined_american_display": "+310",
+    "combined_prob": 0.3538,
+    "combined_prob_raw": 0.2926,
     "venue": "DraftKings"
    }
   }
