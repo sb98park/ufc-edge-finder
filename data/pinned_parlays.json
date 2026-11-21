@@ -1,57 +1,4 @@
 {
- "UFC Fight Night: Procházka vs. Stirling": {
-  "bankroll": {
-   "pinned_at": "2026-11-21T17:43:02+00:00",
-   "identities": [
-    "[\"Shamil Gaziev|Tallison Teixeira\", [{\"fighter\": \"Tallison Teixeira\", \"kind\": \"winner\"}]]",
-    "[\"Nikolas Motta|Dom Mar Fan\", [{\"fighter\": \"Dom Mar Fan\", \"kind\": \"winner\"}]]"
-   ],
-   "snapshot": {
-    "legs": [
-     {
-      "label": "Tallison Teixeira ML",
-      "odds_display": "+165",
-      "is_model": false,
-      "decimal_odds": 2.65,
-      "fight_key": "Shamil Gaziev|Tallison Teixeira",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Tallison Teixeira"
-       }
-      ],
-      "source": "BetMGM"
-     },
-     {
-      "label": "Dom Mar Fan ML",
-      "odds_display": "-5000",
-      "is_model": false,
-      "decimal_odds": 1.01,
-      "fight_key": "Nikolas Motta|Dom Mar Fan",
-      "conditions": [
-       {
-        "kind": "winner",
-        "fighter": "Dom Mar Fan"
-       }
-      ],
-      "source": "BetMGM"
-     }
-    ],
-    "has_model_legs": false,
-    "fight_ids": [
-     "card_6",
-     "card_9"
-    ],
-    "slip_id": "ccdd7b6fd65f",
-    "combined_decimal": 2.6765,
-    "combined_american": 168,
-    "combined_american_display": "+168",
-    "combined_prob": 0.4911,
-    "combined_prob_raw": 0.4207,
-    "venue": "BetMGM"
-   }
-  }
- },
  "UFC 334: Gane vs. Hokit": {
   "bankroll": {
    "pinned_at": "2026-11-11T22:43:01+00:00",
@@ -212,6 +159,7 @@
    }
   }
  },
+ "UFC Fight Night: Procházka vs. Stirling": {},
  "UFC Fight Night: Bonfim vs. Brady": {},
  "UFC Fight Night: Moicano vs. Nolan": {},
  "UFC Fight Night: Buckley vs. Malott": {},
