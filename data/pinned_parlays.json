@@ -1,4 +1,57 @@
 {
+ "UFC Fight Night: Procházka vs. Stirling": {
+  "bankroll": {
+   "pinned_at": "2026-11-21T18:12:39+00:00",
+   "identities": [
+    "[\"Aleksandre Topuria|Santiago Luna\", [{\"fighter\": \"Aleksandre Topuria\", \"kind\": \"winner\"}]]",
+    "[\"Amir Albazi|Alessandro Costa\", [{\"fighter\": \"Amir Albazi\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Aleksandre Topuria ML",
+      "odds_display": "-300",
+      "is_model": false,
+      "decimal_odds": 1.333333,
+      "fight_key": "Aleksandre Topuria|Santiago Luna",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Aleksandre Topuria"
+       }
+      ],
+      "source": "BetMGM"
+     },
+     {
+      "label": "Amir Albazi ML",
+      "odds_display": "-105",
+      "is_model": false,
+      "decimal_odds": 1.952381,
+      "fight_key": "Amir Albazi|Alessandro Costa",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Amir Albazi"
+       }
+      ],
+      "source": "BetMGM"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_5",
+     "card_7"
+    ],
+    "slip_id": "9b0250aba3e3",
+    "combined_decimal": 2.603175,
+    "combined_american": 160,
+    "combined_american_display": "+160",
+    "combined_prob": 0.2755,
+    "combined_prob_raw": 0.3884,
+    "venue": "BetMGM"
+   }
+  }
+ },
  "UFC 334: Gane vs. Hokit": {
   "bankroll": {
    "pinned_at": "2026-11-11T22:43:01+00:00",
@@ -159,7 +212,6 @@
    }
   }
  },
- "UFC Fight Night: Procházka vs. Stirling": {},
  "UFC Fight Night: Bonfim vs. Brady": {},
  "UFC Fight Night: Moicano vs. Nolan": {},
  "UFC Fight Night: Buckley vs. Malott": {},
