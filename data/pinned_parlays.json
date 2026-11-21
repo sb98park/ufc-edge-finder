@@ -1,4 +1,57 @@
 {
+ "UFC Fight Night: Procházka vs. Stirling": {
+  "bankroll": {
+   "pinned_at": "2026-11-21T20:02:37+00:00",
+   "identities": [
+    "[\"Aljamain Sterling|Kevin Vallejos\", [{\"fighter\": \"Kevin Vallejos\", \"kind\": \"winner\"}]]",
+    "[\"Jared Cannonier|Ikram Aliskerov\", [{\"fighter\": \"Ikram Aliskerov\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Kevin Vallejos ML",
+      "odds_display": "-125",
+      "is_model": false,
+      "decimal_odds": 1.8,
+      "fight_key": "Aljamain Sterling|Kevin Vallejos",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Kevin Vallejos"
+       }
+      ],
+      "source": "BetMGM"
+     },
+     {
+      "label": "Ikram Aliskerov ML",
+      "odds_display": "-300",
+      "is_model": false,
+      "decimal_odds": 1.333333,
+      "fight_key": "Jared Cannonier|Ikram Aliskerov",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Ikram Aliskerov"
+       }
+      ],
+      "source": "BetMGM"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_1",
+     "card_4"
+    ],
+    "slip_id": "6252ba206ead",
+    "combined_decimal": 2.4,
+    "combined_american": 140,
+    "combined_american_display": "+140",
+    "combined_prob": 0.3871,
+    "combined_prob_raw": 0.4087,
+    "venue": "BetMGM"
+   }
+  }
+ },
  "UFC 334: Gane vs. Hokit": {
   "bankroll": {
    "pinned_at": "2026-11-11T22:43:01+00:00",
@@ -159,7 +212,6 @@
    }
   }
  },
- "UFC Fight Night: Procházka vs. Stirling": {},
  "UFC Fight Night: Bonfim vs. Brady": {},
  "UFC Fight Night: Moicano vs. Nolan": {},
  "UFC Fight Night: Buckley vs. Malott": {},
