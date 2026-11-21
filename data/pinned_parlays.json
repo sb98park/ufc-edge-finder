@@ -1,54 +1,54 @@
 {
  "UFC Fight Night: Procházka vs. Stirling": {
   "bankroll": {
-   "pinned_at": "2026-11-18T00:12:54+00:00",
+   "pinned_at": "2026-11-21T16:27:45+00:00",
    "identities": [
-    "[\"Aleksandre Topuria|Santiago Luna\", [{\"fighter\": \"Aleksandre Topuria\", \"kind\": \"winner\"}]]",
-    "[\"Jake Matthews|Tahir Abdullayev\", [{\"fighter\": \"Tahir Abdullayev\", \"kind\": \"winner\"}]]"
+    "[\"Aleksandre Topuria|Santiago Luna\", [{\"fighter\": \"Santiago Luna\", \"kind\": \"winner\"}]]",
+    "[\"Nikolas Motta|Dom Mar Fan\", [{\"fighter\": \"Dom Mar Fan\", \"kind\": \"winner\"}]]"
    ],
    "snapshot": {
     "legs": [
      {
-      "label": "Aleksandre Topuria ML",
-      "odds_display": "-285",
+      "label": "Santiago Luna ML",
+      "odds_display": "+240",
       "is_model": false,
-      "decimal_odds": 1.350877,
+      "decimal_odds": 3.4,
       "fight_key": "Aleksandre Topuria|Santiago Luna",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Aleksandre Topuria"
+        "fighter": "Santiago Luna"
        }
       ],
-      "source": "DraftKings"
+      "source": "BetMGM"
      },
      {
-      "label": "Tahir Abdullayev ML",
-      "odds_display": "+205",
+      "label": "Dom Mar Fan ML",
+      "odds_display": "-5000",
       "is_model": false,
-      "decimal_odds": 3.05,
-      "fight_key": "Jake Matthews|Tahir Abdullayev",
+      "decimal_odds": 1.01,
+      "fight_key": "Nikolas Motta|Dom Mar Fan",
       "conditions": [
        {
         "kind": "winner",
-        "fighter": "Tahir Abdullayev"
+        "fighter": "Dom Mar Fan"
        }
       ],
-      "source": "DraftKings"
+      "source": "BetMGM"
      }
     ],
     "has_model_legs": false,
     "fight_ids": [
      "card_5",
-     "card_8"
+     "card_9"
     ],
-    "slip_id": "776c4ccdff1a",
-    "combined_decimal": 4.120175,
-    "combined_american": 312,
-    "combined_american_display": "+312",
-    "combined_prob": 0.3371,
-    "combined_prob_raw": 0.2926,
-    "venue": "DraftKings"
+    "slip_id": "1ae73e1fc735",
+    "combined_decimal": 3.434,
+    "combined_american": 243,
+    "combined_american_display": "+243",
+    "combined_prob": 0.542,
+    "combined_prob_raw": 0.3254,
+    "venue": "BetMGM"
    }
   }
  },
