@@ -1,4 +1,57 @@
 {
+ "UFC Fight Night: Adesanya vs Magomedov": {
+  "bankroll": {
+   "pinned_at": "2026-11-23T05:27:40+00:00",
+   "identities": [
+    "[\"Levan Chokheli|Islam Dulatov\", [{\"fighter\": \"Islam Dulatov\", \"kind\": \"winner\"}]]",
+    "[\"Magomed Tuchalov|Ion Cutelaba\", [{\"fighter\": \"Magomed Tuchalov\", \"kind\": \"winner\"}]]"
+   ],
+   "snapshot": {
+    "legs": [
+     {
+      "label": "Islam Dulatov ML",
+      "odds_display": "-275",
+      "is_model": false,
+      "decimal_odds": 1.363636,
+      "fight_key": "Levan Chokheli|Islam Dulatov",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Islam Dulatov"
+       }
+      ],
+      "source": "BetMGM"
+     },
+     {
+      "label": "Magomed Tuchalov ML",
+      "odds_display": "-210",
+      "is_model": false,
+      "decimal_odds": 1.47619,
+      "fight_key": "Magomed Tuchalov|Ion Cutelaba",
+      "conditions": [
+       {
+        "kind": "winner",
+        "fighter": "Magomed Tuchalov"
+       }
+      ],
+      "source": "BetMGM"
+     }
+    ],
+    "has_model_legs": false,
+    "fight_ids": [
+     "card_4",
+     "card_6"
+    ],
+    "slip_id": "25124b62a3fa",
+    "combined_decimal": 2.012987,
+    "combined_american": 101,
+    "combined_american_display": "+101",
+    "combined_prob": 0.4375,
+    "combined_prob_raw": 0.3983,
+    "venue": "BetMGM"
+   }
+  }
+ },
  "UFC Fight Night: Procházka vs. Stirling": {
   "bankroll": {
    "pinned_at": "2026-11-21T20:02:37+00:00",
@@ -218,6 +271,5 @@
  "UFC Fight Night: Allen vs. Duncan": {},
  "UFC Fight Night: Rosas Jr. vs. Barcelos": {},
  "UFC 331: Van vs. Pantoja 2": {},
- "Noche UFC: Silva vs. Delgado": {},
- "UFC Fight Night: Hooker vs. Parnasse": {}
+ "Noche UFC: Silva vs. Delgado": {}
 }
